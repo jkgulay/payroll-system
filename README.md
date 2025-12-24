@@ -11,6 +11,7 @@ Philippine payroll system for construction companies built with Laravel 10 and V
 ## Quick Start
 
 ### Prerequisites
+
 - PHP 8.1+, Composer 2.x
 - Node.js 18+
 - PostgreSQL 14+
@@ -34,6 +35,7 @@ npm run dev
 ```
 
 ### Default Credentials
+
 - Admin: `admin@payroll.com` / `admin123`
 - Accountant: `accountant@payroll.com` / `accountant123`
 - Employee: `employee@payroll.com` / `employee123`
@@ -197,9 +199,11 @@ Net Pay
 - MVP first, then progressive enhancement
 - Testing and deployment strategy
 - Maintenance plan
+
 ## Configuration
 
 Database settings in `backend/.env`:
+
 ```env
 DB_CONNECTION=pgsql
 DB_DATABASE=construction_payroll
