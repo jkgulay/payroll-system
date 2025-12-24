@@ -23,7 +23,7 @@ class AuthController extends Controller
 
         // Check if input is email or username
         $loginField = filter_var($request->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-        
+
         $user = User::where($loginField, $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {

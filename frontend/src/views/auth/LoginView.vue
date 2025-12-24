@@ -139,7 +139,8 @@ async function handleLogin() {
     console.error("Login error:", error);
 
     if (error.response?.status === 401 || error.response?.status === 422) {
-      errorMessage.value = error.response?.data?.message || "Invalid credentials";
+      errorMessage.value =
+        error.response?.data?.message || "Invalid credentials";
     } else if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message;
     } else {
