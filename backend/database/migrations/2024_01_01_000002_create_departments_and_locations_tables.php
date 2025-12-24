@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('code', 20)->unique();
             $table->string('name', 100);
             $table->text('description')->nullable();
-            $table->foreignId('head_employee_id')->nullable()->constrained('employees');
+            $table->unsignedBigInteger('head_employee_id')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();

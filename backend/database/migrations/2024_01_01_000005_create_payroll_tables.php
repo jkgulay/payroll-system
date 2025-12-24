@@ -64,7 +64,7 @@ return new class extends Migration
 
         Schema::create('payroll_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('payroll_id')->constrained()->onDelete('cascade');
+            $table->foreignId('payroll_id')->constrained('payroll')->onDelete('cascade');
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
 
             // Basic Pay
