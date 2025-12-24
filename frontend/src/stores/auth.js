@@ -1,0 +1,116 @@
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import api from "@/services/api";
+
+export const useAuthStore = defineStore("auth", () => {
+  // State
+  const user = ref(null);
+  const token = ref(localStorage.getItem("token") || null);
+  const loading = ref(false);
+
+  // Getters
+  const isAuthenticated = computed(() => !!token.value);
+  const userRole = computed(() => user.value?.role || null);
+  const isAdmin = computed(() => userRole.value === "admin");
+  const isAccountant = computed(() =>
+    ["admin", "accountant"].includes(userRole.value)
+  );
+
+  // Actions
+  async function login(credentials) {
+    loading.value = true;
+    try {
+      const response = await api.post("/login", credentials);
+      token.value = response.data.token;
+      user.value = response.data.user;
+
+      // Store token in localStorage
+      localStorage.setItem("token", token.value);
+
+      // Set default Authorization header
+      api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
+
+      return response.data;
+    } catch (error) {
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function logout() {
+    loading.value = true;
+    try {
+      await api.post("/logout");
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      // Clear state
+      user.value = null;
+      token.value = null;
+
+      // Clear localStorage
+      localStorage.removeItem("token");
+
+      // Remove Authorization header
+      delete api.defaults.headers.common["Authorization"];
+
+      loading.value = false;
+    }
+  }
+
+  async function checkAuth() {
+    if (!token.value) return false;
+
+    loading.value = true;
+    try {
+      // Set Authorization header
+      api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
+
+      // Get current user
+      const response = await api.get("/user");
+      user.value = response.data;
+
+      return true;
+    } catch (error) {
+      // Token invalid, clear auth
+      user.value = null;
+      token.value = null;
+      localStorage.removeItem("token");
+      delete api.defaults.headers.common["Authorization"];
+
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function fetchUser() {
+    loading.value = true;
+    try {
+      const response = await api.get("/user");
+      user.value = response.data;
+    } catch (error) {
+      console.error("Fetch user error:", error);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  return {
+    // State
+    user,
+    token,
+    loading,
+    // Getters
+    isAuthenticated,
+    userRole,
+    isAdmin,
+    isAccountant,
+    // Actions
+    login,
+    logout,
+    checkAuth,
+    fetchUser,
+  };
+});

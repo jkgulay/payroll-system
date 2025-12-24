@@ -63,6 +63,7 @@ vendor/
 .settings/
 *.tmproj
 *.code-workspace
+.history/
 
 # OS Files
 Thumbs.db
