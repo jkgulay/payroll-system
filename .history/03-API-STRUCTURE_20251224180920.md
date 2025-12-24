@@ -1,0 +1,1203 @@
+# Laravel API Structure & Module Breakdown
+
+## Project Structure
+
+```
+backend/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Api/
+│   │   │   │   ├── AuthController.php
+│   │   │   │   ├── EmployeeController.php
+│   │   │   │   ├── AttendanceController.php
+│   │   │   │   ├── PayrollController.php
+│   │   │   │   ├── ReportController.php
+│   │   │   │   ├── DepartmentController.php
+│   │   │   │   ├── LocationController.php
+│   │   │   │   ├── AllowanceController.php
+│   │   │   │   ├── LoanController.php
+│   │   │   │   ├── DeductionController.php
+│   │   │   │   ├── GovernmentContributionController.php
+│   │   │   │   ├── ApplicantController.php
+│   │   │   │   ├── HolidayController.php
+│   │   │   │   ├── SettingsController.php
+│   │   │   │   └── DashboardController.php
+│   │   ├── Middleware/
+│   │   │   ├── RoleMiddleware.php
+│   │   │   ├── PermissionMiddleware.php
+│   │   │   └── AuditLogMiddleware.php
+│   │   ├── Requests/
+│   │   │   ├── Employee/
+│   │   │   ├── Attendance/
+│   │   │   ├── Payroll/
+│   │   │   └── ...
+│   │   └── Resources/
+│   │       ├── EmployeeResource.php
+│   │       ├── PayrollResource.php
+│   │       └── ...
+│   ├── Models/
+│   │   ├── User.php
+│   │   ├── Employee.php
+│   │   ├── Department.php
+│   │   ├── Location.php
+│   │   ├── Attendance.php
+│   │   ├── Payroll.php
+│   │   ├── PayrollItem.php
+│   │   └── ...
+│   ├── Services/
+│   │   ├── PayrollService.php
+│   │   ├── AttendanceService.php
+│   │   ├── TaxComputationService.php
+│   │   ├── SSSComputationService.php
+│   │   ├── PhilHealthComputationService.php
+│   │   ├── PagIbigComputationService.php
+│   │   ├── ReportService.php
+│   │   └── ImportService.php
+│   ├── Repositories/
+│   │   ├── EmployeeRepository.php
+│   │   ├── AttendanceRepository.php
+│   │   ├── PayrollRepository.php
+│   │   └── ...
+│   ├── Jobs/
+│   │   ├── ProcessPayroll.php
+│   │   ├── GeneratePayslips.php
+│   │   ├── SendPayslipNotifications.php
+│   │   └── ImportAttendanceData.php
+│   ├── Events/
+│   │   ├── PayrollApproved.php
+│   │   ├── AttendanceUpdated.php
+│   │   └── EmployeeCreated.php
+│   ├── Listeners/
+│   │   ├── RecalculatePayroll.php
+│   │   ├── SendNotification.php
+│   │   └── LogActivity.php
+│   └── Traits/
+│       ├── AuditableTrait.php
+│       └── HasPermissions.php
+├── database/
+│   ├── migrations/
+│   ├── seeders/
+│   └── factories/
+├── routes/
+│   ├── api.php
+│   └── web.php
+├── config/
+│   ├── payroll.php
+│   └── permissions.php
+└── tests/
+    ├── Feature/
+    └── Unit/
+```
+
+---
+
+## API Architecture Pattern
+
+### Layered Architecture
+
+```
+Request → Middleware → Controller → Service → Repository → Model → Database
+                          ↓
+                     Response/Resource
+```
+
+**Benefits**:
+- Separation of concerns
+- Testable business logic
+- Reusable services
+- Clean controllers
+
+---
+
+## API Modules
+
+### 1. Authentication Module
+
+**Endpoints:**
+
+```php
+POST   /api/auth/login          // Login
+POST   /api/auth/logout         // Logout
+POST   /api/auth/refresh        // Refresh token
+GET    /api/auth/me             // Get current user
+POST   /api/auth/change-password
+POST   /api/auth/forgot-password
+POST   /api/auth/reset-password
+```
+
+**Controller: AuthController.php**
+
+```php
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Services\AuthService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class AuthController extends Controller
+{
+    protected AuthService $authService;
+
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $credentials = $request->validated();
+        
+        $result = $this->authService->login($credentials);
+        
+        if (!$result['success']) {
+            return response()->json([
+                'message' => 'Invalid credentials'
+            ], 401);
+        }
+        
+        return response()->json([
+            'token' => $result['token'],
+            'user' => $result['user'],
+            'permissions' => $result['permissions']
+        ]);
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
+        
+        return response()->json([
+            'message' => 'Logged out successfully'
+        ]);
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        return response()->json([
+            'user' => $request->user(),
+            'employee' => $request->user()->employee,
+            'permissions' => $this->authService->getUserPermissions($request->user())
+        ]);
+    }
+}
+```
+
+---
+
+### 2. Employee Module
+
+**Endpoints:**
+
+```php
+GET    /api/employees                    // List all employees (paginated)
+GET    /api/employees/{id}               // Get employee details
+POST   /api/employees                    // Create employee
+PUT    /api/employees/{id}               // Update employee
+DELETE /api/employees/{id}               // Soft delete employee
+GET    /api/employees/{id}/payslips      // Get employee payslips
+GET    /api/employees/{id}/attendance    // Get employee attendance
+GET    /api/employees/{id}/loans         // Get employee loans
+GET    /api/employees/{id}/allowances    // Get employee allowances
+GET    /api/employees/{id}/documents     // Get employee documents
+POST   /api/employees/{id}/documents     // Upload document
+GET    /api/employees/search             // Search employees
+GET    /api/employees/export             // Export to Excel
+POST   /api/employees/import             // Import from Excel
+```
+
+**Service: EmployeeService.php**
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Repositories\EmployeeRepository;
+use App\Models\Employee;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+
+class EmployeeService
+{
+    protected EmployeeRepository $employeeRepository;
+
+    public function __construct(EmployeeRepository $employeeRepository)
+    {
+        $this->employeeRepository = $employeeRepository;
+    }
+
+    public function createEmployee(array $data): Employee
+    {
+        return DB::transaction(function () use ($data) {
+            // Create user account if email provided
+            if (isset($data['email'])) {
+                $user = User::create([
+                    'username' => $data['employee_number'],
+                    'email' => $data['email'],
+                    'password' => Hash::make($data['password'] ?? 'default123'),
+                    'role' => 'employee'
+                ]);
+                $data['user_id'] = $user->id;
+            }
+
+            // Create employee record
+            $employee = $this->employeeRepository->create($data);
+
+            // Create default allowances if applicable
+            if (isset($data['allowances'])) {
+                $this->createAllowances($employee->id, $data['allowances']);
+            }
+
+            return $employee;
+        });
+    }
+
+    public function updateEmployee(int $id, array $data): Employee
+    {
+        return DB::transaction(function () use ($id, $data) {
+            $employee = $this->employeeRepository->update($id, $data);
+
+            // Update user account if needed
+            if (isset($data['email']) && $employee->user) {
+                $employee->user->update([
+                    'email' => $data['email']
+                ]);
+            }
+
+            return $employee;
+        });
+    }
+
+    public function getEmployeeWithDetails(int $id): Employee
+    {
+        return $this->employeeRepository->findWithRelations($id, [
+            'user',
+            'department',
+            'location',
+            'allowances',
+            'loans',
+            'deductions'
+        ]);
+    }
+
+    public function searchEmployees(string $query): array
+    {
+        return $this->employeeRepository->search($query);
+    }
+}
+```
+
+---
+
+### 3. Attendance Module
+
+**Endpoints:**
+
+```php
+GET    /api/attendance                       // List attendance (filtered)
+GET    /api/attendance/{id}                  // Get attendance record
+POST   /api/attendance                       // Manual entry
+PUT    /api/attendance/{id}                  // Update attendance
+DELETE /api/attendance/{id}                  // Delete attendance
+POST   /api/attendance/bulk                  // Bulk import
+POST   /api/attendance/import-biometric      // Import from biometric
+GET    /api/attendance/corrections           // Correction requests
+POST   /api/attendance/corrections           // Request correction
+PUT    /api/attendance/corrections/{id}      // Approve/reject
+GET    /api/attendance/employee/{employee_id}/month/{month}
+```
+
+**Service: AttendanceService.php**
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Repositories\AttendanceRepository;
+use App\Models\Attendance;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Event;
+use App\Events\AttendanceUpdated;
+
+class AttendanceService
+{
+    protected AttendanceRepository $attendanceRepository;
+
+    public function __construct(AttendanceRepository $attendanceRepository)
+    {
+        $this->attendanceRepository = $attendanceRepository;
+    }
+
+    public function createAttendance(array $data): Attendance
+    {
+        // Calculate hours worked
+        $data = $this->calculateHours($data);
+        
+        $attendance = $this->attendanceRepository->create($data);
+        
+        // Trigger payroll recalculation if within current period
+        Event::dispatch(new AttendanceUpdated($attendance));
+        
+        return $attendance;
+    }
+
+    public function calculateHours(array $data): array
+    {
+        if (!isset($data['time_in']) || !isset($data['time_out'])) {
+            return $data;
+        }
+
+        $timeIn = Carbon::parse($data['time_in']);
+        $timeOut = Carbon::parse($data['time_out']);
+        
+        // Calculate break time
+        $breakMinutes = 0;
+        if (isset($data['break_start']) && isset($data['break_end'])) {
+            $breakStart = Carbon::parse($data['break_start']);
+            $breakEnd = Carbon::parse($data['break_end']);
+            $breakMinutes = $breakStart->diffInMinutes($breakEnd);
+        }
+        
+        // Total minutes worked
+        $totalMinutes = $timeIn->diffInMinutes($timeOut) - $breakMinutes;
+        $hoursWorked = $totalMinutes / 60;
+        
+        // Standard work hours (from settings)
+        $standardHours = config('payroll.standard_work_hours', 8);
+        
+        // Calculate regular, overtime, undertime
+        if ($hoursWorked > $standardHours) {
+            $data['regular_hours'] = $standardHours;
+            $data['overtime_hours'] = $hoursWorked - $standardHours;
+            $data['undertime_hours'] = 0;
+        } else {
+            $data['regular_hours'] = $hoursWorked;
+            $data['overtime_hours'] = 0;
+            $data['undertime_hours'] = max(0, $standardHours - $hoursWorked);
+        }
+        
+        // Check for night differential (10pm - 6am)
+        $data['night_differential_hours'] = $this->calculateNightDifferential($timeIn, $timeOut);
+        
+        return $data;
+    }
+
+    protected function calculateNightDifferential(Carbon $timeIn, Carbon $timeOut): float
+    {
+        // Night shift: 10:00 PM to 6:00 AM
+        $nightStart = Carbon::parse('22:00:00');
+        $nightEnd = Carbon::parse('06:00:00')->addDay();
+        
+        // Simplified calculation - needs refinement for edge cases
+        $nightHours = 0;
+        
+        if ($timeIn->hour >= 22 || $timeIn->hour < 6) {
+            $nightHours = min($timeOut, $nightEnd)->diffInHours(max($timeIn, $nightStart));
+        }
+        
+        return $nightHours;
+    }
+
+    public function importBiometricData(array $records): array
+    {
+        $imported = 0;
+        $errors = [];
+        
+        foreach ($records as $record) {
+            try {
+                $this->createAttendance($record);
+                $imported++;
+            } catch (\Exception $e) {
+                $errors[] = [
+                    'record' => $record,
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+        
+        return [
+            'imported' => $imported,
+            'errors' => $errors
+        ];
+    }
+}
+```
+
+---
+
+### 4. Payroll Module
+
+**Endpoints:**
+
+```php
+GET    /api/payroll                          // List all payroll periods
+GET    /api/payroll/{id}                     // Get payroll details
+POST   /api/payroll                          // Create new payroll period
+PUT    /api/payroll/{id}                     // Update payroll
+DELETE /api/payroll/{id}                     // Delete draft payroll
+POST   /api/payroll/{id}/process             // Process/compute payroll
+POST   /api/payroll/{id}/approve             // Approve payroll
+POST   /api/payroll/{id}/pay                 // Mark as paid
+GET    /api/payroll/{id}/items               // Get all payroll items
+GET    /api/payroll/{id}/summary             // Get summary
+POST   /api/payroll/{id}/generate-payslips   // Generate all payslips
+GET    /api/payroll/{id}/export              // Export to Excel
+POST   /api/payroll/{id}/recalculate         // Recalculate all items
+```
+
+**Service: PayrollService.php**
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Repositories\PayrollRepository;
+use App\Repositories\EmployeeRepository;
+use App\Repositories\AttendanceRepository;
+use App\Models\Payroll;
+use App\Models\PayrollItem;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class PayrollService
+{
+    protected PayrollRepository $payrollRepository;
+    protected EmployeeRepository $employeeRepository;
+    protected AttendanceRepository $attendanceRepository;
+    protected TaxComputationService $taxService;
+    protected SSSComputationService $sssService;
+    protected PhilHealthComputationService $philHealthService;
+    protected PagIbigComputationService $pagIbigService;
+
+    public function __construct(
+        PayrollRepository $payrollRepository,
+        EmployeeRepository $employeeRepository,
+        AttendanceRepository $attendanceRepository,
+        TaxComputationService $taxService,
+        SSSComputationService $sssService,
+        PhilHealthComputationService $philHealthService,
+        PagIbigComputationService $pagIbigService
+    ) {
+        $this->payrollRepository = $payrollRepository;
+        $this->employeeRepository = $employeeRepository;
+        $this->attendanceRepository = $attendanceRepository;
+        $this->taxService = $taxService;
+        $this->sssService = $sssService;
+        $this->philHealthService = $philHealthService;
+        $this->pagIbigService = $pagIbigService;
+    }
+
+    public function createPayrollPeriod(array $data): Payroll
+    {
+        return DB::transaction(function () use ($data) {
+            // Generate payroll number
+            $data['payroll_number'] = $this->generatePayrollNumber(
+                $data['year'],
+                $data['month'],
+                $data['pay_period_number']
+            );
+            
+            return $this->payrollRepository->create($data);
+        });
+    }
+
+    public function processPayroll(int $payrollId): array
+    {
+        return DB::transaction(function () use ($payrollId) {
+            $payroll = $this->payrollRepository->find($payrollId);
+            
+            if ($payroll->status !== 'draft') {
+                throw new \Exception('Payroll can only be processed when in draft status');
+            }
+            
+            // Get all active employees
+            $employees = $this->employeeRepository->getActiveEmployees();
+            
+            $processed = 0;
+            $errors = [];
+            
+            foreach ($employees as $employee) {
+                try {
+                    $this->computeEmployeePayroll($payroll, $employee);
+                    $processed++;
+                } catch (\Exception $e) {
+                    $errors[] = [
+                        'employee' => $employee->employee_number,
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+            
+            // Update payroll status
+            $this->payrollRepository->update($payrollId, [
+                'status' => 'processing'
+            ]);
+            
+            return [
+                'processed' => $processed,
+                'errors' => $errors
+            ];
+        });
+    }
+
+    protected function computeEmployeePayroll(Payroll $payroll, $employee): PayrollItem
+    {
+        // 1. Get attendance for period
+        $attendance = $this->attendanceRepository->getByEmployeeAndPeriod(
+            $employee->id,
+            $payroll->period_start,
+            $payroll->period_end
+        );
+        
+        // 2. Calculate basic pay
+        $daysWorked = $attendance->where('status', 'present')->sum('regular_hours') / 8;
+        $basicPay = $employee->basic_salary * $daysWorked;
+        
+        // 3. Calculate overtime
+        $overtimeHours = $attendance->sum('overtime_hours');
+        $overtimeRate = $employee->basic_salary / 8 * config('payroll.overtime_multiplier', 1.25);
+        $overtimePay = $overtimeHours * $overtimeRate;
+        
+        // 4. Calculate holiday pay
+        $holidayPay = $this->calculateHolidayPay($employee, $attendance);
+        
+        // 5. Calculate night differential
+        $nightDiffHours = $attendance->sum('night_differential_hours');
+        $nightDiffPay = ($employee->basic_salary / 8) * $nightDiffHours * config('payroll.night_diff_rate', 0.10);
+        
+        // 6. Get allowances
+        $allowances = $employee->allowances()
+            ->where('is_active', true)
+            ->whereBetween('effective_from', [$payroll->period_start, $payroll->period_end])
+            ->get();
+        $totalAllowances = $allowances->sum('amount');
+        
+        // 7. Get bonuses
+        $bonuses = $employee->bonuses()
+            ->where('payroll_id', $payroll->id)
+            ->where('status', 'approved')
+            ->get();
+        $totalBonuses = $bonuses->sum('amount');
+        
+        // 8. Calculate gross pay
+        $grossPay = $basicPay + $overtimePay + $holidayPay + $nightDiffPay + $totalAllowances + $totalBonuses;
+        
+        // 9. Calculate government deductions
+        $sssContribution = $this->sssService->compute($grossPay);
+        $philHealthContribution = $this->philHealthService->compute($grossPay);
+        $pagIbigContribution = $this->pagIbigService->compute($grossPay);
+        
+        // 10. Calculate taxable income
+        $taxableIncome = $grossPay - $sssContribution - $philHealthContribution - $pagIbigContribution;
+        // Subtract non-taxable allowances and bonuses
+        $taxableIncome -= $allowances->where('is_taxable', false)->sum('amount');
+        $taxableIncome -= $bonuses->where('is_taxable', false)->sum('amount');
+        
+        // 11. Calculate withholding tax
+        $withholdingTax = $this->taxService->compute($taxableIncome, 'semi_monthly');
+        
+        // 12. Get other deductions
+        $deductions = $employee->deductions()
+            ->where('is_active', true)
+            ->where('start_date', '<=', $payroll->period_end)
+            ->where(function($query) use ($payroll) {
+                $query->whereNull('end_date')
+                      ->orWhere('end_date', '>=', $payroll->period_start);
+            })
+            ->get();
+        $totalOtherDeductions = $deductions->sum('amount');
+        
+        // 13. Get loan deductions
+        $loans = $employee->loans()
+            ->where('status', 'active')
+            ->get();
+        $totalLoanDeductions = 0;
+        foreach ($loans as $loan) {
+            if ($loan->payments_made < $loan->number_of_payments) {
+                $totalLoanDeductions += $loan->monthly_amortization;
+            }
+        }
+        
+        // 14. Calculate total deductions
+        $totalDeductions = $sssContribution + $philHealthContribution + $pagIbigContribution 
+                         + $withholdingTax + $totalOtherDeductions + $totalLoanDeductions;
+        
+        // 15. Calculate net pay
+        $netPay = $grossPay - $totalDeductions;
+        
+        // 16. Create or update payroll item
+        $payrollItem = PayrollItem::updateOrCreate(
+            [
+                'payroll_id' => $payroll->id,
+                'employee_id' => $employee->id
+            ],
+            [
+                'basic_rate' => $employee->basic_salary,
+                'days_worked' => $daysWorked,
+                'basic_pay' => $basicPay,
+                'overtime_hours' => $overtimeHours,
+                'overtime_pay' => $overtimePay,
+                'holiday_pay' => $holidayPay,
+                'night_differential' => $nightDiffPay,
+                'total_allowances' => $totalAllowances,
+                'total_bonuses' => $totalBonuses,
+                'gross_pay' => $grossPay,
+                'sss_contribution' => $sssContribution,
+                'philhealth_contribution' => $philHealthContribution,
+                'pagibig_contribution' => $pagIbigContribution,
+                'withholding_tax' => $withholdingTax,
+                'total_other_deductions' => $totalOtherDeductions,
+                'total_loan_deductions' => $totalLoanDeductions,
+                'total_deductions' => $totalDeductions,
+                'net_pay' => $netPay
+            ]
+        );
+        
+        // 17. Create detailed breakdown
+        $this->createPayrollItemDetails($payrollItem, [
+            'allowances' => $allowances,
+            'bonuses' => $bonuses,
+            'deductions' => $deductions,
+            'loans' => $loans
+        ]);
+        
+        return $payrollItem;
+    }
+
+    protected function calculateHolidayPay($employee, $attendance): float
+    {
+        $holidayPay = 0;
+        
+        foreach ($attendance as $record) {
+            if ($record->is_holiday && $record->status === 'present') {
+                $multiplier = $record->holiday_type === 'regular' ? 2.0 : 1.3;
+                $holidayPay += $employee->basic_salary * $multiplier;
+            }
+        }
+        
+        return $holidayPay;
+    }
+
+    protected function createPayrollItemDetails(PayrollItem $item, array $data): void
+    {
+        $details = [];
+        
+        // Allowances
+        foreach ($data['allowances'] as $allowance) {
+            $details[] = [
+                'type' => 'earning',
+                'category' => 'allowance',
+                'description' => $allowance->description,
+                'amount' => $allowance->amount,
+                'reference_id' => $allowance->id,
+                'reference_type' => 'allowance'
+            ];
+        }
+        
+        // Similar for bonuses, deductions, loans...
+        
+        $item->details()->createMany($details);
+    }
+
+    protected function generatePayrollNumber(int $year, int $month, int $period): string
+    {
+        return sprintf('PAY-%04d%02d-%d', $year, $month, $period);
+    }
+
+    public function approvePayroll(int $payrollId, int $approvedBy): Payroll
+    {
+        return $this->payrollRepository->update($payrollId, [
+            'status' => 'approved',
+            'approved_by' => $approvedBy,
+            'approved_at' => now()
+        ]);
+    }
+}
+```
+
+---
+
+### 5. Government Contribution Services
+
+**SSSComputationService.php**
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Models\SSSContributionTable;
+
+class SSSComputationService
+{
+    public function compute(float $monthlyCompensation): float
+    {
+        $table = SSSContributionTable::where('is_active', true)
+            ->where('min_range', '<=', $monthlyCompensation)
+            ->where('max_range', '>=', $monthlyCompensation)
+            ->first();
+        
+        if (!$table) {
+            // Use highest bracket
+            $table = SSSContributionTable::where('is_active', true)
+                ->orderBy('max_range', 'desc')
+                ->first();
+        }
+        
+        return $table ? $table->employee_share : 0;
+    }
+}
+```
+
+**PhilHealthComputationService.php**
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Models\PhilHealthContributionTable;
+
+class PhilHealthComputationService
+{
+    public function compute(float $monthlyCompensation): float
+    {
+        $table = PhilHealthContributionTable::where('is_active', true)
+            ->where('min_range', '<=', $monthlyCompensation)
+            ->where('max_range', '>=', $monthlyCompensation)
+            ->first();
+        
+        if (!$table) {
+            // Use highest bracket
+            $table = PhilHealthContributionTable::where('is_active', true)
+                ->orderBy('max_range', 'desc')
+                ->first();
+        }
+        
+        return $table ? $table->employee_share : 0;
+    }
+}
+```
+
+**PagIbigComputationService.php**
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Models\PagIbigContributionTable;
+
+class PagIbigComputationService
+{
+    public function compute(float $monthlyCompensation): float
+    {
+        $table = PagIbigContributionTable::where('is_active', true)
+            ->where('min_range', '<=', $monthlyCompensation)
+            ->where('max_range', '>=', $monthlyCompensation)
+            ->first();
+        
+        if (!$table) {
+            $table = PagIbigContributionTable::where('is_active', true)
+                ->orderBy('max_range', 'desc')
+                ->first();
+        }
+        
+        if (!$table) {
+            return 0;
+        }
+        
+        $employeeContribution = $monthlyCompensation * $table->employee_rate;
+        
+        // Cap at maximum
+        $maxContribution = 200; // Current max for Pag-IBIG
+        return min($employeeContribution, $maxContribution);
+    }
+}
+```
+
+**TaxComputationService.php**
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Models\TaxWithholdingTable;
+
+class TaxComputationService
+{
+    public function compute(float $taxableIncome, string $compensationLevel = 'semi_monthly'): float
+    {
+        // Annualize for computation
+        $multiplier = match($compensationLevel) {
+            'daily' => 260, // Working days per year
+            'weekly' => 52,
+            'semi_monthly' => 24,
+            'monthly' => 12,
+            default => 24
+        };
+        
+        $annualIncome = $taxableIncome * $multiplier;
+        
+        $table = TaxWithholdingTable::where('is_active', true)
+            ->where('compensation_level', $compensationLevel)
+            ->where('min_range', '<=', $taxableIncome)
+            ->where(function($query) use ($taxableIncome) {
+                $query->whereNull('max_range')
+                      ->orWhere('max_range', '>=', $taxableIncome);
+            })
+            ->first();
+        
+        if (!$table) {
+            return 0;
+        }
+        
+        // Tax = Base Tax + (Excess × Rate)
+        $excess = $taxableIncome - $table->excess_over;
+        $tax = $table->base_tax + ($excess * $table->excess_rate);
+        
+        return max(0, $tax);
+    }
+}
+```
+
+---
+
+### 6. Report Module
+
+**Endpoints:**
+
+```php
+GET    /api/reports/payroll-summary           // Payroll summary report
+GET    /api/reports/department-payroll        // By department
+GET    /api/reports/employee-payroll          // By employee
+GET    /api/reports/government-contributions  // SSS, PhilHealth, etc.
+GET    /api/reports/attendance-summary        // Attendance overview
+GET    /api/reports/loans                     // Active loans
+GET    /api/reports/ytd-compensation          // Year-to-date
+POST   /api/reports/export                    // Export to Excel/PDF
+```
+
+---
+
+### 7. Settings Module
+
+**Endpoints:**
+
+```php
+GET    /api/settings/company                  // Company settings
+PUT    /api/settings/company                  // Update settings
+GET    /api/settings/contribution-tables      // Get all tables
+PUT    /api/settings/contribution-tables/sss  // Update SSS table
+PUT    /api/settings/contribution-tables/philhealth
+PUT    /api/settings/contribution-tables/pagibig
+PUT    /api/settings/contribution-tables/tax
+GET    /api/holidays                          // List holidays
+POST   /api/holidays                          // Create holiday
+PUT    /api/holidays/{id}                     // Update holiday
+DELETE /api/holidays/{id}                     // Delete holiday
+```
+
+---
+
+## Middleware
+
+### RoleMiddleware
+
+```php
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+
+class RoleMiddleware
+{
+    public function handle(Request $request, Closure $next, ...$roles)
+    {
+        if (!$request->user() || !in_array($request->user()->role, $roles)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        
+        return $next($request);
+    }
+}
+```
+
+### AuditLogMiddleware
+
+```php
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Models\AuditLog;
+use Closure;
+use Illuminate\Http\Request;
+
+class AuditLogMiddleware
+{
+    public function handle(Request $request, Closure $next)
+    {
+        $response = $next($request);
+        
+        // Log write operations
+        if (in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'])) {
+            AuditLog::create([
+                'user_id' => $request->user()?->id,
+                'action' => $this->getAction($request->method()),
+                'entity_type' => $this->getEntityType($request->path()),
+                'entity_id' => $request->route('id') ?? 0,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        }
+        
+        return $response;
+    }
+    
+    private function getAction(string $method): string
+    {
+        return match($method) {
+            'POST' => 'create',
+            'PUT', 'PATCH' => 'update',
+            'DELETE' => 'delete',
+            default => 'unknown'
+        };
+    }
+    
+    private function getEntityType(string $path): string
+    {
+        // Extract entity from path (e.g., /api/employees/123 -> employee)
+        preg_match('/\/api\/(\w+)/', $path, $matches);
+        return $matches[1] ?? 'unknown';
+    }
+}
+```
+
+---
+
+## API Routes Structure
+
+**routes/api.php**
+
+```php
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\*;
+
+// Public routes
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+
+// Protected routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    
+    // Auth
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me', [AuthController::class, 'me']);
+    
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+    
+    // Admin & Accountant only
+    Route::middleware(['role:admin,accountant'])->group(function () {
+        
+        // Employees
+        Route::apiResource('employees', EmployeeController::class);
+        Route::post('employees/import', [EmployeeController::class, 'import']);
+        Route::get('employees/export', [EmployeeController::class, 'export']);
+        Route::get('employees/search', [EmployeeController::class, 'search']);
+        
+        // Attendance
+        Route::apiResource('attendance', AttendanceController::class);
+        Route::post('attendance/bulk', [AttendanceController::class, 'bulk']);
+        Route::post('attendance/import-biometric', [AttendanceController::class, 'importBiometric']);
+        
+        // Attendance Corrections
+        Route::get('attendance/corrections', [AttendanceController::class, 'corrections']);
+        Route::put('attendance/corrections/{id}', [AttendanceController::class, 'reviewCorrection']);
+        
+        // Payroll
+        Route::apiResource('payroll', PayrollController::class);
+        Route::post('payroll/{id}/process', [PayrollController::class, 'process']);
+        Route::post('payroll/{id}/approve', [PayrollController::class, 'approve']);
+        Route::post('payroll/{id}/recalculate', [PayrollController::class, 'recalculate']);
+        Route::get('payroll/{id}/items', [PayrollController::class, 'items']);
+        Route::post('payroll/{id}/generate-payslips', [PayrollController::class, 'generatePayslips']);
+        
+        // Allowances, Loans, Deductions
+        Route::apiResource('allowances', AllowanceController::class);
+        Route::apiResource('loans', LoanController::class);
+        Route::apiResource('deductions', DeductionController::class);
+        
+        // Reports
+        Route::prefix('reports')->group(function () {
+            Route::get('payroll-summary', [ReportController::class, 'payrollSummary']);
+            Route::get('department-payroll', [ReportController::class, 'departmentPayroll']);
+            Route::get('government-contributions', [ReportController::class, 'governmentContributions']);
+            Route::post('export', [ReportController::class, 'export']);
+        });
+        
+        // Recruitment
+        Route::apiResource('applicants', ApplicantController::class);
+        Route::post('applicants/{id}/approve', [ApplicantController::class, 'approve']);
+        Route::post('applicants/{id}/reject', [ApplicantController::class, 'reject']);
+        Route::post('applicants/{id}/convert-to-employee', [ApplicantController::class, 'convertToEmployee']);
+    });
+    
+    // Admin only
+    Route::middleware(['role:admin'])->group(function () {
+        Route::apiResource('departments', DepartmentController::class);
+        Route::apiResource('locations', LocationController::class);
+        Route::apiResource('holidays', HolidayController::class);
+        
+        Route::get('settings/company', [SettingsController::class, 'company']);
+        Route::put('settings/company', [SettingsController::class, 'updateCompany']);
+        Route::get('settings/contribution-tables', [SettingsController::class, 'contributionTables']);
+        Route::put('settings/contribution-tables/{type}', [SettingsController::class, 'updateContributionTable']);
+    });
+    
+    // Employee self-service
+    Route::prefix('employee')->group(function () {
+        Route::get('profile', [EmployeeController::class, 'myProfile']);
+        Route::get('payslips', [EmployeeController::class, 'myPayslips']);
+        Route::get('attendance', [AttendanceController::class, 'myAttendance']);
+        Route::post('attendance/corrections', [AttendanceController::class, 'requestCorrection']);
+    });
+});
+```
+
+---
+
+## Response Structure
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Operation successful"
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "message": "Error message",
+  "errors": {
+    "field": ["Validation error"]
+  }
+}
+```
+
+### Paginated Response
+
+```json
+{
+  "success": true,
+  "data": [],
+  "meta": {
+    "current_page": 1,
+    "last_page": 10,
+    "per_page": 15,
+    "total": 150
+  }
+}
+```
+
+---
+
+## Background Jobs
+
+### ProcessPayroll Job
+
+```php
+<?php
+
+namespace App\Jobs;
+
+use App\Services\PayrollService;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+
+class ProcessPayroll implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    protected int $payrollId;
+
+    public function __construct(int $payrollId)
+    {
+        $this->payrollId = $payrollId;
+    }
+
+    public function handle(PayrollService $payrollService): void
+    {
+        $payrollService->processPayroll($this->payrollId);
+    }
+}
+```
+
+---
+
+## Testing
+
+### Feature Test Example
+
+```php
+<?php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+use App\Models\User;
+use App\Models\Employee;
+
+class PayrollTest extends TestCase
+{
+    public function test_can_create_payroll_period()
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        
+        $response = $this->actingAs($user)->postJson('/api/payroll', [
+            'year' => 2025,
+            'month' => 1,
+            'pay_period_number' => 1,
+            'period_start' => '2025-01-01',
+            'period_end' => '2025-01-15',
+            'payment_date' => '2025-01-20'
+        ]);
+        
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('payroll', [
+            'year' => 2025,
+            'month' => 1
+        ]);
+    }
+}
+```
+
+---
+
+## Next Steps
+
+- See `04-FRONTEND-STRUCTURE.md` for Vue.js frontend architecture
+- See `05-PAYROLL-COMPUTATION.md` for detailed computation logic
