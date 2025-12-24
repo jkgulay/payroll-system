@@ -20,10 +20,9 @@
                 <v-form @submit.prevent="handleLogin" ref="loginForm">
                   <v-text-field
                     v-model="form.email"
-                    label="Email"
-                    type="email"
-                    prepend-inner-icon="mdi-email"
-                    :rules="[rules.required, rules.email]"
+                    label="Username or Email"
+                    prepend-inner-icon="mdi-account"
+                    :rules="[rules.required]"
                     :error-messages="errors.email"
                     @input="errors.email = ''"
                   ></v-text-field>
@@ -115,10 +114,6 @@ const errors = reactive({
 
 const rules = {
   required: (value) => !!value || "This field is required",
-  email: (value) => {
-    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return pattern.test(value) || "Invalid email address";
-  },
 };
 
 async function handleLogin() {
@@ -143,8 +138,8 @@ async function handleLogin() {
   } catch (error) {
     console.error("Login error:", error);
 
-    if (error.response?.status === 401) {
-      errorMessage.value = "Invalid email or password";
+    if (error.response?.status === 401 || error.response?.status === 422) {
+      errorMessage.value = error.response?.data?.message || "Invalid credentials";
     } else if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message;
     } else {
