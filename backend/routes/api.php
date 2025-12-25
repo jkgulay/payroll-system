@@ -17,6 +17,9 @@ Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout'
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
 
+    // Dashboard
+    Route::get('/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'index']);
+
     // User profile
     Route::get('/user', function (Request $request) {
         return $request->user();

@@ -26,9 +26,8 @@ class Employee extends Model
         'email',
         'mobile_number',
         'phone_number',
-        'address_line_1',
-        'address_line_2',
-        'barangay',
+        'address_line1',
+        'address_line2',
         'city',
         'province',
         'postal_code',
@@ -86,9 +85,8 @@ class Employee extends Model
     public function getFullAddressAttribute(): string
     {
         $parts = array_filter([
-            $this->address_line_1,
-            $this->address_line_2,
-            $this->barangay,
+            $this->address_line1,
+            $this->address_line2,
             $this->city,
             $this->province,
             $this->postal_code,
