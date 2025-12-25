@@ -118,15 +118,15 @@ class AttendanceCorrectionController extends Controller
         try {
             // Update attendance record
             $attendance = $correction->attendance;
-            
+
             if ($correction->requested_time_in) {
                 $attendance->time_in = $correction->requested_time_in;
             }
-            
+
             if ($correction->requested_time_out) {
                 $attendance->time_out = $correction->requested_time_out;
             }
-            
+
             if ($correction->requested_status) {
                 $attendance->status = $correction->requested_status;
             }

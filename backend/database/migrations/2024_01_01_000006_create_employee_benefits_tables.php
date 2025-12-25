@@ -151,7 +151,7 @@ return new class extends Migration
             $table->timestamp('approved_at')->nullable();
             $table->decimal('total_amount', 15, 2)->default(0);
             $table->timestamps();
-            
+
             $table->index(['year', 'period']);
         });
 
@@ -166,7 +166,7 @@ return new class extends Migration
             $table->decimal('withholding_tax', 12, 2)->default(0);
             $table->decimal('net_pay', 12, 2);
             $table->timestamps();
-            
+
             $table->unique(['thirteenth_month_pay_id', 'employee_id']);
         });
     }

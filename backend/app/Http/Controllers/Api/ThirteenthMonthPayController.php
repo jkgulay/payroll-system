@@ -73,9 +73,9 @@ class ThirteenthMonthPayController extends Controller
             foreach ($employees as $employee) {
                 // Get total basic salary from payroll items for the period
                 $basicSalary = PayrollItem::whereHas('payroll', function ($query) use ($startDate, $endDate) {
-                        $query->whereBetween('pay_date', [$startDate, $endDate])
-                              ->where('status', 'paid');
-                    })
+                    $query->whereBetween('pay_date', [$startDate, $endDate])
+                        ->where('status', 'paid');
+                })
                     ->where('employee_id', $employee->id)
                     ->sum('basic_pay');
 
