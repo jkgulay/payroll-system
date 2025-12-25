@@ -147,7 +147,7 @@ const menuItems = [
   { title: "Loans", icon: "mdi-hand-coin", value: "loans", to: "/loans" },
   {
     title: "Deductions",
-    icon: "mdi-wallet-minus",
+    icon: "mdi-wallet",
     value: "deductions",
     to: "/deductions",
   },
