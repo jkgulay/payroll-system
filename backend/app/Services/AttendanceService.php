@@ -24,7 +24,7 @@ class AttendanceService
         try {
             foreach ($records as $record) {
                 try {
-                    $result = $this->processBI biometricRecord($record);
+                    $result = $this->processBBiometricRecord($record);
                     if ($result['action'] === 'created') {
                         $imported++;
                     } elseif ($result['action'] === 'updated') {
