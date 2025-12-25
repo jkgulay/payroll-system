@@ -45,7 +45,7 @@ return new class extends Migration
             $table->foreignId('location_id')->constrained();
             $table->string('position', 100);
             $table->enum('employment_type', ['regular', 'contractual', 'part_time'])->default('regular');
-            $table->enum('employment_status', ['active', 'resigned', 'terminated', 'retired'])->default('active');
+            $table->enum('employment_status', ['regular', 'probationary', 'contractual', 'active', 'resigned', 'terminated', 'retired'])->default('regular');
             $table->date('date_hired');
             $table->date('date_regularized')->nullable();
             $table->date('date_separated')->nullable();

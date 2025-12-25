@@ -66,16 +66,29 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);
 
     // 13th Month Pay
-    Route::get('/thirteenth-month/{year}', [App\Http\Controllers\Api\ThirteenthMonthController::class, 'index']);
-    Route::post('/thirteenth-month/compute', [App\Http\Controllers\Api\ThirteenthMonthController::class, 'compute']);
-    Route::post('/thirteenth-month/{thirteenthMonth}/approve', [App\Http\Controllers\Api\ThirteenthMonthController::class, 'approve']);
-    Route::post('/thirteenth-month/{thirteenthMonth}/pay', [App\Http\Controllers\Api\ThirteenthMonthController::class, 'markPaid']);
+    Route::get('/thirteenth-month', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'index']);
+    Route::get('/thirteenth-month/{id}', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'show']);
+    Route::post('/thirteenth-month/calculate', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'calculate']);
+    Route::post('/thirteenth-month/{id}/approve', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'approve']);
+    Route::post('/thirteenth-month/{id}/mark-paid', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'markPaid']);
 
-    // Recruitment
-    Route::apiResource('applicants', App\Http\Controllers\Api\ApplicantController::class);
-    Route::post('/applicants/{applicant}/interview', [App\Http\Controllers\Api\ApplicantController::class, 'scheduleInterview']);
-    Route::post('/applicants/{applicant}/hire', [App\Http\Controllers\Api\ApplicantController::class, 'hire']);
-    Route::get('/applicants/{applicant}/documents', [App\Http\Controllers\Api\ApplicantController::class, 'documents']);
+    // Recruitment - Job Postings
+    Route::get('/job-postings', [App\Http\Controllers\Api\RecruitmentController::class, 'getJobPostings']);
+    Route::post('/job-postings', [App\Http\Controllers\Api\RecruitmentController::class, 'storeJobPosting']);
+    Route::put('/job-postings/{id}', [App\Http\Controllers\Api\RecruitmentController::class, 'updateJobPosting']);
+
+    // Recruitment - Applicants
+    Route::get('/applicants', [App\Http\Controllers\Api\RecruitmentController::class, 'getApplicants']);
+    Route::post('/applicants', [App\Http\Controllers\Api\RecruitmentController::class, 'storeApplicant']);
+    Route::put('/applicants/{id}/status', [App\Http\Controllers\Api\RecruitmentController::class, 'updateApplicantStatus']);
+    Route::post('/applicants/{id}/convert-to-employee', [App\Http\Controllers\Api\RecruitmentController::class, 'convertToEmployee']);
+
+    // Attendance Corrections
+    Route::get('/attendance-corrections', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'index']);
+    Route::get('/attendance-corrections/{id}', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'show']);
+    Route::post('/attendance-corrections', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'store']);
+    Route::post('/attendance-corrections/{id}/approve', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'approve']);
+    Route::post('/attendance-corrections/{id}/reject', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'reject']);
 
     // Leave Management
     Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class);

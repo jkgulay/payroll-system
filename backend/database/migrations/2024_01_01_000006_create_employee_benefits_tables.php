@@ -137,29 +137,37 @@ return new class extends Migration
             $table->index('payroll_id');
         });
 
-        // 13th Month Pay
+        // 13th Month Pay - Batch Records
         Schema::create('thirteenth_month_pay', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('employee_id')->constrained('employees')->onDelete('cascade');
+            $table->string('batch_number')->unique();
             $table->integer('year');
-            $table->decimal('total_basic_salary', 10, 2); // Sum of basic salary for the year
-            $table->decimal('thirteenth_month_amount', 10, 2); // total_basic_salary / 12
-            $table->decimal('taxable_amount', 10, 2)->default(0); // Amount over ₱90,000
-            $table->decimal('tax_withheld', 10, 2)->default(0);
-            $table->decimal('net_amount', 10, 2);
-            $table->date('payment_date')->nullable();
-            $table->enum('status', ['computed', 'approved', 'paid'])->default('computed');
-            $table->foreignId('computed_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->timestamp('computed_at')->nullable();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->enum('period', ['full_year', 'first_half', 'second_half'])->default('full_year');
+            $table->date('computation_date');
+            $table->date('payment_date');
+            $table->enum('status', ['draft', 'computed', 'approved', 'paid'])->default('draft');
+            $table->foreignId('computed_by')->constrained('users');
+            $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->timestamp('approved_at')->nullable();
-            $table->foreignId('paid_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->timestamp('paid_at')->nullable();
+            $table->decimal('total_amount', 15, 2)->default(0);
             $table->timestamps();
-            $table->softDeletes();
+            
+            $table->index(['year', 'period']);
+        });
 
-            $table->unique(['employee_id', 'year']);
-            $table->index(['year', 'status']);
+        // 13th Month Pay Items (per employee)
+        Schema::create('thirteenth_month_pay_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('thirteenth_month_pay_id')->constrained('thirteenth_month_pay')->cascadeOnDelete();
+            $table->foreignId('employee_id')->constrained();
+            $table->decimal('total_basic_salary', 12, 2);
+            $table->decimal('taxable_thirteenth_month', 12, 2);
+            $table->decimal('non_taxable_thirteenth_month', 12, 2);
+            $table->decimal('withholding_tax', 12, 2)->default(0);
+            $table->decimal('net_pay', 12, 2);
+            $table->timestamps();
+            
+            $table->unique(['thirteenth_month_pay_id', 'employee_id']);
         });
     }
 
@@ -173,6 +181,7 @@ return new class extends Migration
         Schema::dropIfExists('employee_deductions');
         Schema::dropIfExists('employee_bonuses');
         Schema::dropIfExists('employee_allowances');
+        Schema::dropIfExists('thirteenth_month_pay_items');
         Schema::dropIfExists('thirteenth_month_pay');
     }
 };

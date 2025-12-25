@@ -2,44 +2,48 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ThirteenthMonthPay extends Model
 {
+    use HasFactory;
+
     protected $table = 'thirteenth_month_pay';
 
     protected $fillable = [
-        'employee_id',
+        'batch_number',
         'year',
-        'total_basic_salary',
-        'thirteenth_month_amount',
-        'taxable_amount',
-        'tax_withheld',
-        'net_amount',
+        'period',
+        'computation_date',
         'payment_date',
         'status',
         'computed_by',
-        'computed_at',
         'approved_by',
         'approved_at',
-        'paid_by',
-        'paid_at',
+        'total_amount',
     ];
 
     protected $casts = [
-        'total_basic_salary' => 'decimal:2',
-        'thirteenth_month_amount' => 'decimal:2',
-        'taxable_amount' => 'decimal:2',
-        'tax_withheld' => 'decimal:2',
-        'net_amount' => 'decimal:2',
+        'computation_date' => 'date',
         'payment_date' => 'date',
-        'computed_at' => 'datetime',
         'approved_at' => 'datetime',
-        'paid_at' => 'datetime',
+        'total_amount' => 'decimal:2',
+        'year' => 'integer',
     ];
 
-    public function employee()
+    public function items()
     {
-        return $this->belongsTo(Employee::class);
+        return $this->hasMany(ThirteenthMonthPayItem::class);
+    }
+
+    public function computedBy()
+    {
+        return $this->belongsTo(User::class, 'computed_by');
+    }
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 }
