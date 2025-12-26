@@ -210,6 +210,13 @@
             <v-row>
               <v-col cols="12" md="6">
                 <v-text-field
+                  v-model="employeeData.employee_number"
+                  label="Employee Number"
+                  :rules="[rules.required]"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
                   v-model="employeeData.first_name"
                   label="First Name"
                   :rules="[rules.required]"
@@ -224,6 +231,14 @@
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
+                  v-model="employeeData.date_of_birth"
+                  label="Date of Birth"
+                  type="date"
+                  :rules="[rules.required]"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
                   v-model="employeeData.email"
                   label="Email"
                   type="email"
@@ -232,16 +247,14 @@
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="employeeData.phone_number"
-                  label="Phone Number"
-                  :rules="[rules.required]"
+                  v-model="employeeData.mobile_number"
+                  label="Mobile Number"
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="employeeData.position"
                   label="Position"
-                  :rules="[rules.required]"
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
@@ -251,6 +264,40 @@
                   item-title="name"
                   item-value="id"
                   label="Department"
+                  :rules="[rules.required]"
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="employeeData.location_id"
+                  :items="locations"
+                  item-title="name"
+                  item-value="id"
+                  label="Location"
+                  :rules="[rules.required]"
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="employeeData.employment_status"
+                  :items="['regular', 'probationary', 'contractual', 'resigned', 'terminated']"
+                  label="Employment Status"
+                  :rules="[rules.required]"
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="employeeData.employment_type"
+                  :items="['regular', 'contractual', 'part_time']"
+                  label="Employment Type"
+                  :rules="[rules.required]"
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="employeeData.salary_type"
+                  :items="['daily', 'weekly', 'semi-monthly', 'monthly']"
+                  label="Salary Type"
                   :rules="[rules.required]"
                 ></v-select>
               </v-col>
@@ -265,12 +312,42 @@
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="employeeData.hire_date"
-                  label="Hire Date"
+                  v-model="employeeData.date_hired"
+                  label="Date Hired"
                   type="date"
                   :rules="[rules.required]"
                 ></v-text-field>
               </v-col>
+              
+              <!-- User Account Creation Section -->
+              <v-col cols="12">
+                <v-divider class="my-4"></v-divider>
+                <v-checkbox
+                  v-model="employeeData.create_user_account"
+                  label="Create user account for employee login"
+                  hide-details
+                ></v-checkbox>
+              </v-col>
+              
+              <template v-if="employeeData.create_user_account">
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="employeeData.username"
+                    label="Username"
+                    :rules="[rules.required]"
+                    hint="Username for employee login"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="employeeData.password"
+                    label="Password"
+                    type="password"
+                    :rules="[rules.required, rules.minLength]"
+                    hint="Minimum 6 characters"
+                  ></v-text-field>
+                </v-col>
+              </template>
             </v-row>
           </v-form>
         </v-card-text>
@@ -374,6 +451,7 @@ const downloading = ref(false);
 const search = ref("");
 const employees = ref([]);
 const departments = ref([]);
+const locations = ref([]);
 const payrolls = ref([]);
 const showAddEmployeeDialog = ref(false);
 const showPayslipModifyDialog = ref(false);
@@ -390,14 +468,23 @@ const stats = ref({
 });
 
 const employeeData = ref({
+  employee_number: "",
   first_name: "",
   last_name: "",
+  date_of_birth: "",
   email: "",
-  phone_number: "",
+  mobile_number: "",
   position: "",
   department_id: null,
+  location_id: null,
+  employment_status: "regular",
+  employment_type: "regular",
   basic_salary: 0,
-  hire_date: "",
+  salary_type: "monthly",
+  date_hired: "",
+  create_user_account: false,
+  username: "",
+  password: "",
 });
 
 const payslipModify = ref({
@@ -424,6 +511,7 @@ const employeeHeaders = [
 const rules = {
   required: (value) => !!value || "This field is required",
   email: (value) => /.+@.+\..+/.test(value) || "Email must be valid",
+  minLength: (value) => !value || value.length >= 6 || "Minimum 6 characters required",
 };
 
 const employeeForm = ref(null);
@@ -432,12 +520,13 @@ onMounted(() => {
   fetchDashboardData();
   fetchEmployees();
   fetchDepartments();
+  fetchLocations();
   fetchPayrolls();
 });
 
 async function fetchDashboardData() {
   try {
-    const response = await api.get("/dashboard/stats");
+    const response = await api.get("/accountant/dashboard/stats");
     stats.value = response.data;
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
@@ -447,8 +536,12 @@ async function fetchDashboardData() {
 async function fetchEmployees() {
   loading.value = true;
   try {
-    const response = await api.get("/employees");
-    employees.value = response.data.data || response.data;
+    const response = await api.get("/employees", {
+      params: { per_page: 100 } // Get more employees without pagination for dashboard
+    });
+    const data = response.data.data || response.data;
+    // Handle Laravel pagination response
+    employees.value = Array.isArray(data) ? data : (data.data || []);
   } catch (error) {
     console.error("Error fetching employees:", error);
     toast.error("Failed to load employees");
@@ -463,6 +556,15 @@ async function fetchDepartments() {
     departments.value = response.data.data || response.data;
   } catch (error) {
     console.error("Error fetching departments:", error);
+  }
+}
+
+async function fetchLocations() {
+  try {
+    const response = await api.get("/locations");
+    locations.value = response.data.data || response.data;
+  } catch (error) {
+    console.error("Error fetching locations:", error);
   }
 }
 
@@ -516,14 +618,23 @@ function closeEmployeeDialog() {
   showAddEmployeeDialog.value = false;
   editingEmployee.value = null;
   employeeData.value = {
+    employee_number: "",
     first_name: "",
     last_name: "",
+    date_of_birth: "",
     email: "",
-    phone_number: "",
+    mobile_number: "",
     position: "",
     department_id: null,
+    location_id: null,
+    employment_status: "regular",
+    employment_type: "regular",
     basic_salary: 0,
-    hire_date: "",
+    salary_type: "monthly",
+    date_hired: "",
+    create_user_account: false,
+    username: "",
+    password: "",
   };
 }
 

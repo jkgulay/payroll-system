@@ -15,15 +15,16 @@ class AccountantController extends Controller
     public function getDashboardStats()
     {
         $totalEmployees = Employee::count();
-        $activeEmployees = Employee::where('employment_status', 'active')->count();
+        $activeEmployees = Employee::whereIn('employment_status', ['regular', 'probationary', 'contractual', 'active'])
+            ->count();
         $pendingRequests = 0; // Will be implemented with approval system
         
         $currentPayroll = Payroll::latest()->first();
-        $periodPayroll = $currentPayroll 
-            ? $currentPayroll->payslips()->sum('net_pay')
+        $periodPayroll = $currentPayroll && $currentPayroll->payslips 
+            ? $currentPayroll->payslips->sum('net_pay')
             : 0;
             
-        $presentToday = Attendance::whereDate('date', today())
+        $presentToday = Attendance::whereDate('attendance_date', today())
             ->where('status', 'present')
             ->count();
 
@@ -31,7 +32,7 @@ class AccountantController extends Controller
             'totalEmployees' => $totalEmployees,
             'activeEmployees' => $activeEmployees,
             'pendingRequests' => $pendingRequests,
-            'periodPayroll' => $periodPayroll,
+            'periodPayroll' => (float) $periodPayroll,
             'presentToday' => $presentToday,
         ]);
     }

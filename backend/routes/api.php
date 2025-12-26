@@ -21,7 +21,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'index']);
     Route::get('/employee/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'employeeDashboard']);
-    Route::get('/dashboard/stats', [App\Http\Controllers\Api\AccountantController::class, 'getDashboardStats']);
+    Route::get('/accountant/dashboard/stats', [App\Http\Controllers\Api\AccountantController::class, 'getDashboardStats']);
 
     // User profile
     Route::get('/user', function (Request $request) {
