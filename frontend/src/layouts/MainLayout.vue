@@ -122,7 +122,14 @@ const menuItems = computed(() => {
       icon: "mdi-view-dashboard",
       value: "admin-dashboard",
       to: "/admin-dashboard",
-      roles: ["admin", "accountant"],
+      roles: ["admin"],
+    },
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard",
+      value: "accountant-dashboard",
+      to: "/accountant-dashboard",
+      roles: ["accountant"],
     },
     {
       title: "My Dashboard",

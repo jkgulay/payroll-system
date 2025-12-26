@@ -25,16 +25,26 @@ const router = createRouter({
           path: "",
           redirect: (to) => {
             const authStore = useAuthStore();
-            return authStore.userRole === "employee" 
-              ? { name: "employee-dashboard" } 
-              : { name: "admin-dashboard" };
+            if (authStore.userRole === "employee") {
+              return { name: "employee-dashboard" };
+            } else if (authStore.userRole === "accountant") {
+              return { name: "accountant-dashboard" };
+            } else {
+              return { name: "admin-dashboard" };
+            }
           },
         },
         {
           path: "admin-dashboard",
           name: "admin-dashboard",
           component: () => import("@/views/DashboardView.vue"),
-          meta: { title: "Dashboard", roles: ["admin", "accountant"] },
+          meta: { title: "Dashboard", roles: ["admin"] },
+        },
+        {
+          path: "accountant-dashboard",
+          name: "accountant-dashboard",
+          component: () => import("@/views/accountant/AccountantDashboardView.vue"),
+          meta: { title: "Dashboard", roles: ["accountant"] },
         },
         {
           path: "employee-dashboard",
@@ -154,14 +164,28 @@ router.beforeEach(async (to, from, next) => {
 
     // Handle root path redirect
     if (to.path === "/" || to.name === null) {
-      const targetRoute = authStore.userRole === "employee" ? "employee-dashboard" : "admin-dashboard";
+      let targetRoute;
+      if (authStore.userRole === "employee") {
+        targetRoute = "employee-dashboard";
+      } else if (authStore.userRole === "accountant") {
+        targetRoute = "accountant-dashboard";
+      } else {
+        targetRoute = "admin-dashboard";
+      }
       return next({ name: targetRoute });
     }
 
     // Check role-based access
     if (to.meta.roles && !to.meta.roles.includes(authStore.userRole)) {
       // User doesn't have access to this route, redirect to appropriate dashboard
-      const targetRoute = authStore.userRole === "employee" ? "employee-dashboard" : "admin-dashboard";
+      let targetRoute;
+      if (authStore.userRole === "employee") {
+        targetRoute = "employee-dashboard";
+      } else if (authStore.userRole === "accountant") {
+        targetRoute = "accountant-dashboard";
+      } else {
+        targetRoute = "admin-dashboard";
+      }
       
       // Prevent redirect loop
       if (to.name !== targetRoute) {
@@ -176,7 +200,14 @@ router.beforeEach(async (to, from, next) => {
         await authStore.checkAuth();
       }
       // Already authenticated, redirect to appropriate dashboard based on role
-      const targetRoute = authStore.userRole === "employee" ? "employee-dashboard" : "admin-dashboard";
+      let targetRoute;
+      if (authStore.userRole === "employee") {
+        targetRoute = "employee-dashboard";
+      } else if (authStore.userRole === "accountant") {
+        targetRoute = "accountant-dashboard";
+      } else {
+        targetRoute = "admin-dashboard";
+      }
       return next({ name: targetRoute });
     }
   }

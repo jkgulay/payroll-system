@@ -7,6 +7,8 @@ use App\Services\PayrollService;
 use App\Models\Payroll;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PayrollController extends Controller
 {
@@ -222,5 +224,36 @@ class PayrollController extends Controller
         $payroll->delete();
 
         return response()->json(['message' => 'Payroll cancelled successfully']);
+    }
+
+    /**
+     * Export payroll report as PDF with signatures
+     */
+    public function exportPdf(Request $request, Payroll $payroll)
+    {
+        $includeSignatures = $request->input('include_signatures', true);
+        
+        $payroll->load(['payslips.employee.department']);
+        
+        $pdf = Pdf::loadView('payroll.report', [
+            'payroll' => $payroll,
+            'payslips' => $payroll->payslips,
+            'includeSignatures' => $includeSignatures,
+        ]);
+        
+        return $pdf->download('payroll_report_' . $payroll->id . '.pdf');
+    }
+
+    /**
+     * Export payroll report as Excel with signatures
+     */
+    public function exportExcel(Request $request, Payroll $payroll)
+    {
+        $includeSignatures = $request->input('include_signatures', true);
+        
+        return Excel::download(
+            new \App\Exports\PayrollReportExport($payroll, $includeSignatures),
+            'payroll_report_' . $payroll->id . '.xlsx'
+        );
     }
 }

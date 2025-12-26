@@ -21,6 +21,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'index']);
     Route::get('/employee/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'employeeDashboard']);
+    Route::get('/dashboard/stats', [App\Http\Controllers\Api\AccountantController::class, 'getDashboardStats']);
 
     // User profile
     Route::get('/user', function (Request $request) {
@@ -54,6 +55,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/payroll/{payroll}/summary', [PayrollController::class, 'summary']);
     Route::get('/payroll/{payroll}/items', [App\Http\Controllers\Api\PayrollController::class, 'items']);
     Route::get('/payroll/{payroll}/export-excel', [App\Http\Controllers\Api\PayrollController::class, 'exportExcel']);
+    Route::get('/payroll/{payroll}/export-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportPdf']);
 
     // Payslips
     Route::get('/payslips/employee/{employee}', [App\Http\Controllers\Api\PayslipController::class, 'employeePayslips']);
@@ -93,6 +95,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/attendance-corrections', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'store']);
     Route::post('/attendance-corrections/{id}/approve', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'approve']);
     Route::post('/attendance-corrections/{id}/reject', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'reject']);
+
+    // Accountant Routes
+    Route::post('/payslip-modifications', [App\Http\Controllers\Api\AccountantController::class, 'submitPayslipModification']);
+    Route::put('/attendance/{id}/update', [App\Http\Controllers\Api\AccountantController::class, 'updateAttendance']);
+    Route::get('/employees/{employeeId}/attendance', [App\Http\Controllers\Api\AccountantController::class, 'getEmployeeAttendance']);
 
     // Leave Management
     Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class);
