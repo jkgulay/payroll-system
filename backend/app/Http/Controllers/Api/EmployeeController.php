@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class EmployeeController extends Controller
 {
@@ -49,21 +52,45 @@ class EmployeeController extends Controller
             'employee_number' => 'required|string|unique:employees',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
-            'email' => 'nullable|email|unique:employees',
+            'date_of_birth' => 'required|date',
+            'email' => 'required|email|unique:employees',
             'mobile_number' => 'nullable|string|max:20',
-            'department_id' => 'nullable|exists:departments,id',
-            'location_id' => 'nullable|exists:locations,id',
+            'department_id' => 'required|exists:departments,id',
+            'location_id' => 'required|exists:locations,id',
             'position' => 'nullable|string|max:100',
-            'employment_status' => 'required|in:regular,probationary,contractual,resigned,terminated',
-            'employment_type' => 'required|in:full-time,part-time,project-based',
+            'employment_status' => 'required|in:regular,probationary,contractual,active,resigned,terminated,retired',
+            'employment_type' => 'required|in:regular,contractual,part_time',
             'date_hired' => 'required|date',
             'basic_salary' => 'required|numeric|min:0',
             'salary_type' => 'required|in:daily,weekly,semi-monthly,monthly',
+            // Optional user account creation fields
+            'create_user_account' => 'nullable|boolean',
+            'username' => 'nullable|string|unique:users,username',
+            'password' => 'nullable|string|min:6',
         ]);
 
-        $employee = Employee::create($validated);
+        DB::beginTransaction();
+        try {
+            // Create employee
+            $employee = Employee::create($validated);
 
-        return response()->json($employee, 201);
+            // Create user account if requested
+            if ($request->input('create_user_account', false) && $request->username && $request->password) {
+                User::create([
+                    'username' => $request->username,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                    'role' => 'employee',
+                    'is_active' => true,
+                ]);
+            }
+
+            DB::commit();
+            return response()->json($employee, 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Failed to create employee: ' . $e->getMessage()], 500);
+        }
     }
 
     public function show(Employee $employee)

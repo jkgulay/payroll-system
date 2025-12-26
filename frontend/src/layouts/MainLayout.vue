@@ -96,6 +96,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { useToast } from "vue-toastification";
+import api from "@/services/api";
 
 const router = useRouter();
 const route = useRoute();
@@ -113,47 +114,94 @@ const userAvatar = computed(
 );
 const pageTitle = computed(() => route.meta.title || "Dashboard");
 
-const menuItems = [
-  {
-    title: "Dashboard",
-    icon: "mdi-view-dashboard",
-    value: "dashboard",
-    to: "/",
-  },
-  {
-    title: "Employees",
-    icon: "mdi-account-group",
-    value: "employees",
-    to: "/employees",
-  },
-  {
-    title: "Attendance",
-    icon: "mdi-calendar-clock",
-    value: "attendance",
-    to: "/attendance",
-  },
-  {
-    title: "Payroll",
-    icon: "mdi-cash-multiple",
-    value: "payroll",
-    to: "/payroll",
-  },
-  {
-    title: "Allowances",
-    icon: "mdi-wallet-plus",
-    value: "allowances",
-    to: "/allowances",
-  },
-  { title: "Loans", icon: "mdi-hand-coin", value: "loans", to: "/loans" },
-  {
-    title: "Deductions",
-    icon: "mdi-wallet",
-    value: "deductions",
-    to: "/deductions",
-  },
-  { title: "Reports", icon: "mdi-chart-bar", value: "reports", to: "/reports" },
-  { title: "Settings", icon: "mdi-cog", value: "settings", to: "/settings" },
-];
+// Filter menu items based on user role
+const menuItems = computed(() => {
+  const allItems = [
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard",
+      value: "admin-dashboard",
+      to: "/admin-dashboard",
+      roles: ["admin"],
+    },
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard",
+      value: "accountant-dashboard",
+      to: "/accountant-dashboard",
+      roles: ["accountant"],
+    },
+    {
+      title: "My Dashboard",
+      icon: "mdi-view-dashboard",
+      value: "employee-dashboard",
+      to: "/employee-dashboard",
+      roles: ["employee"],
+    },
+    {
+      title: "Employees",
+      icon: "mdi-account-group",
+      value: "employees",
+      to: "/employees",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Attendance",
+      icon: "mdi-calendar-clock",
+      value: "attendance",
+      to: "/attendance",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Payroll",
+      icon: "mdi-cash-multiple",
+      value: "payroll",
+      to: "/payroll",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Allowances",
+      icon: "mdi-wallet-plus",
+      value: "allowances",
+      to: "/allowances",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Loans",
+      icon: "mdi-hand-coin",
+      value: "loans",
+      to: "/loans",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Deductions",
+      icon: "mdi-wallet",
+      value: "deductions",
+      to: "/deductions",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Reports",
+      icon: "mdi-chart-bar",
+      value: "reports",
+      to: "/reports",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Settings",
+      icon: "mdi-cog",
+      value: "settings",
+      to: "/settings",
+      roles: ["admin"],
+    },
+  ];
+
+  // Filter items based on user role
+  const currentRole = authStore.userRole;
+  return allItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole)
+  );
+});
 
 async function handleLogout() {
   try {
@@ -163,6 +211,42 @@ async function handleLogout() {
   } catch (error) {
     console.error("Logout error:", error);
     toast.error("Error logging out");
+  }
+}
+
+function scrollToSection(sectionId) {
+  const element = document.getElementById(sectionId);
+  if (element) {
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+async function downloadCurrentPayslip() {
+  try {
+    // Get current payslip from employee dashboard
+    const response = await api.get("/employee/dashboard");
+    const currentPayslip = response.data.current_payslip;
+    
+    if (currentPayslip) {
+      const pdfResponse = await api.get(`/payslips/${currentPayslip.id}/pdf`, {
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([pdfResponse.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `payslip.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      toast.success("Payslip downloaded successfully");
+    } else {
+      toast.warning("No current payslip available");
+    }
+  } catch (error) {
+    console.error("Error downloading payslip:", error);
+    toast.error("Failed to download payslip");
   }
 }
 </script>

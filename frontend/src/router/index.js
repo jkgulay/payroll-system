@@ -11,33 +11,64 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+      path: "/register",
+      name: "register",
+      component: () => import("@/views/auth/RegisterView.vue"),
+      meta: { requiresAuth: false },
+    },
+    {
       path: "/",
       component: () => import("@/layouts/MainLayout.vue"),
       meta: { requiresAuth: true },
       children: [
         {
           path: "",
-          name: "dashboard",
+          redirect: (to) => {
+            const authStore = useAuthStore();
+            if (authStore.userRole === "employee") {
+              return { name: "employee-dashboard" };
+            } else if (authStore.userRole === "accountant") {
+              return { name: "accountant-dashboard" };
+            } else {
+              return { name: "admin-dashboard" };
+            }
+          },
+        },
+        {
+          path: "admin-dashboard",
+          name: "admin-dashboard",
           component: () => import("@/views/DashboardView.vue"),
-          meta: { title: "Dashboard" },
+          meta: { title: "Dashboard", roles: ["admin"] },
+        },
+        {
+          path: "accountant-dashboard",
+          name: "accountant-dashboard",
+          component: () => import("@/views/accountant/AccountantDashboardView.vue"),
+          meta: { title: "Dashboard", roles: ["accountant"] },
+        },
+        {
+          path: "employee-dashboard",
+          name: "employee-dashboard",
+          component: () => import("@/views/employee/EmployeeDashboardView.vue"),
+          meta: { title: "Dashboard", roles: ["employee"] },
         },
         {
           path: "employees",
           name: "employees",
           component: () => import("@/views/employees/EmployeeListView.vue"),
-          meta: { title: "Employees" },
+          meta: { title: "Employees", roles: ["admin", "accountant"] },
         },
         {
           path: "employees/create",
           name: "employee-create",
           component: () => import("@/views/employees/EmployeeFormView.vue"),
-          meta: { title: "Add Employee" },
+          meta: { title: "Add Employee", roles: ["admin", "accountant"] },
         },
         {
           path: "employees/:id",
           name: "employee-detail",
           component: () => import("@/views/employees/EmployeeDetailView.vue"),
-          meta: { title: "Employee Details" },
+          meta: { title: "Employee Details", roles: ["admin", "accountant"] },
         },
         {
           path: "employees/:id/edit",
@@ -49,13 +80,13 @@ const router = createRouter({
           path: "attendance",
           name: "attendance",
           component: () => import("@/views/attendance/AttendanceView.vue"),
-          meta: { title: "Attendance" },
+          meta: { title: "Attendance", roles: ["admin", "accountant"] },
         },
         {
           path: "payroll",
           name: "payroll",
           component: () => import("@/views/payroll/PayrollListView.vue"),
-          meta: { title: "Payroll" },
+          meta: { title: "Payroll", roles: ["admin", "accountant"] },
         },
         {
           path: "payroll/create",
@@ -103,7 +134,7 @@ const router = createRouter({
           path: "settings",
           name: "settings",
           component: () => import("@/views/settings/SettingsView.vue"),
-          meta: { title: "Settings" },
+          meta: { title: "Settings", roles: ["admin"] },
         },
       ],
     },
@@ -125,11 +156,59 @@ router.beforeEach(async (to, from, next) => {
       // Not authenticated, redirect to login
       return next({ name: "login", query: { redirect: to.fullPath } });
     }
+
+    // Ensure user data is loaded
+    if (!authStore.user) {
+      await authStore.checkAuth();
+    }
+
+    // Handle root path redirect
+    if (to.path === "/" || to.name === null) {
+      let targetRoute;
+      if (authStore.userRole === "employee") {
+        targetRoute = "employee-dashboard";
+      } else if (authStore.userRole === "accountant") {
+        targetRoute = "accountant-dashboard";
+      } else {
+        targetRoute = "admin-dashboard";
+      }
+      return next({ name: targetRoute });
+    }
+
+    // Check role-based access
+    if (to.meta.roles && !to.meta.roles.includes(authStore.userRole)) {
+      // User doesn't have access to this route, redirect to appropriate dashboard
+      let targetRoute;
+      if (authStore.userRole === "employee") {
+        targetRoute = "employee-dashboard";
+      } else if (authStore.userRole === "accountant") {
+        targetRoute = "accountant-dashboard";
+      } else {
+        targetRoute = "admin-dashboard";
+      }
+      
+      // Prevent redirect loop
+      if (to.name !== targetRoute) {
+        return next({ name: targetRoute });
+      }
+    }
   } else {
-    // Route doesn't require auth (login page)
-    if (authStore.isAuthenticated && to.name === "login") {
-      // Already authenticated, redirect to dashboard
-      return next({ name: "dashboard" });
+    // Route doesn't require auth (login/register page)
+    if (authStore.isAuthenticated && (to.name === "login" || to.name === "register")) {
+      // Ensure user data is loaded
+      if (!authStore.user) {
+        await authStore.checkAuth();
+      }
+      // Already authenticated, redirect to appropriate dashboard based on role
+      let targetRoute;
+      if (authStore.userRole === "employee") {
+        targetRoute = "employee-dashboard";
+      } else if (authStore.userRole === "accountant") {
+        targetRoute = "accountant-dashboard";
+      } else {
+        targetRoute = "admin-dashboard";
+      }
+      return next({ name: targetRoute });
     }
   }
 

@@ -41,6 +41,16 @@
                     @input="errors.password = ''"
                   ></v-text-field>
 
+                  <v-select
+                    v-model="form.role"
+                    label="Login As"
+                    prepend-inner-icon="mdi-shield-account"
+                    :items="roles"
+                    :rules="[rules.required]"
+                    :error-messages="errors.role"
+                    @update:modelValue="errors.role = ''"
+                  ></v-select>
+
                   <v-checkbox
                     v-model="form.remember"
                     label="Remember me"
@@ -68,6 +78,21 @@
                   >
                     {{ errorMessage }}
                   </v-alert>
+
+                  <v-divider class="my-4"></v-divider>
+
+                  <div class="text-center">
+                    <span class="text-body-2 text-medium-emphasis">
+                      Don't have an account?
+                    </span>
+                    <v-btn
+                      variant="text"
+                      color="primary"
+                      @click="$router.push({ name: 'register' })"
+                    >
+                      Register
+                    </v-btn>
+                  </div>
                 </v-form>
               </v-card-text>
 
@@ -105,12 +130,20 @@ const form = reactive({
   email: "",
   password: "",
   remember: false,
+  role: "",
 });
 
 const errors = reactive({
   email: "",
   password: "",
+  role: "",
 });
+
+const roles = [
+  { title: "Admin", value: "admin" },
+  { title: "Accountant", value: "accountant" },
+  { title: "Employee", value: "employee" },
+];
 
 const rules = {
   required: (value) => !!value || "This field is required",
@@ -128,6 +161,7 @@ async function handleLogin() {
       email: form.email,
       password: form.password,
       remember: form.remember,
+      role: form.role,
     });
 
     toast.success("Login successful");
