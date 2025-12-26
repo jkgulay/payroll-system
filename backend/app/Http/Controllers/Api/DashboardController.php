@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\Payroll;
+use App\Models\PayrollItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -26,5 +28,72 @@ class DashboardController extends Controller
         ];
 
         return response()->json($data);
+    }
+
+    public function employeeDashboard(Request $request)
+    {
+        $user = $request->user();
+        
+        // Find employee record by email or username
+        $employee = Employee::where('email', $user->email)
+            ->orWhere('username', $user->username)
+            ->first();
+
+        if (!$employee) {
+            return response()->json([
+                'message' => 'Employee record not found',
+                'attendance' => [],
+                'current_payslip' => null,
+                'payslip_history' => [],
+            ]);
+        }
+
+        // Get attendance for current month
+        $currentMonth = Carbon::now()->format('Y-m');
+        $attendance = Attendance::where('employee_id', $employee->id)
+            ->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$currentMonth])
+            ->orderBy('date', 'desc')
+            ->get();
+
+        // Calculate attendance summary
+        $attendanceSummary = [
+            'total_days' => $attendance->count(),
+            'present' => $attendance->where('status', 'present')->count(),
+            'absent' => $attendance->where('status', 'absent')->count(),
+            'late' => $attendance->where('status', 'late')->count(),
+            'undertime' => $attendance->where('status', 'undertime')->count(),
+            'total_hours' => $attendance->sum('total_hours_worked'),
+            'overtime_hours' => $attendance->sum('overtime_hours'),
+        ];
+
+        // Get current/latest payslip (most recent paid)
+        $currentPayslip = PayrollItem::with(['payroll', 'details'])
+            ->where('employee_id', $employee->id)
+            ->whereHas('payroll', function ($query) {
+                $query->where('status', 'paid');
+            })
+            ->latest('id')
+            ->first();
+
+        // Get payslip history (excluding current)
+        $payslipHistory = PayrollItem::with(['payroll'])
+            ->where('employee_id', $employee->id)
+            ->whereHas('payroll', function ($query) {
+                $query->where('status', 'paid');
+            })
+            ->when($currentPayslip, function ($query) use ($currentPayslip) {
+                $query->where('id', '!=', $currentPayslip->id);
+            })
+            ->latest('id')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'employee' => $employee,
+            'attendance' => $attendance,
+            'attendance_summary' => $attendanceSummary,
+            'current_payslip' => $currentPayslip,
+            'payslip_history' => $payslipHistory,
+        ]);
     }
 }
