@@ -12,6 +12,42 @@ use App\Models\User;
 class AuthController extends Controller
 {
     /**
+     * Register a new user
+     */
+    public function register(Request $request)
+    {
+        $request->validate([
+            'username' => 'required|string|unique:users,username',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+            'role' => 'required|in:accountant,employee',
+        ]);
+
+        $user = User::create([
+            'username' => $request->username,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => $request->role,
+            'is_active' => true,
+        ]);
+
+        // Create token
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Registration successful',
+            'user' => [
+                'id' => $user->id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'role' => $user->role,
+                'is_active' => $user->is_active,
+            ],
+            'token' => $token,
+        ], 201);
+    }
+
+    /**
      * Login user and create token
      */
     public function login(Request $request)
@@ -19,12 +55,15 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|string',
             'password' => 'required|string',
+            'role' => 'required|in:admin,accountant,employee',
         ]);
 
         // Check if input is email or username
         $loginField = filter_var($request->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
-        $user = User::where($loginField, $request->email)->first();
+        $user = User::where($loginField, $request->email)
+                    ->where('role', $request->role)
+                    ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([

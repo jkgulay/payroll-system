@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create default admin user
+        // Create default admin user only
         User::create([
             'username' => 'admin',
             'email' => 'admin@payroll.com',
@@ -22,24 +22,6 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Create accountant user
-        User::create([
-            'username' => 'accountant',
-            'email' => 'accountant@payroll.com',
-            'password' => Hash::make('accountant123'),
-            'role' => 'accountant',
-            'is_active' => true,
-        ]);
-
-        // Create employee user
-        User::create([
-            'username' => 'employee',
-            'email' => 'employee@payroll.com',
-            'password' => Hash::make('employee123'),
-            'role' => 'employee',
-            'is_active' => true,
-        ]);
-
-        $this->command->info('Default users created successfully!');
+        $this->command->info('Default admin user created successfully!');
     }
 }

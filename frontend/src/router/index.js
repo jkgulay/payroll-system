@@ -11,6 +11,12 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+      path: "/register",
+      name: "register",
+      component: () => import("@/views/auth/RegisterView.vue"),
+      meta: { requiresAuth: false },
+    },
+    {
       path: "/",
       component: () => import("@/layouts/MainLayout.vue"),
       meta: { requiresAuth: true },
@@ -127,7 +133,7 @@ router.beforeEach(async (to, from, next) => {
     }
   } else {
     // Route doesn't require auth (login page)
-    if (authStore.isAuthenticated && to.name === "login") {
+    if (authStore.isAuthenticated && (to.name === "login" || to.name === "register")) {
       // Already authenticated, redirect to dashboard
       return next({ name: "dashboard" });
     }

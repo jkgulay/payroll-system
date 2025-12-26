@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PayrollController;
 
 // Authentication routes (Laravel Sanctum)
 Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+Route::post('/register', [App\Http\Controllers\Api\AuthController::class, 'register']);
 Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 // Protected routes
