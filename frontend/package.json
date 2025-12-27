@@ -4,7 +4,9 @@
   "description": "Construction Payroll Management System - Frontend",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm run frontend\" \"npm run backend\" --names \"FRONTEND,BACKEND\" --prefix-colors \"blue,yellow\"",
+    "frontend": "vite",
+    "backend": "cd ../backend && php artisan serve",
     "build": "vite build",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
