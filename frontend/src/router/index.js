@@ -11,12 +11,6 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: "/register",
-      name: "register",
-      component: () => import("@/views/auth/RegisterView.vue"),
-      meta: { requiresAuth: false },
-    },
-    {
       path: "/",
       component: () => import("@/layouts/MainLayout.vue"),
       meta: { requiresAuth: true },
@@ -51,6 +45,12 @@ const router = createRouter({
           name: "employee-dashboard",
           component: () => import("@/views/employee/EmployeeDashboardView.vue"),
           meta: { title: "Dashboard", roles: ["employee"] },
+        },
+        {
+          path: "profile",
+          name: "profile",
+          component: () => import("@/views/employee/ProfileView.vue"),
+          meta: { title: "My Profile", roles: ["admin", "accountant", "employee"] },
         },
         {
           path: "employees",
@@ -205,8 +205,8 @@ router.beforeEach(async (to, from, next) => {
       }
     }
   } else {
-    // Route doesn't require auth (login/register page)
-    if (authStore.isAuthenticated && (to.name === "login" || to.name === "register")) {
+    // Route doesn't require auth (login page)
+    if (authStore.isAuthenticated && to.name === "login") {
       // Ensure user data is loaded
       if (!authStore.user) {
         await authStore.checkAuth();

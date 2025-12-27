@@ -202,6 +202,13 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
+      title: "My Profile",
+      icon: "mdi-account-cog",
+      value: "profile",
+      to: "/profile",
+      roles: ["admin", "accountant", "employee"],
+    },
+    {
       title: "Settings",
       icon: "mdi-cog",
       value: "settings",

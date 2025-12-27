@@ -12,8 +12,9 @@ use App\Http\Controllers\Api\PayrollController;
 
 // Authentication routes (Laravel Sanctum)
 Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
-Route::post('/register', [App\Http\Controllers\Api\AuthController::class, 'register']);
 Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
+
+// Registration disabled - accounts created by admin/accountant through employee management
 
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -27,6 +28,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('/profile', [App\Http\Controllers\Api\UserProfileController::class, 'getProfile']);
+    Route::put('/profile', [App\Http\Controllers\Api\UserProfileController::class, 'updateProfile']);
+    Route::post('/profile/change-password', [App\Http\Controllers\Api\UserProfileController::class, 'changePassword']);
 
     // Employees
     Route::apiResource('employees', App\Http\Controllers\Api\EmployeeController::class);
