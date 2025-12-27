@@ -24,6 +24,7 @@ class Employee extends Model
         'civil_status',
         'nationality',
         'email',
+        'username',
         'mobile_number',
         'phone_number',
         'address_line1',
