@@ -28,21 +28,14 @@ return new class extends Migration
             $table->string('mobile_number', 20)->nullable();
             $table->string('phone_number', 20)->nullable();
 
-            // Address
-            $table->string('address_line1')->nullable();
-            $table->string('address_line2')->nullable();
-            $table->string('city', 100)->nullable();
-            $table->string('province', 100)->nullable();
-            $table->string('postal_code', 10)->nullable();
-
             // Emergency Contact
             $table->string('emergency_contact_name')->nullable();
             $table->string('emergency_contact_relationship', 50)->nullable();
             $table->string('emergency_contact_number', 20)->nullable();
 
             // Employment Details
-            $table->foreignId('department_id')->constrained();
-            $table->foreignId('location_id')->constrained();
+            $table->foreignId('project_id')->constrained('projects');
+            $table->text('worker_address')->nullable();
             $table->string('position', 100);
             $table->enum('employment_type', ['regular', 'contractual', 'part_time'])->default('regular');
             $table->enum('employment_status', ['regular', 'probationary', 'contractual', 'active', 'resigned', 'terminated', 'retired'])->default('regular');
@@ -75,8 +68,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index('employee_number');
-            $table->index('department_id');
-            $table->index('location_id');
+            $table->index('project_id');
             $table->index('employment_status');
             $table->index('employment_type');
             $table->index('last_name');

@@ -234,9 +234,62 @@ class AccountantResumeController extends Controller
             $resumes = $query->orderBy('created_at', 'desc')->get();
             $resumes->load('user:id,username,email', 'reviewer:id,username,email');
 
+            // Also get resumes from employee applications
+            $applicationResumes = \App\Models\EmployeeApplication::query()
+                ->whereNotNull('resume_path')
+                ->with(['creator:id,username,email', 'reviewer:id,username,email'])
+                ->orderBy('submitted_at', 'desc')
+                ->get()
+                ->map(function ($app) {
+                    // Map application status to resume status
+                    $status = match($app->application_status) {
+                        'pending' => 'pending',
+                        'approved' => 'approved',
+                        'rejected' => 'rejected',
+                        default => 'pending'
+                    };
+
+                    // Get file extension
+                    $extension = pathinfo($app->resume_path, PATHINFO_EXTENSION);
+
+                    return (object)[
+                        'id' => 'app_' . $app->id, // Prefix to differentiate from regular resumes
+                        'user_id' => $app->created_by,
+                        'user' => $app->creator,
+                        'original_filename' => $app->first_name . ' ' . $app->last_name . ' - Resume.' . $extension,
+                        'stored_filename' => basename($app->resume_path),
+                        'file_path' => $app->resume_path,
+                        'file_url' => url('storage/' . $app->resume_path),
+                        'file_type' => $extension,
+                        'file_size' => 0, // Size not tracked in applications
+                        'status' => $status,
+                        'admin_notes' => $app->rejection_reason,
+                        'reviewed_by' => $app->reviewed_by,
+                        'reviewed_at' => $app->reviewed_at,
+                        'reviewer' => $app->reviewer,
+                        'created_at' => $app->submitted_at,
+                        'updated_at' => $app->updated_at,
+                        'is_application' => true, // Flag to identify application resumes
+                        'application_id' => $app->id,
+                        'first_name' => $app->first_name,
+                        'last_name' => $app->last_name,
+                        'middle_name' => $app->middle_name
+                    ];
+                });
+
+            // Filter application resumes by status if requested
+            if ($request->has('status') && $request->status !== 'all') {
+                $applicationResumes = $applicationResumes->filter(function ($resume) use ($request) {
+                    return $resume->status === $request->status;
+                });
+            }
+
+            // Merge both collections
+            $allResumes = $resumes->concat($applicationResumes)->sortByDesc('created_at')->values();
+
             return response()->json([
                 'success' => true,
-                'data' => $resumes
+                'data' => $allResumes
             ]);
 
         } catch (\Exception $e) {
@@ -253,6 +306,14 @@ class AccountantResumeController extends Controller
      */
     public function approve(Request $request, $id)
     {
+        // Check if this is an application resume
+        if (str_starts_with($id, 'app_')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee application resumes cannot be approved here. Please use the Pending Applications section in the dashboard to review and approve the full application.'
+            ], 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -316,6 +377,14 @@ class AccountantResumeController extends Controller
      */
     public function reject(Request $request, $id)
     {
+        // Check if this is an application resume
+        if (str_starts_with($id, 'app_')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee application resumes cannot be rejected here. Please use the Pending Applications section in the dashboard to review and reject the full application.'
+            ], 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'admin_notes' => 'required|string|max:1000',
         ]);

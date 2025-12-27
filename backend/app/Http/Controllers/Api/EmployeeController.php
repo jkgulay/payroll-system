@@ -13,7 +13,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Employee::with(['department', 'location']);
+        $query = Employee::with(['project']);
 
         // Search
         if ($request->has('search')) {
@@ -26,14 +26,9 @@ class EmployeeController extends Controller
             });
         }
 
-        // Filter by department
-        if ($request->has('department_id')) {
-            $query->where('department_id', $request->department_id);
-        }
-
-        // Filter by location
-        if ($request->has('location_id')) {
-            $query->where('location_id', $request->location_id);
+        // Filter by project
+        if ($request->has('project_id')) {
+            $query->where('project_id', $request->project_id);
         }
 
         // Filter by status
@@ -49,44 +44,68 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'employee_number' => 'required|string|unique:employees',
             'first_name' => 'required|string|max:100',
+            'middle_name' => 'nullable|string|max:100',
             'last_name' => 'required|string|max:100',
             'date_of_birth' => 'required|date',
+            'gender' => 'required|in:male,female,other',
             'email' => 'required|email|unique:employees',
             'mobile_number' => 'nullable|string|max:20',
-            'department_id' => 'required|exists:departments,id',
-            'location_id' => 'required|exists:locations,id',
+            'project_id' => 'required|exists:projects,id',
+            'worker_address' => 'nullable|string',
             'position' => 'nullable|string|max:100',
             'employment_status' => 'required|in:regular,probationary,contractual,active,resigned,terminated,retired',
             'employment_type' => 'required|in:regular,contractual,part_time',
             'date_hired' => 'required|date',
             'basic_salary' => 'required|numeric|min:0',
             'salary_type' => 'required|in:daily,weekly,semi-monthly,monthly',
-            // Optional user account creation fields
-            'create_user_account' => 'nullable|boolean',
-            'username' => 'nullable|string|unique:users,username',
-            'password' => 'nullable|string|min:6',
+            // Allowances
+            'has_water_allowance' => 'nullable|boolean',
+            'water_allowance' => 'nullable|numeric|min:0',
+            'has_cola' => 'nullable|boolean',
+            'cola' => 'nullable|numeric|min:0',
+            'has_incentives' => 'nullable|boolean',
+            'incentives' => 'nullable|numeric|min:0',
+            'has_ppe' => 'nullable|boolean',
+            'ppe' => 'nullable|numeric|min:0',
+            // User account role
+            'role' => 'required|in:accountant,employee',
         ]);
 
         DB::beginTransaction();
         try {
+            // Generate employee number (EMP001, EMP002, etc.)
+            $lastEmployee = Employee::orderBy('id', 'desc')->first();
+            $nextNumber = $lastEmployee ? ((int) substr($lastEmployee->employee_number, 3)) + 1 : 1;
+            $validated['employee_number'] = 'EMP' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+
             // Create employee
             $employee = Employee::create($validated);
 
-            // Create user account if requested
-            if ($request->input('create_user_account', false) && $request->username && $request->password) {
-                User::create([
-                    'username' => $request->username,
-                    'email' => $request->email,
-                    'password' => Hash::make($request->password),
-                    'role' => 'employee',
-                    'is_active' => true,
-                ]);
-            }
+            // Generate password: LastName + EmployeeID + 2 random digits
+            $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+            $autoPassword = $validated['last_name'] . $validated['employee_number'] . '@' . $randomDigits;
+
+            // Always create user account
+            User::create([
+                'username' => $validated['email'],
+                'email' => $validated['email'],
+                'password' => Hash::make($autoPassword),
+                'role' => $validated['role'],
+                'is_active' => true,
+                'must_change_password' => true, // Force password change on first login
+            ]);
+
+            // Store temporary password for response (in real app, send via email)
+            $employee->temporary_password = $autoPassword;
 
             DB::commit();
-            return response()->json($employee, 201);
+            return response()->json([
+                'employee' => $employee,
+                'role' => $validated['role'],
+                'temporary_password' => $autoPassword,
+                'message' => 'Employee created successfully. Temporary password: ' . $autoPassword
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Failed to create employee: ' . $e->getMessage()], 500);
@@ -95,7 +114,7 @@ class EmployeeController extends Controller
 
     public function show(Employee $employee)
     {
-        $employee->load(['department', 'location', 'allowances', 'loans', 'deductions']);
+        $employee->load(['project', 'allowances', 'loans', 'deductions']);
         return response()->json($employee);
     }
 
@@ -107,8 +126,8 @@ class EmployeeController extends Controller
             'last_name' => 'required|string|max:100',
             'email' => 'nullable|email|unique:employees,email,' . $employee->id,
             'mobile_number' => 'nullable|string|max:20',
-            'department_id' => 'nullable|exists:departments,id',
-            'location_id' => 'nullable|exists:locations,id',
+            'project_id' => 'nullable|exists:projects,id',
+            'worker_address' => 'nullable|string',
             'position' => 'nullable|string|max:100',
             'employment_status' => 'required|in:active,resigned,terminated,retired',
             'employment_type' => 'required|in:regular,contractual,part_time',

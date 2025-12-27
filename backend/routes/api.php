@@ -40,8 +40,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/employees/{employee}/loans', [App\Http\Controllers\Api\EmployeeController::class, 'loans']);
     Route::get('/employees/{employee}/deductions', [App\Http\Controllers\Api\EmployeeController::class, 'deductions']);
 
-    // Departments & Locations
-    Route::apiResource('departments', App\Http\Controllers\Api\DepartmentController::class);
+    // Employee Applications
+    Route::apiResource('employee-applications', App\Http\Controllers\Api\EmployeeApplicationController::class);
+    Route::post('/employee-applications/{id}/approve', [App\Http\Controllers\Api\EmployeeApplicationController::class, 'approve']);
+    Route::post('/employee-applications/{id}/reject', [App\Http\Controllers\Api\EmployeeApplicationController::class, 'reject']);
+
+    // Projects & Locations
+    Route::apiResource('projects', App\Http\Controllers\Api\ProjectController::class);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
     // Attendance

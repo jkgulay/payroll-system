@@ -18,7 +18,7 @@ class AttendanceCorrectionController extends Controller
     {
         $query = AttendanceCorrection::with([
             'attendance',
-            'employee.department',
+            'employee.project',
             'requestedBy',
             'approvedBy'
         ]);
@@ -202,7 +202,7 @@ class AttendanceCorrectionController extends Controller
     {
         $correction = AttendanceCorrection::with([
             'attendance',
-            'employee.department',
+            'employee.project',
             'requestedBy',
             'approvedBy'
         ])->findOrFail($id);

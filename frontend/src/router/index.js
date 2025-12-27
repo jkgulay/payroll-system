@@ -59,24 +59,6 @@ const router = createRouter({
           meta: { title: "Employees", roles: ["admin", "accountant"] },
         },
         {
-          path: "employees/create",
-          name: "employee-create",
-          component: () => import("@/views/employees/EmployeeFormView.vue"),
-          meta: { title: "Add Employee", roles: ["admin", "accountant"] },
-        },
-        {
-          path: "employees/:id",
-          name: "employee-detail",
-          component: () => import("@/views/employees/EmployeeDetailView.vue"),
-          meta: { title: "Employee Details", roles: ["admin", "accountant"] },
-        },
-        {
-          path: "employees/:id/edit",
-          name: "employee-edit",
-          component: () => import("@/views/employees/EmployeeFormView.vue"),
-          meta: { title: "Edit Employee" },
-        },
-        {
           path: "attendance",
           name: "attendance",
           component: () => import("@/views/attendance/AttendanceView.vue"),

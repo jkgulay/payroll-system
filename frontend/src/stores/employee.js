@@ -6,7 +6,7 @@ export const useEmployeeStore = defineStore("employee", () => {
   // State
   const employees = ref([]);
   const currentEmployee = ref(null);
-  const departments = ref([]);
+  const projects = ref([]);
   const locations = ref([]);
   const loading = ref(false);
   const pagination = ref({
@@ -88,10 +88,10 @@ export const useEmployeeStore = defineStore("employee", () => {
     }
   }
 
-  async function fetchDepartments() {
+  async function fetchProjects() {
     try {
-      const response = await api.get("/departments");
-      departments.value = response.data;
+      const response = await api.get("/projects");
+      projects.value = response.data;
       return response.data;
     } catch (error) {
       throw error;
@@ -139,7 +139,7 @@ export const useEmployeeStore = defineStore("employee", () => {
     // State
     employees,
     currentEmployee,
-    departments,
+    projects,
     locations,
     loading,
     pagination,
@@ -149,7 +149,7 @@ export const useEmployeeStore = defineStore("employee", () => {
     createEmployee,
     updateEmployee,
     deleteEmployee,
-    fetchDepartments,
+    fetchProjects,
     fetchLocations,
     fetchEmployeeAllowances,
     fetchEmployeeLoans,

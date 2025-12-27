@@ -24,7 +24,7 @@ class PayslipExport implements FromCollection, WithHeadings, WithMapping, WithSt
             ['label' => 'EMPLOYEE INFORMATION', 'value' => ''],
             ['label' => 'Employee Name', 'value' => $this->payslip->employee->full_name],
             ['label' => 'Employee Number', 'value' => $this->payslip->employee->employee_number],
-            ['label' => 'Department', 'value' => $this->payslip->employee->department->name ?? 'N/A'],
+            ['label' => 'Project', 'value' => $this->payslip->employee->project->name ?? 'N/A'],
             ['label' => 'Position', 'value' => $this->payslip->employee->position],
             ['label' => '', 'value' => ''],
             ['label' => 'PAYROLL PERIOD', 'value' => ''],

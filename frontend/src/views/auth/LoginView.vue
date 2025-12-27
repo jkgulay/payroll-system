@@ -136,7 +136,7 @@ const form = reactive({
   email: "",
   password: "",
   remember: false,
-  role: "",
+  role: "admin",
 });
 
 const errors = reactive({
@@ -177,10 +177,18 @@ async function handleLogin() {
     router.push(redirect);
   } catch (error) {
     console.error("Login error:", error);
+    console.error("Login error response:", error.response?.data);
 
     if (error.response?.status === 401 || error.response?.status === 422) {
-      errorMessage.value =
-        error.response?.data?.message || "Invalid credentials";
+      // Show validation errors if available
+      if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const errorMessages = Object.values(errors).flat();
+        errorMessage.value = errorMessages.join('. ');
+      } else {
+        errorMessage.value =
+          error.response?.data?.message || "Invalid credentials";
+      }
     } else if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message;
     } else {
