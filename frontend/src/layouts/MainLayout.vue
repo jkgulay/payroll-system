@@ -1,29 +1,48 @@
 <template>
   <v-app>
+    <!-- Construction-themed Navigation Drawer -->
     <v-navigation-drawer
       v-model="drawer"
       :rail="rail"
       permanent
       @click="rail = false"
+      class="construction-drawer"
+      color="steel"
+      elevation="4"
+      app
     >
+      <!-- User Profile Section -->
       <v-list-item
-        :prepend-avatar="userAvatar"
-        :title="userName"
-        :subtitle="userRole"
         nav
+        class="user-profile-item pa-3"
       >
+        <template v-slot:prepend>
+          <v-avatar size="40" color="primary">
+            <v-img
+              v-if="userAvatar"
+              :src="userAvatar"
+              cover
+            ></v-img>
+            <v-icon v-else color="white">mdi-account</v-icon>
+          </v-avatar>
+        </template>
+        <v-list-item-title>{{ userName }}</v-list-item-title>
+        <v-list-item-subtitle>{{ userRole }}</v-list-item-subtitle>
         <template v-slot:append>
           <v-btn
             variant="text"
             :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
             @click.stop="rail = !rail"
+            size="small"
+            color="white"
           ></v-btn>
         </template>
       </v-list-item>
 
-      <v-divider></v-divider>
+      <v-divider class="steel-divider mx-3"></v-divider>
 
-      <v-list density="compact" nav>
+      <!-- Navigation Menu -->
+      <v-list density="compact" nav class="pa-2">
         <v-list-item
           v-for="item in menuItems"
           :key="item.value"
@@ -31,55 +50,89 @@
           :title="item.title"
           :value="item.value"
           :to="item.to"
-          color="primary"
+          color="hardhat"
+          class="menu-item mb-1"
+          rounded="lg"
         ></v-list-item>
       </v-list>
 
+      <!-- Logout Button -->
       <template v-slot:append>
-        <div class="pa-2">
-          <v-btn block prepend-icon="mdi-logout" @click="handleLogout">
+        <div class="pa-3">
+          <v-btn 
+            block 
+            prepend-icon="mdi-logout" 
+            @click="handleLogout"
+            color="error"
+            variant="tonal"
+            class="font-weight-bold"
+          >
             Logout
           </v-btn>
         </div>
       </template>
     </v-navigation-drawer>
 
-    <v-app-bar elevation="1">
-      <v-app-bar-title>
-        <v-icon icon="mdi-hard-hat" class="mr-2"></v-icon>
-        {{ pageTitle }}
-      </v-app-bar-title>
+    <!-- Construction-themed App Bar -->
+    <v-app-bar 
+      elevation="4" 
+      class="construction-appbar"
+      color="surface"
+      app
+    >
+      <!-- Construction-themed Title with Icon -->
+      <div class="d-flex align-center">
+        <v-icon 
+          icon="mdi-hard-hat" 
+          color="hardhat" 
+          size="32"
+          class="mr-3 rotating-hardhat"
+        ></v-icon>
+        <div>
+          <v-app-bar-title class="construction-header text-h6">
+            {{ pageTitle }}
+          </v-app-bar-title>
+          <div class="text-caption text-medium-emphasis">
+            Construction Payroll System
+          </div>
+        </div>
+      </div>
 
       <v-spacer></v-spacer>
 
-      <!-- Sync status indicator -->
+      <!-- Sync status indicator with construction theme -->
       <v-chip
         v-if="syncStore.pendingChanges > 0"
         color="info"
         size="small"
-        class="mr-2"
+        class="mr-2 construction-chip"
+        prepend-icon="mdi-sync"
       >
-        <v-icon start>mdi-sync</v-icon>
         {{ syncStore.pendingChanges }} pending
       </v-chip>
 
-      <!-- Online/Offline indicator -->
+      <!-- Online/Offline indicator with construction safety colors -->
       <v-chip
         :color="syncStore.isOnline ? 'success' : 'error'"
         size="small"
-        variant="flat"
+        variant="elevated"
+        class="construction-chip mr-2"
+        :prepend-icon="syncStore.isOnline ? 'mdi-wifi' : 'mdi-wifi-off'"
       >
-        <v-icon start>{{
-          syncStore.isOnline ? "mdi-wifi" : "mdi-wifi-off"
-        }}</v-icon>
         {{ syncStore.isOnline ? "Online" : "Offline" }}
       </v-chip>
 
-      <v-btn icon="mdi-bell" class="ml-2"></v-btn>
+      <!-- Notification Bell -->
+      <v-btn 
+        icon="mdi-bell-outline" 
+        variant="text"
+        color="steel"
+      ></v-btn>
     </v-app-bar>
 
-    <v-main>
-      <v-container fluid>
+    <!-- Main Content Area -->
+    <v-main class="main-content">
+      <v-container fluid class="pa-6 main-container">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />
@@ -107,26 +160,35 @@ const toast = useToast();
 const drawer = ref(true);
 const rail = ref(false);
 
-const userName = computed(() => authStore.user?.name || "User");
-const userRole = computed(() => authStore.user?.role || "Employee");
-const userAvatar = computed(
-  () => authStore.user?.avatar || "/avatar-placeholder.png"
-);
+const userName = computed(() => authStore.user?.name || authStore.user?.username || "User");
+const userRole = computed(() => {
+  const role = authStore.user?.role || "Employee";
+  return role.charAt(0).toUpperCase() + role.slice(1);
+});
+const userAvatar = computed(() => {
+  if (!authStore.user?.avatar) return null;
+  const avatar = authStore.user.avatar;
+  // If avatar is already a full URL, return it
+  if (avatar.startsWith('http')) return avatar;
+  // Otherwise, prepend the base URL (remove /api from VITE_API_URL)
+  const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '');
+  return `${apiUrl}/storage/${avatar}`;
+});
 const pageTitle = computed(() => route.meta.title || "Dashboard");
 
-// Filter menu items based on user role
+// Filter menu items based on user role with construction-themed icons
 const menuItems = computed(() => {
   const allItems = [
     {
       title: "Dashboard",
-      icon: "mdi-view-dashboard",
+      icon: "mdi-view-dashboard-variant",
       value: "admin-dashboard",
       to: "/admin-dashboard",
       roles: ["admin"],
     },
     {
       title: "Dashboard",
-      icon: "mdi-view-dashboard",
+      icon: "mdi-view-dashboard-variant",
       value: "accountant-dashboard",
       to: "/accountant-dashboard",
       roles: ["accountant"],
@@ -140,21 +202,21 @@ const menuItems = computed(() => {
     },
     {
       title: "Employees",
-      icon: "mdi-account-group",
+      icon: "mdi-hard-hat",
       value: "employees",
       to: "/employees",
       roles: ["admin", "accountant"],
     },
     {
       title: "Attendance",
-      icon: "mdi-calendar-clock",
+      icon: "mdi-clock-check-outline",
       value: "attendance",
       to: "/attendance",
       roles: ["admin", "accountant"],
     },
     {
       title: "Payroll",
-      icon: "mdi-cash-multiple",
+      icon: "mdi-currency-php",
       value: "payroll",
       to: "/payroll",
       roles: ["admin", "accountant"],
@@ -168,49 +230,49 @@ const menuItems = computed(() => {
     },
     {
       title: "Resume Review",
-      icon: "mdi-file-check-outline",
+      icon: "mdi-file-certificate-outline",
       value: "resume-review",
       to: "/resume-review",
       roles: ["admin"],
     },
     {
       title: "Allowances",
-      icon: "mdi-wallet-plus",
+      icon: "mdi-cash-plus",
       value: "allowances",
       to: "/allowances",
       roles: ["admin", "accountant"],
     },
     {
       title: "Loans",
-      icon: "mdi-hand-coin",
+      icon: "mdi-hand-coin-outline",
       value: "loans",
       to: "/loans",
       roles: ["admin", "accountant"],
     },
     {
       title: "Deductions",
-      icon: "mdi-wallet",
+      icon: "mdi-cash-minus",
       value: "deductions",
       to: "/deductions",
       roles: ["admin", "accountant"],
     },
     {
       title: "Reports",
-      icon: "mdi-chart-bar",
+      icon: "mdi-file-chart-outline",
       value: "reports",
       to: "/reports",
       roles: ["admin", "accountant"],
     },
     {
       title: "My Profile",
-      icon: "mdi-account-cog",
+      icon: "mdi-badge-account-horizontal-outline",
       value: "profile",
       to: "/profile",
       roles: ["admin", "accountant", "employee"],
     },
     {
       title: "Settings",
-      icon: "mdi-cog",
+      icon: "mdi-cog-outline",
       value: "settings",
       to: "/settings",
       roles: ["admin"],
@@ -272,14 +334,145 @@ async function downloadCurrentPayslip() {
 }
 </script>
 
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
+<style scoped lang="scss">
+// Construction-themed Navigation Drawer
+.construction-drawer {
+  background: linear-gradient(180deg, #37474F 0%, #263238 100%) !important;
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100vh !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  
+  :deep(.v-navigation-drawer__content) {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow-y: auto !important;
+  }
+  
+  :deep(.v-list) {
+    flex: 1 !important;
+    overflow-y: auto !important;
+  }
+  
+  :deep(.v-list-item) {
+    color: rgba(255, 255, 255, 0.9) !important;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+    }
+  }
+  
+  :deep(.v-list-item--active) {
+    background: linear-gradient(90deg, #D84315 0%, #F4511E 100%) !important;
+    color: white !important;
+    border-left: 4px solid #FF6E40;
+    
+    &::before {
+      opacity: 0.15;
+    }
+  }
 }
 
-.fade-enter-from,
+.user-profile-item {
+  background: rgba(0, 0, 0, 0.2);
+  margin: 8px;
+  border-radius: 8px;
+  
+  :deep(.v-list-item-title) {
+    color: white !important;
+    font-weight: 600;
+  }
+  
+  :deep(.v-list-item-subtitle) {
+    color: rgba(255, 255, 255, 0.7) !important;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+}
+
+.menu-item {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+  }
+  
+  :deep(.v-list-item__prepend) {
+    .v-icon {
+      font-size: 20px;
+    }
+  }
+}
+
+// Construction App Bar styling
+.construction-appbar {
+  border-bottom: 4px solid #D84315 !important;
+  background: white !important;
+  
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, 
+      #D84315 0%, 
+      #FF6E40 25%, 
+      #F4511E 50%, 
+      #FF6E40 75%, 
+      #D84315 100%);
+  }
+}
+
+.construction-chip {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+// Rotating hardhat animation
+.rotating-hardhat {
+  animation: subtle-rotate 3s ease-in-out infinite;
+}
+
+@keyframes subtle-rotate {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+// Main content area
+.main-content {
+  background: linear-gradient(135deg, #ECEFF1 0%, #CFD8DC 100%);
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+.main-container {
+  min-height: 100vh;
+  padding-bottom: 24px;
+}
+
+// Page transitions
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
 .fade-leave-to {
   opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class UserProfileController extends Controller
@@ -145,6 +146,106 @@ class UserProfileController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to change password',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Upload user avatar
+     */
+    public function uploadAvatar(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // Max 2MB
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            /** @var User $user */
+            $user = auth()->user();
+
+            // Delete old avatar if exists
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+
+            // Store new avatar
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar = $path;
+            $user->save();
+
+            // Log the action
+            try {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'avatar_uploaded',
+                    'description' => 'Uploaded profile picture',
+                    'ip_address' => $request->ip(),
+                ]);
+            } catch (\Exception $logError) {
+                Log::warning('Failed to create audit log: ' . $logError->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile picture uploaded successfully',
+                'data' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload profile picture',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Remove user avatar
+     */
+    public function removeAvatar(Request $request)
+    {
+        try {
+            /** @var User $user */
+            $user = auth()->user();
+
+            // Delete avatar file if exists
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+
+            $user->avatar = null;
+            $user->save();
+
+            // Log the action
+            try {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'avatar_removed',
+                    'description' => 'Removed profile picture',
+                    'ip_address' => $request->ip(),
+                ]);
+            } catch (\Exception $logError) {
+                Log::warning('Failed to create audit log: ' . $logError->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile picture removed successfully',
+                'data' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove profile picture',
                 'error' => $e->getMessage()
             ], 500);
         }
