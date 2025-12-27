@@ -78,21 +78,6 @@
                   >
                     {{ errorMessage }}
                   </v-alert>
-
-                  <v-divider class="my-4"></v-divider>
-
-                  <div class="text-center">
-                    <span class="text-body-2 text-medium-emphasis">
-                      Don't have an account?
-                    </span>
-                    <v-btn
-                      variant="text"
-                      color="primary"
-                      @click="$router.push({ name: 'register' })"
-                    >
-                      Register
-                    </v-btn>
-                  </div>
                 </v-form>
               </v-card-text>
 

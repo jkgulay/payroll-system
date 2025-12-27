@@ -11,12 +11,6 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: "/register",
-      name: "register",
-      component: () => import("@/views/auth/RegisterView.vue"),
-      meta: { requiresAuth: false },
-    },
-    {
       path: "/",
       component: () => import("@/layouts/MainLayout.vue"),
       meta: { requiresAuth: true },
@@ -53,6 +47,12 @@ const router = createRouter({
           meta: { title: "Dashboard", roles: ["employee"] },
         },
         {
+          path: "profile",
+          name: "profile",
+          component: () => import("@/views/employee/ProfileView.vue"),
+          meta: { title: "My Profile", roles: ["admin", "accountant", "employee"] },
+        },
+        {
           path: "employees",
           name: "employees",
           component: () => import("@/views/employees/EmployeeListView.vue"),
@@ -81,6 +81,18 @@ const router = createRouter({
           name: "attendance",
           component: () => import("@/views/attendance/AttendanceView.vue"),
           meta: { title: "Attendance", roles: ["admin", "accountant"] },
+        },
+        {
+          path: "resumes",
+          name: "resumes",
+          component: () => import("@/views/accountant/ResumeManagement.vue"),
+          meta: { title: "My Resumes", roles: ["accountant"] },
+        },
+        {
+          path: "resume-review",
+          name: "resume-review",
+          component: () => import("@/views/accountant/AdminResumeReview.vue"),
+          meta: { title: "Resume Review", roles: ["admin"] },
         },
         {
           path: "payroll",
@@ -193,8 +205,8 @@ router.beforeEach(async (to, from, next) => {
       }
     }
   } else {
-    // Route doesn't require auth (login/register page)
-    if (authStore.isAuthenticated && (to.name === "login" || to.name === "register")) {
+    // Route doesn't require auth (login page)
+    if (authStore.isAuthenticated && to.name === "login") {
       // Ensure user data is loaded
       if (!authStore.user) {
         await authStore.checkAuth();
