@@ -74,7 +74,11 @@
               </template>
 
               <template v-slot:item.application_status="{ item }">
-                <v-chip :color="getStatusColor(item.application_status)" size="small" dark>
+                <v-chip
+                  :color="getStatusColor(item.application_status)"
+                  size="small"
+                  dark
+                >
                   {{ item.application_status.toUpperCase() }}
                 </v-chip>
               </template>
@@ -84,7 +88,7 @@
               </template>
 
               <template v-slot:item.reviewed_at="{ item }">
-                {{ item.reviewed_at ? formatDate(item.reviewed_at) : 'N/A' }}
+                {{ item.reviewed_at ? formatDate(item.reviewed_at) : "N/A" }}
               </template>
 
               <template v-slot:item.actions="{ item }">
@@ -106,42 +110,56 @@
     <!-- View Application Dialog -->
     <v-dialog v-model="viewDialog" max-width="900px" scrollable>
       <v-card v-if="selectedApplication">
-        <v-card-title class="text-h5 py-4" :class="getStatusClass(selectedApplication.application_status)">
+        <v-card-title
+          class="text-h5 py-4"
+          :class="getStatusClass(selectedApplication.application_status)"
+        >
           <v-icon start>mdi-clipboard-text</v-icon>
           Application Details
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6" style="max-height: 600px;">
+        <v-card-text class="pt-6" style="max-height: 600px">
           <!-- Status Alert -->
           <v-alert
             :type="getAlertType(selectedApplication.application_status)"
             variant="tonal"
             class="mb-4"
           >
-            <div class="text-h6">Status: {{ selectedApplication.application_status.toUpperCase() }}</div>
+            <div class="text-h6">
+              Status: {{ selectedApplication.application_status.toUpperCase() }}
+            </div>
             <div v-if="selectedApplication.application_status === 'pending'">
               Your application is currently under review by the admin.
             </div>
             <div v-if="selectedApplication.application_status === 'rejected'">
-              <strong>Reason:</strong> {{ selectedApplication.rejection_reason }}
+              <strong>Reason:</strong>
+              {{ selectedApplication.rejection_reason }}
             </div>
             <div v-if="selectedApplication.application_status === 'approved'">
-              Your application has been approved! Your employee account has been created.
+              Your application has been approved! Your employee account has been
+              created.
             </div>
           </v-alert>
 
           <!-- Credentials Section (Only for Approved Applications) -->
-          <v-card v-if="selectedApplication.application_status === 'approved' && selectedApplication.employee" class="mb-4 bg-green-lighten-5">
+          <v-card
+            v-if="
+              selectedApplication.application_status === 'approved' &&
+              selectedApplication.employee
+            "
+            class="mb-4 bg-green-lighten-5"
+          >
             <v-card-title class="bg-success text-white">
               <v-icon start>mdi-key</v-icon>
               Your Login Credentials
             </v-card-title>
             <v-card-text class="pt-4">
               <v-alert type="info" variant="tonal" class="mb-4">
-                <strong>Important:</strong> Please save these credentials securely. You will need them to log into the system.
+                <strong>Important:</strong> Please save these credentials
+                securely. You will need them to log into the system.
               </v-alert>
-              
+
               <v-row>
                 <v-col cols="12" md="6">
                   <v-text-field
@@ -166,11 +184,14 @@
                 <v-col cols="12">
                   <v-alert type="warning" variant="tonal">
                     <div class="mb-2">
-                      <strong>Note:</strong> For security reasons, your temporary password is not displayed here. 
-                      Please contact the admin who approved your application to receive your temporary password.
+                      <strong>Note:</strong> For security reasons, your
+                      temporary password is not displayed here. Please contact
+                      the admin who approved your application to receive your
+                      temporary password.
                     </div>
                     <div>
-                      You will be required to change your password on first login.
+                      You will be required to change your password on first
+                      login.
                     </div>
                   </v-alert>
                 </v-col>
@@ -347,9 +368,7 @@
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="viewDialog = false">
-            Close
-          </v-btn>
+          <v-btn variant="text" @click="viewDialog = false"> Close </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -357,50 +376,55 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useToast } from 'vue-toastification';
-import api from '@/services/api';
-import { format } from 'date-fns';
+import { ref, computed, onMounted } from "vue";
+import { useToast } from "vue-toastification";
+import api from "@/services/api";
+import { format } from "date-fns";
 
 const toast = useToast();
 
 const loading = ref(false);
 const viewDialog = ref(false);
-const tab = ref('all');
+const tab = ref("all");
 const applications = ref([]);
 const selectedApplication = ref(null);
 
 const headers = [
-  { title: 'Full Name', key: 'full_name', sortable: true },
-  { title: 'Email', key: 'email', sortable: true },
-  { title: 'Position', key: 'position', sortable: true },
-  { title: 'Status', key: 'application_status', sortable: true },
-  { title: 'Submitted', key: 'submitted_at', sortable: true },
-  { title: 'Reviewed', key: 'reviewed_at', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
+  { title: "Full Name", key: "full_name", sortable: true },
+  { title: "Email", key: "email", sortable: true },
+  { title: "Position", key: "position", sortable: true },
+  { title: "Status", key: "application_status", sortable: true },
+  { title: "Submitted", key: "submitted_at", sortable: true },
+  { title: "Reviewed", key: "reviewed_at", sortable: true },
+  { title: "Actions", key: "actions", sortable: false },
 ];
 
 const stats = computed(() => ({
   total: applications.value.length,
-  pending: applications.value.filter(a => a.application_status === 'pending').length,
-  approved: applications.value.filter(a => a.application_status === 'approved').length,
-  rejected: applications.value.filter(a => a.application_status === 'rejected').length,
+  pending: applications.value.filter((a) => a.application_status === "pending")
+    .length,
+  approved: applications.value.filter(
+    (a) => a.application_status === "approved"
+  ).length,
+  rejected: applications.value.filter(
+    (a) => a.application_status === "rejected"
+  ).length,
 }));
 
 const filteredApplications = computed(() => {
-  if (tab.value === 'all') return applications.value;
-  return applications.value.filter(a => a.application_status === tab.value);
+  if (tab.value === "all") return applications.value;
+  return applications.value.filter((a) => a.application_status === tab.value);
 });
 
 async function fetchApplications() {
   loading.value = true;
   try {
-    const response = await api.get('/employee-applications');
+    const response = await api.get("/employee-applications");
     const data = response.data.data || response.data;
-    applications.value = Array.isArray(data) ? data : (data.data || []);
+    applications.value = Array.isArray(data) ? data : data.data || [];
   } catch (error) {
-    console.error('Error fetching applications:', error);
-    toast.error('Failed to load applications');
+    console.error("Error fetching applications:", error);
+    toast.error("Failed to load applications");
   } finally {
     loading.value = false;
   }
@@ -413,34 +437,34 @@ function viewApplication(application) {
 
 function getStatusColor(status) {
   const colors = {
-    pending: 'warning',
-    approved: 'success',
-    rejected: 'error',
+    pending: "warning",
+    approved: "success",
+    rejected: "error",
   };
-  return colors[status] || 'grey';
+  return colors[status] || "grey";
 }
 
 function getStatusClass(status) {
   const classes = {
-    pending: 'bg-warning',
-    approved: 'bg-success',
-    rejected: 'bg-error',
+    pending: "bg-warning",
+    approved: "bg-success",
+    rejected: "bg-error",
   };
-  return classes[status] || 'bg-grey';
+  return classes[status] || "bg-grey";
 }
 
 function getAlertType(status) {
   const types = {
-    pending: 'info',
-    approved: 'success',
-    rejected: 'error',
+    pending: "info",
+    approved: "success",
+    rejected: "error",
   };
-  return types[status] || 'info';
+  return types[status] || "info";
 }
 
 function formatDate(dateString) {
-  if (!dateString) return 'N/A';
-  return format(new Date(dateString), 'MMM dd, yyyy hh:mm a');
+  if (!dateString) return "N/A";
+  return format(new Date(dateString), "MMM dd, yyyy hh:mm a");
 }
 
 onMounted(() => {

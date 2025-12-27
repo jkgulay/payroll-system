@@ -7,8 +7,12 @@
           <v-card-text>
             <div class="d-flex align-center justify-space-between">
               <div>
-                <div class="text-overline text-medium-emphasis">Total Employees</div>
-                <div class="text-h4 font-weight-bold">{{ stats.totalEmployees }}</div>
+                <div class="text-overline text-medium-emphasis">
+                  Total Employees
+                </div>
+                <div class="text-h4 font-weight-bold">
+                  {{ stats.totalEmployees }}
+                </div>
                 <div class="text-caption text-success">
                   <v-icon size="small">mdi-arrow-up</v-icon>
                   {{ stats.activeEmployees }} active
@@ -27,8 +31,12 @@
           <v-card-text>
             <div class="d-flex align-center justify-space-between">
               <div>
-                <div class="text-overline text-medium-emphasis">Pending Requests</div>
-                <div class="text-h4 font-weight-bold">{{ stats.pendingRequests }}</div>
+                <div class="text-overline text-medium-emphasis">
+                  Pending Requests
+                </div>
+                <div class="text-h4 font-weight-bold">
+                  {{ stats.pendingRequests }}
+                </div>
                 <div class="text-caption text-warning">Needs approval</div>
               </div>
               <v-avatar color="warning" size="56">
@@ -44,9 +52,15 @@
           <v-card-text>
             <div class="d-flex align-center justify-space-between">
               <div>
-                <div class="text-overline text-medium-emphasis">This Period</div>
-                <div class="text-h4 font-weight-bold">₱{{ formatNumber(stats.periodPayroll) }}</div>
-                <div class="text-caption text-medium-emphasis">Payroll amount</div>
+                <div class="text-overline text-medium-emphasis">
+                  This Period
+                </div>
+                <div class="text-h4 font-weight-bold">
+                  ₱{{ formatNumber(stats.periodPayroll) }}
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  Payroll amount
+                </div>
               </div>
               <v-avatar color="success" size="56">
                 <v-icon size="32">mdi-cash-multiple</v-icon>
@@ -61,9 +75,15 @@
           <v-card-text>
             <div class="d-flex align-center justify-space-between">
               <div>
-                <div class="text-overline text-medium-emphasis">Attendance Today</div>
-                <div class="text-h4 font-weight-bold">{{ stats.presentToday }}</div>
-                <div class="text-caption text-medium-emphasis">of {{ stats.totalEmployees }} employees</div>
+                <div class="text-overline text-medium-emphasis">
+                  Attendance Today
+                </div>
+                <div class="text-h4 font-weight-bold">
+                  {{ stats.presentToday }}
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  of {{ stats.totalEmployees }} employees
+                </div>
               </div>
               <v-avatar color="info" size="56">
                 <v-icon size="32">mdi-calendar-check</v-icon>
@@ -218,14 +238,18 @@
               <template v-slot:item.full_name="{ item }">
                 <div class="d-flex align-center">
                   <v-avatar color="primary" size="32" class="mr-2">
-                    <span class="text-caption">{{ getInitials(item.full_name) }}</span>
+                    <span class="text-caption">{{
+                      getInitials(item.full_name)
+                    }}</span>
                   </v-avatar>
                   {{ item.full_name }}
                 </div>
               </template>
               <template v-slot:item.employment_status="{ item }">
                 <v-chip
-                  :color="item.employment_status === 'active' ? 'success' : 'grey'"
+                  :color="
+                    item.employment_status === 'active' ? 'success' : 'grey'
+                  "
                   size="small"
                 >
                   {{ item.employment_status }}
@@ -252,14 +276,19 @@
     </v-row>
 
     <!-- Add Employee Application Dialog -->
-    <v-dialog v-model="showAddEmployeeDialog" max-width="900px" persistent scrollable>
+    <v-dialog
+      v-model="showAddEmployeeDialog"
+      max-width="900px"
+      persistent
+      scrollable
+    >
       <v-card>
         <v-card-title class="text-h5 py-4 bg-primary">
           Submit Employee Application
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6" style="max-height: 600px;">
+        <v-card-text class="pt-6" style="max-height: 600px">
           <v-form ref="employeeForm">
             <v-row>
               <!-- Personal Information -->
@@ -334,7 +363,7 @@
                   :items="[
                     { title: 'Male', value: 'male' },
                     { title: 'Female', value: 'female' },
-                    { title: 'Other', value: 'other' }
+                    { title: 'Other', value: 'other' },
                   ]"
                   label="Gender"
                   :rules="[rules.required]"
@@ -356,7 +385,9 @@
 
               <!-- Employment Information -->
               <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">Section 2: Employment Information</div>
+                <div class="text-h6 mb-2 mt-4">
+                  Section 2: Employment Information
+                </div>
                 <v-divider class="mb-4"></v-divider>
               </v-col>
 
@@ -396,7 +427,7 @@
                     { title: 'Regular', value: 'regular' },
                     { title: 'Probationary', value: 'probationary' },
                     { title: 'Contractual', value: 'contractual' },
-                    { title: 'Active', value: 'active' }
+                    { title: 'Active', value: 'active' },
                   ]"
                   label="Employment Status"
                   :rules="[rules.required]"
@@ -411,7 +442,7 @@
                   :items="[
                     { title: 'Regular', value: 'regular' },
                     { title: 'Contractual', value: 'contractual' },
-                    { title: 'Part Time', value: 'part_time' }
+                    { title: 'Part Time', value: 'part_time' },
                   ]"
                   label="Employment Type"
                   :rules="[rules.required]"
@@ -425,7 +456,7 @@
                   v-model="employeeData.salary_type"
                   :items="[
                     { title: 'Daily', value: 'daily' },
-                    { title: 'Monthly', value: 'monthly' }
+                    { title: 'Monthly', value: 'monthly' },
                   ]"
                   label="Salary Type"
                   :rules="[rules.required]"
@@ -587,17 +618,28 @@
 
               <!-- System Status -->
               <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">Section 5: Application Status</div>
+                <div class="text-h6 mb-2 mt-4">
+                  Section 5: Application Status
+                </div>
                 <v-divider class="mb-4"></v-divider>
               </v-col>
 
               <v-col cols="12">
-                <v-alert type="warning" variant="tonal" density="compact" class="mb-2">
+                <v-alert
+                  type="warning"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-2"
+                >
                   <div class="text-subtitle-2 mb-2">Important Notes:</div>
                   <ul class="text-caption">
                     <li>Application will be submitted to Admin for review</li>
-                    <li>Employee account will only be created after Admin approval</li>
-                    <li>You will be notified once the application is processed</li>
+                    <li>
+                      Employee account will only be created after Admin approval
+                    </li>
+                    <li>
+                      You will be notified once the application is processed
+                    </li>
                   </ul>
                 </v-alert>
               </v-col>
@@ -658,7 +700,9 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn @click="showPayslipModifyDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="submitPayslipModification">Submit</v-btn>
+          <v-btn color="primary" @click="submitPayslipModification"
+            >Submit</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -690,7 +734,11 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn @click="showDownloadDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="downloadPayroll" :loading="downloading">
+          <v-btn
+            color="primary"
+            @click="downloadPayroll"
+            :loading="downloading"
+          >
             Download
           </v-btn>
         </v-card-actions>
@@ -706,7 +754,7 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6" style="max-height: 600px;">
+        <v-card-text class="pt-6" style="max-height: 600px">
           <v-form v-if="selectedEmployee">
             <v-row>
               <!-- Personal Information -->
@@ -884,7 +932,9 @@
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  :model-value="selectedEmployee.is_active ? 'Active' : 'Inactive'"
+                  :model-value="
+                    selectedEmployee.is_active ? 'Active' : 'Inactive'
+                  "
                   label="Status"
                   readonly
                   variant="plain"
@@ -900,7 +950,11 @@
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  :model-value="selectedEmployee.has_water_allowance ? `₱${selectedEmployee.water_allowance}` : 'N/A'"
+                  :model-value="
+                    selectedEmployee.has_water_allowance
+                      ? `₱${selectedEmployee.water_allowance}`
+                      : 'N/A'
+                  "
                   label="Water Allowance"
                   readonly
                   variant="plain"
@@ -910,7 +964,11 @@
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  :model-value="selectedEmployee.has_cola ? `₱${selectedEmployee.cola}` : 'N/A'"
+                  :model-value="
+                    selectedEmployee.has_cola
+                      ? `₱${selectedEmployee.cola}`
+                      : 'N/A'
+                  "
                   label="COLA"
                   readonly
                   variant="plain"
@@ -920,7 +978,11 @@
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  :model-value="selectedEmployee.has_incentives ? `₱${selectedEmployee.incentives}` : 'N/A'"
+                  :model-value="
+                    selectedEmployee.has_incentives
+                      ? `₱${selectedEmployee.incentives}`
+                      : 'N/A'
+                  "
                   label="Incentives"
                   readonly
                   variant="plain"
@@ -930,7 +992,11 @@
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  :model-value="selectedEmployee.has_ppe ? `₱${selectedEmployee.ppe}` : 'N/A'"
+                  :model-value="
+                    selectedEmployee.has_ppe
+                      ? `₱${selectedEmployee.ppe}`
+                      : 'N/A'
+                  "
                   label="PPE"
                   readonly
                   variant="plain"
@@ -945,20 +1011,24 @@
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="closeViewEmployeeDialog"
-          >
-            Close
-          </v-btn>
+          <v-btn variant="text" @click="closeViewEmployeeDialog"> Close </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Application Details Dialog -->
-    <v-dialog v-model="showApplicationDetailsDialog" max-width="800px" scrollable>
+    <v-dialog
+      v-model="showApplicationDetailsDialog"
+      max-width="800px"
+      scrollable
+    >
       <v-card>
-        <v-card-title class="text-h5 py-4" :class="getApplicationStatusClass(selectedApplication?.application_status)">
+        <v-card-title
+          class="text-h5 py-4"
+          :class="
+            getApplicationStatusClass(selectedApplication?.application_status)
+          "
+        >
           <v-icon start>mdi-clipboard-text</v-icon>
           Application Details
         </v-card-title>
@@ -967,33 +1037,46 @@
         <v-card-text class="pt-6" v-if="selectedApplication">
           <!-- Status Alert -->
           <v-alert
-            :type="getApplicationAlertType(selectedApplication.application_status)"
+            :type="
+              getApplicationAlertType(selectedApplication.application_status)
+            "
             variant="tonal"
             class="mb-4"
           >
-            <div class="text-h6">Status: {{ selectedApplication.application_status.toUpperCase() }}</div>
+            <div class="text-h6">
+              Status: {{ selectedApplication.application_status.toUpperCase() }}
+            </div>
             <div v-if="selectedApplication.application_status === 'pending'">
               Your application is currently under review by the admin.
             </div>
             <div v-if="selectedApplication.application_status === 'rejected'">
-              <strong>Reason:</strong> {{ selectedApplication.rejection_reason }}
+              <strong>Reason:</strong>
+              {{ selectedApplication.rejection_reason }}
             </div>
             <div v-if="selectedApplication.application_status === 'approved'">
-              Your application has been approved! Your employee account has been created.
+              Your application has been approved! Your employee account has been
+              created.
             </div>
           </v-alert>
 
           <!-- Credentials Section (Only for Approved Applications) -->
-          <v-card v-if="selectedApplication.application_status === 'approved' && selectedApplication.employee" class="mb-4 bg-success-lighten">
+          <v-card
+            v-if="
+              selectedApplication.application_status === 'approved' &&
+              selectedApplication.employee
+            "
+            class="mb-4 bg-success-lighten"
+          >
             <v-card-title class="bg-success text-white">
               <v-icon start>mdi-key</v-icon>
               Your Login Credentials
             </v-card-title>
             <v-card-text class="pt-4">
               <v-alert type="info" variant="tonal" class="mb-4">
-                <strong>Important:</strong> Please save these credentials securely. You will need them to log into the system.
+                <strong>Important:</strong> Please save these credentials
+                securely. You will need them to log into the system.
               </v-alert>
-              
+
               <v-row>
                 <v-col cols="12" md="6">
                   <v-text-field
@@ -1018,11 +1101,14 @@
                 <v-col cols="12">
                   <v-alert type="warning" variant="tonal">
                     <div class="mb-2">
-                      <strong>Note:</strong> For security reasons, your temporary password is not displayed here. 
-                      Please contact the admin who approved your application to receive your temporary password.
+                      <strong>Note:</strong> For security reasons, your
+                      temporary password is not displayed here. Please contact
+                      the admin who approved your application to receive your
+                      temporary password.
                     </div>
                     <div>
-                      You will be required to change your password on first login.
+                      You will be required to change your password on first
+                      login.
                     </div>
                   </v-alert>
                 </v-col>
@@ -1099,7 +1185,9 @@
 
             <v-col cols="12" md="6">
               <v-text-field
-                :model-value="new Date(selectedApplication.submitted_at).toLocaleString()"
+                :model-value="
+                  new Date(selectedApplication.submitted_at).toLocaleString()
+                "
                 label="Submitted At"
                 readonly
                 variant="plain"
@@ -1109,7 +1197,9 @@
 
             <v-col cols="12" md="6" v-if="selectedApplication.reviewed_at">
               <v-text-field
-                :model-value="new Date(selectedApplication.reviewed_at).toLocaleString()"
+                :model-value="
+                  new Date(selectedApplication.reviewed_at).toLocaleString()
+                "
                 label="Reviewed At"
                 readonly
                 variant="plain"
@@ -1232,7 +1322,8 @@ const applicationHeaders = [
 const rules = {
   required: (value) => !!value || "This field is required",
   email: (value) => /.+@.+\..+/.test(value) || "Email must be valid",
-  minLength: (value) => !value || value.length >= 6 || "Minimum 6 characters required",
+  minLength: (value) =>
+    !value || value.length >= 6 || "Minimum 6 characters required",
 };
 
 const employeeForm = ref(null);
@@ -1258,11 +1349,11 @@ async function fetchEmployees() {
   loading.value = true;
   try {
     const response = await api.get("/employees", {
-      params: { per_page: 100 } // Get more employees without pagination for dashboard
+      params: { per_page: 100 }, // Get more employees without pagination for dashboard
     });
     const data = response.data.data || response.data;
     // Handle Laravel pagination response
-    employees.value = Array.isArray(data) ? data : (data.data || []);
+    employees.value = Array.isArray(data) ? data : data.data || [];
   } catch (error) {
     console.error("Error fetching employees:", error);
     toast.error("Failed to load employees");
@@ -1276,7 +1367,7 @@ async function fetchMyApplications() {
   try {
     const response = await api.get("/employee-applications");
     const data = response.data.data || response.data;
-    myApplications.value = Array.isArray(data) ? data : (data.data || []);
+    myApplications.value = Array.isArray(data) ? data : data.data || [];
   } catch (error) {
     console.error("Error fetching applications:", error);
     toast.error("Failed to load applications");
@@ -1292,29 +1383,29 @@ function viewApplicationDetails(application) {
 
 function getApplicationStatusColor(status) {
   const colors = {
-    pending: 'warning',
-    approved: 'success',
-    rejected: 'error',
+    pending: "warning",
+    approved: "success",
+    rejected: "error",
   };
-  return colors[status] || 'grey';
+  return colors[status] || "grey";
 }
 
 function getApplicationStatusClass(status) {
   const classes = {
-    pending: 'bg-warning',
-    approved: 'bg-success',
-    rejected: 'bg-error',
+    pending: "bg-warning",
+    approved: "bg-success",
+    rejected: "bg-error",
   };
-  return classes[status] || 'bg-grey';
+  return classes[status] || "bg-grey";
 }
 
 function getApplicationAlertType(status) {
   const types = {
-    pending: 'warning',
-    approved: 'success',
-    rejected: 'error',
+    pending: "warning",
+    approved: "success",
+    rejected: "error",
   };
-  return types[status] || 'info';
+  return types[status] || "info";
 }
 
 async function fetchProjects() {
@@ -1354,14 +1445,14 @@ async function submitEmployeeApplication() {
   try {
     // Create FormData for file uploads
     const formData = new FormData();
-    
+
     // Add all employee data fields with proper boolean handling
-    Object.keys(employeeData.value).forEach(key => {
+    Object.keys(employeeData.value).forEach((key) => {
       const value = employeeData.value[key];
-      if (value !== null && value !== '') {
+      if (value !== null && value !== "") {
         // Convert booleans to 1 or 0 for Laravel
-        if (typeof value === 'boolean') {
-          formData.append(key, value ? '1' : '0');
+        if (typeof value === "boolean") {
+          formData.append(key, value ? "1" : "0");
         } else {
           formData.append(key, value);
         }
@@ -1370,30 +1461,46 @@ async function submitEmployeeApplication() {
 
     // Add document files
     if (documents.value.resume) {
-      formData.append('resume', documents.value.resume[0] || documents.value.resume);
+      formData.append(
+        "resume",
+        documents.value.resume[0] || documents.value.resume
+      );
     }
     if (documents.value.id_document) {
-      formData.append('id_document', documents.value.id_document[0] || documents.value.id_document);
+      formData.append(
+        "id_document",
+        documents.value.id_document[0] || documents.value.id_document
+      );
     }
     if (documents.value.contract) {
-      formData.append('contract', documents.value.contract[0] || documents.value.contract);
+      formData.append(
+        "contract",
+        documents.value.contract[0] || documents.value.contract
+      );
     }
     if (documents.value.certificates) {
-      formData.append('certificates', documents.value.certificates[0] || documents.value.certificates);
+      formData.append(
+        "certificates",
+        documents.value.certificates[0] || documents.value.certificates
+      );
     }
 
     await api.post("/employee-applications", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
-    
-    toast.success("Employee application submitted successfully! Waiting for admin approval.");
+
+    toast.success(
+      "Employee application submitted successfully! Waiting for admin approval."
+    );
     closeEmployeeDialog();
     fetchDashboardData();
   } catch (error) {
     console.error("Error submitting employee application:", error);
-    toast.error(error.response?.data?.message || "Failed to submit application");
+    toast.error(
+      error.response?.data?.message || "Failed to submit application"
+    );
   } finally {
     saving.value = false;
   }
@@ -1406,7 +1513,10 @@ async function saveEmployee() {
   saving.value = true;
   try {
     if (editingEmployee.value) {
-      await api.put(`/employees/${editingEmployee.value.id}`, employeeData.value);
+      await api.put(
+        `/employees/${editingEmployee.value.id}`,
+        employeeData.value
+      );
       toast.success("Employee updated successfully");
     } else {
       await submitEmployeeApplication();
@@ -1513,9 +1623,10 @@ async function downloadPayroll() {
 
   downloading.value = true;
   try {
-    const endpoint = downloadOptions.value.format === "PDF" 
-      ? `/payroll/${downloadOptions.value.payroll_id}/export-pdf`
-      : `/payroll/${downloadOptions.value.payroll_id}/export-excel`;
+    const endpoint =
+      downloadOptions.value.format === "PDF"
+        ? `/payroll/${downloadOptions.value.payroll_id}/export-pdf`
+        : `/payroll/${downloadOptions.value.payroll_id}/export-excel`;
 
     const response = await api.get(endpoint, {
       params: { include_signatures: downloadOptions.value.include_signatures },

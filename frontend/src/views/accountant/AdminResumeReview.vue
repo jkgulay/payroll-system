@@ -198,7 +198,8 @@
             class="mb-4"
           >
             <strong>Employee Application Resume</strong><br />
-            This resume is part of an employee application. You can approve or reject it directly from here.
+            This resume is part of an employee application. You can approve or
+            reject it directly from here.
           </v-alert>
 
           <v-row>
@@ -422,7 +423,10 @@
         <v-card-text>
           <p class="mb-4">
             Approving this application will create an employee account for
-            <strong>{{ applicationToReview?.first_name }} {{ applicationToReview?.last_name }}</strong>.
+            <strong
+              >{{ applicationToReview?.first_name }}
+              {{ applicationToReview?.last_name }}</strong
+            >.
           </p>
           <v-text-field
             v-model="applicationHireDate"
@@ -434,7 +438,11 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn text @click="approveApplicationDialog = false" :disabled="processing">
+          <v-btn
+            text
+            @click="approveApplicationDialog = false"
+            :disabled="processing"
+          >
             Cancel
           </v-btn>
           <v-btn
@@ -456,7 +464,10 @@
         <v-card-text>
           <p class="mb-4">
             Are you sure you want to reject the application from
-            <strong>{{ applicationToReview?.first_name }} {{ applicationToReview?.last_name }}</strong>?
+            <strong
+              >{{ applicationToReview?.first_name }}
+              {{ applicationToReview?.last_name }}</strong
+            >?
           </p>
           <v-textarea
             v-model="applicationRejectionReason"
@@ -469,7 +480,11 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn text @click="rejectApplicationDialog = false" :disabled="processing">
+          <v-btn
+            text
+            @click="rejectApplicationDialog = false"
+            :disabled="processing"
+          >
             Cancel
           </v-btn>
           <v-btn
@@ -494,7 +509,7 @@
           <v-alert type="success" variant="tonal" class="mb-4">
             Employee account has been created successfully!
           </v-alert>
-          
+
           <div class="mb-4">
             <h3 class="mb-2">Employee Details:</h3>
             <v-list dense>
@@ -507,7 +522,8 @@
               <v-list-item>
                 <v-list-item-title>Name:</v-list-item-title>
                 <v-list-item-subtitle class="text-right">
-                  {{ approvedEmployeeData?.first_name }} {{ approvedEmployeeData?.last_name }}
+                  {{ approvedEmployeeData?.first_name }}
+                  {{ approvedEmployeeData?.last_name }}
                 </v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
@@ -528,11 +544,13 @@
                 <strong>Username:</strong> {{ approvedEmployeeData?.email }}
               </p>
               <p class="mb-0">
-                <strong>Temporary Password:</strong> {{ approvedEmployeePassword }}
+                <strong>Temporary Password:</strong>
+                {{ approvedEmployeePassword }}
               </p>
             </v-alert>
             <p class="text-caption mt-2">
-              Please provide these credentials to the employee. They will be required to change the password on first login.
+              Please provide these credentials to the employee. They will be
+              required to change the password on first login.
             </p>
           </div>
         </v-card-text>
@@ -713,11 +731,11 @@ async function rejectResume() {
 
 function openApproveApplicationDialog(resume) {
   // Extract application ID from the resume ID (format: 'app_X')
-  const applicationId = resume.id.toString().replace('app_', '');
-  
+  const applicationId = resume.id.toString().replace("app_", "");
+
   // Fetch full application details
   fetchApplicationDetails(applicationId);
-  
+
   applicationHireDate.value = "";
   approveApplicationDialog.value = true;
   viewDialog.value = false;
@@ -725,11 +743,11 @@ function openApproveApplicationDialog(resume) {
 
 function openRejectApplicationDialog(resume) {
   // Extract application ID from the resume ID (format: 'app_X')
-  const applicationId = resume.id.toString().replace('app_', '');
-  
+  const applicationId = resume.id.toString().replace("app_", "");
+
   // Fetch full application details
   fetchApplicationDetails(applicationId);
-  
+
   applicationRejectionReason.value = "";
   rejectApplicationDialog.value = true;
   viewDialog.value = false;
@@ -757,14 +775,16 @@ async function approveApplication() {
 
     approvedEmployeeData.value = response.data.employee;
     approvedEmployeePassword.value = response.data.temporary_password;
-    
+
     toast.success("Application approved successfully!");
     approveApplicationDialog.value = false;
     approvalSuccessDialog.value = true;
-    
+
     fetchResumes();
   } catch (error) {
-    toast.error(error.response?.data?.message || "Failed to approve application");
+    toast.error(
+      error.response?.data?.message || "Failed to approve application"
+    );
     console.error(error);
   } finally {
     processing.value = false;
@@ -785,10 +805,12 @@ async function rejectApplication() {
     rejectApplicationDialog.value = false;
     applicationRejectionReason.value = "";
     applicationToReview.value = null;
-    
+
     fetchResumes();
   } catch (error) {
-    toast.error(error.response?.data?.message || "Failed to reject application");
+    toast.error(
+      error.response?.data?.message || "Failed to reject application"
+    );
     console.error(error);
   } finally {
     processing.value = false;

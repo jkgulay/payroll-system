@@ -184,7 +184,7 @@ async function handleLogin() {
       if (error.response?.data?.errors) {
         const errors = error.response.data.errors;
         const errorMessages = Object.values(errors).flat();
-        errorMessage.value = errorMessages.join('. ');
+        errorMessage.value = errorMessages.join(". ");
       } else {
         errorMessage.value =
           error.response?.data?.message || "Invalid credentials";
@@ -202,7 +202,7 @@ async function handleLogin() {
 // Construction-themed Login Page
 
 .login-main {
-  background: #FFFFFF;
+  background: #ffffff;
   position: relative;
   overflow: hidden;
 }
@@ -215,10 +215,10 @@ async function handleLogin() {
 
 // Header with Construction Orange Gradient
 .login-header {
-  background: linear-gradient(135deg, #D84315 0%, #F4511E 50%, #FF6E40 100%);
+  background: linear-gradient(135deg, #d84315 0%, #f4511e 50%, #ff6e40 100%);
   text-align: center;
   position: relative;
-  
+
   &::after {
     content: "";
     position: absolute;
@@ -226,17 +226,19 @@ async function handleLogin() {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, 
+    background: linear-gradient(
+      90deg,
       transparent 0%,
       rgba(255, 255, 255, 0.5) 50%,
-      transparent 100%);
+      transparent 100%
+    );
   }
 }
 
 .hardhat-icon-container {
   display: inline-block;
   position: relative;
-  
+
   .hardhat-icon {
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
     animation: float 3s ease-in-out infinite;
@@ -244,7 +246,8 @@ async function handleLogin() {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -270,7 +273,7 @@ async function handleLogin() {
   letter-spacing: 1px;
   box-shadow: 0 4px 12px rgba(216, 67, 21, 0.4);
   transition: all 0.3s ease;
-  
+
   &:hover {
     box-shadow: 0 6px 16px rgba(216, 67, 21, 0.6);
     transform: translateY(-2px);
@@ -279,9 +282,9 @@ async function handleLogin() {
 
 // Footer
 .login-footer {
-  background: linear-gradient(135deg, #FAFAFA 0%, #ECEFF1 100%);
-  color: #37474F;
-  border-top: 3px solid #D84315;
+  background: linear-gradient(135deg, #fafafa 0%, #eceff1 100%);
+  color: #37474f;
+  border-top: 3px solid #d84315;
 }
 
 // Form fields enhancement
@@ -290,14 +293,14 @@ async function handleLogin() {
   .v-field {
     border: 2px solid rgba(216, 67, 21, 0.2);
     transition: all 0.3s ease;
-    
+
     &:hover {
       border-color: rgba(216, 67, 21, 0.4);
     }
   }
-  
+
   .v-field--focused {
-    border-color: #D84315;
+    border-color: #d84315;
     box-shadow: 0 0 0 3px rgba(216, 67, 21, 0.1);
   }
 }

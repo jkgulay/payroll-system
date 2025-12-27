@@ -119,7 +119,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/my-resumes', [App\Http\Controllers\Api\AccountantResumeController::class, 'myResumes']);
         Route::get('/approved', [App\Http\Controllers\Api\AccountantResumeController::class, 'approvedResumes']);
         Route::delete('/{id}', [App\Http\Controllers\Api\AccountantResumeController::class, 'destroy']);
-        
+
         // Admin routes
         Route::middleware(['role:admin'])->group(function () {
             Route::get('/pending', [App\Http\Controllers\Api\AccountantResumeController::class, 'pendingResumes']);
@@ -127,7 +127,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/{id}/approve', [App\Http\Controllers\Api\AccountantResumeController::class, 'approve']);
             Route::post('/{id}/reject', [App\Http\Controllers\Api\AccountantResumeController::class, 'reject']);
         });
-        
+
         // Download (both accountant and admin)
         Route::get('/{id}/download', [App\Http\Controllers\Api\AccountantResumeController::class, 'download']);
     });

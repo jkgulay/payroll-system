@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('employee_applications', function (Blueprint $table) {
             $table->id();
-            
+
             // Personal Information
             $table->string('first_name');
             $table->string('middle_name')->nullable();
@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('mobile_number')->nullable();
             $table->text('worker_address');
-            
+
             // Employment Information
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
             $table->string('position');
@@ -32,7 +32,7 @@ return new class extends Migration
             $table->enum('employment_type', ['regular', 'contractual', 'part_time']);
             $table->enum('salary_type', ['daily', 'monthly']);
             $table->decimal('basic_salary', 10, 2);
-            
+
             // Allowances
             $table->boolean('has_water_allowance')->default(false);
             $table->decimal('water_allowance', 10, 2)->default(0);
@@ -42,13 +42,13 @@ return new class extends Migration
             $table->decimal('incentives', 10, 2)->default(0);
             $table->boolean('has_ppe')->default(false);
             $table->decimal('ppe', 10, 2)->default(0);
-            
+
             // Document paths
             $table->string('resume_path')->nullable();
             $table->string('id_path')->nullable();
             $table->string('contract_path')->nullable();
             $table->string('certificates_path')->nullable();
-            
+
             // Application status
             $table->enum('application_status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade'); // HR/Accountant
@@ -56,13 +56,13 @@ return new class extends Migration
             $table->text('rejection_reason')->nullable();
             $table->timestamp('submitted_at')->useCurrent();
             $table->timestamp('reviewed_at')->nullable();
-            
+
             // Created employee reference (after approval)
             $table->foreignId('employee_id')->nullable()->constrained('employees')->onDelete('set null');
-            
+
             $table->timestamps();
             $table->softDeletes();
-            
+
             // Indexes for performance
             $table->index('application_status');
             $table->index('created_by');

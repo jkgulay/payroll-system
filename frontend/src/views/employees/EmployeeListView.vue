@@ -153,13 +153,16 @@
     <!-- Employee Details/Edit Dialog -->
     <v-dialog v-model="showEmployeeDialog" max-width="1000px" scrollable>
       <v-card>
-        <v-card-title class="text-h5 py-4" :class="isEditing ? 'bg-primary' : 'bg-info'">
-          <v-icon start>{{ isEditing ? 'mdi-pencil' : 'mdi-eye' }}</v-icon>
-          {{ isEditing ? 'Edit Employee' : 'Employee Details' }}
+        <v-card-title
+          class="text-h5 py-4"
+          :class="isEditing ? 'bg-primary' : 'bg-info'"
+        >
+          <v-icon start>{{ isEditing ? "mdi-pencil" : "mdi-eye" }}</v-icon>
+          {{ isEditing ? "Edit Employee" : "Employee Details" }}
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6" style="max-height: 600px;">
+        <v-card-text class="pt-6" style="max-height: 600px">
           <v-form ref="employeeForm" v-if="selectedEmployee">
             <v-row>
               <!-- Personal Information -->
@@ -245,7 +248,7 @@
                   :items="[
                     { title: 'Male', value: 'male' },
                     { title: 'Female', value: 'female' },
-                    { title: 'Other', value: 'other' }
+                    { title: 'Other', value: 'other' },
                   ]"
                   label="Gender"
                   :readonly="!isEditing"
@@ -312,7 +315,7 @@
                     { title: 'Regular', value: 'regular' },
                     { title: 'Probationary', value: 'probationary' },
                     { title: 'Contractual', value: 'contractual' },
-                    { title: 'Active', value: 'active' }
+                    { title: 'Active', value: 'active' },
                   ]"
                   label="Employment Status"
                   :readonly="!isEditing"
@@ -327,7 +330,7 @@
                   :items="[
                     { title: 'Regular', value: 'regular' },
                     { title: 'Contractual', value: 'contractual' },
-                    { title: 'Part Time', value: 'part_time' }
+                    { title: 'Part Time', value: 'part_time' },
                   ]"
                   label="Employment Type"
                   :readonly="!isEditing"
@@ -341,7 +344,7 @@
                   v-model="selectedEmployee.salary_type"
                   :items="[
                     { title: 'Daily', value: 'daily' },
-                    { title: 'Monthly', value: 'monthly' }
+                    { title: 'Monthly', value: 'monthly' },
                   ]"
                   label="Salary Type"
                   :readonly="!isEditing"
@@ -378,11 +381,8 @@
             Edit
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="closeDialog"
-          >
-            {{ isEditing ? 'Cancel' : 'Close' }}
+          <v-btn variant="text" @click="closeDialog">
+            {{ isEditing ? "Cancel" : "Close" }}
           </v-btn>
           <v-btn
             v-if="isEditing"
@@ -399,7 +399,12 @@
     </v-dialog>
 
     <!-- Add Employee Dialog -->
-    <v-dialog v-model="showAddEmployeeDialog" max-width="900px" persistent scrollable>
+    <v-dialog
+      v-model="showAddEmployeeDialog"
+      max-width="900px"
+      persistent
+      scrollable
+    >
       <v-card>
         <v-card-title class="text-h5 py-4 bg-primary">
           <v-icon start>mdi-account-plus</v-icon>
@@ -407,7 +412,7 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6" style="max-height: 600px;">
+        <v-card-text class="pt-6" style="max-height: 600px">
           <v-form ref="addEmployeeForm">
             <v-row>
               <!-- Personal Information -->
@@ -485,7 +490,7 @@
                   :items="[
                     { title: 'Male', value: 'male' },
                     { title: 'Female', value: 'female' },
-                    { title: 'Other', value: 'other' }
+                    { title: 'Other', value: 'other' },
                   ]"
                   label="Gender"
                   :rules="[rules.required]"
@@ -565,7 +570,7 @@
                     { title: 'Regular', value: 'regular' },
                     { title: 'Probationary', value: 'probationary' },
                     { title: 'Contractual', value: 'contractual' },
-                    { title: 'Active', value: 'active' }
+                    { title: 'Active', value: 'active' },
                   ]"
                   label="Employment Status"
                   :rules="[rules.required]"
@@ -580,7 +585,7 @@
                   :items="[
                     { title: 'Regular', value: 'regular' },
                     { title: 'Contractual', value: 'contractual' },
-                    { title: 'Part Time', value: 'part_time' }
+                    { title: 'Part Time', value: 'part_time' },
                   ]"
                   label="Employment Type"
                   :rules="[rules.required]"
@@ -594,7 +599,7 @@
                   v-model="newEmployeeData.salary_type"
                   :items="[
                     { title: 'Daily', value: 'daily' },
-                    { title: 'Monthly', value: 'monthly' }
+                    { title: 'Monthly', value: 'monthly' },
                   ]"
                   label="Salary Type"
                   :rules="[rules.required]"
@@ -703,7 +708,8 @@
 
               <v-col cols="12">
                 <v-alert type="info" variant="tonal" density="compact">
-                  Account will be auto-created with email as username and auto-generated password
+                  Account will be auto-created with email as username and
+                  auto-generated password
                 </v-alert>
               </v-col>
 
@@ -712,7 +718,7 @@
                   v-model="newEmployeeData.role"
                   :items="[
                     { title: 'Accountant', value: 'accountant' },
-                    { title: 'Employee', value: 'employee' }
+                    { title: 'Employee', value: 'employee' },
                   ]"
                   label="User Role"
                   :rules="[rules.required]"
@@ -752,28 +758,37 @@
           Employee Account Created
         </v-card-title>
         <v-divider></v-divider>
-        
+
         <v-card-text class="pt-6">
           <v-alert type="success" variant="tonal" class="mb-4">
             <div class="text-h6 mb-2">
-              {{ createdEmployee?.employee_number }} - {{ createdEmployee?.first_name }} {{ createdEmployee?.last_name }}
+              {{ createdEmployee?.employee_number }} -
+              {{ createdEmployee?.first_name }} {{ createdEmployee?.last_name }}
             </div>
           </v-alert>
 
           <div class="mb-4">
-            <div class="text-subtitle-1 font-weight-bold mb-2">Login Credentials:</div>
+            <div class="text-subtitle-1 font-weight-bold mb-2">
+              Login Credentials:
+            </div>
             <v-sheet color="grey-lighten-4" rounded class="pa-4">
               <div class="mb-3">
                 <div class="text-caption">Username (Email)</div>
-                <div class="text-body-1 font-weight-bold">{{ createdEmployee?.email }}</div>
+                <div class="text-body-1 font-weight-bold">
+                  {{ createdEmployee?.email }}
+                </div>
               </div>
               <div class="mb-3">
                 <div class="text-caption">Temporary Password</div>
-                <div class="text-h6 font-weight-bold text-primary">{{ temporaryPassword }}</div>
+                <div class="text-h6 font-weight-bold text-primary">
+                  {{ temporaryPassword }}
+                </div>
               </div>
               <div>
                 <div class="text-caption">Role</div>
-                <div class="text-body-1 font-weight-bold text-capitalize">{{ createdEmployee?.role }}</div>
+                <div class="text-body-1 font-weight-bold text-capitalize">
+                  {{ createdEmployee?.role }}
+                </div>
               </div>
             </v-sheet>
           </div>
@@ -786,7 +801,11 @@
         <v-divider></v-divider>
 
         <v-card-actions class="pa-4">
-          <v-btn variant="text" prepend-icon="mdi-content-copy" @click="copyCredentials">
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-content-copy"
+            @click="copyCredentials"
+          >
             Copy
           </v-btn>
           <v-spacer></v-spacer>
@@ -802,7 +821,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useEmployeeStore } from "@/stores/employee";
-import { useToast } from 'vue-toastification';
+import { useToast } from "vue-toastification";
 import api from "@/services/api";
 
 const toast = useToast();
@@ -824,7 +843,7 @@ const saving = ref(false);
 // Add Employee Dialog variables
 const showAddEmployeeDialog = ref(false);
 const showPasswordDialog = ref(false);
-const temporaryPassword = ref('');
+const temporaryPassword = ref("");
 const createdEmployee = ref(null);
 const addEmployeeForm = ref(null);
 const savingNew = ref(false);
@@ -854,7 +873,7 @@ const newEmployeeData = ref({
   incentives: 0,
   has_ppe: false,
   ppe: 0,
-  role: "employee"
+  role: "employee",
 });
 
 const rules = {
@@ -926,15 +945,19 @@ async function editEmployee(employee) {
 }
 
 async function suspendEmployee(employee) {
-  if (!confirm(`Are you sure you want to suspend ${employee.first_name} ${employee.last_name}?`)) {
+  if (
+    !confirm(
+      `Are you sure you want to suspend ${employee.first_name} ${employee.last_name}?`
+    )
+  ) {
     return;
   }
-  
+
   try {
     await api.put(`/employees/${employee.id}`, {
       ...employee,
-      employment_status: 'suspended',
-      is_active: false
+      employment_status: "suspended",
+      is_active: false,
     });
     toast.success("Employee suspended successfully!");
     await fetchEmployees();
@@ -945,16 +968,20 @@ async function suspendEmployee(employee) {
 }
 
 async function terminateEmployee(employee) {
-  if (!confirm(`Are you sure you want to terminate ${employee.first_name} ${employee.last_name}?`)) {
+  if (
+    !confirm(
+      `Are you sure you want to terminate ${employee.first_name} ${employee.last_name}?`
+    )
+  ) {
     return;
   }
-  
+
   try {
     await api.put(`/employees/${employee.id}`, {
       ...employee,
-      employment_status: 'terminated',
+      employment_status: "terminated",
       is_active: false,
-      date_separated: new Date().toISOString().split('T')[0]
+      date_separated: new Date().toISOString().split("T")[0],
     });
     toast.success("Employee terminated successfully!");
     await fetchEmployees();
@@ -965,10 +992,14 @@ async function terminateEmployee(employee) {
 }
 
 async function deleteEmployee(employee) {
-  if (!confirm(`Are you sure you want to DELETE ${employee.first_name} ${employee.last_name}? This action cannot be undone!`)) {
+  if (
+    !confirm(
+      `Are you sure you want to DELETE ${employee.first_name} ${employee.last_name}? This action cannot be undone!`
+    )
+  ) {
     return;
   }
-  
+
   try {
     await api.delete(`/employees/${employee.id}`);
     toast.success("Employee deleted successfully!");
@@ -982,13 +1013,17 @@ async function deleteEmployee(employee) {
 async function saveEmployee() {
   saving.value = true;
   try {
-    await api.put(`/employees/${selectedEmployee.value.id}`, selectedEmployee.value);
+    await api.put(
+      `/employees/${selectedEmployee.value.id}`,
+      selectedEmployee.value
+    );
     toast.success("Employee updated successfully!");
     await fetchEmployees();
     closeDialog();
   } catch (error) {
     console.error("Error updating employee:", error);
-    const message = error.response?.data?.message || "Failed to update employee";
+    const message =
+      error.response?.data?.message || "Failed to update employee";
     toast.error(message);
   } finally {
     saving.value = false;
@@ -1016,7 +1051,7 @@ async function saveNewEmployee() {
   savingNew.value = true;
   try {
     const response = await api.post("/employees", newEmployeeData.value);
-    
+
     temporaryPassword.value = response.data.temporary_password;
     createdEmployee.value = response.data.employee;
     createdEmployee.value.role = response.data.role;
@@ -1027,7 +1062,8 @@ async function saveNewEmployee() {
     await fetchEmployees();
   } catch (error) {
     console.error("Error creating employee:", error);
-    const message = error.response?.data?.message || "Failed to create employee";
+    const message =
+      error.response?.data?.message || "Failed to create employee";
     toast.error(message);
   } finally {
     savingNew.value = false;
@@ -1062,7 +1098,7 @@ function closeAddDialog() {
     incentives: 0,
     has_ppe: false,
     ppe: 0,
-    role: "employee"
+    role: "employee",
   };
 }
 
@@ -1074,10 +1110,13 @@ Role: ${createdEmployee.value.role}
 
 ⚠️ Employee must change password on first login`;
 
-  navigator.clipboard.writeText(credentials).then(() => {
-    toast.success('Credentials copied to clipboard!');
-  }).catch(() => {
-    toast.error('Failed to copy credentials');
-  });
+  navigator.clipboard
+    .writeText(credentials)
+    .then(() => {
+      toast.success("Credentials copied to clipboard!");
+    })
+    .catch(() => {
+      toast.error("Failed to copy credentials");
+    });
 }
 </script>

@@ -63,12 +63,12 @@ class User extends Authenticatable
         if (!$this->avatar) {
             return null;
         }
-        
+
         // If avatar is already a full URL, return it
         if (str_starts_with($this->avatar, 'http')) {
             return $this->avatar;
         }
-        
+
         // Return the storage URL
         return url('storage/' . $this->avatar);
     }

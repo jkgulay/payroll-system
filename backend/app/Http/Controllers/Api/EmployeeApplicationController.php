@@ -34,10 +34,10 @@ class EmployeeApplicationController extends Controller
         // Search by name or email
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -225,7 +225,6 @@ class EmployeeApplicationController extends Controller
                 'temporary_password' => $autoPassword,
                 'role' => 'employee',
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

@@ -37,7 +37,8 @@ const router = createRouter({
         {
           path: "accountant-dashboard",
           name: "accountant-dashboard",
-          component: () => import("@/views/accountant/AccountantDashboardView.vue"),
+          component: () =>
+            import("@/views/accountant/AccountantDashboardView.vue"),
           meta: { title: "Dashboard", roles: ["accountant"] },
         },
         {
@@ -50,7 +51,10 @@ const router = createRouter({
           path: "profile",
           name: "profile",
           component: () => import("@/views/employee/ProfileView.vue"),
-          meta: { title: "My Profile", roles: ["admin", "accountant", "employee"] },
+          meta: {
+            title: "My Profile",
+            roles: ["admin", "accountant", "employee"],
+          },
         },
         {
           path: "employees",
@@ -180,7 +184,7 @@ router.beforeEach(async (to, from, next) => {
       } else {
         targetRoute = "admin-dashboard";
       }
-      
+
       // Prevent redirect loop
       if (to.name !== targetRoute) {
         return next({ name: targetRoute });

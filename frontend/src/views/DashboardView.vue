@@ -155,11 +155,14 @@
               density="comfortable"
             >
               <template v-slot:item.full_name="{ item }">
-                <strong>{{ item.first_name }} {{ item.middle_name }} {{ item.last_name }}</strong>
+                <strong
+                  >{{ item.first_name }} {{ item.middle_name }}
+                  {{ item.last_name }}</strong
+                >
               </template>
 
               <template v-slot:item.project="{ item }">
-                {{ item.project?.name || 'N/A' }}
+                {{ item.project?.name || "N/A" }}
               </template>
 
               <template v-slot:item.submitted_at="{ item }">
@@ -167,11 +170,14 @@
               </template>
 
               <template v-slot:item.created_by="{ item }">
-                {{ item.creator?.username || 'Unknown' }}
+                {{ item.creator?.username || "Unknown" }}
               </template>
 
               <template v-slot:item.application_status="{ item }">
-                <v-chip size="small" :color="getApplicationStatusColor(item.application_status)">
+                <v-chip
+                  size="small"
+                  :color="getApplicationStatusColor(item.application_status)"
+                >
                   {{ item.application_status }}
                 </v-chip>
               </template>
@@ -420,7 +426,7 @@
                   :items="[
                     { title: 'Male', value: 'male' },
                     { title: 'Female', value: 'female' },
-                    { title: 'Other', value: 'other' }
+                    { title: 'Other', value: 'other' },
                   ]"
                   label="Gender"
                   :rules="[rules.required]"
@@ -782,7 +788,12 @@
     </v-dialog>
 
     <!-- Application Review Dialog -->
-    <v-dialog v-model="showApplicationDialog" max-width="1000px" persistent scrollable>
+    <v-dialog
+      v-model="showApplicationDialog"
+      max-width="1000px"
+      persistent
+      scrollable
+    >
       <v-card v-if="selectedApplication">
         <v-card-title class="text-h5 py-4 bg-warning">
           <v-icon start>mdi-account-check</v-icon>
@@ -790,7 +801,7 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6" style="max-height: 600px;">
+        <v-card-text class="pt-6" style="max-height: 600px">
           <v-row>
             <!-- Personal Information -->
             <v-col cols="12">
@@ -881,7 +892,9 @@
 
             <!-- Employment Information -->
             <v-col cols="12">
-              <div class="text-h6 mb-2 mt-4">Section 2: Employment Information</div>
+              <div class="text-h6 mb-2 mt-4">
+                Section 2: Employment Information
+              </div>
               <v-divider class="mb-4"></v-divider>
             </v-col>
 
@@ -961,7 +974,11 @@
               <v-divider class="mb-4"></v-divider>
             </v-col>
 
-            <v-col cols="12" md="6" v-if="selectedApplication.has_water_allowance">
+            <v-col
+              cols="12"
+              md="6"
+              v-if="selectedApplication.has_water_allowance"
+            >
               <v-text-field
                 :model-value="`Water Allowance: ₱${selectedApplication.water_allowance}`"
                 label="Water Allowance"
@@ -1012,7 +1029,9 @@
                 <!-- Resume -->
                 <v-expansion-panel v-if="selectedApplication.resume_path">
                   <v-expansion-panel-title>
-                    <v-icon class="mr-3" color="primary">mdi-file-document</v-icon>
+                    <v-icon class="mr-3" color="primary"
+                      >mdi-file-document</v-icon
+                    >
                     <span class="font-weight-bold">Resume (Required)</span>
                   </v-expansion-panel-title>
                   <v-expansion-panel-text>
@@ -1040,12 +1059,17 @@
                       </v-btn>
                     </div>
                     <!-- Preview -->
-                    <div v-if="getFileExtension(selectedApplication.resume_path) === 'pdf'">
+                    <div
+                      v-if="
+                        getFileExtension(selectedApplication.resume_path) ===
+                        'pdf'
+                      "
+                    >
                       <iframe
                         :src="getStorageUrl(selectedApplication.resume_path)"
                         width="100%"
                         height="600px"
-                        style="border: 1px solid #ddd; border-radius: 4px;"
+                        style="border: 1px solid #ddd; border-radius: 4px"
                       ></iframe>
                     </div>
                     <div v-else>
@@ -1061,7 +1085,9 @@
                 <!-- ID Document -->
                 <v-expansion-panel v-if="selectedApplication.id_path">
                   <v-expansion-panel-title>
-                    <v-icon class="mr-3" color="info">mdi-card-account-details</v-icon>
+                    <v-icon class="mr-3" color="info"
+                      >mdi-card-account-details</v-icon
+                    >
                     <span class="font-weight-bold">ID Document</span>
                   </v-expansion-panel-title>
                   <v-expansion-panel-text>
@@ -1089,12 +1115,16 @@
                       </v-btn>
                     </div>
                     <!-- Preview -->
-                    <div v-if="getFileExtension(selectedApplication.id_path) === 'pdf'">
+                    <div
+                      v-if="
+                        getFileExtension(selectedApplication.id_path) === 'pdf'
+                      "
+                    >
                       <iframe
                         :src="getStorageUrl(selectedApplication.id_path)"
                         width="100%"
                         height="600px"
-                        style="border: 1px solid #ddd; border-radius: 4px;"
+                        style="border: 1px solid #ddd; border-radius: 4px"
                       ></iframe>
                     </div>
                     <div v-else>
@@ -1138,12 +1168,17 @@
                       </v-btn>
                     </div>
                     <!-- Preview -->
-                    <div v-if="getFileExtension(selectedApplication.contract_path) === 'pdf'">
+                    <div
+                      v-if="
+                        getFileExtension(selectedApplication.contract_path) ===
+                        'pdf'
+                      "
+                    >
                       <iframe
                         :src="getStorageUrl(selectedApplication.contract_path)"
                         width="100%"
                         height="600px"
-                        style="border: 1px solid #ddd; border-radius: 4px;"
+                        style="border: 1px solid #ddd; border-radius: 4px"
                       ></iframe>
                     </div>
                     <div v-else>
@@ -1159,7 +1194,9 @@
                 <!-- Certificates -->
                 <v-expansion-panel v-if="selectedApplication.certificates_path">
                   <v-expansion-panel-title>
-                    <v-icon class="mr-3" color="warning">mdi-certificate</v-icon>
+                    <v-icon class="mr-3" color="warning"
+                      >mdi-certificate</v-icon
+                    >
                     <span class="font-weight-bold">Certificates</span>
                   </v-expansion-panel-title>
                   <v-expansion-panel-text>
@@ -1168,7 +1205,9 @@
                         size="small"
                         color="primary"
                         variant="elevated"
-                        :href="getStorageUrl(selectedApplication.certificates_path)"
+                        :href="
+                          getStorageUrl(selectedApplication.certificates_path)
+                        "
                         target="_blank"
                         prepend-icon="mdi-open-in-new"
                       >
@@ -1178,7 +1217,9 @@
                         size="small"
                         color="secondary"
                         variant="elevated"
-                        :href="getStorageUrl(selectedApplication.certificates_path)"
+                        :href="
+                          getStorageUrl(selectedApplication.certificates_path)
+                        "
                         download
                         prepend-icon="mdi-download"
                         class="ml-2"
@@ -1187,17 +1228,27 @@
                       </v-btn>
                     </div>
                     <!-- Preview -->
-                    <div v-if="getFileExtension(selectedApplication.certificates_path) === 'pdf'">
+                    <div
+                      v-if="
+                        getFileExtension(
+                          selectedApplication.certificates_path
+                        ) === 'pdf'
+                      "
+                    >
                       <iframe
-                        :src="getStorageUrl(selectedApplication.certificates_path)"
+                        :src="
+                          getStorageUrl(selectedApplication.certificates_path)
+                        "
                         width="100%"
                         height="600px"
-                        style="border: 1px solid #ddd; border-radius: 4px;"
+                        style="border: 1px solid #ddd; border-radius: 4px"
                       ></iframe>
                     </div>
                     <div v-else>
                       <v-img
-                        :src="getStorageUrl(selectedApplication.certificates_path)"
+                        :src="
+                          getStorageUrl(selectedApplication.certificates_path)
+                        "
                         max-height="600"
                         contain
                       ></v-img>
@@ -1207,20 +1258,33 @@
               </v-expansion-panels>
 
               <!-- No documents message -->
-              <v-alert v-if="!selectedApplication.resume_path && !selectedApplication.id_path && !selectedApplication.contract_path && !selectedApplication.certificates_path" type="info" variant="tonal">
+              <v-alert
+                v-if="
+                  !selectedApplication.resume_path &&
+                  !selectedApplication.id_path &&
+                  !selectedApplication.contract_path &&
+                  !selectedApplication.certificates_path
+                "
+                type="info"
+                variant="tonal"
+              >
                 No documents uploaded with this application
               </v-alert>
             </v-col>
 
             <!-- Application Status -->
             <v-col cols="12">
-              <div class="text-h6 mb-2 mt-4">Section 5: Application Details</div>
+              <div class="text-h6 mb-2 mt-4">
+                Section 5: Application Details
+              </div>
               <v-divider class="mb-4"></v-divider>
             </v-col>
 
             <v-col cols="12" md="6">
               <v-text-field
-                :model-value="selectedApplication.creator?.username || 'Unknown'"
+                :model-value="
+                  selectedApplication.creator?.username || 'Unknown'
+                "
                 label="Submitted By"
                 readonly
                 variant="outlined"
@@ -1324,24 +1388,34 @@
         <v-card-text class="pt-6">
           <v-alert type="success" variant="tonal" class="mb-4">
             <div class="text-h6 mb-2">
-              {{ approvedEmployeeData?.employee_number }} - {{ approvedEmployeeData?.first_name }} {{ approvedEmployeeData?.last_name }}
+              {{ approvedEmployeeData?.employee_number }} -
+              {{ approvedEmployeeData?.first_name }}
+              {{ approvedEmployeeData?.last_name }}
             </div>
           </v-alert>
 
           <div class="mb-4">
-            <div class="text-subtitle-1 font-weight-bold mb-2">Login Credentials Created:</div>
+            <div class="text-subtitle-1 font-weight-bold mb-2">
+              Login Credentials Created:
+            </div>
             <v-sheet color="grey-lighten-4" rounded class="pa-4">
               <div class="mb-3">
                 <div class="text-caption">Username (Email)</div>
-                <div class="text-body-1 font-weight-bold">{{ approvedEmployeeData?.email }}</div>
+                <div class="text-body-1 font-weight-bold">
+                  {{ approvedEmployeeData?.email }}
+                </div>
               </div>
               <div class="mb-3">
                 <div class="text-caption">Temporary Password</div>
-                <div class="text-h6 font-weight-bold text-primary">{{ approvedEmployeePassword }}</div>
+                <div class="text-h6 font-weight-bold text-primary">
+                  {{ approvedEmployeePassword }}
+                </div>
               </div>
               <div>
                 <div class="text-caption">Role</div>
-                <div class="text-body-1 font-weight-bold text-capitalize">Employee</div>
+                <div class="text-body-1 font-weight-bold text-capitalize">
+                  Employee
+                </div>
               </div>
             </v-sheet>
           </div>
@@ -1354,7 +1428,11 @@
         <v-divider></v-divider>
 
         <v-card-actions class="pa-4">
-          <v-btn variant="text" prepend-icon="mdi-content-copy" @click="copyApprovedCredentials">
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-content-copy"
+            @click="copyApprovedCredentials"
+          >
             Copy
           </v-btn>
           <v-spacer></v-spacer>
@@ -1394,17 +1472,17 @@ const applicationHeaders = ref([
   { title: "Submitted By", key: "created_by" },
   { title: "Submitted At", key: "submitted_at" },
   { title: "Status", key: "application_status" },
-  { title: "Actions", key: "actions", sortable: false }
+  { title: "Actions", key: "actions", sortable: false },
 ]);
 const showApplicationDialog = ref(false);
 const selectedApplication = ref(null);
-const applicationAction = ref('approve'); // 'approve' or 'reject'
-const rejectionReason = ref('');
-const approvalHireDate = ref('');
+const applicationAction = ref("approve"); // 'approve' or 'reject'
+const rejectionReason = ref("");
+const approvalHireDate = ref("");
 const processing = ref(false);
 const showApprovalSuccessDialog = ref(false);
 const approvedEmployeeData = ref(null);
-const approvedEmployeePassword = ref('');
+const approvedEmployeePassword = ref("");
 
 // Employee form data
 const showAddEmployeeDialog = ref(false);
@@ -1529,7 +1607,7 @@ async function saveEmployee() {
       });
     } else {
       const message =
-        error.response?.data?.message || 
+        error.response?.data?.message ||
         error.response?.data?.error ||
         "Failed to create employee";
       toast.error(message);
@@ -1629,27 +1707,28 @@ function getPayrollColor(status) {
 // Application Management Functions
 async function fetchPendingApplications() {
   try {
-    const response = await api.get('/employee-applications', {
-      params: { status: 'pending' }
+    const response = await api.get("/employee-applications", {
+      params: { status: "pending" },
     });
     pendingApplications.value = response.data;
   } catch (error) {
-    console.error('Error fetching applications:', error);
-    toast.error('Failed to load pending applications');
+    console.error("Error fetching applications:", error);
+    toast.error("Failed to load pending applications");
   }
 }
 
 function viewApplication(application) {
   selectedApplication.value = application;
-  applicationAction.value = 'approve';
-  rejectionReason.value = '';
-  approvalHireDate.value = application.date_hired || new Date().toISOString().split('T')[0];
+  applicationAction.value = "approve";
+  rejectionReason.value = "";
+  approvalHireDate.value =
+    application.date_hired || new Date().toISOString().split("T")[0];
   showApplicationDialog.value = true;
 }
 
 async function approveApplication() {
   if (!approvalHireDate.value) {
-    toast.warning('Please provide a hire date');
+    toast.warning("Please provide a hire date");
     return;
   }
   processing.value = true;
@@ -1660,14 +1739,16 @@ async function approveApplication() {
     );
     approvedEmployeeData.value = response.data.employee;
     approvedEmployeePassword.value = response.data.temporary_password;
-    toast.success('Application approved! Employee account created.');
+    toast.success("Application approved! Employee account created.");
     closeApplicationDialog();
     showApprovalSuccessDialog.value = true;
     await fetchPendingApplications();
     await fetchDashboardData(); // Update stats
   } catch (error) {
-    console.error('Error approving application:', error);
-    toast.error(error.response?.data?.message || 'Failed to approve application');
+    console.error("Error approving application:", error);
+    toast.error(
+      error.response?.data?.message || "Failed to approve application"
+    );
   } finally {
     processing.value = false;
   }
@@ -1675,7 +1756,7 @@ async function approveApplication() {
 
 async function rejectApplication() {
   if (!rejectionReason.value.trim()) {
-    toast.warning('Please provide a rejection reason');
+    toast.warning("Please provide a rejection reason");
     return;
   }
   processing.value = true;
@@ -1684,12 +1765,12 @@ async function rejectApplication() {
       `/employee-applications/${selectedApplication.value.id}/reject`,
       { rejection_reason: rejectionReason.value }
     );
-    toast.success('Application rejected');
+    toast.success("Application rejected");
     closeApplicationDialog();
     await fetchPendingApplications();
   } catch (error) {
-    console.error('Error rejecting application:', error);
-    toast.error('Failed to reject application');
+    console.error("Error rejecting application:", error);
+    toast.error("Failed to reject application");
   } finally {
     processing.value = false;
   }
@@ -1698,9 +1779,9 @@ async function rejectApplication() {
 function closeApplicationDialog() {
   showApplicationDialog.value = false;
   selectedApplication.value = null;
-  applicationAction.value = 'approve';
-  rejectionReason.value = '';
-  approvalHireDate.value = '';
+  applicationAction.value = "approve";
+  rejectionReason.value = "";
+  approvalHireDate.value = "";
   processing.value = false;
 }
 
@@ -1713,51 +1794,56 @@ Temporary Password: ${approvedEmployeePassword.value}
 Role: Employee
 
 ⚠️ Employee must change password on first login.`;
-  
-  navigator.clipboard.writeText(credentials).then(() => {
-    toast.success('Credentials copied to clipboard!');
-  }).catch(() => {
-    toast.error('Failed to copy credentials');
-  });
+
+  navigator.clipboard
+    .writeText(credentials)
+    .then(() => {
+      toast.success("Credentials copied to clipboard!");
+    })
+    .catch(() => {
+      toast.error("Failed to copy credentials");
+    });
 }
 
 function hasAllowances(application) {
-  return application.has_water_allowance || 
-         application.has_cola || 
-         application.has_incentives || 
-         application.has_ppe;
+  return (
+    application.has_water_allowance ||
+    application.has_cola ||
+    application.has_incentives ||
+    application.has_ppe
+  );
 }
 
 function getApplicationStatusColor(status) {
   const colors = {
-    'pending': 'warning',
-    'approved': 'success',
-    'rejected': 'error'
+    pending: "warning",
+    approved: "success",
+    rejected: "error",
   };
-  return colors[status] || 'default';
+  return colors[status] || "default";
 }
 
 function formatDate(dateString) {
-  if (!dateString) return '';
+  if (!dateString) return "";
   const date = new Date(dateString);
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
 function getStorageUrl(path) {
-  const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-  const backendURL = baseURL.replace('/api', '');
+  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+  const backendURL = baseURL.replace("/api", "");
   return `${backendURL}/storage/${path}`;
 }
 
 function getFileExtension(path) {
-  if (!path) return '';
-  return path.split('.').pop().toLowerCase();
+  if (!path) return "";
+  return path.split(".").pop().toLowerCase();
 }
 </script>
 

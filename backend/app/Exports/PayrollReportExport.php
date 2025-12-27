@@ -123,11 +123,11 @@ class PayrollReportExport implements FromCollection, WithHeadings, WithMapping, 
             $sheet->setCellValue('A' . $signatureRow, 'Prepared by:');
             $sheet->setCellValue('E' . $signatureRow, 'Checked by:');
             $sheet->setCellValue('I' . $signatureRow, 'Approved by:');
-            
+
             $sheet->setCellValue('A' . ($signatureRow + 3), '_____________________');
             $sheet->setCellValue('E' . ($signatureRow + 3), '_____________________');
             $sheet->setCellValue('I' . ($signatureRow + 3), '_____________________');
-            
+
             $sheet->setCellValue('A' . ($signatureRow + 4), 'Accountant');
             $sheet->setCellValue('E' . ($signatureRow + 4), 'HR Manager');
             $sheet->setCellValue('I' . ($signatureRow + 4), 'Administrator');

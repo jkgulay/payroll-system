@@ -36,10 +36,10 @@ class AccountantResumeController extends Controller
             $extension = $file->getClientOriginalExtension();
             $fileType = $extension;
             $fileSize = $file->getSize();
-            
+
             // Generate unique filename
             $storedFilename = Str::uuid() . '.' . $extension;
-            
+
             // Store file in storage/app/public/resumes
             $filePath = $file->storeAs('resumes', $storedFilename, 'public');
 
@@ -72,7 +72,6 @@ class AccountantResumeController extends Controller
                 'message' => 'Resume uploaded successfully and sent for admin approval',
                 'data' => $resume
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -99,7 +98,6 @@ class AccountantResumeController extends Controller
                 'success' => true,
                 'data' => $resumes
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -126,7 +124,6 @@ class AccountantResumeController extends Controller
                 'success' => true,
                 'data' => $resumes
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -177,7 +174,6 @@ class AccountantResumeController extends Controller
                 'success' => true,
                 'message' => 'Resume deleted successfully'
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -203,7 +199,6 @@ class AccountantResumeController extends Controller
                 'success' => true,
                 'data' => $resumes
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -242,7 +237,7 @@ class AccountantResumeController extends Controller
                 ->get()
                 ->map(function ($app) {
                     // Map application status to resume status
-                    $status = match($app->application_status) {
+                    $status = match ($app->application_status) {
                         'pending' => 'pending',
                         'approved' => 'approved',
                         'rejected' => 'rejected',
@@ -291,7 +286,6 @@ class AccountantResumeController extends Controller
                 'success' => true,
                 'data' => $allResumes
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -362,7 +356,6 @@ class AccountantResumeController extends Controller
                 'message' => 'Resume approved successfully',
                 'data' => $resume
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -433,7 +426,6 @@ class AccountantResumeController extends Controller
                 'message' => 'Resume rejected',
                 'data' => $resume
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -468,7 +460,6 @@ class AccountantResumeController extends Controller
 
             $filePath = storage_path('app/public/' . $resume->file_path);
             return response()->download($filePath, $resume->original_filename);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
