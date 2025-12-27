@@ -18,10 +18,12 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'username',
+        'name',
         'email',
         'password',
         'role',
         'is_active',
+        'avatar',
         'last_login_at',
         'two_factor_secret',
         'two_factor_enabled',
@@ -46,5 +48,25 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'last_login_at' => 'datetime',
+        'two_factor_enabled' => 'boolean',
     ];
+
+    /**
+     * Get the avatar URL attribute
+     */
+    protected function getAvatarUrlAttribute(): ?string
+    {
+        if (!$this->avatar) {
+            return null;
+        }
+        
+        // If avatar is already a full URL, return it
+        if (str_starts_with($this->avatar, 'http')) {
+            return $this->avatar;
+        }
+        
+        // Return the storage URL
+        return url('storage/' . $this->avatar);
+    }
 }

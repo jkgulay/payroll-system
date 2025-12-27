@@ -2,7 +2,7 @@
   <v-container fluid>
     <v-row>
       <v-col cols="12">
-        <h1 class="text-h4 font-weight-bold mb-6">
+        <h1 class="construction-header text-h4 mb-6">
           <v-icon>mdi-account-cog</v-icon>
           My Profile
         </h1>
@@ -10,18 +10,91 @@
     </v-row>
 
     <v-row>
+      <!-- Profile Picture Section -->
+      <v-col cols="12" md="4">
+        <v-card class="industrial-card">
+          <v-card-title class="construction-header">
+            <v-icon class="mr-2">mdi-camera-account</v-icon>
+            Profile Picture
+          </v-card-title>
+          <v-divider class="steel-divider"></v-divider>
+          <v-card-text class="text-center pa-6">
+            <v-avatar size="200" class="mb-4" color="steel">
+              <v-img
+                v-if="avatarPreview || user?.avatar"
+                :src="avatarPreview || getAvatarUrl(user?.avatar)"
+                cover
+              ></v-img>
+              <v-icon v-else size="100" color="white">mdi-account</v-icon>
+            </v-avatar>
+
+            <div class="mb-4">
+              <v-file-input
+                v-model="avatarFile"
+                accept="image/*"
+                label="Choose profile picture"
+                prepend-icon="mdi-camera"
+                variant="outlined"
+                density="comfortable"
+                show-size
+                @change="handleAvatarChange"
+                :disabled="uploadingAvatar"
+              ></v-file-input>
+            </div>
+
+            <v-btn
+              color="primary"
+              block
+              :loading="uploadingAvatar"
+              :disabled="!avatarFile || avatarFile.length === 0"
+              @click="uploadAvatar"
+              class="construction-btn"
+            >
+              <v-icon left>mdi-upload</v-icon>
+              Upload Picture
+            </v-btn>
+
+            <v-btn
+              v-if="user?.avatar"
+              color="error"
+              variant="tonal"
+              block
+              class="mt-2"
+              @click="removeAvatar"
+              :disabled="uploadingAvatar"
+            >
+              <v-icon left>mdi-delete</v-icon>
+              Remove Picture
+            </v-btn>
+
+            <div class="text-caption text-medium-emphasis mt-3">
+              Recommended: Square image, at least 200x200px
+              <br>Max size: 2MB
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
       <!-- Profile Information -->
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title>
+      <v-col cols="12" md="8">
+        <v-card class="industrial-card mb-4">
+          <v-card-title class="construction-header">
             <v-icon class="mr-2">mdi-account</v-icon>
             Profile Information
           </v-card-title>
+          <v-divider class="steel-divider"></v-divider>
           <v-card-text>
             <v-list>
               <v-list-item>
                 <template v-slot:prepend>
                   <v-icon>mdi-account-circle</v-icon>
+                </template>
+                <v-list-item-title>Full Name</v-list-item-title>
+                <v-list-item-subtitle>{{ user?.name || 'N/A' }}</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon>mdi-account-badge</v-icon>
                 </template>
                 <v-list-item-title>Username</v-list-item-title>
                 <v-list-item-subtitle>{{ user?.username }}</v-list-item-subtitle>
@@ -43,15 +116,14 @@
             </v-list>
           </v-card-text>
         </v-card>
-      </v-col>
 
-      <!-- Change Password -->
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title>
+        <!-- Change Password -->
+        <v-card class="industrial-card">
+          <v-card-title class="construction-header">
             <v-icon class="mr-2">mdi-lock-reset</v-icon>
             Change Password
           </v-card-title>
+          <v-divider class="steel-divider"></v-divider>
           <v-card-text>
             <v-form @submit.prevent="changePassword" ref="passwordFormRef" validate-on="submit lazy">
               <v-text-field
@@ -102,6 +174,7 @@
                 color="primary"
                 :loading="changingPassword"
                 block
+                class="construction-btn"
               >
                 <v-icon left>mdi-lock-check</v-icon>
                 Change Password
@@ -113,13 +186,14 @@
     </v-row>
 
     <!-- Account Security -->
-    <v-row>
+    <v-row class="mt-4">
       <v-col cols="12">
-        <v-card>
-          <v-card-title>
+        <v-card class="industrial-card">
+          <v-card-title class="construction-header">
             <v-icon class="mr-2">mdi-shield-check</v-icon>
             Account Security
           </v-card-title>
+          <v-divider class="steel-divider"></v-divider>
           <v-card-text>
             <v-list>
               <v-list-item>
@@ -155,6 +229,10 @@ const toast = useToast();
 const authStore = useAuthStore();
 
 const user = ref(null);
+const avatarFile = ref(null);
+const avatarPreview = ref(null);
+const uploadingAvatar = ref(false);
+
 const passwordForm = reactive({
   current_password: '',
   new_password: '',
@@ -184,11 +262,128 @@ async function fetchProfile() {
     const response = await api.get('/profile');
     if (response.data.success) {
       user.value = response.data.data;
+      // Update auth store with latest user data
+      authStore.user = response.data.data;
     }
   } catch (error) {
     toast.error('Failed to load profile');
     console.error(error);
   }
+}
+
+function handleAvatarChange() {
+  // v-file-input with v-model returns array
+  const file = avatarFile.value?.[0];
+  
+  if (!file) {
+    avatarPreview.value = null;
+    return;
+  }
+
+  // Validate file size (max 2MB)
+  if (file.size > 2 * 1024 * 1024) {
+    toast.error('Image size must be less than 2MB');
+    avatarFile.value = [];
+    avatarPreview.value = null;
+    return;
+  }
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    toast.error('Please select an image file');
+    avatarFile.value = [];
+    avatarPreview.value = null;
+    return;
+  }
+
+  // Create preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    avatarPreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadAvatar() {
+  // Handle both array and direct file access
+  let file = null;
+  if (Array.isArray(avatarFile.value) && avatarFile.value.length > 0) {
+    file = avatarFile.value[0];
+  } else if (avatarFile.value && avatarFile.value instanceof File) {
+    file = avatarFile.value;
+  }
+  
+  if (!file) {
+    toast.error('Please select an image first');
+    return;
+  }
+
+  uploadingAvatar.value = true;
+
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await api.post('/profile/upload-avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    if (response.data.success) {
+      toast.success('Profile picture updated successfully');
+      
+      // Update user data locally
+      user.value = response.data.data;
+      authStore.user = response.data.data;
+      
+      // Clear the file input and preview
+      avatarFile.value = [];
+      avatarPreview.value = null;
+      
+      // Force a refresh to ensure avatar displays
+      await fetchProfile();
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Failed to upload profile picture');
+    console.error(error);
+  } finally {
+    uploadingAvatar.value = false;
+  }
+}
+
+async function removeAvatar() {
+  if (!confirm('Are you sure you want to remove your profile picture?')) {
+    return;
+  }
+
+  uploadingAvatar.value = true;
+
+  try {
+    const response = await api.delete('/profile/remove-avatar');
+
+    if (response.data.success) {
+      toast.success('Profile picture removed successfully');
+      user.value = response.data.data;
+      // Update auth store
+      authStore.user = response.data.data;
+      avatarPreview.value = null;
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Failed to remove profile picture');
+    console.error(error);
+  } finally {
+    uploadingAvatar.value = false;
+  }
+}
+
+function getAvatarUrl(avatar) {
+  if (!avatar) return null;
+  // If avatar is already a full URL, return it
+  if (avatar.startsWith('http')) return avatar;
+  // Otherwise, prepend the base URL (remove /api from VITE_API_URL)
+  const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '');
+  return `${apiUrl}/storage/${avatar}`;
 }
 
 async function changePassword() {

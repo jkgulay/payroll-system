@@ -31,6 +31,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/profile', [App\Http\Controllers\Api\UserProfileController::class, 'getProfile']);
     Route::put('/profile', [App\Http\Controllers\Api\UserProfileController::class, 'updateProfile']);
     Route::post('/profile/change-password', [App\Http\Controllers\Api\UserProfileController::class, 'changePassword']);
+    Route::post('/profile/upload-avatar', [App\Http\Controllers\Api\UserProfileController::class, 'uploadAvatar']);
+    Route::delete('/profile/remove-avatar', [App\Http\Controllers\Api\UserProfileController::class, 'removeAvatar']);
 
     // Employees
     Route::apiResource('employees', App\Http\Controllers\Api\EmployeeController::class);
