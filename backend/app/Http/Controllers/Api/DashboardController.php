@@ -33,7 +33,7 @@ class DashboardController extends Controller
     public function employeeDashboard(Request $request)
     {
         $user = $request->user();
-        
+
         // Find employee record by email or username
         $employee = Employee::where('email', $user->email)
             ->orWhere('username', $user->username)
@@ -42,7 +42,17 @@ class DashboardController extends Controller
         if (!$employee) {
             return response()->json([
                 'message' => 'Employee record not found',
+                'employee' => null,
                 'attendance' => [],
+                'attendance_summary' => [
+                    'total_days' => 0,
+                    'present' => 0,
+                    'absent' => 0,
+                    'late' => 0,
+                    'undertime' => 0,
+                    'total_hours' => 0,
+                    'overtime_hours' => 0,
+                ],
                 'current_payslip' => null,
                 'payslip_history' => [],
             ]);
@@ -51,7 +61,7 @@ class DashboardController extends Controller
         // Get attendance for current month
         $currentMonth = Carbon::now()->format('Y-m');
         $attendance = Attendance::where('employee_id', $employee->id)
-            ->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$currentMonth])
+            ->whereRaw("TO_CHAR(date, 'YYYY-MM') = ?", [$currentMonth])
             ->orderBy('date', 'desc')
             ->get();
 
