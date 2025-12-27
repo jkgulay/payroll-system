@@ -83,6 +83,18 @@ const router = createRouter({
           meta: { title: "Attendance", roles: ["admin", "accountant"] },
         },
         {
+          path: "resumes",
+          name: "resumes",
+          component: () => import("@/views/accountant/ResumeManagement.vue"),
+          meta: { title: "My Resumes", roles: ["accountant"] },
+        },
+        {
+          path: "resume-review",
+          name: "resume-review",
+          component: () => import("@/views/accountant/AdminResumeReview.vue"),
+          meta: { title: "Resume Review", roles: ["admin"] },
+        },
+        {
           path: "payroll",
           name: "payroll",
           component: () => import("@/views/payroll/PayrollListView.vue"),

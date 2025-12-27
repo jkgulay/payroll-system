@@ -101,6 +101,26 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/attendance/{id}/update', [App\Http\Controllers\Api\AccountantController::class, 'updateAttendance']);
     Route::get('/employees/{employeeId}/attendance', [App\Http\Controllers\Api\AccountantController::class, 'getEmployeeAttendance']);
 
+    // Accountant Resume Management
+    Route::prefix('accountant-resumes')->group(function () {
+        // Accountant routes
+        Route::post('/upload', [App\Http\Controllers\Api\AccountantResumeController::class, 'upload']);
+        Route::get('/my-resumes', [App\Http\Controllers\Api\AccountantResumeController::class, 'myResumes']);
+        Route::get('/approved', [App\Http\Controllers\Api\AccountantResumeController::class, 'approvedResumes']);
+        Route::delete('/{id}', [App\Http\Controllers\Api\AccountantResumeController::class, 'destroy']);
+        
+        // Admin routes
+        Route::middleware(['role:admin'])->group(function () {
+            Route::get('/pending', [App\Http\Controllers\Api\AccountantResumeController::class, 'pendingResumes']);
+            Route::get('/all', [App\Http\Controllers\Api\AccountantResumeController::class, 'allResumes']);
+            Route::post('/{id}/approve', [App\Http\Controllers\Api\AccountantResumeController::class, 'approve']);
+            Route::post('/{id}/reject', [App\Http\Controllers\Api\AccountantResumeController::class, 'reject']);
+        });
+        
+        // Download (both accountant and admin)
+        Route::get('/{id}/download', [App\Http\Controllers\Api\AccountantResumeController::class, 'download']);
+    });
+
     // Leave Management
     Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class);
     Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class);

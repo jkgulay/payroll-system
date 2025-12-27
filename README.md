@@ -48,6 +48,7 @@ npm run dev
 - Government contributions (SSS, PhilHealth, Pag-IBIG, Withholding Tax)
 - Benefits, allowances, loans, and deductions
 - Multi-stage approval workflow
+- **Resume upload and approval system** (NEW)
 - Excel export capabilities
 - Offline-first architecture
 

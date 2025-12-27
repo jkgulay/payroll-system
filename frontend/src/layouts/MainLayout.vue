@@ -160,6 +160,20 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
+      title: "My Resumes",
+      icon: "mdi-file-document-outline",
+      value: "resumes",
+      to: "/resumes",
+      roles: ["accountant"],
+    },
+    {
+      title: "Resume Review",
+      icon: "mdi-file-check-outline",
+      value: "resume-review",
+      to: "/resume-review",
+      roles: ["admin"],
+    },
+    {
       title: "Allowances",
       icon: "mdi-wallet-plus",
       value: "allowances",
