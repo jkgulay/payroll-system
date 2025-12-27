@@ -17,12 +17,14 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'employee_id',
         'username',
         'name',
         'email',
         'password',
         'role',
         'is_active',
+        'must_change_password',
         'avatar',
         'last_login_at',
         'two_factor_secret',
@@ -48,6 +50,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'must_change_password' => 'boolean',
         'last_login_at' => 'datetime',
         'two_factor_enabled' => 'boolean',
     ];
@@ -60,12 +63,12 @@ class User extends Authenticatable
         if (!$this->avatar) {
             return null;
         }
-        
+
         // If avatar is already a full URL, return it
         if (str_starts_with($this->avatar, 'http')) {
             return $this->avatar;
         }
-        
+
         // Return the storage URL
         return url('storage/' . $this->avatar);
     }

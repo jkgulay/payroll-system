@@ -75,16 +75,29 @@
               :loading="loading"
               class="elevation-1"
             >
+              <template v-slot:item.full_name="{ item }">
+                <div v-if="item.is_application && item.first_name">
+                  {{ item.first_name }} {{ item.last_name }}
+                </div>
+                <div v-else>
+                  <span class="text-grey">N/A</span>
+                </div>
+              </template>
+
               <template v-slot:item.user="{ item }">
                 <div>
-                  <strong>{{ item.user?.username }}</strong><br>
+                  <strong>{{ item.user?.username }}</strong
+                  ><br />
                   <small>{{ item.user?.email }}</small>
                 </div>
               </template>
 
               <template v-slot:item.original_filename="{ item }">
                 <div class="d-flex align-center">
-                  <v-icon :color="getFileIcon(item.file_type).color" class="mr-2">
+                  <v-icon
+                    :color="getFileIcon(item.file_type).color"
+                    class="mr-2"
+                  >
                     {{ getFileIcon(item.file_type).icon }}
                   </v-icon>
                   <span>{{ item.original_filename }}</span>
@@ -115,6 +128,7 @@
                   <v-icon>mdi-eye</v-icon>
                 </v-btn>
                 <v-btn
+                  v-if="!item.is_application"
                   icon
                   size="small"
                   @click="downloadResume(item)"
@@ -123,7 +137,7 @@
                   <v-icon>mdi-download</v-icon>
                 </v-btn>
                 <v-btn
-                  v-if="item.status === 'pending'"
+                  v-if="item.status === 'pending' && !item.is_application"
                   icon
                   size="small"
                   color="success"
@@ -133,7 +147,7 @@
                   <v-icon>mdi-check</v-icon>
                 </v-btn>
                 <v-btn
-                  v-if="item.status === 'pending'"
+                  v-if="item.status === 'pending' && !item.is_application"
                   icon
                   size="small"
                   color="error"
@@ -141,6 +155,26 @@
                   title="Reject"
                 >
                   <v-icon>mdi-close</v-icon>
+                </v-btn>
+                <v-btn
+                  v-if="item.status === 'pending' && item.is_application"
+                  icon
+                  size="small"
+                  color="success"
+                  @click="openApproveApplicationDialog(item)"
+                  title="Approve Application"
+                >
+                  <v-icon>mdi-check-circle</v-icon>
+                </v-btn>
+                <v-btn
+                  v-if="item.status === 'pending' && item.is_application"
+                  icon
+                  size="small"
+                  color="error"
+                  @click="openRejectApplicationDialog(item)"
+                  title="Reject Application"
+                >
+                  <v-icon>mdi-close-circle</v-icon>
                 </v-btn>
               </template>
             </v-data-table>
@@ -154,20 +188,37 @@
       <v-card v-if="selectedResume">
         <v-card-title>
           <span class="text-h5">Resume Details</span>
-          <v-spacer></v-spacer>
-          <v-btn icon @click="viewDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
         </v-card-title>
         <v-card-text>
+          <!-- Application Resume Alert -->
+          <v-alert
+            v-if="selectedResume.is_application"
+            type="info"
+            variant="tonal"
+            class="mb-4"
+          >
+            <strong>Employee Application Resume</strong><br />
+            This resume is part of an employee application. You can approve or
+            reject it directly from here.
+          </v-alert>
+
           <v-row>
             <v-col cols="12" sm="6">
               <strong>Uploaded By:</strong>
-              <div>{{ selectedResume.user?.username }} ({{ selectedResume.user?.email }})</div>
+              <div>
+                {{ selectedResume.user?.username }} ({{
+                  selectedResume.user?.email
+                }})
+              </div>
             </v-col>
             <v-col cols="12" sm="6">
               <strong>Status:</strong>
-              <v-chip :color="getStatusColor(selectedResume.status)" size="small" dark class="ml-2">
+              <v-chip
+                :color="getStatusColor(selectedResume.status)"
+                size="small"
+                dark
+                class="ml-2"
+              >
                 {{ selectedResume.status.toUpperCase() }}
               </v-chip>
             </v-col>
@@ -175,30 +226,46 @@
               <strong>Filename:</strong> {{ selectedResume.original_filename }}
             </v-col>
             <v-col cols="12" sm="6">
-              <strong>File Type:</strong> {{ selectedResume.file_type.toUpperCase() }}
+              <strong>File Type:</strong>
+              {{ selectedResume.file_type.toUpperCase() }}
             </v-col>
             <v-col cols="12" sm="6">
-              <strong>File Size:</strong> {{ formatFileSize(selectedResume.file_size) }}
+              <strong>File Size:</strong>
+              {{ formatFileSize(selectedResume.file_size) }}
             </v-col>
             <v-col cols="12" sm="6">
-              <strong>Uploaded:</strong> {{ formatDate(selectedResume.created_at) }}
+              <strong>Uploaded:</strong>
+              {{ formatDate(selectedResume.created_at) }}
             </v-col>
             <v-col v-if="selectedResume.reviewed_at" cols="12" sm="6">
-              <strong>Reviewed:</strong> {{ formatDate(selectedResume.reviewed_at) }}
+              <strong>Reviewed:</strong>
+              {{ formatDate(selectedResume.reviewed_at) }}
             </v-col>
             <v-col v-if="selectedResume.reviewer" cols="12" sm="6">
-              <strong>Reviewed By:</strong> {{ selectedResume.reviewer.username }}
+              <strong>Reviewed By:</strong>
+              {{ selectedResume.reviewer.username }}
             </v-col>
             <v-col v-if="selectedResume.admin_notes" cols="12">
-              <v-alert :type="selectedResume.status === 'approved' ? 'success' : 'error'">
-                <strong>Admin Notes:</strong><br>
+              <v-alert
+                :type="
+                  selectedResume.status === 'approved' ? 'success' : 'error'
+                "
+              >
+                <strong>Admin Notes:</strong><br />
                 {{ selectedResume.admin_notes }}
               </v-alert>
             </v-col>
           </v-row>
 
           <!-- Preview for images -->
-          <div v-if="['jpg', 'jpeg', 'png'].includes(selectedResume.file_type.toLowerCase())" class="mt-4">
+          <div
+            v-if="
+              ['jpg', 'jpeg', 'png'].includes(
+                selectedResume.file_type.toLowerCase()
+              )
+            "
+            class="mt-4"
+          >
             <v-divider class="mb-4"></v-divider>
             <strong>Preview:</strong>
             <v-img
@@ -210,7 +277,10 @@
           </div>
 
           <!-- PDF Preview -->
-          <div v-if="selectedResume.file_type.toLowerCase() === 'pdf'" class="mt-4">
+          <div
+            v-if="selectedResume.file_type.toLowerCase() === 'pdf'"
+            class="mt-4"
+          >
             <v-divider class="mb-4"></v-divider>
             <strong>PDF Preview:</strong>
             <iframe
@@ -224,7 +294,10 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
-            v-if="selectedResume.status === 'pending'"
+            v-if="
+              selectedResume.status === 'pending' &&
+              !selectedResume.is_application
+            "
             color="success"
             @click="openApproveDialog(selectedResume)"
           >
@@ -232,14 +305,43 @@
             Approve
           </v-btn>
           <v-btn
-            v-if="selectedResume.status === 'pending'"
+            v-if="
+              selectedResume.status === 'pending' &&
+              !selectedResume.is_application
+            "
             color="error"
             @click="openRejectDialog(selectedResume)"
           >
             <v-icon left>mdi-close</v-icon>
             Reject
           </v-btn>
-          <v-btn color="primary" @click="downloadResume(selectedResume)">
+          <v-btn
+            v-if="
+              selectedResume.status === 'pending' &&
+              selectedResume.is_application
+            "
+            color="success"
+            @click="openApproveApplicationDialog(selectedResume)"
+          >
+            <v-icon left>mdi-check-circle</v-icon>
+            Approve Application
+          </v-btn>
+          <v-btn
+            v-if="
+              selectedResume.status === 'pending' &&
+              selectedResume.is_application
+            "
+            color="error"
+            @click="openRejectApplicationDialog(selectedResume)"
+          >
+            <v-icon left>mdi-close-circle</v-icon>
+            Reject Application
+          </v-btn>
+          <v-btn
+            v-if="!selectedResume.is_application"
+            color="primary"
+            @click="downloadResume(selectedResume)"
+          >
             <v-icon left>mdi-download</v-icon>
             Download
           </v-btn>
@@ -255,7 +357,8 @@
         <v-card-text>
           <p class="mb-4">
             Are you sure you want to approve this resume from
-            <strong>{{ resumeToReview?.user?.username }}</strong>?
+            <strong>{{ resumeToReview?.user?.username }}</strong
+            >?
           </p>
           <v-textarea
             v-model="adminNotes"
@@ -270,11 +373,7 @@
           <v-btn text @click="approveDialog = false" :disabled="processing">
             Cancel
           </v-btn>
-          <v-btn
-            color="success"
-            @click="approveResume"
-            :loading="processing"
-          >
+          <v-btn color="success" @click="approveResume" :loading="processing">
             Approve
           </v-btn>
         </v-card-actions>
@@ -288,14 +387,15 @@
         <v-card-text>
           <p class="mb-4">
             Are you sure you want to reject this resume from
-            <strong>{{ resumeToReview?.user?.username }}</strong>?
+            <strong>{{ resumeToReview?.user?.username }}</strong
+            >?
           </p>
           <v-textarea
             v-model="adminNotes"
             label="Reason for Rejection (Required)"
             outlined
             rows="3"
-            :rules="[v => !!v || 'Rejection reason is required']"
+            :rules="[(v) => !!v || 'Rejection reason is required']"
             placeholder="Please provide a reason for rejection..."
           ></v-textarea>
         </v-card-text>
@@ -315,14 +415,162 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Approve Application Dialog -->
+    <v-dialog v-model="approveApplicationDialog" max-width="600">
+      <v-card>
+        <v-card-title>Approve Employee Application</v-card-title>
+        <v-card-text>
+          <p class="mb-4">
+            Approving this application will create an employee account for
+            <strong
+              >{{ applicationToReview?.first_name }}
+              {{ applicationToReview?.last_name }}</strong
+            >.
+          </p>
+          <v-text-field
+            v-model="applicationHireDate"
+            label="Hire Date (Required)"
+            type="date"
+            outlined
+            :rules="[(v) => !!v || 'Hire date is required']"
+          ></v-text-field>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            text
+            @click="approveApplicationDialog = false"
+            :disabled="processing"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="success"
+            @click="approveApplication"
+            :loading="processing"
+            :disabled="!applicationHireDate"
+          >
+            Approve & Create Employee
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Reject Application Dialog -->
+    <v-dialog v-model="rejectApplicationDialog" max-width="600">
+      <v-card>
+        <v-card-title>Reject Employee Application</v-card-title>
+        <v-card-text>
+          <p class="mb-4">
+            Are you sure you want to reject the application from
+            <strong
+              >{{ applicationToReview?.first_name }}
+              {{ applicationToReview?.last_name }}</strong
+            >?
+          </p>
+          <v-textarea
+            v-model="applicationRejectionReason"
+            label="Reason for Rejection (Required)"
+            outlined
+            rows="3"
+            :rules="[(v) => !!v || 'Rejection reason is required']"
+            placeholder="Please provide a reason for rejection..."
+          ></v-textarea>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            text
+            @click="rejectApplicationDialog = false"
+            :disabled="processing"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            @click="rejectApplication"
+            :loading="processing"
+            :disabled="!applicationRejectionReason"
+          >
+            Reject Application
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Application Approval Success Dialog -->
+    <v-dialog v-model="approvalSuccessDialog" max-width="600" persistent>
+      <v-card>
+        <v-card-title class="text-h5 success white--text">
+          Application Approved Successfully
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <v-alert type="success" variant="tonal" class="mb-4">
+            Employee account has been created successfully!
+          </v-alert>
+
+          <div class="mb-4">
+            <h3 class="mb-2">Employee Details:</h3>
+            <v-list dense>
+              <v-list-item>
+                <v-list-item-title>Employee Number:</v-list-item-title>
+                <v-list-item-subtitle class="text-right">
+                  <strong>{{ approvedEmployeeData?.employee_number }}</strong>
+                </v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title>Name:</v-list-item-title>
+                <v-list-item-subtitle class="text-right">
+                  {{ approvedEmployeeData?.first_name }}
+                  {{ approvedEmployeeData?.last_name }}
+                </v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title>Position:</v-list-item-title>
+                <v-list-item-subtitle class="text-right">
+                  {{ approvedEmployeeData?.position }}
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </div>
+
+          <v-divider class="my-4"></v-divider>
+
+          <div>
+            <h3 class="mb-2">Login Credentials:</h3>
+            <v-alert type="info" variant="tonal">
+              <p class="mb-2">
+                <strong>Username:</strong> {{ approvedEmployeeData?.email }}
+              </p>
+              <p class="mb-0">
+                <strong>Temporary Password:</strong>
+                {{ approvedEmployeePassword }}
+              </p>
+            </v-alert>
+            <p class="text-caption mt-2">
+              Please provide these credentials to the employee. They will be
+              required to change the password on first login.
+            </p>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="closeApprovalSuccessDialog">
+            Close
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useToast } from 'vue-toastification';
-import { resumeService } from '@/services/resumeService';
-import { format } from 'date-fns';
+import { ref, computed, onMounted } from "vue";
+import { useToast } from "vue-toastification";
+import { resumeService } from "@/services/resumeService";
+import api from "@/services/api";
+import { format } from "date-fns";
 
 const toast = useToast();
 
@@ -331,34 +579,43 @@ const processing = ref(false);
 const viewDialog = ref(false);
 const approveDialog = ref(false);
 const rejectDialog = ref(false);
+const approveApplicationDialog = ref(false);
+const rejectApplicationDialog = ref(false);
+const approvalSuccessDialog = ref(false);
 const resumes = ref([]);
 const selectedResume = ref(null);
 const resumeToReview = ref(null);
-const adminNotes = ref('');
-const statusFilter = ref('all');
+const applicationToReview = ref(null);
+const adminNotes = ref("");
+const applicationHireDate = ref("");
+const applicationRejectionReason = ref("");
+const approvedEmployeeData = ref(null);
+const approvedEmployeePassword = ref("");
+const statusFilter = ref("all");
 
 const statusOptions = [
-  { title: 'All', value: 'all' },
-  { title: 'Pending', value: 'pending' },
-  { title: 'Approved', value: 'approved' },
-  { title: 'Rejected', value: 'rejected' },
+  { title: "All", value: "all" },
+  { title: "Pending", value: "pending" },
+  { title: "Approved", value: "approved" },
+  { title: "Rejected", value: "rejected" },
 ];
 
 const headers = [
-  { title: 'User', value: 'user', sortable: true },
-  { title: 'Filename', value: 'original_filename', sortable: true },
-  { title: 'Type', value: 'file_type', sortable: true },
-  { title: 'Size', value: 'file_size', sortable: true },
-  { title: 'Status', value: 'status', sortable: true },
-  { title: 'Uploaded', value: 'created_at', sortable: true },
-  { title: 'Actions', value: 'actions', sortable: false, align: 'center' },
+  { title: "Full Name", value: "full_name", sortable: true },
+  { title: "Submitted By", value: "user", sortable: true },
+  { title: "Filename", value: "original_filename", sortable: true },
+  { title: "Type", value: "file_type", sortable: true },
+  { title: "Size", value: "file_size", sortable: true },
+  { title: "Status", value: "status", sortable: true },
+  { title: "Uploaded", value: "created_at", sortable: true },
+  { title: "Actions", value: "actions", sortable: false, align: "center" },
 ];
 
 const stats = computed(() => ({
   total: resumes.value.length,
-  pending: resumes.value.filter((r) => r.status === 'pending').length,
-  approved: resumes.value.filter((r) => r.status === 'approved').length,
-  rejected: resumes.value.filter((r) => r.status === 'rejected').length,
+  pending: resumes.value.filter((r) => r.status === "pending").length,
+  approved: resumes.value.filter((r) => r.status === "approved").length,
+  rejected: resumes.value.filter((r) => r.status === "rejected").length,
 }));
 
 onMounted(() => {
@@ -368,14 +625,15 @@ onMounted(() => {
 async function fetchResumes() {
   loading.value = true;
   try {
-    const params = statusFilter.value !== 'all' ? { status: statusFilter.value } : {};
+    const params =
+      statusFilter.value !== "all" ? { status: statusFilter.value } : {};
     const response = await resumeService.getAllResumes(params);
-    
+
     if (response.success) {
       resumes.value = response.data;
     }
   } catch (error) {
-    toast.error('Failed to fetch resumes');
+    toast.error("Failed to fetch resumes");
     console.error(error);
   } finally {
     loading.value = false;
@@ -390,33 +648,33 @@ function viewResume(resume) {
 async function downloadResume(resume) {
   try {
     const response = await resumeService.downloadResume(resume.id);
-    
+
     // Create blob link to download
     const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', resume.original_filename);
+    link.setAttribute("download", resume.original_filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
-    
-    toast.success('Resume downloaded successfully');
+
+    toast.success("Resume downloaded successfully");
   } catch (error) {
-    toast.error('Failed to download resume');
+    toast.error("Failed to download resume");
     console.error(error);
   }
 }
 
 function openApproveDialog(resume) {
   resumeToReview.value = resume;
-  adminNotes.value = '';
+  adminNotes.value = "";
   approveDialog.value = true;
   viewDialog.value = false;
 }
 
 function openRejectDialog(resume) {
   resumeToReview.value = resume;
-  adminNotes.value = '';
+  adminNotes.value = "";
   rejectDialog.value = true;
   viewDialog.value = false;
 }
@@ -430,16 +688,16 @@ async function approveResume() {
       resumeToReview.value.id,
       adminNotes.value
     );
-    
+
     if (response.success) {
       toast.success(response.message);
       approveDialog.value = false;
-      adminNotes.value = '';
+      adminNotes.value = "";
       resumeToReview.value = null;
       fetchResumes();
     }
   } catch (error) {
-    toast.error(error.response?.data?.message || 'Failed to approve resume');
+    toast.error(error.response?.data?.message || "Failed to approve resume");
     console.error(error);
   } finally {
     processing.value = false;
@@ -455,52 +713,148 @@ async function rejectResume() {
       resumeToReview.value.id,
       adminNotes.value
     );
-    
+
     if (response.success) {
       toast.success(response.message);
       rejectDialog.value = false;
-      adminNotes.value = '';
+      adminNotes.value = "";
       resumeToReview.value = null;
       fetchResumes();
     }
   } catch (error) {
-    toast.error(error.response?.data?.message || 'Failed to reject resume');
+    toast.error(error.response?.data?.message || "Failed to reject resume");
     console.error(error);
   } finally {
     processing.value = false;
   }
 }
 
+function openApproveApplicationDialog(resume) {
+  // Extract application ID from the resume ID (format: 'app_X')
+  const applicationId = resume.id.toString().replace("app_", "");
+
+  // Fetch full application details
+  fetchApplicationDetails(applicationId);
+
+  applicationHireDate.value = "";
+  approveApplicationDialog.value = true;
+  viewDialog.value = false;
+}
+
+function openRejectApplicationDialog(resume) {
+  // Extract application ID from the resume ID (format: 'app_X')
+  const applicationId = resume.id.toString().replace("app_", "");
+
+  // Fetch full application details
+  fetchApplicationDetails(applicationId);
+
+  applicationRejectionReason.value = "";
+  rejectApplicationDialog.value = true;
+  viewDialog.value = false;
+}
+
+async function fetchApplicationDetails(applicationId) {
+  try {
+    const response = await api.get(`/employee-applications/${applicationId}`);
+    applicationToReview.value = response.data;
+  } catch (error) {
+    toast.error("Failed to fetch application details");
+    console.error(error);
+  }
+}
+
+async function approveApplication() {
+  if (!applicationToReview.value || !applicationHireDate.value) return;
+
+  processing.value = true;
+  try {
+    const response = await api.post(
+      `/employee-applications/${applicationToReview.value.id}/approve`,
+      { date_hired: applicationHireDate.value }
+    );
+
+    approvedEmployeeData.value = response.data.employee;
+    approvedEmployeePassword.value = response.data.temporary_password;
+
+    toast.success("Application approved successfully!");
+    approveApplicationDialog.value = false;
+    approvalSuccessDialog.value = true;
+
+    fetchResumes();
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to approve application"
+    );
+    console.error(error);
+  } finally {
+    processing.value = false;
+  }
+}
+
+async function rejectApplication() {
+  if (!applicationToReview.value || !applicationRejectionReason.value) return;
+
+  processing.value = true;
+  try {
+    const response = await api.post(
+      `/employee-applications/${applicationToReview.value.id}/reject`,
+      { rejection_reason: applicationRejectionReason.value }
+    );
+
+    toast.success("Application rejected successfully");
+    rejectApplicationDialog.value = false;
+    applicationRejectionReason.value = "";
+    applicationToReview.value = null;
+
+    fetchResumes();
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to reject application"
+    );
+    console.error(error);
+  } finally {
+    processing.value = false;
+  }
+}
+
+function closeApprovalSuccessDialog() {
+  approvalSuccessDialog.value = false;
+  applicationHireDate.value = "";
+  applicationToReview.value = null;
+  approvedEmployeeData.value = null;
+  approvedEmployeePassword.value = "";
+}
+
 function getStatusColor(status) {
   const colors = {
-    pending: 'warning',
-    approved: 'success',
-    rejected: 'error',
+    pending: "warning",
+    approved: "success",
+    rejected: "error",
   };
-  return colors[status] || 'grey';
+  return colors[status] || "grey";
 }
 
 function getFileIcon(fileType) {
   const icons = {
-    pdf: { icon: 'mdi-file-pdf-box', color: 'error' },
-    doc: { icon: 'mdi-file-word-box', color: 'primary' },
-    docx: { icon: 'mdi-file-word-box', color: 'primary' },
-    jpg: { icon: 'mdi-file-image', color: 'success' },
-    jpeg: { icon: 'mdi-file-image', color: 'success' },
-    png: { icon: 'mdi-file-image', color: 'success' },
+    pdf: { icon: "mdi-file-pdf-box", color: "error" },
+    doc: { icon: "mdi-file-word-box", color: "primary" },
+    docx: { icon: "mdi-file-word-box", color: "primary" },
+    jpg: { icon: "mdi-file-image", color: "success" },
+    jpeg: { icon: "mdi-file-image", color: "success" },
+    png: { icon: "mdi-file-image", color: "success" },
   };
-  return icons[fileType.toLowerCase()] || { icon: 'mdi-file', color: 'grey' };
+  return icons[fileType.toLowerCase()] || { icon: "mdi-file", color: "grey" };
 }
 
 function formatFileSize(bytes) {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return "0 Bytes";
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
 function formatDate(dateString) {
-  return format(new Date(dateString), 'MMM dd, yyyy hh:mm a');
+  return format(new Date(dateString), "MMM dd, yyyy hh:mm a");
 }
 </script>

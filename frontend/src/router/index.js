@@ -37,7 +37,8 @@ const router = createRouter({
         {
           path: "accountant-dashboard",
           name: "accountant-dashboard",
-          component: () => import("@/views/accountant/AccountantDashboardView.vue"),
+          component: () =>
+            import("@/views/accountant/AccountantDashboardView.vue"),
           meta: { title: "Dashboard", roles: ["accountant"] },
         },
         {
@@ -50,31 +51,16 @@ const router = createRouter({
           path: "profile",
           name: "profile",
           component: () => import("@/views/employee/ProfileView.vue"),
-          meta: { title: "My Profile", roles: ["admin", "accountant", "employee"] },
+          meta: {
+            title: "My Profile",
+            roles: ["admin", "accountant", "employee"],
+          },
         },
         {
           path: "employees",
           name: "employees",
           component: () => import("@/views/employees/EmployeeListView.vue"),
           meta: { title: "Employees", roles: ["admin", "accountant"] },
-        },
-        {
-          path: "employees/create",
-          name: "employee-create",
-          component: () => import("@/views/employees/EmployeeFormView.vue"),
-          meta: { title: "Add Employee", roles: ["admin", "accountant"] },
-        },
-        {
-          path: "employees/:id",
-          name: "employee-detail",
-          component: () => import("@/views/employees/EmployeeDetailView.vue"),
-          meta: { title: "Employee Details", roles: ["admin", "accountant"] },
-        },
-        {
-          path: "employees/:id/edit",
-          name: "employee-edit",
-          component: () => import("@/views/employees/EmployeeFormView.vue"),
-          meta: { title: "Edit Employee" },
         },
         {
           path: "attendance",
@@ -198,7 +184,7 @@ router.beforeEach(async (to, from, next) => {
       } else {
         targetRoute = "admin-dashboard";
       }
-      
+
       // Prevent redirect loop
       if (to.name !== targetRoute) {
         return next({ name: targetRoute });

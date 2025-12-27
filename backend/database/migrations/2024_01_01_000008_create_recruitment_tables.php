@@ -31,7 +31,7 @@ return new class extends Migration
             $table->enum('civil_status', ['single', 'married', 'widowed', 'separated'])->nullable();
 
             // Applied Position
-            $table->foreignId('department_id')->nullable()->constrained('departments')->onDelete('set null');
+            $table->foreignId('project_id')->nullable()->constrained('projects')->onDelete('set null');
             $table->string('position_applied');
             $table->date('application_date');
             $table->decimal('expected_salary', 10, 2)->nullable();

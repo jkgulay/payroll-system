@@ -78,7 +78,7 @@
                 <div>
                   <h2 class="text-h5">{{ employee.full_name }}</h2>
                   <p class="text-body-1 mb-0">
-                    {{ employee.position }} - {{ employee.department?.name }}
+                    {{ employee.position }} - {{ employee.project?.name }}
                   </p>
                   <p class="text-caption text-medium-emphasis">
                     Employee No: {{ employee.employee_number }}

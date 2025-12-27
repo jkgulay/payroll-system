@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Department extends Model
+class Project extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -28,13 +28,8 @@ class Department extends Model
         return $this->hasMany(Employee::class);
     }
 
-    public function head(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function headEmployee()
     {
         return $this->belongsTo(Employee::class, 'head_employee_id');
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
     }
 }

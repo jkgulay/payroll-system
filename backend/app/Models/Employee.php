@@ -27,16 +27,11 @@ class Employee extends Model
         'username',
         'mobile_number',
         'phone_number',
-        'address_line1',
-        'address_line2',
-        'city',
-        'province',
-        'postal_code',
         'emergency_contact_name',
         'emergency_contact_relationship',
         'emergency_contact_number',
-        'department_id',
-        'location_id',
+        'project_id',
+        'worker_address',
         'position',
         'employment_type',
         'employment_status',
@@ -46,6 +41,16 @@ class Employee extends Model
         'separation_reason',
         'salary_type',
         'basic_salary',
+        // Allowances
+        'has_water_allowance',
+        'water_allowance',
+        'has_cola',
+        'cola',
+        'has_incentives',
+        'incentives',
+        'has_ppe',
+        'ppe',
+        // Government IDs
         'sss_number',
         'philhealth_number',
         'pagibig_number',
@@ -66,7 +71,6 @@ class Employee extends Model
 
     protected $appends = [
         'full_name',
-        'full_address',
     ];
 
     // Accessors
@@ -83,27 +87,10 @@ class Employee extends Model
         return $name;
     }
 
-    public function getFullAddressAttribute(): string
-    {
-        $parts = array_filter([
-            $this->address_line1,
-            $this->address_line2,
-            $this->city,
-            $this->province,
-            $this->postal_code,
-        ]);
-        return implode(', ', $parts);
-    }
-
     // Relationships
-    public function department(): BelongsTo
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(Department::class);
-    }
-
-    public function location(): BelongsTo
-    {
-        return $this->belongsTo(Location::class);
+        return $this->belongsTo(Project::class);
     }
 
     public function attendance(): HasMany
@@ -172,14 +159,9 @@ class Employee extends Model
         return $query->where('employment_type', $type);
     }
 
-    public function scopeByDepartment($query, $departmentId)
+    public function scopeByProject($query, $projectId)
     {
-        return $query->where('department_id', $departmentId);
-    }
-
-    public function scopeByLocation($query, $locationId)
-    {
-        return $query->where('location_id', $locationId);
+        return $query->where('project_id', $projectId);
     }
 
     public function scopeDailyPaid($query)

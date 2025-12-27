@@ -40,8 +40,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/employees/{employee}/loans', [App\Http\Controllers\Api\EmployeeController::class, 'loans']);
     Route::get('/employees/{employee}/deductions', [App\Http\Controllers\Api\EmployeeController::class, 'deductions']);
 
-    // Departments & Locations
-    Route::apiResource('departments', App\Http\Controllers\Api\DepartmentController::class);
+    // Employee Applications
+    Route::apiResource('employee-applications', App\Http\Controllers\Api\EmployeeApplicationController::class);
+    Route::post('/employee-applications/{id}/approve', [App\Http\Controllers\Api\EmployeeApplicationController::class, 'approve']);
+    Route::post('/employee-applications/{id}/reject', [App\Http\Controllers\Api\EmployeeApplicationController::class, 'reject']);
+
+    // Projects & Locations
+    Route::apiResource('projects', App\Http\Controllers\Api\ProjectController::class);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
     // Attendance
@@ -114,7 +119,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/my-resumes', [App\Http\Controllers\Api\AccountantResumeController::class, 'myResumes']);
         Route::get('/approved', [App\Http\Controllers\Api\AccountantResumeController::class, 'approvedResumes']);
         Route::delete('/{id}', [App\Http\Controllers\Api\AccountantResumeController::class, 'destroy']);
-        
+
         // Admin routes
         Route::middleware(['role:admin'])->group(function () {
             Route::get('/pending', [App\Http\Controllers\Api\AccountantResumeController::class, 'pendingResumes']);
@@ -122,7 +127,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/{id}/approve', [App\Http\Controllers\Api\AccountantResumeController::class, 'approve']);
             Route::post('/{id}/reject', [App\Http\Controllers\Api\AccountantResumeController::class, 'reject']);
         });
-        
+
         // Download (both accountant and admin)
         Route::get('/{id}/download', [App\Http\Controllers\Api\AccountantResumeController::class, 'download']);
     });

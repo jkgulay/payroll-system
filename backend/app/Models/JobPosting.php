@@ -13,7 +13,7 @@ class JobPosting extends Model
     protected $fillable = [
         'title',
         'position',
-        'department_id',
+        'project_id',
         'location_id',
         'description',
         'requirements',
@@ -36,9 +36,9 @@ class JobPosting extends Model
         'vacancies' => 'integer',
     ];
 
-    public function department()
+    public function project()
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Project::class);
     }
 
     public function location()
