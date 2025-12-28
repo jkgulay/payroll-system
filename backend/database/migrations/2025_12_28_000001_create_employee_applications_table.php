@@ -20,14 +20,14 @@ return new class extends Migration
             $table->string('last_name');
             $table->date('date_of_birth');
             $table->enum('gender', ['male', 'female', 'other']);
-            $table->string('email')->unique();
+            $table->string('email');
             $table->string('mobile_number')->nullable();
             $table->text('worker_address');
 
             // Employment Information
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
             $table->string('position');
-            $table->date('date_hired');
+            $table->date('date_hired')->nullable();
             $table->enum('employment_status', ['regular', 'probationary', 'contractual', 'active']);
             $table->enum('employment_type', ['regular', 'contractual', 'part_time']);
             $table->enum('salary_type', ['daily', 'monthly']);
