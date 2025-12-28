@@ -113,6 +113,15 @@
           </v-col>
         </v-row>
       </v-container>
+
+      <!-- Two-Factor Authentication Dialog -->
+      <TwoFactorVerify
+        v-model="showTwoFactorDialog"
+        :user-id="twoFactorUserId"
+        @verified="handleTwoFactorVerified"
+        @cancel="handleTwoFactorCancel"
+        ref="twoFactorVerifyRef"
+      />
     </v-main>
   </v-app>
 </template>
@@ -122,6 +131,8 @@ import { ref, reactive } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
+import TwoFactorVerify from "@/components/TwoFactorVerify.vue";
+import api from "@/services/api";
 
 const router = useRouter();
 const route = useRoute();
@@ -131,6 +142,9 @@ const toast = useToast();
 const loginForm = ref(null);
 const showPassword = ref(false);
 const errorMessage = ref("");
+const showTwoFactorDialog = ref(false);
+const twoFactorUserId = ref(null);
+const twoFactorVerifyRef = ref(null);
 
 const form = reactive({
   email: "",
@@ -163,12 +177,19 @@ async function handleLogin() {
   if (!valid) return;
 
   try {
-    await authStore.login({
+    const response = await authStore.login({
       email: form.email,
       password: form.password,
       remember: form.remember,
       role: form.role,
     });
+
+    // Check if 2FA is required
+    if (response && response.requires_2fa) {
+      twoFactorUserId.value = response.user_id;
+      showTwoFactorDialog.value = true;
+      return;
+    }
 
     toast.success("Login successful");
 
@@ -195,6 +216,65 @@ async function handleLogin() {
       errorMessage.value = "An error occurred. Please try again.";
     }
   }
+}
+
+async function handleTwoFactorVerified({ userId, code }) {
+  twoFactorVerifyRef.value.setLoading(true);
+
+  try {
+    const response = await api.post("/two-factor/verify", {
+      user_id: userId,
+      code: code,
+    });
+
+    if (response.data.valid) {
+      // Properly set authentication state
+      authStore.token = response.data.token;
+      authStore.user = response.data.user;
+      
+      // Store token in localStorage
+      localStorage.setItem("token", response.data.token);
+      
+      // Set default Authorization header for future requests
+      api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
+      
+      showTwoFactorDialog.value = false;
+      toast.success("Login successful");
+
+      // Redirect to appropriate dashboard based on role
+      let redirectPath = route.query.redirect;
+      if (!redirectPath) {
+        const role = response.data.user.role;
+        if (role === "employee") {
+          redirectPath = "/employee-dashboard";
+        } else if (role === "accountant") {
+          redirectPath = "/accountant-dashboard";
+        } else {
+          redirectPath = "/admin-dashboard";
+        }
+      }
+      
+      await router.push(redirectPath);
+    }
+  } catch (error) {
+    console.error("2FA verification error:", error);
+    
+    if (error.response?.status === 401) {
+      twoFactorVerifyRef.value.setError(
+        error.response?.data?.message || "Invalid verification code"
+      );
+    } else {
+      twoFactorVerifyRef.value.setError("Verification failed. Please try again.");
+    }
+  }
+}
+
+function handleTwoFactorCancel() {
+  showTwoFactorDialog.value = false;
+  twoFactorUserId.value = null;
+  // Clear any error messages
+  errorMessage.value = "";
+  toast.info("Login cancelled");
 }
 </script>
 

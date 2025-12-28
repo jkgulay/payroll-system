@@ -312,6 +312,13 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant", "employee"],
     },
     {
+      title: "Security",
+      icon: "mdi-shield-lock-outline",
+      value: "security",
+      to: "/security",
+      roles: ["admin", "accountant", "employee"],
+    },
+    {
       title: "Settings",
       icon: "mdi-cog-outline",
       value: "settings",

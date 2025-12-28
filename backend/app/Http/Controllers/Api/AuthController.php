@@ -77,6 +77,15 @@ class AuthController extends Controller
             ]);
         }
 
+        // Check if 2FA is enabled
+        if ($user->two_factor_confirmed_at) {
+            return response()->json([
+                'requires_2fa' => true,
+                'user_id' => $user->id,
+                'message' => 'Please provide your two-factor authentication code',
+            ]);
+        }
+
         // Update last login
         $user->last_login_at = now();
         $user->save();
@@ -85,13 +94,17 @@ class AuthController extends Controller
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
+            'requires_2fa' => false,
             'user' => [
                 'id' => $user->id,
                 'username' => $user->username,
+                'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
                 'is_active' => $user->is_active,
                 'last_login_at' => $user->last_login_at,
+                'avatar' => $user->avatar,
+                'employee_id' => $user->employee_id,
             ],
             'token' => $token,
         ]);
