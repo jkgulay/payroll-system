@@ -17,6 +17,7 @@
             prepend-icon="mdi-refresh"
             variant="elevated"
             @click="refreshData"
+            :loading="refreshing"
             class="construction-btn"
           >
             Refresh Data
@@ -507,15 +508,15 @@
                 <v-select
                   v-model="employeeData.employment_status"
                   :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Probationary', value: 'probationary' },
-                    { title: 'Contractual', value: 'contractual' },
                     { title: 'Active', value: 'active' },
+                    { title: 'Probationary', value: 'probationary' },
                   ]"
                   label="Employment Status"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                  hint="Current work status"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -531,6 +532,8 @@
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                  hint="Type of employment contract"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -1490,6 +1493,7 @@ const showPasswordDialog = ref(false);
 const temporaryPassword = ref("");
 const newEmployeeData = ref(null);
 const saving = ref(false);
+const refreshing = ref(false);
 const employeeForm = ref(null);
 const projects = ref([]);
 
@@ -1506,8 +1510,8 @@ const employeeData = ref({
   project_id: null,
   position: "",
   date_hired: "",
-  employment_status: "",
-  employment_type: "",
+  employment_status: "active",
+  employment_type: "regular",
   salary_type: "daily",
   basic_salary: 450, // Default pay rate
   // Allowances
@@ -1556,7 +1560,16 @@ async function fetchDashboardData() {
 }
 
 async function refreshData() {
-  await fetchDashboardData();
+  refreshing.value = true;
+  try {
+    await Promise.all([fetchDashboardData(), fetchPendingApplications()]);
+    toast.success("Dashboard refreshed successfully!");
+  } catch (error) {
+    console.error("Error refreshing dashboard:", error);
+    toast.error("Failed to refresh dashboard");
+  } finally {
+    refreshing.value = false;
+  }
 }
 
 async function fetchProjects() {

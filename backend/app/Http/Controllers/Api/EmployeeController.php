@@ -36,6 +36,16 @@ class EmployeeController extends Controller
             $query->where('employment_status', $request->employment_status);
         }
 
+        // Filter by employment type
+        if ($request->has('employment_type')) {
+            $query->where('employment_type', $request->employment_type);
+        }
+
+        // Filter by position
+        if ($request->has('position') && $request->position) {
+            $query->where('position', $request->position);
+        }
+
         $employees = $query->paginate($request->get('per_page', 15));
 
         return response()->json($employees);

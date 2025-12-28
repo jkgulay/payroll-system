@@ -18,7 +18,7 @@
     <v-card>
       <v-card-text>
         <v-row class="mb-4">
-          <v-col cols="12" md="4">
+          <v-col cols="12" md="3">
             <v-text-field
               v-model="search"
               prepend-inner-icon="mdi-magnify"
@@ -29,7 +29,7 @@
           </v-col>
           <v-col cols="12" md="3">
             <v-select
-              v-model="filters.project"
+              v-model="filters.project_id"
               :items="projects"
               item-title="name"
               item-value="id"
@@ -38,9 +38,9 @@
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="3">
+          <v-col cols="12" md="2">
             <v-select
-              v-model="filters.status"
+              v-model="filters.employment_status"
               :items="statusOptions"
               label="Status"
               clearable
@@ -50,8 +50,17 @@
           <v-col cols="12" md="2">
             <v-select
               v-model="filters.employment_type"
-              :items="employmentTypes"
-              label="Employment Type"
+              :items="employmentTypeOptions"
+              label="Type"
+              clearable
+              @update:model-value="fetchEmployees"
+            ></v-select>
+          </v-col>
+          <v-col cols="12" md="2">
+            <v-select
+              v-model="filters.position"
+              :items="positions"
+              label="Position"
               clearable
               @update:model-value="fetchEmployees"
             ></v-select>
@@ -567,15 +576,15 @@
                 <v-select
                   v-model="newEmployeeData.employment_status"
                   :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Probationary', value: 'probationary' },
-                    { title: 'Contractual', value: 'contractual' },
                     { title: 'Active', value: 'active' },
+                    { title: 'Probationary', value: 'probationary' },
                   ]"
                   label="Employment Status"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                  hint="Current work status"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -591,6 +600,8 @@
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                  hint="Type of employment contract"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -829,9 +840,10 @@ const employeeStore = useEmployeeStore();
 
 const search = ref("");
 const filters = ref({
-  project: null,
-  status: null,
+  project_id: null,
+  employment_status: null,
   employment_type: null,
+  position: null,
 });
 
 // Existing employee list variables
@@ -861,8 +873,8 @@ const newEmployeeData = ref({
   project_id: null,
   position: "",
   date_hired: "",
-  employment_status: "",
-  employment_type: "",
+  employment_status: "active",
+  employment_type: "regular",
   salary_type: "daily",
   basic_salary: 450,
   has_water_allowance: false,
@@ -886,13 +898,19 @@ const employeeForm = ref(null);
 
 const statusOptions = [
   { title: "Active", value: "active" },
-  { title: "Inactive", value: "inactive" },
+  { title: "Probationary", value: "probationary" },
+  { title: "Resigned", value: "resigned" },
+  { title: "Terminated", value: "terminated" },
+  { title: "Retired", value: "retired" },
 ];
 
-const employmentTypes = [
-  { title: "Daily", value: "daily" },
-  { title: "Monthly", value: "monthly" },
+const employmentTypeOptions = [
+  { title: "Regular", value: "regular" },
+  { title: "Contractual", value: "contractual" },
+  { title: "Part Time", value: "part_time" },
 ];
+
+const positions = ref([]);
 
 const headers = [
   { title: "Employee #", key: "employee_number", sortable: true },
@@ -907,6 +925,7 @@ const headers = [
 onMounted(async () => {
   await fetchEmployees();
   await fetchProjects();
+  await fetchPositions();
 });
 
 async function fetchEmployees() {
@@ -918,6 +937,25 @@ async function fetchEmployees() {
 
 async function fetchProjects() {
   projects.value = await employeeStore.fetchProjects();
+}
+
+async function fetchPositions() {
+  try {
+    const response = await api.get("/employees", {
+      params: { per_page: 1000 },
+    });
+    // Extract unique positions from employees
+    const uniquePositions = [
+      ...new Set(
+        response.data.data
+          .map((emp) => emp.position)
+          .filter((pos) => pos && pos.trim() !== "")
+      ),
+    ].sort();
+    positions.value = uniquePositions;
+  } catch (error) {
+    console.error("Error fetching positions:", error);
+  }
 }
 
 async function viewEmployee(employee) {

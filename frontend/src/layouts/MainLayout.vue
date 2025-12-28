@@ -12,17 +12,10 @@
       app
     >
       <!-- User Profile Section -->
-      <v-list-item
-        nav
-        class="user-profile-item pa-3"
-      >
+      <v-list-item nav class="user-profile-item pa-3">
         <template v-slot:prepend>
           <v-avatar size="40" color="primary">
-            <v-img
-              v-if="userAvatar"
-              :src="userAvatar"
-              cover
-            ></v-img>
+            <v-img v-if="userAvatar" :src="userAvatar" cover></v-img>
             <v-icon v-else color="white">mdi-account</v-icon>
           </v-avatar>
         </template>
@@ -59,9 +52,9 @@
       <!-- Logout Button -->
       <template v-slot:append>
         <div class="pa-3">
-          <v-btn 
-            block 
-            prepend-icon="mdi-logout" 
+          <v-btn
+            block
+            prepend-icon="mdi-logout"
             @click="handleLogout"
             color="error"
             variant="tonal"
@@ -74,17 +67,12 @@
     </v-navigation-drawer>
 
     <!-- Construction-themed App Bar -->
-    <v-app-bar 
-      elevation="4" 
-      class="construction-appbar"
-      color="surface"
-      app
-    >
+    <v-app-bar elevation="4" class="construction-appbar" color="surface" app>
       <!-- Construction-themed Title with Icon -->
       <div class="d-flex align-center">
-        <v-icon 
-          icon="mdi-hard-hat" 
-          color="hardhat" 
+        <v-icon
+          icon="mdi-hard-hat"
+          color="hardhat"
           size="32"
           class="mr-3 rotating-hardhat"
         ></v-icon>
@@ -123,11 +111,7 @@
       </v-chip>
 
       <!-- Notification Bell -->
-      <v-btn 
-        icon="mdi-bell-outline" 
-        variant="text"
-        color="steel"
-      ></v-btn>
+      <v-btn icon="mdi-bell-outline" variant="text" color="steel"></v-btn>
     </v-app-bar>
 
     <!-- Main Content Area -->
@@ -148,10 +132,11 @@
           <v-icon icon="mdi-logout" size="28" class="mr-3"></v-icon>
           <span class="text-h6">Confirm Logout</span>
         </v-card-title>
-        
+
         <v-card-text class="pa-6">
           <div class="text-body-1">
-            Are you sure you want to logout from the Construction Payroll System?
+            Are you sure you want to logout from the Construction Payroll
+            System?
           </div>
           <div class="text-body-2 text-medium-emphasis mt-2">
             Any unsaved changes will be lost.
@@ -201,7 +186,9 @@ const rail = ref(false);
 const logoutDialog = ref(false);
 const loggingOut = ref(false);
 
-const userName = computed(() => authStore.user?.name || authStore.user?.username || "User");
+const userName = computed(
+  () => authStore.user?.name || authStore.user?.username || "User"
+);
 const userRole = computed(() => {
   const role = authStore.user?.role || "Employee";
   return role.charAt(0).toUpperCase() + role.slice(1);
@@ -210,9 +197,11 @@ const userAvatar = computed(() => {
   if (!authStore.user?.avatar) return null;
   const avatar = authStore.user.avatar;
   // If avatar is already a full URL, return it
-  if (avatar.startsWith('http')) return avatar;
+  if (avatar.startsWith("http")) return avatar;
   // Otherwise, prepend the base URL (remove /api from VITE_API_URL)
-  const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '');
+  const apiUrl = (
+    import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+  ).replace("/api", "");
   return `${apiUrl}/storage/${avatar}`;
 });
 const pageTitle = computed(() => route.meta.title || "Dashboard");
@@ -246,7 +235,7 @@ const menuItems = computed(() => {
       icon: "mdi-hard-hat",
       value: "employees",
       to: "/employees",
-      roles: ["admin", "accountant"],
+      roles: ["admin"],
     },
     {
       title: "Attendance",
@@ -366,7 +355,7 @@ async function downloadCurrentPayslip() {
     // Get current payslip from employee dashboard
     const response = await api.get("/employee/dashboard");
     const currentPayslip = response.data.current_payslip;
-    
+
     if (currentPayslip) {
       const pdfResponse = await api.get(`/payslips/${currentPayslip.id}/pdf`, {
         responseType: "blob",
@@ -394,7 +383,7 @@ async function downloadCurrentPayslip() {
 <style scoped lang="scss">
 // Construction-themed Navigation Drawer
 .construction-drawer {
-  background: linear-gradient(180deg, #37474F 0%, #263238 100%) !important;
+  background: linear-gradient(180deg, #37474f 0%, #263238 100%) !important;
   position: fixed !important;
   top: 0 !important;
   bottom: 0 !important;
@@ -402,32 +391,32 @@ async function downloadCurrentPayslip() {
   overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
-  
+
   :deep(.v-navigation-drawer__content) {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     overflow-y: auto !important;
   }
-  
+
   :deep(.v-list) {
     flex: 1 !important;
     overflow-y: auto !important;
   }
-  
+
   :deep(.v-list-item) {
     color: rgba(255, 255, 255, 0.9) !important;
-    
+
     &:hover {
       background: rgba(255, 255, 255, 0.08) !important;
     }
   }
-  
+
   :deep(.v-list-item--active) {
-    background: linear-gradient(90deg, #D84315 0%, #F4511E 100%) !important;
+    background: linear-gradient(90deg, #d84315 0%, #f4511e 100%) !important;
     color: white !important;
-    border-left: 4px solid #FF6E40;
-    
+    border-left: 4px solid #ff6e40;
+
     &::before {
       opacity: 0.15;
     }
@@ -438,12 +427,12 @@ async function downloadCurrentPayslip() {
   background: rgba(0, 0, 0, 0.2);
   margin: 8px;
   border-radius: 8px;
-  
+
   :deep(.v-list-item-title) {
     color: white !important;
     font-weight: 600;
   }
-  
+
   :deep(.v-list-item-subtitle) {
     color: rgba(255, 255, 255, 0.7) !important;
     text-transform: uppercase;
@@ -454,11 +443,11 @@ async function downloadCurrentPayslip() {
 
 .menu-item {
   transition: all 0.3s ease;
-  
+
   &:hover {
     transform: translateX(4px);
   }
-  
+
   :deep(.v-list-item__prepend) {
     .v-icon {
       font-size: 20px;
@@ -468,9 +457,9 @@ async function downloadCurrentPayslip() {
 
 // Construction App Bar styling
 .construction-appbar {
-  border-bottom: 4px solid #D84315 !important;
+  border-bottom: 4px solid #d84315 !important;
   background: white !important;
-  
+
   &::after {
     content: "";
     position: absolute;
@@ -478,12 +467,14 @@ async function downloadCurrentPayslip() {
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, 
-      #D84315 0%, 
-      #FF6E40 25%, 
-      #F4511E 50%, 
-      #FF6E40 75%, 
-      #D84315 100%);
+    background: linear-gradient(
+      90deg,
+      #d84315 0%,
+      #ff6e40 25%,
+      #f4511e 50%,
+      #ff6e40 75%,
+      #d84315 100%
+    );
   }
 }
 
@@ -500,14 +491,21 @@ async function downloadCurrentPayslip() {
 }
 
 @keyframes subtle-rotate {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-5deg); }
-  75% { transform: rotate(5deg); }
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
 }
 
 // Main content area
 .main-content {
-  background: linear-gradient(135deg, #ECEFF1 0%, #CFD8DC 100%);
+  background: linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%);
   min-height: 100vh;
   overflow-y: auto;
 }
