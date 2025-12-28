@@ -136,6 +136,77 @@
       </v-col>
     </v-row>
 
+    <!-- Analytics Quick View Section -->
+    <v-row class="mt-6">
+      <v-col cols="12">
+        <v-card class="industrial-card">
+          <v-card-title class="construction-header pa-5 d-flex justify-space-between align-center">
+            <div>
+              <v-icon start size="24">mdi-chart-box-outline</v-icon>
+              Analytics Overview
+            </div>
+            <v-btn
+              variant="text"
+              color="primary"
+              append-icon="mdi-arrow-right"
+              to="/analytics"
+            >
+              View Full Analytics
+            </v-btn>
+          </v-card-title>
+          <v-divider class="steel-divider"></v-divider>
+          <v-card-text class="pa-4">
+            <v-row>
+              <v-col cols="12" md="6" lg="3">
+                <div class="analytics-mini-card" @click="$router.push('/analytics')">
+                  <div class="d-flex align-center justify-space-between mb-2">
+                    <span class="text-caption text-medium-emphasis">Payroll Trend</span>
+                    <v-icon size="20" color="success">mdi-trending-up</v-icon>
+                  </div>
+                  <div class="text-h6 font-weight-bold">Monthly Growth</div>
+                  <div class="text-caption text-success">Track last 12 months</div>
+                  <v-icon size="small" class="mt-2" color="success">mdi-arrow-right</v-icon>
+                </div>
+              </v-col>
+              <v-col cols="12" md="6" lg="3">
+                <div class="analytics-mini-card" @click="$router.push('/analytics')">
+                  <div class="d-flex align-center justify-space-between mb-2">
+                    <span class="text-caption text-medium-emphasis">Employee Analytics</span>
+                    <v-icon size="20" color="primary">mdi-account-group</v-icon>
+                  </div>
+                  <div class="text-h6 font-weight-bold">Distribution</div>
+                  <div class="text-caption text-primary">By project & location</div>
+                  <v-icon size="small" class="mt-2" color="primary">mdi-arrow-right</v-icon>
+                </div>
+              </v-col>
+              <v-col cols="12" md="6" lg="3">
+                <div class="analytics-mini-card" @click="$router.push('/analytics')">
+                  <div class="d-flex align-center justify-space-between mb-2">
+                    <span class="text-caption text-medium-emphasis">Attendance Rate</span>
+                    <v-icon size="20" color="info">mdi-clock-check-outline</v-icon>
+                  </div>
+                  <div class="text-h6 font-weight-bold">Daily Tracking</div>
+                  <div class="text-caption text-info">Last 30 days</div>
+                  <v-icon size="small" class="mt-2" color="info">mdi-arrow-right</v-icon>
+                </div>
+              </v-col>
+              <v-col cols="12" md="6" lg="3">
+                <div class="analytics-mini-card" @click="$router.push('/analytics')">
+                  <div class="d-flex align-center justify-space-between mb-2">
+                    <span class="text-caption text-medium-emphasis">Government Contributions</span>
+                    <v-icon size="20" color="warning">mdi-bank</v-icon>
+                  </div>
+                  <div class="text-h6 font-weight-bold">Trends</div>
+                  <div class="text-caption text-warning">SSS, PhilHealth, Pag-IBIG</div>
+                  <v-icon size="small" class="mt-2" color="warning">mdi-arrow-right</v-icon>
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- Pending Employee Applications -->
     <v-row class="mt-6" v-if="pendingApplications.length > 0">
       <v-col cols="12">
@@ -194,79 +265,6 @@
                 ></v-btn>
               </template>
             </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- Quick Actions with Construction Theme -->
-    <v-row class="mt-6">
-      <v-col cols="12">
-        <v-card class="industrial-card quick-actions-card">
-          <v-card-title class="construction-header pa-5">
-            <v-icon start size="24">mdi-toolbox-outline</v-icon>
-            Quick Actions
-          </v-card-title>
-          <v-divider class="steel-divider"></v-divider>
-          <v-card-text class="pa-5">
-            <v-row>
-              <v-col cols="6" sm="4" md="3">
-                <v-btn
-                  color="primary"
-                  variant="elevated"
-                  block
-                  size="x-large"
-                  class="construction-btn action-btn"
-                  @click="showAddEmployeeDialog = true"
-                >
-                  <v-icon size="28" class="mb-2"
-                    >mdi-account-plus-outline</v-icon
-                  >
-                  <div class="text-caption">Add Worker</div>
-                </v-btn>
-              </v-col>
-              <v-col cols="6" sm="4" md="3">
-                <v-btn
-                  color="info"
-                  variant="elevated"
-                  block
-                  size="x-large"
-                  class="construction-btn action-btn"
-                  to="/attendance"
-                >
-                  <v-icon size="28" class="mb-2"
-                    >mdi-clock-check-outline</v-icon
-                  >
-                  <div class="text-caption">Attendance</div>
-                </v-btn>
-              </v-col>
-              <v-col cols="6" sm="4" md="3">
-                <v-btn
-                  color="success"
-                  variant="elevated"
-                  block
-                  size="x-large"
-                  class="construction-btn action-btn"
-                  to="/payroll/create"
-                >
-                  <v-icon size="28" class="mb-2">mdi-cash-plus</v-icon>
-                  <div class="text-caption">New Payroll</div>
-                </v-btn>
-              </v-col>
-              <v-col cols="6" sm="4" md="3">
-                <v-btn
-                  color="accent"
-                  variant="elevated"
-                  block
-                  size="x-large"
-                  class="construction-btn action-btn"
-                  to="/reports"
-                >
-                  <v-icon size="28" class="mb-2">mdi-file-chart-outline</v-icon>
-                  <div class="text-caption">Reports</div>
-                </v-btn>
-              </v-col>
-            </v-row>
           </v-card-text>
         </v-card>
       </v-col>
@@ -1455,6 +1453,22 @@ function getFileExtension(path) {
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+// Analytics Mini Cards
+.analytics-mini-card {
+  padding: 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #2196f3;
   }
 }
 

@@ -36,17 +36,44 @@
 
       <!-- Navigation Menu -->
       <v-list density="compact" nav class="pa-2">
-        <v-list-item
-          v-for="item in menuItems"
-          :key="item.value"
-          :prepend-icon="item.icon"
-          :title="item.title"
-          :value="item.value"
-          :to="item.to"
-          color="hardhat"
-          class="menu-item mb-1"
-          rounded="lg"
-        ></v-list-item>
+        <template v-for="item in menuItems" :key="item.value">
+          <!-- Items with children (submenu) -->
+          <v-list-group v-if="item.children" :value="item.value">
+            <template v-slot:activator="{ props }">
+              <v-list-item
+                v-bind="props"
+                :prepend-icon="item.icon"
+                :title="item.title"
+                color="hardhat"
+                class="menu-item mb-1"
+                rounded="lg"
+              ></v-list-item>
+            </template>
+            <v-list-item
+              v-for="child in item.children"
+              :key="child.value"
+              :prepend-icon="child.icon"
+              :title="child.title"
+              :value="child.value"
+              :to="child.to"
+              color="hardhat"
+              class="menu-item mb-1 ml-4"
+              rounded="lg"
+            ></v-list-item>
+          </v-list-group>
+          
+          <!-- Regular items without children -->
+          <v-list-item
+            v-else
+            :prepend-icon="item.icon"
+            :title="item.title"
+            :value="item.value"
+            :to="item.to"
+            color="hardhat"
+            class="menu-item mb-1"
+            rounded="lg"
+          ></v-list-item>
+        </template>
       </v-list>
 
       <!-- Logout Button -->
@@ -280,25 +307,30 @@ const menuItems = computed(() => {
       roles: ["admin"],
     },
     {
-      title: "Allowances",
-      icon: "mdi-cash-plus",
-      value: "allowances",
-      to: "/allowances",
+      title: "Benefits & Deductions",
+      icon: "mdi-cash-multiple",
+      value: "benefits",
       roles: ["admin", "accountant"],
-    },
-    {
-      title: "Loans",
-      icon: "mdi-hand-coin-outline",
-      value: "loans",
-      to: "/loans",
-      roles: ["admin", "accountant"],
-    },
-    {
-      title: "Deductions",
-      icon: "mdi-cash-minus",
-      value: "deductions",
-      to: "/deductions",
-      roles: ["admin", "accountant"],
+      children: [
+        {
+          title: "Allowances",
+          icon: "mdi-cash-plus",
+          value: "allowances",
+          to: "/allowances",
+        },
+        {
+          title: "Loans",
+          icon: "mdi-hand-coin-outline",
+          value: "loans",
+          to: "/loans",
+        },
+        {
+          title: "Deductions",
+          icon: "mdi-cash-minus",
+          value: "deductions",
+          to: "/deductions",
+        },
+      ],
     },
     {
       title: "Reports",
@@ -308,17 +340,17 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
+      title: "Analytics",
+      icon: "mdi-chart-box-outline",
+      value: "analytics",
+      to: "/analytics",
+      roles: ["admin", "accountant"],
+    },
+    {
       title: "My Profile",
       icon: "mdi-badge-account-horizontal-outline",
       value: "profile",
       to: "/profile",
-      roles: ["admin", "accountant", "employee"],
-    },
-    {
-      title: "Security",
-      icon: "mdi-shield-lock-outline",
-      value: "security",
-      to: "/security",
       roles: ["admin", "accountant", "employee"],
     },
     {

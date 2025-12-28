@@ -10,229 +10,344 @@
     </v-row>
 
     <v-row>
-      <!-- Profile Picture Section -->
+      <!-- Left Column: Profile Picture & Info -->
       <v-col cols="12" md="4">
-        <v-card class="industrial-card">
-          <v-card-title class="construction-header">
-            <v-icon class="mr-2">mdi-camera-account</v-icon>
-            Profile Picture
+        <!-- Profile Picture -->
+        <v-card class="industrial-card mb-4">
+          <v-card-title class="construction-header pa-3">
+            <v-icon class="mr-2" size="20">mdi-camera-account</v-icon>
+            <span class="text-subtitle-1">Profile Picture</span>
           </v-card-title>
           <v-divider class="steel-divider"></v-divider>
-          <v-card-text class="text-center pa-6">
-            <v-avatar size="200" class="mb-4" color="steel">
+          <v-card-text class="text-center pa-4">
+            <v-avatar size="150" class="mb-3" color="steel">
               <v-img
                 v-if="avatarPreview || user?.avatar"
                 :src="avatarPreview || getAvatarUrl(user?.avatar)"
                 cover
               ></v-img>
-              <v-icon v-else size="100" color="white">mdi-account</v-icon>
+              <v-icon v-else size="80" color="white">mdi-account</v-icon>
             </v-avatar>
 
-            <div class="mb-4">
-              <v-file-input
-                v-model="avatarFile"
-                accept="image/*"
-                label="Choose profile picture"
-                prepend-icon="mdi-camera"
-                variant="outlined"
-                density="comfortable"
-                show-size
-                @change="handleAvatarChange"
-                :disabled="uploadingAvatar"
-              ></v-file-input>
-            </div>
+            <v-file-input
+              v-model="avatarFile"
+              accept="image/*"
+              label="Choose picture"
+              prepend-icon="mdi-camera"
+              variant="outlined"
+              density="compact"
+              hide-details
+              @change="handleAvatarChange"
+              :disabled="uploadingAvatar"
+              class="mb-2"
+            ></v-file-input>
 
             <v-btn
               color="primary"
+              size="small"
               block
               :loading="uploadingAvatar"
               :disabled="!avatarFile || avatarFile.length === 0"
               @click="uploadAvatar"
-              class="construction-btn"
+              class="mb-1"
             >
-              <v-icon left>mdi-upload</v-icon>
-              Upload Picture
+              <v-icon size="small" left>mdi-upload</v-icon>
+              Upload
             </v-btn>
 
             <v-btn
               v-if="user?.avatar"
               color="error"
               variant="tonal"
+              size="small"
               block
-              class="mt-2"
               @click="removeAvatar"
               :disabled="uploadingAvatar"
             >
-              <v-icon left>mdi-delete</v-icon>
-              Remove Picture
+              <v-icon size="small" left>mdi-delete</v-icon>
+              Remove
             </v-btn>
-
-            <div class="text-caption text-medium-emphasis mt-3">
-              Recommended: Square image, at least 200x200px
-              <br>Max size: 2MB
-            </div>
           </v-card-text>
         </v-card>
-      </v-col>
 
-      <!-- Profile Information -->
-      <v-col cols="12" md="8">
-        <v-card class="industrial-card mb-4">
-          <v-card-title class="construction-header">
-            <v-icon class="mr-2">mdi-account</v-icon>
-            Profile Information
+        <!-- Profile Information -->
+        <v-card class="industrial-card">
+          <v-card-title class="construction-header pa-3">
+            <v-icon class="mr-2" size="20">mdi-account</v-icon>
+            <span class="text-subtitle-1">Profile Info</span>
           </v-card-title>
           <v-divider class="steel-divider"></v-divider>
-          <v-card-text>
-            <v-list>
-              <v-list-item>
+          <v-card-text class="pa-3">
+            <v-list density="compact" class="pa-0">
+              <v-list-item class="px-0">
                 <template v-slot:prepend>
-                  <v-icon>mdi-account-circle</v-icon>
+                  <v-icon size="small">mdi-account-circle</v-icon>
                 </template>
-                <v-list-item-title>Full Name</v-list-item-title>
-                <v-list-item-subtitle>{{ user?.name || 'N/A' }}</v-list-item-subtitle>
+                <v-list-item-title class="text-caption">Full Name</v-list-item-title>
+                <v-list-item-subtitle class="text-body-2">{{ user?.name || 'N/A' }}</v-list-item-subtitle>
               </v-list-item>
-              <v-list-item>
+              <v-list-item class="px-0">
                 <template v-slot:prepend>
-                  <v-icon>mdi-account-badge</v-icon>
+                  <v-icon size="small">mdi-account-badge</v-icon>
                 </template>
-                <v-list-item-title>Username</v-list-item-title>
-                <v-list-item-subtitle>{{ user?.username }}</v-list-item-subtitle>
+                <v-list-item-title class="text-caption">Username</v-list-item-title>
+                <v-list-item-subtitle class="text-body-2">{{ user?.username }}</v-list-item-subtitle>
               </v-list-item>
-              <v-list-item>
+              <v-list-item class="px-0">
                 <template v-slot:prepend>
-                  <v-icon>mdi-email</v-icon>
+                  <v-icon size="small">mdi-email</v-icon>
                 </template>
-                <v-list-item-title>Email</v-list-item-title>
-                <v-list-item-subtitle>{{ user?.email }}</v-list-item-subtitle>
+                <v-list-item-title class="text-caption">Email</v-list-item-title>
+                <v-list-item-subtitle class="text-body-2">{{ user?.email }}</v-list-item-subtitle>
               </v-list-item>
-              <v-list-item>
+              <v-list-item class="px-0">
                 <template v-slot:prepend>
-                  <v-icon>mdi-shield-account</v-icon>
+                  <v-icon size="small">mdi-shield-account</v-icon>
                 </template>
-                <v-list-item-title>Role</v-list-item-title>
-                <v-list-item-subtitle class="text-capitalize">{{ user?.role }}</v-list-item-subtitle>
+                <v-list-item-title class="text-caption">Role</v-list-item-title>
+                <v-list-item-subtitle class="text-body-2 text-capitalize">{{ user?.role }}</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item v-if="user?.last_login_at" class="px-0">
+                <template v-slot:prepend>
+                  <v-icon size="small">mdi-clock</v-icon>
+                </template>
+                <v-list-item-title class="text-caption">Last Login</v-list-item-title>
+                <v-list-item-subtitle class="text-body-2">{{ formatDate(user.last_login_at) }}</v-list-item-subtitle>
               </v-list-item>
             </v-list>
           </v-card-text>
         </v-card>
+      </v-col>
 
+      <!-- Right Column: Security Settings -->
+      <v-col cols="12" md="8">
         <!-- Change Password -->
-        <v-card class="industrial-card">
-          <v-card-title class="construction-header">
-            <v-icon class="mr-2">mdi-lock-reset</v-icon>
-            Change Password
+        <v-card class="industrial-card mb-4">
+          <v-card-title class="construction-header pa-3">
+            <v-icon class="mr-2" size="20">mdi-lock-reset</v-icon>
+            <span class="text-subtitle-1">Change Password</span>
           </v-card-title>
           <v-divider class="steel-divider"></v-divider>
-          <v-card-text>
+          <v-card-text class="pa-3">
             <v-form @submit.prevent="changePassword" ref="passwordFormRef" validate-on="submit lazy">
-              <v-text-field
-                v-model="passwordForm.current_password"
-                label="Current Password"
-                :type="showCurrentPassword ? 'text' : 'password'"
-                :append-inner-icon="showCurrentPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                @click:append-inner="showCurrentPassword = !showCurrentPassword"
-                :rules="[rules.required]"
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
+              <v-row dense>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model="passwordForm.current_password"
+                    label="Current Password"
+                    :type="showCurrentPassword ? 'text' : 'password'"
+                    :append-inner-icon="showCurrentPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                    @click:append-inner="showCurrentPassword = !showCurrentPassword"
+                    :rules="[rules.required]"
+                    variant="outlined"
+                    density="compact"
+                    hide-details="auto"
+                  ></v-text-field>
+                </v-col>
 
-              <v-text-field
-                v-model="passwordForm.new_password"
-                label="New Password"
-                :type="showNewPassword ? 'text' : 'password'"
-                :append-inner-icon="showNewPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                @click:append-inner="showNewPassword = !showNewPassword"
-                :rules="[rules.required, rules.minLength]"
-                variant="outlined"
-                density="comfortable"
-                hint="At least 8 characters"
-                persistent-hint
-              ></v-text-field>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model="passwordForm.new_password"
+                    label="New Password"
+                    :type="showNewPassword ? 'text' : 'password'"
+                    :append-inner-icon="showNewPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                    @click:append-inner="showNewPassword = !showNewPassword"
+                    :rules="[rules.required, rules.minLength]"
+                    variant="outlined"
+                    density="compact"
+                    hint="At least 8 characters"
+                    persistent-hint
+                  ></v-text-field>
+                </v-col>
 
-              <v-text-field
-                v-model="passwordForm.new_password_confirmation"
-                label="Confirm New Password"
-                :type="showConfirmPassword ? 'text' : 'password'"
-                :append-inner-icon="showConfirmPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                @click:append-inner="showConfirmPassword = !showConfirmPassword"
-                :rules="[rules.required, rules.passwordMatch]"
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model="passwordForm.new_password_confirmation"
+                    label="Confirm Password"
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    :append-inner-icon="showConfirmPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                    @click:append-inner="showConfirmPassword = !showConfirmPassword"
+                    :rules="[rules.required, rules.passwordMatch]"
+                    variant="outlined"
+                    density="compact"
+                    hide-details="auto"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
 
-              <v-alert v-if="passwordError" type="error" class="mb-3" dismissible>
+              <v-alert v-if="passwordError" type="error" density="compact" class="mt-3 mb-2" dismissible>
                 {{ passwordError }}
               </v-alert>
 
-              <v-alert v-if="passwordSuccess" type="success" class="mb-3" dismissible>
+              <v-alert v-if="passwordSuccess" type="success" density="compact" class="mt-3 mb-2" dismissible>
                 {{ passwordSuccess }}
               </v-alert>
 
               <v-btn
                 type="submit"
                 color="primary"
+                size="small"
                 :loading="changingPassword"
-                block
-                class="construction-btn"
+                class="mt-3"
               >
-                <v-icon left>mdi-lock-check</v-icon>
-                Change Password
+                <v-icon size="small" left>mdi-lock-check</v-icon>
+                Update Password
               </v-btn>
             </v-form>
           </v-card-text>
         </v-card>
-      </v-col>
-    </v-row>
 
-    <!-- Account Security -->
-    <v-row class="mt-4">
-      <v-col cols="12">
+        <!-- Two-Factor Authentication -->
         <v-card class="industrial-card">
-          <v-card-title class="construction-header">
-            <v-icon class="mr-2">mdi-shield-check</v-icon>
-            Account Security
+          <v-card-title class="construction-header pa-3">
+            <v-icon class="mr-2" size="20">mdi-two-factor-authentication</v-icon>
+            <span class="text-subtitle-1">Two-Factor Authentication</span>
           </v-card-title>
           <v-divider class="steel-divider"></v-divider>
-          <v-card-text>
-            <v-list>
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon color="success">mdi-check-circle</v-icon>
-                </template>
-                <v-list-item-title>Password Protection</v-list-item-title>
-                <v-list-item-subtitle>Your account is protected with a password</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item v-if="user?.last_login_at">
-                <template v-slot:prepend>
-                  <v-icon>mdi-clock</v-icon>
-                </template>
-                <v-list-item-title>Last Login</v-list-item-title>
-                <v-list-item-subtitle>{{ formatDate(user.last_login_at) }}</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
+          <v-card-text class="pa-3">
+            <div v-if="loading2FA" class="text-center pa-4">
+              <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+            </div>
+            <div v-else>
+              <!-- 2FA Enabled -->
+              <div v-if="twoFactorEnabled">
+                <v-alert type="success" density="compact" variant="tonal" class="mb-3">
+                  <div class="d-flex align-center">
+                    <v-icon start size="small">mdi-shield-check</v-icon>
+                    <span class="text-body-2">2FA is enabled and protecting your account</span>
+                  </div>
+                </v-alert>
+
+                <div class="d-flex gap-2">
+                  <v-btn
+                    color="error"
+                    variant="outlined"
+                    size="small"
+                    @click="disable2FA"
+                    :loading="disabling2FA"
+                  >
+                    <v-icon size="small" left>mdi-shield-off</v-icon>
+                    Disable
+                  </v-btn>
+
+                  <v-btn
+                    color="warning"
+                    variant="tonal"
+                    size="small"
+                    @click="showRecoveryDialog = true"
+                    :disabled="disabling2FA"
+                  >
+                    <v-icon size="small" left>mdi-key-variant</v-icon>
+                    Recovery Codes
+                  </v-btn>
+                </div>
+              </div>
+
+              <!-- 2FA Disabled -->
+              <div v-else>
+                <v-alert type="warning" density="compact" variant="tonal" class="mb-3">
+                  <div class="d-flex align-center">
+                    <v-icon start size="small">mdi-shield-alert</v-icon>
+                    <span class="text-body-2">2FA is not enabled</span>
+                  </div>
+                </v-alert>
+
+                <p class="text-caption mb-3">
+                  Secure your account with two-factor authentication using an authenticator app.
+                </p>
+
+                <v-btn
+                  color="primary"
+                  size="small"
+                  @click="show2FASetup = true"
+                >
+                  <v-icon size="small" left>mdi-shield-plus</v-icon>
+                  Enable 2FA
+                </v-btn>
+              </div>
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Recovery Codes Dialog -->
+    <v-dialog v-model="showRecoveryDialog" max-width="500">
+      <v-card>
+        <v-card-title class="bg-warning pa-3">
+          <v-icon class="mr-2" size="20">mdi-key-variant</v-icon>
+          <span class="text-subtitle-1">Recovery Codes</span>
+        </v-card-title>
+        <v-card-text class="pa-3">
+          <v-alert type="info" density="compact" variant="tonal" class="mb-3">
+            <div class="text-caption">
+              <strong>Important:</strong> Save these codes securely. Use them to access your account if you lose your authenticator.
+            </div>
+          </v-alert>
+
+          <v-btn
+            color="primary"
+            size="small"
+            block
+            class="mb-2"
+            @click="regenerateRecoveryCodes"
+            :loading="regeneratingCodes"
+          >
+            <v-icon size="small" left>mdi-refresh</v-icon>
+            Generate New Codes
+          </v-btn>
+
+          <div v-if="recoveryCodes.length > 0">
+            <v-list density="compact" class="bg-grey-lighten-4 rounded pa-2 mb-2">
+              <v-list-item v-for="(code, index) in recoveryCodes" :key="index" class="px-2 py-1">
+                <template v-slot:prepend>
+                  <v-icon size="x-small">mdi-key</v-icon>
+                </template>
+                <v-list-item-title class="text-caption font-mono">{{ code }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+
+            <v-btn
+              color="success"
+              variant="tonal"
+              size="small"
+              block
+              @click="downloadRecoveryCodes"
+            >
+              <v-icon size="small" left>mdi-download</v-icon>
+              Download
+            </v-btn>
+          </div>
+        </v-card-text>
+        <v-card-actions class="pa-3">
+          <v-spacer></v-spacer>
+          <v-btn size="small" @click="showRecoveryDialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 2FA Setup Dialog -->
+    <TwoFactorSetup v-model="show2FASetup" @enabled="handle2FAEnabled" />
   </v-container>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { useToast } from 'vue-toastification';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
-import api from '@/services/api';
+import { useToast } from 'vue-toastification';
 import { format } from 'date-fns';
+import TwoFactorSetup from '@/components/TwoFactorSetup.vue';
+import api from '@/services/api';
 
-const toast = useToast();
 const authStore = useAuthStore();
+const toast = useToast();
 
-const user = ref(null);
-const avatarFile = ref(null);
+const user = computed(() => authStore.user);
+const avatarFile = ref([]);
 const avatarPreview = ref(null);
 const uploadingAvatar = ref(false);
 
+const passwordFormRef = ref(null);
 const passwordForm = reactive({
   current_password: '',
   new_password: '',
@@ -245,7 +360,15 @@ const showConfirmPassword = ref(false);
 const changingPassword = ref(false);
 const passwordError = ref('');
 const passwordSuccess = ref('');
-const passwordFormRef = ref(null);
+
+// 2FA variables
+const loading2FA = ref(false);
+const twoFactorEnabled = ref(false);
+const disabling2FA = ref(false);
+const show2FASetup = ref(false);
+const showRecoveryDialog = ref(false);
+const recoveryCodes = ref([]);
+const regeneratingCodes = ref(false);
 
 const rules = {
   required: (v) => !!v || 'This field is required',
@@ -255,6 +378,7 @@ const rules = {
 
 onMounted(() => {
   fetchProfile();
+  check2FAStatus();
 });
 
 async function fetchProfile() {
@@ -269,6 +393,71 @@ async function fetchProfile() {
     toast.error('Failed to load profile');
     console.error(error);
   }
+}
+
+// 2FA Functions
+async function check2FAStatus() {
+  loading2FA.value = true;
+  try {
+    const response = await api.get('/two-factor/status');
+    twoFactorEnabled.value = response.data.enabled;
+  } catch (error) {
+    console.error('Failed to check 2FA status:', error);
+  } finally {
+    loading2FA.value = false;
+  }
+}
+
+async function disable2FA() {
+  if (!confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+    return;
+  }
+
+  disabling2FA.value = true;
+  try {
+    await api.delete('/two-factor/disable');
+    twoFactorEnabled.value = false;
+    toast.success('Two-factor authentication disabled');
+  } catch (error) {
+    toast.error('Failed to disable 2FA');
+    console.error(error);
+  } finally {
+    disabling2FA.value = false;
+  }
+}
+
+function handle2FAEnabled() {
+  twoFactorEnabled.value = true;
+  show2FASetup.value = false;
+  toast.success('Two-factor authentication enabled successfully');
+}
+
+async function regenerateRecoveryCodes() {
+  regeneratingCodes.value = true;
+  try {
+    const response = await api.post('/two-factor/recovery-codes');
+    recoveryCodes.value = response.data.recovery_codes || [];
+    toast.success('New recovery codes generated');
+  } catch (error) {
+    toast.error('Failed to generate recovery codes');
+    console.error(error);
+  } finally {
+    regeneratingCodes.value = false;
+  }
+}
+
+function downloadRecoveryCodes() {
+  const text = recoveryCodes.value.join('\n');
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '2fa-recovery-codes.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+  toast.success('Recovery codes downloaded');
 }
 
 function handleAvatarChange() {

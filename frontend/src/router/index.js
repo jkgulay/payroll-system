@@ -144,6 +144,12 @@ const router = createRouter({
           meta: { title: "Reports" },
         },
         {
+          path: "analytics",
+          name: "analytics",
+          component: () => import("@/views/AnalyticsDashboard.vue"),
+          meta: { title: "Analytics Dashboard", roles: ["admin", "accountant"] },
+        },
+        {
           path: "settings",
           name: "settings",
           component: () => import("@/views/settings/SettingsView.vue"),
