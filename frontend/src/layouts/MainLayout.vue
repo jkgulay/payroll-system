@@ -140,6 +140,45 @@
         </router-view>
       </v-container>
     </v-main>
+
+    <!-- Logout Confirmation Dialog -->
+    <v-dialog v-model="logoutDialog" max-width="450" persistent>
+      <v-card>
+        <v-card-title class="d-flex align-center bg-error pa-4">
+          <v-icon icon="mdi-logout" size="28" class="mr-3"></v-icon>
+          <span class="text-h6">Confirm Logout</span>
+        </v-card-title>
+        
+        <v-card-text class="pa-6">
+          <div class="text-body-1">
+            Are you sure you want to logout from the Construction Payroll System?
+          </div>
+          <div class="text-body-2 text-medium-emphasis mt-2">
+            Any unsaved changes will be lost.
+          </div>
+        </v-card-text>
+
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            @click="logoutDialog = false"
+            :disabled="loggingOut"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="elevated"
+            @click="confirmLogout"
+            :loading="loggingOut"
+            prepend-icon="mdi-logout"
+          >
+            Logout
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -159,6 +198,8 @@ const toast = useToast();
 
 const drawer = ref(true);
 const rail = ref(false);
+const logoutDialog = ref(false);
+const loggingOut = ref(false);
 
 const userName = computed(() => authStore.user?.name || authStore.user?.username || "User");
 const userRole = computed(() => {
@@ -271,6 +312,13 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant", "employee"],
     },
     {
+      title: "Security",
+      icon: "mdi-shield-lock-outline",
+      value: "security",
+      to: "/security",
+      roles: ["admin", "accountant", "employee"],
+    },
+    {
       title: "Settings",
       icon: "mdi-cog-outline",
       value: "settings",
@@ -287,6 +335,12 @@ const menuItems = computed(() => {
 });
 
 async function handleLogout() {
+  // Show confirmation dialog
+  logoutDialog.value = true;
+}
+
+async function confirmLogout() {
+  loggingOut.value = true;
   try {
     await authStore.logout();
     toast.success("Logged out successfully");
@@ -294,6 +348,9 @@ async function handleLogout() {
   } catch (error) {
     console.error("Logout error:", error);
     toast.error("Error logging out");
+  } finally {
+    loggingOut.value = false;
+    logoutDialog.value = false;
   }
 }
 

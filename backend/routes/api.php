@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\PayrollController;
 Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
 Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
 
+// Two-Factor Authentication routes
+Route::post('/two-factor/verify', [App\Http\Controllers\Api\TwoFactorController::class, 'verify']);
+
 // Registration disabled - accounts created by admin/accountant through employee management
 
 // Protected routes
@@ -33,6 +36,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/profile/change-password', [App\Http\Controllers\Api\UserProfileController::class, 'changePassword']);
     Route::post('/profile/upload-avatar', [App\Http\Controllers\Api\UserProfileController::class, 'uploadAvatar']);
     Route::delete('/profile/remove-avatar', [App\Http\Controllers\Api\UserProfileController::class, 'removeAvatar']);
+
+    // Two-Factor Authentication (protected routes)
+    Route::get('/two-factor/status', [App\Http\Controllers\Api\TwoFactorController::class, 'status']);
+    Route::post('/two-factor/enable', [App\Http\Controllers\Api\TwoFactorController::class, 'enable']);
+    Route::post('/two-factor/confirm', [App\Http\Controllers\Api\TwoFactorController::class, 'confirm']);
+    Route::delete('/two-factor/disable', [App\Http\Controllers\Api\TwoFactorController::class, 'disable']);
+    Route::post('/two-factor/recovery-codes', [App\Http\Controllers\Api\TwoFactorController::class, 'regenerateRecoveryCodes']);
 
     // Employees
     Route::apiResource('employees', App\Http\Controllers\Api\EmployeeController::class);

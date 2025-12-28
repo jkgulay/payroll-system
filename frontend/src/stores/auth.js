@@ -21,6 +21,13 @@ export const useAuthStore = defineStore("auth", () => {
     loading.value = true;
     try {
       const response = await api.post("/login", credentials);
+      
+      // Check if 2FA is required
+      if (response.data.requires_2fa) {
+        loading.value = false;
+        return response.data; // Return to let login component handle 2FA
+      }
+
       token.value = response.data.token;
       user.value = response.data.user;
 

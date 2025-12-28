@@ -134,6 +134,12 @@ const router = createRouter({
           component: () => import("@/views/settings/SettingsView.vue"),
           meta: { title: "Settings", roles: ["admin"] },
         },
+        {
+          path: "security",
+          name: "security",
+          component: () => import("@/views/settings/SecurityView.vue"),
+          meta: { title: "Security Settings" },
+        },
       ],
     },
     {
