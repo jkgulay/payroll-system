@@ -25,14 +25,14 @@ class PayrollController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Payroll::with(['preparedBy', 'checkedBy', 'approvedBy'])
-            ->orderBy('period_start_date', 'desc');
+            ->orderBy('period_start', 'desc');
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
         if ($request->has('year')) {
-            $query->whereYear('period_start_date', $request->year);
+            $query->where('year', $request->year);
         }
 
         $payrolls = $query->paginate(20);
@@ -232,15 +232,15 @@ class PayrollController extends Controller
     public function exportPdf(Request $request, Payroll $payroll)
     {
         $includeSignatures = $request->input('include_signatures', true);
-        
+
         $payroll->load(['payslips.employee.department']);
-        
+
         $pdf = Pdf::loadView('payroll.report', [
             'payroll' => $payroll,
             'payslips' => $payroll->payslips,
             'includeSignatures' => $includeSignatures,
         ]);
-        
+
         return $pdf->download('payroll_report_' . $payroll->id . '.pdf');
     }
 
@@ -250,7 +250,7 @@ class PayrollController extends Controller
     public function exportExcel(Request $request, Payroll $payroll)
     {
         $includeSignatures = $request->input('include_signatures', true);
-        
+
         return Excel::download(
             new \App\Exports\PayrollReportExport($payroll, $includeSignatures),
             'payroll_report_' . $payroll->id . '.xlsx'

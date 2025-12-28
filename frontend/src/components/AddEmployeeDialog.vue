@@ -173,8 +173,9 @@
               <v-select
                 v-model="formData.employment_status"
                 :items="[
-                  { title: 'Active', value: 'active' },
+                  { title: 'Regular', value: 'regular' },
                   { title: 'Probationary', value: 'probationary' },
+                  { title: 'Contractual', value: 'contractual' },
                 ]"
                 label="Employment Status"
                 :rules="[rules.required]"
@@ -380,7 +381,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { usePositionRates } from "@/composables/usePositionRates";
 
 const props = defineProps({
@@ -396,7 +397,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "save"]);
 
-const { positionOptions, getRate } = usePositionRates();
+const { positionOptions, getRate, loadPositionRates } = usePositionRates();
 
 const show = computed({
   get: () => props.modelValue,
@@ -419,7 +420,7 @@ const formData = ref({
   project_id: null,
   position: "",
   date_hired: "",
-  employment_status: "active",
+  employment_status: "regular",
   employment_type: "regular",
   salary_type: "daily",
   basic_salary: 450,
@@ -439,6 +440,11 @@ const rules = {
   email: (v) => /.+@.+\..+/.test(v) || "Email must be valid",
   emailOptional: (v) => !v || /.+@.+\..+/.test(v) || "Email must be valid",
 };
+
+// Load position rates from database on mount
+onMounted(async () => {
+  await loadPositionRates();
+});
 
 // Update basic salary when position changes
 function updateBasicSalary(position) {
@@ -468,7 +474,7 @@ function resetForm() {
     project_id: null,
     position: "",
     date_hired: "",
-    employment_status: "active",
+    employment_status: "regular",
     employment_type: "regular",
     salary_type: "daily",
     basic_salary: 450,

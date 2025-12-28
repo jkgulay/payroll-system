@@ -57,6 +57,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Projects & Locations
     Route::apiResource('projects', App\Http\Controllers\Api\ProjectController::class);
+    Route::get('projects/{project}/employees', [App\Http\Controllers\Api\ProjectController::class, 'employees']);
+    Route::post('projects/{project}/mark-complete', [App\Http\Controllers\Api\ProjectController::class, 'markComplete']);
+    Route::post('projects/{project}/reactivate', [App\Http\Controllers\Api\ProjectController::class, 'reactivate']);
+    Route::post('projects/{project}/generate-payroll', [App\Http\Controllers\Api\ProjectController::class, 'generatePayroll']);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
     // Attendance
@@ -84,6 +88,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/payslips/{payrollItem}/pdf', [App\Http\Controllers\Api\PayslipController::class, 'downloadPdf']);
     Route::get('/payslips/{payrollItem}/excel', [App\Http\Controllers\Api\PayslipController::class, 'downloadExcel']);
     Route::get('/payslips/{payrollItem}/view', [App\Http\Controllers\Api\PayslipController::class, 'view']);
+
+    // Position Rates
+    Route::apiResource('position-rates', App\Http\Controllers\Api\PositionRateController::class);
+    Route::post('/position-rates/{positionRate}/bulk-update', [App\Http\Controllers\Api\PositionRateController::class, 'bulkUpdateEmployees']);
+    Route::get('/position-rates/by-name/search', [App\Http\Controllers\Api\PositionRateController::class, 'getByName']);
+    Route::get('/positions/names', [App\Http\Controllers\Api\PositionRateController::class, 'getPositionNames']);
 
     // Employee Benefits
     Route::apiResource('allowances', App\Http\Controllers\Api\AllowanceController::class);

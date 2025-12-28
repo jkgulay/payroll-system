@@ -16,10 +16,13 @@ class Payroll extends Model
 
     protected $fillable = [
         'payroll_number',
-        'period_start_date',
-        'period_end_date',
+        'period_type',
+        'period_start',
+        'period_end',
         'payment_date',
         'pay_period_number',
+        'month',
+        'year',
         'status',
         'total_gross_pay',
         'total_deductions',
@@ -35,11 +38,13 @@ class Payroll extends Model
         'paid_by',
         'paid_at',
         'notes',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
-        'period_start_date' => 'date',
-        'period_end_date' => 'date',
+        'period_start' => 'date',
+        'period_end' => 'date',
         'payment_date' => 'date',
         'total_gross_pay' => 'decimal:2',
         'total_deductions' => 'decimal:2',
@@ -55,10 +60,30 @@ class Payroll extends Model
         'period_label',
     ];
 
-    // Accessors
+    // Accessors for backward compatibility
+    public function getPeriodStartDateAttribute()
+    {
+        return $this->period_start;
+    }
+
+    public function getPeriodEndDateAttribute()
+    {
+        return $this->period_end;
+    }
+
+    public function setPeriodStartDateAttribute($value)
+    {
+        $this->attributes['period_start'] = $value;
+    }
+
+    public function setPeriodEndDateAttribute($value)
+    {
+        $this->attributes['period_end'] = $value;
+    }
+
     public function getPeriodLabelAttribute(): string
     {
-        return $this->period_start_date->format('M d') . ' - ' . $this->period_end_date->format('M d, Y');
+        return $this->period_start->format('M d') . ' - ' . $this->period_end->format('M d, Y');
     }
 
     // Relationships

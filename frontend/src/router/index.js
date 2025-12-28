@@ -63,6 +63,12 @@ const router = createRouter({
           meta: { title: "Employees", roles: ["admin"] },
         },
         {
+          path: "projects",
+          name: "projects",
+          component: () => import("@/views/projects/ProjectManagementView.vue"),
+          meta: { title: "Project Management", roles: ["admin"] },
+        },
+        {
           path: "attendance",
           name: "attendance",
           component: () => import("@/views/attendance/AttendanceView.vue"),

@@ -1142,8 +1142,9 @@ const saving = ref(false);
 const refreshing = ref(false);
 const projects = ref([]);
 
-async function saveEmployee(employeeData) {
-  saving.value = true;
+async function saveEmployee(payload) {
+  const { data: employeeData, setSaving } = payload;
+
   try {
     const response = await api.post("/employees", employeeData);
 
@@ -1179,7 +1180,7 @@ async function saveEmployee(employeeData) {
       toast.error(message);
     }
   } finally {
-    saving.value = false;
+    setSaving(false);
   }
 }
 

@@ -57,18 +57,18 @@ class EmployeeController extends Controller
             'first_name' => 'required|string|max:100',
             'middle_name' => 'nullable|string|max:100',
             'last_name' => 'required|string|max:100',
-            'date_of_birth' => 'required|date',
-            'gender' => 'required|in:male,female,other',
+            'date_of_birth' => 'nullable|date',
+            'gender' => 'nullable|in:male,female,other',
             'email' => 'nullable|email|unique:employees,email',
             'mobile_number' => 'nullable|string|max:20',
-            'project_id' => 'required|exists:projects,id',
+            'project_id' => 'nullable|exists:projects,id',
             'worker_address' => 'nullable|string',
-            'position' => 'nullable|string|max:100',
-            'employment_status' => 'required|in:regular,probationary,contractual,active,resigned,terminated,retired',
-            'employment_type' => 'required|in:regular,contractual,part_time',
-            'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
-            'salary_type' => 'required|in:daily,weekly,semi-monthly,monthly',
+            'position' => 'required|string|max:100',
+            'employment_status' => 'nullable|in:regular,probationary,contractual',
+            'employment_type' => 'nullable|in:regular,contractual,part_time',
+            'date_hired' => 'nullable|date',
+            'basic_salary' => 'nullable|numeric|min:0',
+            'salary_type' => 'nullable|in:daily,monthly',
             // Allowances
             'has_water_allowance' => 'nullable|boolean',
             'water_allowance' => 'nullable|numeric|min:0',
@@ -78,9 +78,21 @@ class EmployeeController extends Controller
             'incentives' => 'nullable|numeric|min:0',
             'has_ppe' => 'nullable|boolean',
             'ppe' => 'nullable|numeric|min:0',
-            // User account role
-            'role' => 'required|in:accountant,employee',
         ]);
+
+        // Validate role separately (it's for user account, not employee record)
+        $role = $request->validate([
+            'role' => 'nullable|in:admin,accountant,employee',
+        ])['role'] ?? 'employee'; // Default to 'employee' if not provided
+
+        // Set defaults for required database fields if not provided
+        $validated['date_of_birth'] = $validated['date_of_birth'] ?? now()->subYears(25)->format('Y-m-d');
+        $validated['project_id'] = $validated['project_id'] ?? 1; // Default to first project
+        $validated['employment_status'] = $validated['employment_status'] ?? 'regular';
+        $validated['employment_type'] = $validated['employment_type'] ?? 'regular';
+        $validated['date_hired'] = $validated['date_hired'] ?? now()->format('Y-m-d');
+        $validated['basic_salary'] = $validated['basic_salary'] ?? 0;
+        $validated['salary_type'] = $validated['salary_type'] ?? 'daily';
 
         DB::beginTransaction();
         try {
@@ -123,7 +135,7 @@ class EmployeeController extends Controller
                 'username' => $username,
                 'email' => $email,
                 'password' => Hash::make($autoPassword),
-                'role' => $validated['role'],
+                'role' => $role,
                 'is_active' => true,
                 'must_change_password' => true, // Force password change on first login
             ]);
@@ -134,7 +146,7 @@ class EmployeeController extends Controller
             DB::commit();
             return response()->json([
                 'employee' => $employee,
-                'role' => $validated['role'],
+                'role' => $role,
                 'username' => $username,
                 'temporary_password' => $autoPassword,
                 'message' => 'Employee created successfully. Username: ' . $username . ', Temporary password: ' . $autoPassword
@@ -154,19 +166,28 @@ class EmployeeController extends Controller
     public function update(Request $request, Employee $employee)
     {
         $validated = $request->validate([
-            'employee_number' => 'required|string|unique:employees,employee_number,' . $employee->id,
-            'first_name' => 'required|string|max:100',
-            'last_name' => 'required|string|max:100',
+            'employee_number' => 'sometimes|string|unique:employees,employee_number,' . $employee->id,
+            'first_name' => 'sometimes|required|string|max:100',
+            'last_name' => 'sometimes|required|string|max:100',
             'email' => 'nullable|email|unique:employees,email,' . $employee->id,
             'mobile_number' => 'nullable|string|max:20',
             'project_id' => 'nullable|exists:projects,id',
             'worker_address' => 'nullable|string',
             'position' => 'nullable|string|max:100',
-            'employment_status' => 'required|in:active,resigned,terminated,retired',
-            'employment_type' => 'required|in:regular,contractual,part_time',
-            'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
-            'salary_type' => 'required|in:daily,monthly,hourly',
+            'employment_status' => 'nullable|in:regular,probationary,contractual',
+            'employment_type' => 'nullable|in:regular,contractual,part_time',
+            'date_hired' => 'nullable|date',
+            'basic_salary' => 'nullable|numeric|min:0',
+            'salary_type' => 'nullable|in:daily,monthly,hourly',
+            // Allowances
+            'has_water_allowance' => 'nullable|boolean',
+            'water_allowance' => 'nullable|numeric|min:0',
+            'has_cola' => 'nullable|boolean',
+            'cola' => 'nullable|numeric|min:0',
+            'has_incentives' => 'nullable|boolean',
+            'incentives' => 'nullable|numeric|min:0',
+            'has_ppe' => 'nullable|boolean',
+            'ppe' => 'nullable|numeric|min:0',
         ]);
 
         $employee->update($validated);

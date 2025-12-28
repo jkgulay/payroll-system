@@ -829,6 +829,9 @@ const {
   updateRate,
   addPosition: addPositionToRates,
   deletePosition: deletePositionFromRates,
+  loadPositionRates,
+  bulkUpdateEmployees,
+  refreshRates,
 } = usePositionRates();
 
 const search = ref("");
@@ -914,6 +917,7 @@ const rules = {
 };
 
 onMounted(async () => {
+  await loadPositionRates(); // Load position rates from database
   await fetchEmployees();
   await fetchProjects();
 });
@@ -1052,10 +1056,17 @@ function formatDate(dateString) {
 
 // Position Management Functions
 const filteredPositionRates = computed(() => {
-  const positions = Object.entries(positionRates.value).map(
-    ([position, rate]) => ({ position, rate })
-  );
+  // positionRates is now an array of objects: [{id, position_name, daily_rate, category, employee_count}, ...]
+  const positions = positionRates.value.map((item) => ({
+    id: item.id,
+    position: item.position_name,
+    rate: item.daily_rate,
+    category: item.category,
+    employee_count: item.employee_count || 0,
+  }));
+
   if (!positionSearch.value) return positions;
+
   return positions.filter((p) =>
     p.position.toLowerCase().includes(positionSearch.value.toLowerCase())
   );
@@ -1067,6 +1078,7 @@ function getEmployeeCountForPosition(position) {
 
 function editPositionRate(item) {
   editingPosition.value = {
+    id: item.id, // Now includes ID for API calls
     position: item.position,
     rate: item.rate,
     originalRate: item.rate,
@@ -1082,19 +1094,22 @@ async function updatePositionRate() {
 
   savingPosition.value = true;
   try {
-    // Update using composable (saves to localStorage)
-    updateRate(editingPosition.value.position, editingPosition.value.rate);
+    // Update using API-based composable (saves to database)
+    await updateRate(editingPosition.value.id, {
+      position_name: editingPosition.value.position,
+      daily_rate: editingPosition.value.rate,
+    });
 
-    // TODO: Save to backend
-    // await api.post('/position-rates', positionRates.value);
-
+    await refreshRates(); // Refresh from server
     toast.success(
       `Default rate for ${editingPosition.value.position} updated to ₱${editingPosition.value.rate}/day`
     );
     closeEditPositionDialog();
   } catch (error) {
     console.error("Error updating position rate:", error);
-    toast.error("Failed to update position rate");
+    toast.error(
+      error.response?.data?.message || "Failed to update position rate"
+    );
   } finally {
     savingPosition.value = false;
   }
@@ -1113,20 +1128,31 @@ async function addPosition() {
 
   savingPosition.value = true;
   try {
-    // Add using composable (saves to localStorage)
-    addPositionToRates(newPosition.value.name, newPosition.value.rate);
+    // Add using API-based composable (saves to database)
+    await addPositionToRates({
+      position_name: newPosition.value.name,
+      daily_rate: newPosition.value.rate,
+      category: "other", // Default category
+      is_active: true,
+    });
 
-    // TODO: Save to backend
-    // await api.post('/position-rates', positionRates.value);
-
+    await refreshRates(); // Refresh from server
     toast.success(`Position "${newPosition.value.name}" added successfully!`);
     closeAddPositionDialog();
   } catch (error) {
     console.error("Error adding position:", error);
-    if (error.message === "Position already exists") {
+    const errorMessage =
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to add position";
+
+    if (
+      errorMessage.includes("already exists") ||
+      errorMessage.includes("duplicate")
+    ) {
       toast.warning("Position already exists!");
     } else {
-      toast.error("Failed to add position");
+      toast.error(errorMessage);
     }
   } finally {
     savingPosition.value = false;
@@ -1138,16 +1164,21 @@ function closeAddPositionDialog() {
   newPosition.value = { name: "", rate: null };
 }
 
-function deletePosition(item) {
+async function deletePosition(item) {
   if (getEmployeeCountForPosition(item.position) > 0) {
     toast.warning("Cannot delete position with assigned employees");
     return;
   }
 
   if (confirm(`Delete position "${item.position}"?`)) {
-    deletePositionFromRates(item.position);
-    toast.success(`Position "${item.position}" deleted`);
-    // TODO: Save to backend
+    try {
+      await deletePositionFromRates(item.id); // Now uses API with ID
+      await refreshRates(); // Refresh from server
+      toast.success(`Position "${item.position}" deleted`);
+    } catch (error) {
+      console.error("Error deleting position:", error);
+      toast.error(error.response?.data?.message || "Failed to delete position");
+    }
   }
 }
 
@@ -1184,31 +1215,20 @@ async function confirmBulkUpdate() {
       (emp) => emp.position === bulkUpdateTarget.value.position
     );
 
-    // Update all employees with this position
-    for (const employee of employeesToUpdate) {
-      await api.put(`/employees/${employee.id}`, {
-        basic_salary: bulkUpdateRate.value,
-      });
+    // Use the bulk update endpoint from composable
+    // This updates BOTH the position_rate AND all employees in a single transaction
+    await bulkUpdateEmployees(bulkUpdateTarget.value.id, bulkUpdateRate.value);
 
-      // TODO: Create audit log entries
-      // await api.post('/pay-rate-history', {
-      //   employee_id: employee.id,
-      //   old_rate: employee.basic_salary,
-      //   new_rate: bulkUpdateRate.value,
-      //   effective_date: bulkUpdateEffectiveDate.value,
-      //   reason: bulkUpdateReason.value,
-      //   is_bulk_update: true,
-      // });
-    }
+    await refreshRates(); // Refresh position rates from server
+    await fetchEmployees(); // Refresh employee list
 
     toast.success(
-      `Successfully updated ${employeesToUpdate.length} employees with position "${bulkUpdateTarget.value.position}"`
+      `Successfully updated ${employeesToUpdate.length} employees with position "${bulkUpdateTarget.value.position}" to ₱${bulkUpdateRate.value}/day`
     );
-    await fetchEmployees();
     closeBulkUpdateDialog();
   } catch (error) {
     console.error("Error bulk updating employees:", error);
-    toast.error("Failed to update employees");
+    toast.error(error.response?.data?.message || "Failed to update employees");
   } finally {
     bulkUpdating.value = false;
   }

@@ -14,6 +14,7 @@ class Employee extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'user_id',
         'employee_number',
         'first_name',
         'middle_name',
@@ -57,7 +58,10 @@ class Employee extends Model
         'tin_number',
         'bank_name',
         'bank_account_number',
+        'profile_photo',
         'is_active',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

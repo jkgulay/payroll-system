@@ -238,6 +238,13 @@ const menuItems = computed(() => {
       roles: ["admin"],
     },
     {
+      title: "Projects",
+      icon: "mdi-office-building",
+      value: "projects",
+      to: "/projects",
+      roles: ["admin"],
+    },
+    {
       title: "Attendance",
       icon: "mdi-clock-check-outline",
       value: "attendance",
