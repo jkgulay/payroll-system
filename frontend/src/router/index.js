@@ -60,7 +60,7 @@ const router = createRouter({
           path: "employees",
           name: "employees",
           component: () => import("@/views/employees/EmployeeListView.vue"),
-          meta: { title: "Employees", roles: ["admin", "accountant"] },
+          meta: { title: "Employees", roles: ["admin"] },
         },
         {
           path: "attendance",

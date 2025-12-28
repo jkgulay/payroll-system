@@ -18,7 +18,7 @@
     <v-card>
       <v-card-text>
         <v-row class="mb-4">
-          <v-col cols="12" md="4">
+          <v-col cols="12" md="3">
             <v-text-field
               v-model="search"
               prepend-inner-icon="mdi-magnify"
@@ -29,7 +29,7 @@
           </v-col>
           <v-col cols="12" md="3">
             <v-select
-              v-model="filters.project"
+              v-model="filters.project_id"
               :items="projects"
               item-title="name"
               item-value="id"
@@ -38,9 +38,9 @@
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="3">
+          <v-col cols="12" md="2">
             <v-select
-              v-model="filters.status"
+              v-model="filters.employment_status"
               :items="statusOptions"
               label="Status"
               clearable
@@ -50,8 +50,17 @@
           <v-col cols="12" md="2">
             <v-select
               v-model="filters.employment_type"
-              :items="employmentTypes"
-              label="Employment Type"
+              :items="employmentTypeOptions"
+              label="Type"
+              clearable
+              @update:model-value="fetchEmployees"
+            ></v-select>
+          </v-col>
+          <v-col cols="12" md="2">
+            <v-select
+              v-model="filters.position"
+              :items="positions"
+              label="Position"
               clearable
               @update:model-value="fetchEmployees"
             ></v-select>
@@ -454,12 +463,14 @@
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="newEmployeeData.email"
-                  label="Email"
+                  label="Email (Optional)"
                   type="email"
                   prepend-inner-icon="mdi-email"
-                  :rules="[rules.required, rules.email]"
+                  :rules="[rules.emailOptional]"
                   variant="outlined"
                   density="comfortable"
+                  hint="If no email, username will be firstname.lastname"
+                  persistent-hint
                 ></v-text-field>
               </v-col>
 
@@ -503,7 +514,9 @@
                 <v-textarea
                   v-model="newEmployeeData.worker_address"
                   label="Worker Address"
-                  rows="2"
+                  prepend-inner-icon="mdi-map-marker"
+                  rows="1"
+                  hint="Enter the worker's complete home address"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
@@ -546,6 +559,7 @@
                 <v-text-field
                   v-model="newEmployeeData.position"
                   label="Position"
+                  prepend-inner-icon="mdi-badge-account"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
@@ -567,15 +581,15 @@
                 <v-select
                   v-model="newEmployeeData.employment_status"
                   :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Probationary', value: 'probationary' },
-                    { title: 'Contractual', value: 'contractual' },
                     { title: 'Active', value: 'active' },
+                    { title: 'Probationary', value: 'probationary' },
                   ]"
                   label="Employment Status"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                  hint="Current work status"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -591,6 +605,8 @@
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                  hint="Type of employment contract"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -613,11 +629,11 @@
                   v-model.number="newEmployeeData.basic_salary"
                   label="Basic Pay Rate"
                   type="number"
-                  prefix="₱"
+                  prepend-inner-icon="mdi-cash"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
-                  hint="Default: ₱450"
+                  hint="Default: ₱450 per day (can be modified)"
                   persistent-hint
                 ></v-text-field>
               </v-col>
@@ -632,6 +648,7 @@
                 <v-checkbox
                   v-model="newEmployeeData.has_water_allowance"
                   label="Water Allowance"
+                  color="primary"
                   hide-details
                 ></v-checkbox>
                 <v-text-field
@@ -649,7 +666,8 @@
               <v-col cols="12" md="6">
                 <v-checkbox
                   v-model="newEmployeeData.has_cola"
-                  label="COLA"
+                  label="COLA (Cost of Living Allowance)"
+                  color="primary"
                   hide-details
                 ></v-checkbox>
                 <v-text-field
@@ -668,6 +686,7 @@
                 <v-checkbox
                   v-model="newEmployeeData.has_incentives"
                   label="Incentives"
+                  color="primary"
                   hide-details
                 ></v-checkbox>
                 <v-text-field
@@ -685,7 +704,8 @@
               <v-col cols="12" md="6">
                 <v-checkbox
                   v-model="newEmployeeData.has_ppe"
-                  label="PPE"
+                  label="PPE (Personal Protective Equipment)"
+                  color="primary"
                   hide-details
                 ></v-checkbox>
                 <v-text-field
@@ -708,8 +728,19 @@
 
               <v-col cols="12">
                 <v-alert type="info" variant="tonal" density="compact">
-                  Account will be auto-created with email as username and
-                  auto-generated password
+                  <ul class="mt-2">
+                    <li>
+                      <strong>Username:</strong> Email if provided, otherwise
+                      firstname.lastname
+                    </li>
+                    <li>
+                      <strong>Password:</strong> Auto-generated (LastName +
+                      EmpID + 2 random digits)
+                    </li>
+                    <li><strong>Role:</strong> Selected below</li>
+                    <li><strong>Status:</strong> Active</li>
+                    <li>Employee must change password on first login</li>
+                  </ul>
                 </v-alert>
               </v-col>
 
@@ -721,7 +752,10 @@
                     { title: 'Employee', value: 'employee' },
                   ]"
                   label="User Role"
+                  prepend-inner-icon="mdi-shield-account"
                   :rules="[rules.required]"
+                  hint="Admin can assign accountant or employee role"
+                  persistent-hint
                   variant="outlined"
                   density="comfortable"
                 ></v-select>
@@ -773,7 +807,15 @@
             </div>
             <v-sheet color="grey-lighten-4" rounded class="pa-4">
               <div class="mb-3">
-                <div class="text-caption">Username (Email)</div>
+                <div class="text-caption">Username</div>
+                <div class="text-body-1 font-weight-bold">
+                  {{
+                    createdEmployeeUsername || createdEmployee?.email || "N/A"
+                  }}
+                </div>
+              </div>
+              <div class="mb-3" v-if="createdEmployee?.email">
+                <div class="text-caption">Email</div>
                 <div class="text-body-1 font-weight-bold">
                   {{ createdEmployee?.email }}
                 </div>
@@ -829,9 +871,10 @@ const employeeStore = useEmployeeStore();
 
 const search = ref("");
 const filters = ref({
-  project: null,
-  status: null,
+  project_id: null,
+  employment_status: null,
   employment_type: null,
+  position: null,
 });
 
 // Existing employee list variables
@@ -845,6 +888,7 @@ const showAddEmployeeDialog = ref(false);
 const showPasswordDialog = ref(false);
 const temporaryPassword = ref("");
 const createdEmployee = ref(null);
+const createdEmployeeUsername = ref("");
 const addEmployeeForm = ref(null);
 const savingNew = ref(false);
 
@@ -861,8 +905,8 @@ const newEmployeeData = ref({
   project_id: null,
   position: "",
   date_hired: "",
-  employment_status: "",
-  employment_type: "",
+  employment_status: "active",
+  employment_type: "regular",
   salary_type: "daily",
   basic_salary: 450,
   has_water_allowance: false,
@@ -879,6 +923,7 @@ const newEmployeeData = ref({
 const rules = {
   required: (v) => !!v || "This field is required",
   email: (v) => /.+@.+\..+/.test(v) || "Email must be valid",
+  emailOptional: (v) => !v || /.+@.+\..+/.test(v) || "Email must be valid",
 };
 
 const projects = ref([]);
@@ -886,13 +931,19 @@ const employeeForm = ref(null);
 
 const statusOptions = [
   { title: "Active", value: "active" },
-  { title: "Inactive", value: "inactive" },
+  { title: "Probationary", value: "probationary" },
+  { title: "Resigned", value: "resigned" },
+  { title: "Terminated", value: "terminated" },
+  { title: "Retired", value: "retired" },
 ];
 
-const employmentTypes = [
-  { title: "Daily", value: "daily" },
-  { title: "Monthly", value: "monthly" },
+const employmentTypeOptions = [
+  { title: "Regular", value: "regular" },
+  { title: "Contractual", value: "contractual" },
+  { title: "Part Time", value: "part_time" },
 ];
+
+const positions = ref([]);
 
 const headers = [
   { title: "Employee #", key: "employee_number", sortable: true },
@@ -907,6 +958,7 @@ const headers = [
 onMounted(async () => {
   await fetchEmployees();
   await fetchProjects();
+  await fetchPositions();
 });
 
 async function fetchEmployees() {
@@ -918,6 +970,25 @@ async function fetchEmployees() {
 
 async function fetchProjects() {
   projects.value = await employeeStore.fetchProjects();
+}
+
+async function fetchPositions() {
+  try {
+    const response = await api.get("/employees", {
+      params: { per_page: 1000 },
+    });
+    // Extract unique positions from employees
+    const uniquePositions = [
+      ...new Set(
+        response.data.data
+          .map((emp) => emp.position)
+          .filter((pos) => pos && pos.trim() !== "")
+      ),
+    ].sort();
+    positions.value = uniquePositions;
+  } catch (error) {
+    console.error("Error fetching positions:", error);
+  }
 }
 
 async function viewEmployee(employee) {
@@ -1055,6 +1126,7 @@ async function saveNewEmployee() {
     temporaryPassword.value = response.data.temporary_password;
     createdEmployee.value = response.data.employee;
     createdEmployee.value.role = response.data.role;
+    createdEmployeeUsername.value = response.data.username;
 
     toast.success("Employee created successfully!");
     closeAddDialog();
@@ -1103,8 +1175,15 @@ function closeAddDialog() {
 }
 
 function copyCredentials() {
-  const credentials = `Employee: ${createdEmployee.value.employee_number} - ${createdEmployee.value.first_name} ${createdEmployee.value.last_name}
-Username: ${createdEmployee.value.email}
+  const emailInfo = createdEmployee.value.email
+    ? `\nEmail: ${createdEmployee.value.email}`
+    : "";
+  const credentials = `Employee: ${createdEmployee.value.employee_number} - ${
+    createdEmployee.value.first_name
+  } ${createdEmployee.value.last_name}
+Username: ${
+    createdEmployeeUsername.value || createdEmployee.value.email
+  }${emailInfo}
 Temporary Password: ${temporaryPassword.value}
 Role: ${createdEmployee.value.role}
 

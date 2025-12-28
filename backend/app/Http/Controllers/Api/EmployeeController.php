@@ -36,6 +36,16 @@ class EmployeeController extends Controller
             $query->where('employment_status', $request->employment_status);
         }
 
+        // Filter by employment type
+        if ($request->has('employment_type')) {
+            $query->where('employment_type', $request->employment_type);
+        }
+
+        // Filter by position
+        if ($request->has('position') && $request->position) {
+            $query->where('position', $request->position);
+        }
+
         $employees = $query->paginate($request->get('per_page', 15));
 
         return response()->json($employees);
@@ -49,7 +59,7 @@ class EmployeeController extends Controller
             'last_name' => 'required|string|max:100',
             'date_of_birth' => 'required|date',
             'gender' => 'required|in:male,female,other',
-            'email' => 'required|email|unique:employees',
+            'email' => 'nullable|email|unique:employees,email',
             'mobile_number' => 'nullable|string|max:20',
             'project_id' => 'required|exists:projects,id',
             'worker_address' => 'nullable|string',
@@ -86,10 +96,32 @@ class EmployeeController extends Controller
             $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
             $autoPassword = $validated['last_name'] . $validated['employee_number'] . '@' . $randomDigits;
 
+            // Generate username: Use email if provided, otherwise firstname.lastname
+            if (!empty($validated['email'])) {
+                $username = $validated['email'];
+                $email = $validated['email'];
+            } else {
+                // Generate username from firstname.lastname
+                $baseUsername = strtolower($validated['first_name'] . '.' . $validated['last_name']);
+                // Remove special characters and spaces
+                $baseUsername = preg_replace('/[^a-z0-9.]/', '', $baseUsername);
+
+                // Ensure username is unique
+                $username = $baseUsername;
+                $counter = 1;
+                while (User::where('username', $username)->exists()) {
+                    $username = $baseUsername . $counter;
+                    $counter++;
+                }
+
+                // Use a placeholder email or null
+                $email = null;
+            }
+
             // Always create user account
             User::create([
-                'username' => $validated['email'],
-                'email' => $validated['email'],
+                'username' => $username,
+                'email' => $email,
                 'password' => Hash::make($autoPassword),
                 'role' => $validated['role'],
                 'is_active' => true,
@@ -103,8 +135,9 @@ class EmployeeController extends Controller
             return response()->json([
                 'employee' => $employee,
                 'role' => $validated['role'],
+                'username' => $username,
                 'temporary_password' => $autoPassword,
-                'message' => 'Employee created successfully. Temporary password: ' . $autoPassword
+                'message' => 'Employee created successfully. Username: ' . $username . ', Temporary password: ' . $autoPassword
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();

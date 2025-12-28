@@ -17,6 +17,7 @@
             prepend-icon="mdi-refresh"
             variant="elevated"
             @click="refreshData"
+            :loading="refreshing"
             class="construction-btn"
           >
             Refresh Data
@@ -390,12 +391,14 @@
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="employeeData.email"
-                  label="Email"
+                  label="Email (Optional)"
                   type="email"
                   prepend-inner-icon="mdi-email"
-                  :rules="[rules.required, rules.email]"
+                  :rules="[rules.emailOptional]"
                   variant="outlined"
                   density="comfortable"
+                  hint="If no email, username will be firstname.lastname"
+                  persistent-hint
                 ></v-text-field>
               </v-col>
 
@@ -507,15 +510,15 @@
                 <v-select
                   v-model="employeeData.employment_status"
                   :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Probationary', value: 'probationary' },
-                    { title: 'Contractual', value: 'contractual' },
                     { title: 'Active', value: 'active' },
+                    { title: 'Probationary', value: 'probationary' },
                   ]"
                   label="Employment Status"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                  hint="Current work status"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -531,6 +534,8 @@
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                  hint="Type of employment contract"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -646,14 +651,17 @@
 
               <!-- User Account Section -->
               <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">User Account (Auto-Created)</div>
+                <div class="text-h6 mb-2 mt-4">User Account</div>
                 <v-divider class="mb-4"></v-divider>
               </v-col>
 
               <v-col cols="12">
                 <v-alert type="info" variant="tonal" density="compact">
                   <ul class="mt-2">
-                    <li><strong>Username:</strong> Employee's email address</li>
+                    <li>
+                      <strong>Username:</strong> Email if provided, otherwise
+                      firstname.lastname
+                    </li>
                     <li>
                       <strong>Password:</strong> Auto-generated (LastName +
                       EmpID + 2 random digits)
@@ -729,9 +737,15 @@
             </div>
             <v-sheet color="grey-lighten-4" rounded class="pa-4">
               <div class="mb-3">
-                <div class="text-caption text-grey-darken-2">
-                  Username (Email)
+                <div class="text-caption text-grey-darken-2">Username</div>
+                <div class="text-body-1 font-weight-bold">
+                  {{
+                    createdEmployeeUsername || newEmployeeData?.email || "N/A"
+                  }}
                 </div>
+              </div>
+              <div class="mb-3" v-if="newEmployeeData?.email">
+                <div class="text-caption text-grey-darken-2">Email</div>
                 <div class="text-body-1 font-weight-bold">
                   {{ newEmployeeData?.email }}
                 </div>
@@ -1489,7 +1503,9 @@ const showAddEmployeeDialog = ref(false);
 const showPasswordDialog = ref(false);
 const temporaryPassword = ref("");
 const newEmployeeData = ref(null);
+const createdEmployeeUsername = ref("");
 const saving = ref(false);
+const refreshing = ref(false);
 const employeeForm = ref(null);
 const projects = ref([]);
 
@@ -1506,8 +1522,8 @@ const employeeData = ref({
   project_id: null,
   position: "",
   date_hired: "",
-  employment_status: "",
-  employment_type: "",
+  employment_status: "active",
+  employment_type: "regular",
   salary_type: "daily",
   basic_salary: 450, // Default pay rate
   // Allowances
@@ -1526,6 +1542,7 @@ const employeeData = ref({
 const rules = {
   required: (v) => !!v || "This field is required",
   email: (v) => /.+@.+\..+/.test(v) || "Email must be valid",
+  emailOptional: (v) => !v || /.+@.+\..+/.test(v) || "Email must be valid",
   minLength: (v) => v.length >= 8 || "Password must be at least 8 characters",
 };
 
@@ -1556,7 +1573,16 @@ async function fetchDashboardData() {
 }
 
 async function refreshData() {
-  await fetchDashboardData();
+  refreshing.value = true;
+  try {
+    await Promise.all([fetchDashboardData(), fetchPendingApplications()]);
+    toast.success("Dashboard refreshed successfully!");
+  } catch (error) {
+    console.error("Error refreshing dashboard:", error);
+    toast.error("Failed to refresh dashboard");
+  } finally {
+    refreshing.value = false;
+  }
 }
 
 async function fetchProjects() {
@@ -1586,6 +1612,7 @@ async function saveEmployee() {
     temporaryPassword.value = response.data.temporary_password;
     newEmployeeData.value = response.data.employee;
     newEmployeeData.value.role = response.data.role; // Add role from response
+    createdEmployeeUsername.value = response.data.username;
 
     toast.success("Employee created successfully!");
     closeEmployeeDialog();
@@ -1652,10 +1679,15 @@ function closeEmployeeDialog() {
 }
 
 function copyCredentials() {
+  const emailInfo = newEmployeeData.value?.email
+    ? `\nEmail: ${newEmployeeData.value.email}`
+    : "";
   const credentials = `Employee Login Credentials
 Employee Number: ${newEmployeeData.value?.employee_number}
 Name: ${newEmployeeData.value?.first_name} ${newEmployeeData.value?.last_name}
-Username: ${newEmployeeData.value?.email}
+Username: ${
+    createdEmployeeUsername.value || newEmployeeData.value?.email
+  }${emailInfo}
 Temporary Password: ${temporaryPassword.value}
 Role: ${newEmployeeData.value?.role || employeeData.value.role}
 

@@ -15,10 +15,18 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        // Count all active employees (is_active = true)
+        $totalEmployees = Employee::where('is_active', true)->count();
+
+        // Count active employees with 'active' employment status
+        $activeStatus = Employee::where('is_active', true)
+            ->where('employment_status', 'active')
+            ->count();
+
         $data = [
             'stats' => [
-                'totalEmployees' => Employee::where('employment_status', 'active')->count(),
-                'activeEmployees' => Employee::where('employment_status', 'active')->where('is_active', true)->count(),
+                'totalEmployees' => $totalEmployees,
+                'activeEmployees' => $activeStatus,
                 'periodPayroll' => 0,
                 'presentToday' => 0,
                 'pendingApprovals' => 0,
