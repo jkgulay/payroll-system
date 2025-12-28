@@ -144,9 +144,30 @@
     <!-- Main Content Area -->
     <v-main class="main-content">
       <v-container fluid class="pa-6 main-container">
+        <!-- Breadcrumbs for better navigation -->
+        <v-breadcrumbs
+          v-if="breadcrumbs.length > 1"
+          :items="breadcrumbs"
+          class="px-0 mb-4 breadcrumbs-construction"
+        >
+          <template v-slot:divider>
+            <v-icon size="small">mdi-chevron-right</v-icon>
+          </template>
+          <template v-slot:item="{ item }">
+            <v-breadcrumbs-item
+              :to="item.to"
+              :disabled="item.disabled"
+              class="text-body-2"
+            >
+              <v-icon v-if="item.icon" size="small" class="mr-1">{{ item.icon }}</v-icon>
+              {{ item.title }}
+            </v-breadcrumbs-item>
+          </template>
+        </v-breadcrumbs>
+
         <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
+          <transition name="page-transition" mode="out-in">
+            <component :is="Component" :key="route.fullPath" />
           </transition>
         </router-view>
       </v-container>
@@ -232,6 +253,35 @@ const userAvatar = computed(() => {
   return `${apiUrl}/storage/${avatar}`;
 });
 const pageTitle = computed(() => route.meta.title || "Dashboard");
+
+// Breadcrumbs generation
+const breadcrumbs = computed(() => {
+  const crumbs = [
+    {
+      title: "Home",
+      icon: "mdi-home",
+      to: "/",
+      disabled: false
+    }
+  ];
+
+  // Parse route path to create breadcrumbs
+  const paths = route.path.split("/").filter(p => p);
+  let currentPath = "";
+  
+  paths.forEach((path, index) => {
+    currentPath += `/${path}`;
+    const isLast = index === paths.length - 1;
+    
+    crumbs.push({
+      title: path.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+      to: currentPath,
+      disabled: isLast
+    });
+  });
+
+  return crumbs;
+});
 
 // Filter menu items based on user role with construction-themed icons
 const menuItems = computed(() => {
@@ -488,7 +538,7 @@ async function downloadCurrentPayslip() {
 }
 
 .menu-item {
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
     transform: translateX(4px);
@@ -498,6 +548,28 @@ async function downloadCurrentPayslip() {
     .v-icon {
       font-size: 20px;
     }
+  }
+}
+
+// Breadcrumbs styling
+.breadcrumbs-construction {
+  :deep(.v-breadcrumbs-item) {
+    color: #546E7A;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      color: #D84315;
+    }
+  }
+  
+  :deep(.v-breadcrumbs-item--disabled) {
+    color: #D84315;
+    font-weight: 600;
+  }
+  
+  :deep(.v-breadcrumbs-divider) {
+    color: #B0BEC5;
   }
 }
 
