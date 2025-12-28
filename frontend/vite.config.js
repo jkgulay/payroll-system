@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import vuetify from "vite-plugin-vuetify";
 import { fileURLToPath, URL } from "node:url";
+import viteCompression from "vite-plugin-compression";
+import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,6 +14,27 @@ export default defineConfig({
       styles: {
         configFile: "src/styles/settings.scss",
       },
+    }),
+    // Gzip compression
+    viteCompression({
+      algorithm: "gzip",
+      ext: ".gz",
+      threshold: 10240, // Only compress files > 10KB
+      deleteOriginFile: false,
+    }),
+    // Brotli compression (better compression than gzip)
+    viteCompression({
+      algorithm: "brotliCompress",
+      ext: ".br",
+      threshold: 10240,
+      deleteOriginFile: false,
+    }),
+    // Bundle analyzer (only in build mode)
+    visualizer({
+      filename: "./dist/stats.html",
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
     }),
   ],
   resolve: {
@@ -31,14 +54,80 @@ export default defineConfig({
   build: {
     outDir: "dist",
     assetsDir: "assets",
+    // Enable minification
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.logs in production
+        drop_debugger: true,
+      },
+    },
+    // Optimize chunk size
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ["vue", "vue-router", "pinia"],
-          vuetify: ["vuetify"],
-          charts: ["chart.js", "vue-chartjs"],
+        // Manual chunk splitting for better caching
+        manualChunks: (id) => {
+          // Core Vue libraries
+          if (id.includes("node_modules/vue") || 
+              id.includes("node_modules/vue-router") || 
+              id.includes("node_modules/pinia")) {
+            return "vendor-vue";
+          }
+          // Vuetify components
+          if (id.includes("node_modules/vuetify")) {
+            return "vendor-vuetify";
+          }
+          // Chart libraries
+          if (id.includes("node_modules/chart.js") || 
+              id.includes("node_modules/vue-chartjs")) {
+            return "vendor-charts";
+          }
+          // PDF/Excel libraries
+          if (id.includes("node_modules/jspdf") || 
+              id.includes("node_modules/exceljs")) {
+            return "vendor-export";
+          }
+          // Utilities
+          if (id.includes("node_modules/axios") || 
+              id.includes("node_modules/date-fns")) {
+            return "vendor-utils";
+          }
+          // Other node_modules
+          if (id.includes("node_modules")) {
+            return "vendor-other";
+          }
+        },
+        // Optimize asset file names
+        chunkFileNames: "js/[name]-[hash].js",
+        entryFileNames: "js/[name]-[hash].js",
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split(".");
+          const ext = info[info.length - 1];
+          if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(assetInfo.name)) {
+            return `images/[name]-[hash][extname]`;
+          } else if (/\.(woff2?|eot|ttf|otf)$/.test(assetInfo.name)) {
+            return `fonts/[name]-[hash][extname]`;
+          } else if (ext === "css") {
+            return `css/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
         },
       },
     },
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    // Source maps only for errors
+    sourcemap: false,
+  },
+  // Optimize dependencies
+  optimizeDeps: {
+    include: [
+      "vue",
+      "vue-router",
+      "pinia",
+      "axios",
+      "date-fns",
+    ],
   },
 });
