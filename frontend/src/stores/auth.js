@@ -5,8 +5,11 @@ import api from "@/services/api";
 export const useAuthStore = defineStore("auth", () => {
   // State
   const user = ref(null);
-  const token = ref(localStorage.getItem("token") || null);
+  const token = ref(
+    localStorage.getItem("token") || sessionStorage.getItem("token") || null
+  );
   const loading = ref(false);
+  const rememberMe = ref(localStorage.getItem("rememberMe") === "true");
 
   // Getters
   const isAuthenticated = computed(() => !!token.value);
@@ -30,9 +33,20 @@ export const useAuthStore = defineStore("auth", () => {
 
       token.value = response.data.token;
       user.value = response.data.user;
+      rememberMe.value = credentials.remember || false;
 
-      // Store token in localStorage
-      localStorage.setItem("token", token.value);
+      // Store token based on remember me preference
+      if (rememberMe.value) {
+        localStorage.setItem("token", token.value);
+        localStorage.setItem("rememberMe", "true");
+        // Remove from session storage if it exists
+        sessionStorage.removeItem("token");
+      } else {
+        sessionStorage.setItem("token", token.value);
+        // Clear from localStorage if it exists
+        localStorage.removeItem("token");
+        localStorage.removeItem("rememberMe");
+      }
 
       // Set default Authorization header
       api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
@@ -55,9 +69,12 @@ export const useAuthStore = defineStore("auth", () => {
       // Clear state
       user.value = null;
       token.value = null;
+      rememberMe.value = false;
 
-      // Clear localStorage
+      // Clear both localStorage and sessionStorage
       localStorage.removeItem("token");
+      localStorage.removeItem("rememberMe");
+      sessionStorage.removeItem("token");
 
       // Remove Authorization header
       delete api.defaults.headers.common["Authorization"];
@@ -83,7 +100,10 @@ export const useAuthStore = defineStore("auth", () => {
       // Token invalid, clear auth
       user.value = null;
       token.value = null;
+      rememberMe.value = false;
       localStorage.removeItem("token");
+      localStorage.removeItem("rememberMe");
+      sessionStorage.removeItem("token");
       delete api.defaults.headers.common["Authorization"];
 
       return false;
@@ -109,6 +129,7 @@ export const useAuthStore = defineStore("auth", () => {
     user,
     token,
     loading,
+    rememberMe,
     // Getters
     isAuthenticated,
     userRole,

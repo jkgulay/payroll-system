@@ -231,9 +231,18 @@ async function handleTwoFactorVerified({ userId, code }) {
       // Properly set authentication state
       authStore.token = response.data.token;
       authStore.user = response.data.user;
+      authStore.rememberMe = form.remember;
       
-      // Store token in localStorage
-      localStorage.setItem("token", response.data.token);
+      // Store token based on remember me preference
+      if (form.remember) {
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("rememberMe", "true");
+        sessionStorage.removeItem("token");
+      } else {
+        sessionStorage.setItem("token", response.data.token);
+        localStorage.removeItem("token");
+        localStorage.removeItem("rememberMe");
+      }
       
       // Set default Authorization header for future requests
       api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
