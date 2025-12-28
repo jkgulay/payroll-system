@@ -99,6 +99,15 @@ const router = createRouter({
           meta: { title: "Payroll Details" },
         },
         {
+          path: "payroll/pay-rates",
+          name: "pay-rates",
+          component: () => import("@/views/payroll/PayRateManagementView.vue"),
+          meta: {
+            title: "Compensation & Pay Rates",
+            roles: ["admin", "accountant"],
+          },
+        },
+        {
           path: "payroll/:id/process",
           name: "payroll-process",
           component: () => import("@/views/payroll/PayrollProcessView.vue"),

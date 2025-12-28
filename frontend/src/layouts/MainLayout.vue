@@ -252,6 +252,13 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
+      title: "Pay Rates",
+      icon: "mdi-cash-multiple",
+      value: "pay-rates",
+      to: "/payroll/pay-rates",
+      roles: ["admin", "accountant"],
+    },
+    {
       title: "My Resumes",
       icon: "mdi-file-document-outline",
       value: "resumes",

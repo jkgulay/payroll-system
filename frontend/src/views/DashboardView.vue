@@ -339,379 +339,12 @@
       </v-col>
     </v-row>
 
-    <!-- Add Employee Dialog -->
-    <v-dialog v-model="showAddEmployeeDialog" max-width="900px" persistent>
-      <v-card>
-        <v-card-title class="text-h5 py-4 bg-primary">
-          <v-icon start>mdi-account-plus</v-icon>
-          Add Employee
-        </v-card-title>
-        <v-divider></v-divider>
-
-        <v-card-text class="pt-6">
-          <v-form ref="employeeForm">
-            <v-row>
-              <!-- Personal Information -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2">Personal Information</div>
-                <v-divider class="mb-4"></v-divider>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="employeeData.first_name"
-                  label="First Name"
-                  prepend-inner-icon="mdi-account"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="employeeData.middle_name"
-                  label="Middle Name (Optional)"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Optional"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="employeeData.last_name"
-                  label="Last Name"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.email"
-                  label="Email (Optional)"
-                  type="email"
-                  prepend-inner-icon="mdi-email"
-                  :rules="[rules.emailOptional]"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="If no email, username will be firstname.lastname"
-                  persistent-hint
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.mobile_number"
-                  label="Phone Number"
-                  prepend-inner-icon="mdi-phone"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.date_of_birth"
-                  label="Date of Birth"
-                  type="date"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.gender"
-                  :items="[
-                    { title: 'Male', value: 'male' },
-                    { title: 'Female', value: 'female' },
-                    { title: 'Other', value: 'other' },
-                  ]"
-                  label="Gender"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12">
-                <v-textarea
-                  v-model="employeeData.worker_address"
-                  label="Worker Address"
-                  prepend-inner-icon="mdi-map-marker"
-                  rows="1"
-                  hint="Enter the worker's complete home address"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-textarea>
-              </v-col>
-
-              <!-- Employment Information -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">Employment Information</div>
-                <v-divider class="mb-4"></v-divider>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.employee_number"
-                  label="Employee Number (Auto-Generated)"
-                  prepend-inner-icon="mdi-identifier"
-                  readonly
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Will be automatically generated (EMP001, EMP002...)"
-                  persistent-hint
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.project_id"
-                  :items="projects"
-                  item-title="name"
-                  item-value="id"
-                  label="Project"
-                  prepend-inner-icon="mdi-office-building"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.position"
-                  label="Position"
-                  prepend-inner-icon="mdi-badge-account"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.date_hired"
-                  label="Hire Date"
-                  type="date"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.employment_status"
-                  :items="[
-                    { title: 'Active', value: 'active' },
-                    { title: 'Probationary', value: 'probationary' },
-                  ]"
-                  label="Employment Status"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Current work status"
-                  persistent-hint
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.employment_type"
-                  :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Contractual', value: 'contractual' },
-                    { title: 'Part Time', value: 'part_time' },
-                  ]"
-                  label="Employment Type"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Type of employment contract"
-                  persistent-hint
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.salary_type"
-                  :items="[
-                    { title: 'Daily', value: 'daily' },
-                    { title: 'Monthly', value: 'monthly' },
-                  ]"
-                  label="Salary Type"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="employeeData.basic_salary"
-                  label="Basic Pay Rate"
-                  type="number"
-                  prepend-inner-icon="mdi-cash"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Default: ₱450 per day (can be modified)"
-                  persistent-hint
-                ></v-text-field>
-              </v-col>
-
-              <!-- Allowances Section -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">Allowances</div>
-                <v-divider class="mb-2"></v-divider>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_water_allowance"
-                  label="Water Allowance"
-                  color="primary"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_water_allowance"
-                  v-model.number="employeeData.water_allowance"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_cola"
-                  label="COLA (Cost of Living Allowance)"
-                  color="primary"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_cola"
-                  v-model.number="employeeData.cola"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_incentives"
-                  label="Incentives"
-                  color="primary"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_incentives"
-                  v-model.number="employeeData.incentives"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_ppe"
-                  label="PPE (Personal Protective Equipment)"
-                  color="primary"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_ppe"
-                  v-model.number="employeeData.ppe"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <!-- User Account Section -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">User Account</div>
-                <v-divider class="mb-4"></v-divider>
-              </v-col>
-
-              <v-col cols="12">
-                <v-alert type="info" variant="tonal" density="compact">
-                  <ul class="mt-2">
-                    <li>
-                      <strong>Username:</strong> Email if provided, otherwise
-                      firstname.lastname
-                    </li>
-                    <li>
-                      <strong>Password:</strong> Auto-generated (LastName +
-                      EmpID + 2 random digits)
-                    </li>
-                    <li><strong>Role:</strong> Selected below</li>
-                    <li><strong>Status:</strong> Active</li>
-                    <li>Employee must change password on first login</li>
-                  </ul>
-                </v-alert>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.role"
-                  :items="[
-                    { title: 'Accountant', value: 'accountant' },
-                    { title: 'Employee', value: 'employee' },
-                  ]"
-                  label="User Role"
-                  prepend-inner-icon="mdi-shield-account"
-                  :rules="[rules.required]"
-                  hint="Admin can assign accountant or employee role"
-                  persistent-hint
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-            </v-row>
-          </v-form>
-        </v-card-text>
-
-        <v-divider></v-divider>
-
-        <v-card-actions class="pa-4">
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeEmployeeDialog" :disabled="saving">
-            Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            variant="elevated"
-            @click="saveEmployee"
-            :loading="saving"
-          >
-            <v-icon start>mdi-check</v-icon>
-            Add Employee
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <!-- Add Employee Dialog (Reusable Component) -->
+    <AddEmployeeDialog
+      v-model="showAddEmployeeDialog"
+      :projects="projects"
+      @save="saveEmployee"
+    />
 
     <!-- Temporary Password Dialog -->
     <v-dialog v-model="showPasswordDialog" max-width="600px" persistent>
@@ -1463,6 +1096,7 @@
 import { ref, onMounted, computed } from "vue";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
 
 const toast = useToast();
 
@@ -1506,45 +1140,48 @@ const newEmployeeData = ref(null);
 const createdEmployeeUsername = ref("");
 const saving = ref(false);
 const refreshing = ref(false);
-const employeeForm = ref(null);
 const projects = ref([]);
 
-const employeeData = ref({
-  employee_number: "",
-  first_name: "",
-  middle_name: "",
-  last_name: "",
-  date_of_birth: "",
-  gender: "",
-  email: "",
-  mobile_number: "",
-  worker_address: "",
-  project_id: null,
-  position: "",
-  date_hired: "",
-  employment_status: "active",
-  employment_type: "regular",
-  salary_type: "daily",
-  basic_salary: 450, // Default pay rate
-  // Allowances
-  has_water_allowance: false,
-  water_allowance: 0,
-  has_cola: false,
-  cola: 0,
-  has_incentives: false,
-  incentives: 0,
-  has_ppe: false,
-  ppe: 0,
-  // User account auto-created
-  role: "employee",
-});
+async function saveEmployee(employeeData) {
+  saving.value = true;
+  try {
+    const response = await api.post("/employees", employeeData);
 
-const rules = {
-  required: (v) => !!v || "This field is required",
-  email: (v) => /.+@.+\..+/.test(v) || "Email must be valid",
-  emailOptional: (v) => !v || /.+@.+\..+/.test(v) || "Email must be valid",
-  minLength: (v) => v.length >= 8 || "Password must be at least 8 characters",
-};
+    // Store temporary password and employee data
+    temporaryPassword.value = response.data.temporary_password;
+    newEmployeeData.value = response.data.employee;
+    newEmployeeData.value.role = response.data.role; // Add role from response
+    createdEmployeeUsername.value = response.data.username;
+
+    toast.success("Employee created successfully!");
+    showAddEmployeeDialog.value = false; // Close the dialog
+
+    // Show password dialog
+    showPasswordDialog.value = true;
+
+    await fetchDashboardData(); // Refresh dashboard stats
+  } catch (error) {
+    console.error("Error creating employee:", error);
+    console.error("Full error response:", error.response?.data);
+    console.error("Validation errors:", error.response?.data?.errors);
+
+    if (error.response?.data?.errors) {
+      // Show specific validation errors
+      const errors = error.response.data.errors;
+      Object.keys(errors).forEach((field) => {
+        toast.error(`${field}: ${errors[field][0]}`);
+      });
+    } else {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to create employee";
+      toast.error(message);
+    }
+  } finally {
+    saving.value = false;
+  }
+}
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString("en-US", {
@@ -1595,89 +1232,6 @@ async function fetchProjects() {
   }
 }
 
-async function saveEmployee() {
-  if (!employeeForm.value) return;
-
-  const isValid = await employeeForm.value.validate();
-  if (!isValid.valid) {
-    toast.warning("Please fill in all required fields");
-    return;
-  }
-
-  saving.value = true;
-  try {
-    const response = await api.post("/employees", employeeData.value);
-
-    // Store temporary password and employee data
-    temporaryPassword.value = response.data.temporary_password;
-    newEmployeeData.value = response.data.employee;
-    newEmployeeData.value.role = response.data.role; // Add role from response
-    createdEmployeeUsername.value = response.data.username;
-
-    toast.success("Employee created successfully!");
-    closeEmployeeDialog();
-
-    // Show password dialog
-    showPasswordDialog.value = true;
-
-    await fetchDashboardData(); // Refresh dashboard stats
-  } catch (error) {
-    console.error("Error creating employee:", error);
-    console.error("Full error response:", error.response?.data);
-    console.error("Validation errors:", error.response?.data?.errors);
-
-    if (error.response?.data?.errors) {
-      // Show specific validation errors
-      const errors = error.response.data.errors;
-      Object.keys(errors).forEach((field) => {
-        toast.error(`${field}: ${errors[field][0]}`);
-      });
-    } else {
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Failed to create employee";
-      toast.error(message);
-    }
-  } finally {
-    saving.value = false;
-  }
-}
-
-function closeEmployeeDialog() {
-  showAddEmployeeDialog.value = false;
-  employeeForm.value?.reset();
-
-  // Reset form data
-  employeeData.value = {
-    employee_number: "",
-    first_name: "",
-    middle_name: "",
-    last_name: "",
-    date_of_birth: "",
-    gender: "",
-    email: "",
-    mobile_number: "",
-    worker_address: "",
-    project_id: null,
-    position: "",
-    date_hired: "",
-    employment_status: "",
-    employment_type: "",
-    salary_type: "daily",
-    basic_salary: 450,
-    has_water_allowance: false,
-    water_allowance: 0,
-    has_cola: false,
-    cola: 0,
-    has_incentives: false,
-    incentives: 0,
-    has_ppe: false,
-    ppe: 0,
-    role: "employee",
-  };
-}
-
 function copyCredentials() {
   const emailInfo = newEmployeeData.value?.email
     ? `\nEmail: ${newEmployeeData.value.email}`
@@ -1689,7 +1243,7 @@ Username: ${
     createdEmployeeUsername.value || newEmployeeData.value?.email
   }${emailInfo}
 Temporary Password: ${temporaryPassword.value}
-Role: ${newEmployeeData.value?.role || employeeData.value.role}
+Role: ${newEmployeeData.value?.role}
 
 ⚠️ Employee must change password on first login.`;
 
