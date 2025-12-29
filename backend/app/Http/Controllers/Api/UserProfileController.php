@@ -40,6 +40,7 @@ class UserProfileController extends Controller
     public function updateProfile(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|string|max:255',
             'username' => 'sometimes|string|max:50|unique:users,username,' . auth()->id(),
             'email' => 'sometimes|email|unique:users,email,' . auth()->id(),
         ]);
@@ -55,6 +56,10 @@ class UserProfileController extends Controller
         try {
             /** @var User $user */
             $user = auth()->user();
+            
+            if ($request->has('name')) {
+                $user->name = $request->name;
+            }
             
             if ($request->has('username')) {
                 $user->username = $request->username;
