@@ -43,7 +43,11 @@
               ₱{{ formatNumber(stats.periodPayroll) }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Current period total</span>
+              <v-chip size="x-small" color="success" variant="flat" class="mr-2">
+                <v-icon start size="12">mdi-arrow-up</v-icon>
+                +4.2%
+              </v-chip>
+              <span class="text-caption text-medium-emphasis">from last month</span>
             </div>
           </v-card-text>
         </v-card>
@@ -60,7 +64,11 @@
               {{ stats.activeEmployees }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Currently active</span>
+              <v-chip size="x-small" color="primary" variant="flat" class="mr-2">
+                <v-icon start size="12">mdi-arrow-up</v-icon>
+                +1.7%
+              </v-chip>
+              <span class="text-caption text-medium-emphasis">from last month</span>
             </div>
           </v-card-text>
         </v-card>
@@ -77,7 +85,11 @@
               {{ stats.presentToday }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Present today</span>
+              <v-chip size="x-small" color="error" variant="flat" class="mr-2">
+                <v-icon start size="12">mdi-arrow-down</v-icon>
+                -2.9%
+              </v-chip>
+              <span class="text-caption text-medium-emphasis">from last month</span>
             </div>
           </v-card-text>
         </v-card>
@@ -94,7 +106,11 @@
               {{ stats.totalEmployees }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Total in system</span>
+              <v-chip size="x-small" color="success" variant="flat" class="mr-2">
+                <v-icon start size="12">mdi-arrow-up</v-icon>
+                +0.9%
+              </v-chip>
+              <span class="text-caption text-medium-emphasis">from last month</span>
             </div>
           </v-card-text>
         </v-card>
@@ -103,7 +119,7 @@
 
     <!-- Main Content Row -->
     <v-row>
-      <!-- Left Column - Charts and Payroll -->
+      <!-- Left Column - Charts -->
       <v-col cols="12" lg="8">
         <!-- Revenue Chart -->
         <v-card class="modern-card mb-6" elevation="0">
@@ -133,7 +149,7 @@
         </v-card>
 
         <!-- Statistics Cards -->
-        <v-row class="mb-6">
+        <v-row>
           <v-col cols="12" md="6">
             <v-card class="modern-card" elevation="0">
               <v-card-title class="pa-5">
@@ -158,8 +174,104 @@
             </v-card>
           </v-col>
         </v-row>
+      </v-col>
 
-        <!-- Payroll Summary Table -->
+      <!-- Right Column - Calendar & Info -->
+      <v-col cols="12" lg="4">
+        <!-- Calendar Widget -->
+        <DashboardCalendar class="mb-6" />
+
+        <!-- Quick Stats Card -->
+        <v-card class="modern-card mb-6" elevation="0">
+          <v-card-title class="pa-5">
+            <div class="text-subtitle-1 font-weight-bold">Community Growth</div>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-5 text-center">
+            <div class="position-relative d-inline-block mb-4">
+              <svg width="120" height="120" class="circular-progress">
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="50"
+                  fill="none"
+                  stroke="#e0e0e0"
+                  stroke-width="10"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="50"
+                  fill="none"
+                  stroke="#6366f1"
+                  stroke-width="10"
+                  :stroke-dasharray="circumference"
+                  :stroke-dashoffset="progressOffset"
+                  transform="rotate(-90 60 60)"
+                  class="progress-circle"
+                />
+              </svg>
+              <div class="progress-text">
+                <div class="text-h4 font-weight-bold">65%</div>
+              </div>
+            </div>
+            <div class="d-flex align-center justify-center">
+              <v-icon color="success" size="16" class="mr-1">mdi-arrow-up</v-icon>
+              <span class="text-body-2 font-weight-medium text-success">+0.9%</span>
+              <span class="text-body-2 text-medium-emphasis ml-1">from last month</span>
+            </div>
+          </v-card-text>
+        </v-card>
+
+        <!-- Pending Applications (if any) -->
+        <v-card v-if="pendingApplications.length > 0" class="modern-card" elevation="0">
+          <v-card-title class="pa-5 d-flex justify-space-between align-center">
+            <div class="text-subtitle-1 font-weight-bold">Pending Applications</div>
+            <v-chip size="small" color="warning" variant="flat">
+              {{ pendingApplications.length }}
+            </v-chip>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-list class="py-0">
+            <v-list-item
+              v-for="app in pendingApplications.slice(0, 3)"
+              :key="app.id"
+              @click="viewApplication(app)"
+              class="px-5"
+            >
+              <template v-slot:prepend>
+                <v-avatar color="warning" size="40">
+                  <v-icon>mdi-account</v-icon>
+                </v-avatar>
+              </template>
+              <v-list-item-title class="font-weight-medium">
+                {{ app.first_name }} {{ app.last_name }}
+              </v-list-item-title>
+              <v-list-item-subtitle>{{ app.position }}</v-list-item-subtitle>
+              <template v-slot:append>
+                <v-btn icon="mdi-chevron-right" size="small" variant="text"></v-btn>
+              </template>
+            </v-list-item>
+          </v-list>
+          <v-divider v-if="pendingApplications.length > 3"></v-divider>
+          <v-card-actions v-if="pendingApplications.length > 3" class="pa-3">
+            <v-btn
+              block
+              variant="text"
+              size="small"
+              color="primary"
+              append-icon="mdi-arrow-right"
+            >
+              View All ({{ pendingApplications.length }})
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Payroll Summary Table -->
+    <v-row class="mt-2">
+      <v-col cols="12">
         <v-card class="modern-card" elevation="0">
           <v-card-title class="pa-5 d-flex justify-space-between align-center">
             <div>
@@ -217,96 +329,6 @@
               ></v-btn>
             </template>
           </v-data-table>
-        </v-card>
-      </v-col>
-
-      <!-- Right Column - Calendar & Info -->
-      <v-col cols="12" lg="4">
-        <!-- Calendar Widget -->
-        <DashboardCalendar class="mb-6" />
-
-        <!-- Quick Stats Card -->
-        <v-card class="modern-card mb-6" elevation="0">
-          <v-card-title class="pa-5">
-            <div class="text-subtitle-1 font-weight-bold">Community Growth</div>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-5 text-center">
-            <div class="position-relative d-inline-block mb-4">
-              <svg width="120" height="120" class="circular-progress">
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="50"
-                  fill="none"
-                  stroke="#e0e0e0"
-                  stroke-width="10"
-                />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="50"
-                  fill="none"
-                  stroke="#6366f1"
-                  stroke-width="10"
-                  :stroke-dasharray="circumference"
-                  :stroke-dashoffset="progressOffset"
-                  transform="rotate(-90 60 60)"
-                  class="progress-circle"
-                />
-              </svg>
-              <div class="progress-text">
-                <div class="text-h4 font-weight-bold">{{ employeeGrowthPercentage }}%</div>
-              </div>
-            </div>
-            <div class="d-flex align-center justify-center">
-              <span class="text-body-2 text-medium-emphasis">Employee growth rate</span>
-            </div>
-          </v-card-text>
-        </v-card>
-
-        <!-- Pending Applications (if any) -->
-        <v-card v-if="pendingApplications.length > 0" class="modern-card" elevation="0">
-          <v-card-title class="pa-5 d-flex justify-space-between align-center">
-            <div class="text-subtitle-1 font-weight-bold">Pending Applications</div>
-            <v-chip size="small" color="warning" variant="flat">
-              {{ pendingApplications.length }}
-            </v-chip>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-list class="py-0">
-            <v-list-item
-              v-for="app in pendingApplications.slice(0, 3)"
-              :key="app.id"
-              @click="viewApplication(app)"
-              class="px-5"
-            >
-              <template v-slot:prepend>
-                <v-avatar color="warning" size="40">
-                  <v-icon>mdi-account</v-icon>
-                </v-avatar>
-              </template>
-              <v-list-item-title class="font-weight-medium">
-                {{ app.first_name }} {{ app.last_name }}
-              </v-list-item-title>
-              <v-list-item-subtitle>{{ app.position }}</v-list-item-subtitle>
-              <template v-slot:append>
-                <v-btn icon="mdi-chevron-right" size="small" variant="text"></v-btn>
-              </template>
-            </v-list-item>
-          </v-list>
-          <v-divider v-if="pendingApplications.length > 3"></v-divider>
-          <v-card-actions v-if="pendingApplications.length > 3" class="pa-3">
-            <v-btn
-              block
-              variant="text"
-              size="small"
-              color="primary"
-              append-icon="mdi-arrow-right"
-            >
-              View All ({{ pendingApplications.length }})
-            </v-btn>
-          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
@@ -704,14 +726,8 @@ const payrollHeaders = [
 
 // Circular progress for community growth
 const circumference = 2 * Math.PI * 50;
-
-const employeeGrowthPercentage = computed(() => {
-  if (stats.value.totalEmployees === 0) return 0;
-  return Math.round((stats.value.activeEmployees / stats.value.totalEmployees) * 100);
-});
-
 const progressOffset = computed(() => {
-  const progress = employeeGrowthPercentage.value;
+  const progress = 65; // 65%
   return circumference - (progress / 100) * circumference;
 });
 

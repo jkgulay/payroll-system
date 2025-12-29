@@ -1,93 +1,73 @@
 <template>
   <div>
     <!-- Quick Stats -->
-    <v-row>
-      <v-col cols="12" sm="6" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="text-overline text-medium-emphasis">
-                  Total Employees
-                </div>
-                <div class="text-h4 font-weight-bold">
-                  {{ stats.totalEmployees }}
-                </div>
-                <div class="text-caption text-success">
-                  <v-icon size="small">mdi-arrow-up</v-icon>
-                  {{ stats.activeEmployees }} active
-                </div>
-              </div>
-              <v-avatar color="primary" size="56">
-                <v-icon size="32">mdi-account-group</v-icon>
-              </v-avatar>
+    <v-row class="mb-6">
+      <v-col cols="12" sm="6" lg="3">
+        <v-card class="modern-card stat-card" elevation="0">
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">Total Employees</span>
+              <v-icon size="20" color="primary">mdi-account-group</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              {{ stats.totalEmployees }}
+            </div>
+            <div class="d-flex align-center">
+              <v-chip size="x-small" color="success" variant="flat" class="mr-2">
+                <v-icon start size="12">mdi-arrow-up</v-icon>
+                {{ stats.activeEmployees }} active
+              </v-chip>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="text-overline text-medium-emphasis">
-                  Pending Requests
-                </div>
-                <div class="text-h4 font-weight-bold">
-                  {{ stats.pendingRequests }}
-                </div>
-                <div class="text-caption text-warning">Needs approval</div>
-              </div>
-              <v-avatar color="warning" size="56">
-                <v-icon size="32">mdi-alert-circle</v-icon>
-              </v-avatar>
+      <v-col cols="12" sm="6" lg="3">
+        <v-card class="modern-card stat-card" elevation="0">
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">Pending Requests</span>
+              <v-icon size="20" color="warning">mdi-alert-circle</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              {{ stats.pendingRequests }}
+            </div>
+            <div class="d-flex align-center">
+              <span class="text-caption text-warning">Needs approval</span>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="text-overline text-medium-emphasis">
-                  This Period
-                </div>
-                <div class="text-h4 font-weight-bold">
-                  ₱{{ formatNumber(stats.periodPayroll) }}
-                </div>
-                <div class="text-caption text-medium-emphasis">
-                  Payroll amount
-                </div>
-              </div>
-              <v-avatar color="success" size="56">
-                <v-icon size="32">mdi-cash-multiple</v-icon>
-              </v-avatar>
+      <v-col cols="12" sm="6" lg="3">
+        <v-card class="modern-card stat-card" elevation="0">
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">This Period</span>
+              <v-icon size="20" color="success">mdi-cash-multiple</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              ₱{{ formatNumber(stats.periodPayroll) }}
+            </div>
+            <div class="d-flex align-center">
+              <span class="text-caption text-medium-emphasis">Payroll amount</span>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="text-overline text-medium-emphasis">
-                  Attendance Today
-                </div>
-                <div class="text-h4 font-weight-bold">
-                  {{ stats.presentToday }}
-                </div>
-                <div class="text-caption text-medium-emphasis">
-                  of {{ stats.totalEmployees }} employees
-                </div>
-              </div>
-              <v-avatar color="info" size="56">
-                <v-icon size="32">mdi-calendar-check</v-icon>
-              </v-avatar>
+      <v-col cols="12" sm="6" lg="3">
+        <v-card class="modern-card stat-card" elevation="0">
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">Attendance Today</span>
+              <v-icon size="20" color="info">mdi-calendar-check</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              {{ stats.presentToday }}
+            </div>
+            <div class="d-flex align-center">
+              <span class="text-caption text-medium-emphasis">of {{ stats.totalEmployees }} employees</span>
             </div>
           </v-card-text>
         </v-card>
@@ -95,21 +75,25 @@
     </v-row>
 
     <!-- Quick Actions -->
-    <v-row class="mt-4">
+    <v-row>
       <v-col cols="12">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            <v-icon class="mr-2">mdi-lightning-bolt</v-icon>
-            Quick Actions
+        <v-card class="modern-card" elevation="0">
+          <v-card-title class="pa-5">
+            <v-icon class="mr-2" size="20">mdi-lightning-bolt</v-icon>
+            <span class="text-h6 font-weight-bold">Quick Actions</span>
           </v-card-title>
-          <v-card-text>
+          <v-divider></v-divider>
+          <v-card-text class="pa-5">
             <v-row>
               <v-col cols="12" sm="6" md="3">
                 <v-btn
                   color="primary"
                   block
+                  size="large"
                   prepend-icon="mdi-account-plus"
                   @click="showAddEmployeeDialog = true"
+                  variant="flat"
+                  class="text-none font-weight-medium"
                 >
                   Add Employee
                 </v-btn>
@@ -118,8 +102,11 @@
                 <v-btn
                   color="info"
                   block
+                  size="large"
                   prepend-icon="mdi-calendar-edit"
                   @click="$router.push('/attendance')"
+                  variant="flat"
+                  class="text-none font-weight-medium"
                 >
                   Edit Attendance
                 </v-btn>
@@ -128,8 +115,11 @@
                 <v-btn
                   color="success"
                   block
+                  size="large"
                   prepend-icon="mdi-cash-edit"
                   @click="showPayslipModifyDialog = true"
+                  variant="flat"
+                  class="text-none font-weight-medium"
                 >
                   Modify Payslip
                 </v-btn>
@@ -138,8 +128,11 @@
                 <v-btn
                   color="orange"
                   block
+                  size="large"
                   prepend-icon="mdi-download"
                   @click="showDownloadDialog = true"
+                  variant="flat"
+                  class="text-none font-weight-medium"
                 >
                   Download Payroll
                 </v-btn>

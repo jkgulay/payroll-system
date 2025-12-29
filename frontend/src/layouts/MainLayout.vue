@@ -390,13 +390,6 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
-      title: "Analytics",
-      icon: "mdi-chart-box-outline",
-      value: "analytics",
-      to: "/analytics",
-      roles: ["admin", "accountant"],
-    },
-    {
       title: "My Profile",
       icon: "mdi-badge-account-horizontal-outline",
       value: "profile",
@@ -479,7 +472,7 @@ async function downloadCurrentPayslip() {
 <style scoped lang="scss">
 // Construction-themed Navigation Drawer
 .construction-drawer {
-  background: linear-gradient(180deg, #37474f 0%, #263238 100%) !important;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
   position: fixed !important;
   top: 0 !important;
   bottom: 0 !important;
@@ -487,6 +480,7 @@ async function downloadCurrentPayslip() {
   overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 
   :deep(.v-navigation-drawer__content) {
     height: 100% !important;
@@ -501,20 +495,63 @@ async function downloadCurrentPayslip() {
   }
 
   :deep(.v-list-item) {
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 4px 8px;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    .v-list-item-title {
+      color: rgba(255, 255, 255, 0.9) !important;
+      font-weight: 500;
+    }
+
+    .v-icon {
+      color: rgba(255, 255, 255, 0.7) !important;
+    }
 
     &:hover {
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: rgba(99, 102, 241, 0.2) !important;
+      transform: translateX(4px);
+
+      .v-list-item-title {
+        color: white !important;
+      }
+
+      .v-icon {
+        color: rgba(255, 255, 255, 0.9) !important;
+      }
     }
   }
 
   :deep(.v-list-item--active) {
-    background: linear-gradient(90deg, #d84315 0%, #f4511e 100%) !important;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
     color: white !important;
-    border-left: 4px solid #ff6e40;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 
     &::before {
-      opacity: 0.15;
+      opacity: 0;
+    }
+    
+    .v-list-item-title {
+      color: white !important;
+      font-weight: 600;
+    }
+
+    .v-icon {
+      color: white !important;
+    }
+  }
+
+  // List group styling for submenus
+  :deep(.v-list-group) {
+    .v-list-item {
+      color: rgba(255, 255, 255, 0.85) !important;
+    }
+
+    .v-list-group__items {
+      .v-list-item {
+        padding-left: 48px;
+      }
     }
   }
 }
@@ -522,31 +559,84 @@ async function downloadCurrentPayslip() {
 .user-profile-item {
   background: rgba(0, 0, 0, 0.2);
   margin: 8px;
-  border-radius: 8px;
+  border-radius: 12px;
+  padding: 12px 8px;
 
   :deep(.v-list-item-title) {
     color: white !important;
     font-weight: 600;
+    font-size: 0.95rem;
   }
 
   :deep(.v-list-item-subtitle) {
-    color: rgba(255, 255, 255, 0.7) !important;
+    color: rgba(255, 255, 255, 0.75) !important;
     text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.5px;
+    font-size: 0.7rem;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  :deep(.v-avatar) {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+  }
+
+  :deep(.v-btn) {
+    color: rgba(255, 255, 255, 0.8) !important;
   }
 }
 
 .menu-item {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  &:hover {
-    transform: translateX(4px);
-  }
-
   :deep(.v-list-item__prepend) {
     .v-icon {
       font-size: 20px;
+      color: rgba(255, 255, 255, 0.7) !important;
+    }
+  }
+
+  :deep(.v-list-item-title) {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500;
+  }
+
+  &:hover {
+    :deep(.v-list-item__prepend) {
+      .v-icon {
+        color: rgba(255, 255, 255, 0.95) !important;
+      }
+    }
+
+    :deep(.v-list-item-title) {
+      color: white !important;
+    }
+  }
+}
+
+// Steel beam divider effect
+:deep(.steel-divider) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  height: 1px;
+  margin: 12px 16px;
+}
+
+// Logout button styling in drawer
+.construction-drawer {
+  :deep(.v-btn) {
+    &.v-btn--variant-tonal {
+      background-color: rgba(239, 68, 68, 0.15) !important;
+      color: #fca5a5 !important;
+      font-weight: 600;
+
+      &:hover {
+        background-color: rgba(239, 68, 68, 0.25) !important;
+        color: #fef2f2 !important;
+      }
+
+      .v-icon {
+        color: #fca5a5 !important;
+      }
     }
   }
 }
@@ -575,25 +665,10 @@ async function downloadCurrentPayslip() {
 
 // Construction App Bar styling
 .construction-appbar {
-  border-bottom: 4px solid #d84315 !important;
-  background: white !important;
-
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: -4px;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: linear-gradient(
-      90deg,
-      #d84315 0%,
-      #ff6e40 25%,
-      #f4511e 50%,
-      #ff6e40 75%,
-      #d84315 100%
-    );
-  }
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 
 .construction-chip {
@@ -623,7 +698,7 @@ async function downloadCurrentPayslip() {
 
 // Main content area
 .main-content {
-  background: linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%);
+  background: #f8fafc;
   min-height: 100vh;
   overflow-y: auto;
 }

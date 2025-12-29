@@ -767,3 +767,398 @@ html {
   gap: 8px;
   font-size: 14px;
 }
+
+// ========================================
+// MODERN DASHBOARD STYLES
+// ========================================
+
+// Modern card styling
+.modern-card {
+  border-radius: 16px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: #ffffff !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-2px);
+  }
+}
+
+// Calendar card styling
+.calendar-card {
+  .calendar-header {
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .calendar-day-header {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    padding: 8px 4px;
+    text-transform: uppercase;
+  }
+
+  .calendar-date {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover:not(.calendar-date--other-month) {
+      background-color: rgba(99, 102, 241, 0.1);
+    }
+    
+    .date-number {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    &.calendar-date--other-month {
+      opacity: 0.3;
+      cursor: default;
+      
+      &:hover {
+        background-color: transparent;
+      }
+    }
+    
+    &.calendar-date--today {
+      background-color: rgba(99, 102, 241, 0.15);
+      font-weight: 700;
+      
+      .date-number {
+        color: rgb(99, 102, 241);
+      }
+    }
+    
+    &.calendar-date--selected {
+      background-color: rgb(99, 102, 241);
+      
+      .date-number {
+        color: white;
+      }
+      
+      .event-indicator {
+        background-color: white;
+      }
+    }
+    
+    .event-indicator {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: rgb(99, 102, 241);
+      position: absolute;
+      bottom: 4px;
+    }
+  }
+
+  .event-item {
+    padding: 8px;
+    background-color: rgba(99, 102, 241, 0.05);
+    border-radius: 6px;
+    border-left: 3px solid rgb(99, 102, 241);
+  }
+}
+
+// Modern table styling
+.modern-table {
+  :deep(table) {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  :deep(thead) {
+    background-color: #f8fafc;
+    
+    th {
+      font-weight: 600 !important;
+      color: #475569 !important;
+      text-transform: uppercase;
+      font-size: 0.75rem !important;
+      letter-spacing: 0.5px;
+      padding: 16px !important;
+      border-bottom: 2px solid #e2e8f0 !important;
+    }
+  }
+  
+  :deep(tbody) {
+    tr {
+      transition: background-color 0.2s ease;
+      
+      &:hover {
+        background-color: #f1f5f9 !important;
+      }
+      
+      td {
+        padding: 16px !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+      }
+    }
+  }
+}
+
+// Stat card with top border
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  }
+}
+
+// Circular progress
+.circular-progress {
+  .progress-circle {
+    transition: stroke-dashoffset 1s ease;
+    stroke-linecap: round;
+  }
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+// Modern navigation drawer
+.v-navigation-drawer {
+  &.construction-drawer {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+    
+    // Ensure all text is visible
+    .v-list-item {
+      color: rgba(255, 255, 255, 0.85) !important;
+      
+      .v-list-item-title {
+        color: rgba(255, 255, 255, 0.9) !important;
+      }
+      
+      .v-icon {
+        color: rgba(255, 255, 255, 0.7) !important;
+      }
+    }
+    
+    // Active state
+    .v-list-item--active {
+      .v-list-item-title,
+      .v-icon {
+        color: white !important;
+      }
+    }
+    
+    // Divider visibility
+    .v-divider {
+      border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+  }
+}
+
+// Modern app bar
+.v-app-bar {
+  &.construction-appbar {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+}
+
+// Button styles
+.v-btn {
+  text-transform: none !important;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  
+  &.v-btn--variant-flat,
+  &.v-btn--variant-elevated {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+  }
+}
+
+// Chip modern styling
+.v-chip {
+  font-weight: 600;
+  border-radius: 8px !important;
+  
+  &.v-chip--size-x-small {
+    height: 20px !important;
+    font-size: 0.7rem;
+  }
+  
+  &.v-chip--size-small {
+    height: 24px !important;
+    font-size: 0.75rem;
+  }
+}
+
+// Form inputs
+.v-field {
+  border-radius: 8px !important;
+  
+  &.v-field--variant-outlined {
+    .v-field__outline {
+      --v-field-border-opacity: 0.2;
+    }
+    
+    &.v-field--focused {
+      .v-field__outline {
+        --v-field-border-opacity: 1;
+      }
+    }
+  }
+}
+
+// Card transitions
+.v-card {
+  &.modern-card {
+    .v-card-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #1e293b;
+    }
+    
+    .v-card-subtitle {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+// List items
+.v-list {
+  .v-list-item {
+    border-radius: 8px;
+    margin-bottom: 4px;
+    
+    &:hover {
+      background-color: rgba(99, 102, 241, 0.08) !important;
+    }
+    
+    &.v-list-item--active {
+      background-color: rgba(99, 102, 241, 0.12) !important;
+      
+      .v-list-item-title {
+        color: rgb(99, 102, 241);
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+// Smooth transitions for page changes
+.page-transition-enter-active,
+.page-transition-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-transition-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-transition-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+// Responsive adjustments
+@media (max-width: 960px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    
+    .d-flex {
+      width: 100%;
+      margin-top: 12px;
+    }
+  }
+  
+  .modern-card {
+    margin-bottom: 16px;
+  }
+}
+
+// Loading states
+.v-progress-circular {
+  &.v-progress-circular--indeterminate {
+    animation: progress-circular-rotate 1.4s linear infinite;
+  }
+}
+
+@keyframes progress-circular-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// Empty state styling
+.empty-state {
+  padding: 48px 24px;
+  text-align: center;
+  
+  .empty-state-icon {
+    font-size: 64px;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+  }
+  
+  .empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 8px;
+  }
+  
+  .empty-state-description {
+    color: #64748b;
+    font-size: 0.875rem;
+  }
+}
+
+// Hover card effect
+.hover-card {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(99, 102, 241, 0.2) !important;
+    
+    .v-icon {
+      transform: scale(1.1);
+      transition: transform 0.3s ease;
+    }
+  }
+}
