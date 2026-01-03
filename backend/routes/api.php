@@ -10,13 +10,15 @@ use App\Http\Controllers\Api\PayrollController;
 |--------------------------------------------------------------------------
 */
 
-// Authentication routes (Laravel Sanctum)
-Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+// Authentication routes with rate limiting to prevent brute force
+Route::middleware(['throttle:login'])->group(function () {
+    Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+    Route::post('/two-factor/verify', [App\Http\Controllers\Api\TwoFactorController::class, 'verify']);
+});
+
 Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 // Two-Factor Authentication routes
-Route::post('/two-factor/verify', [App\Http\Controllers\Api\TwoFactorController::class, 'verify']);
-
 // Registration disabled - accounts created by admin/accountant through employee management
 
 // Protected routes

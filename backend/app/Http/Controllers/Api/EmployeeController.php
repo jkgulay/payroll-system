@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreEmployeeRequest;
+use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -51,34 +53,10 @@ class EmployeeController extends Controller
         return response()->json($employees);
     }
 
-    public function store(Request $request)
+    public function store(StoreEmployeeRequest $request)
     {
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:100',
-            'middle_name' => 'nullable|string|max:100',
-            'last_name' => 'required|string|max:100',
-            'date_of_birth' => 'nullable|date',
-            'gender' => 'nullable|in:male,female,other',
-            'email' => 'nullable|email|unique:employees,email',
-            'mobile_number' => 'nullable|string|max:20',
-            'project_id' => 'nullable|exists:projects,id',
-            'worker_address' => 'nullable|string',
-            'position' => 'required|string|max:100',
-            'employment_status' => 'nullable|in:regular,probationary,contractual',
-            'employment_type' => 'nullable|in:regular,contractual,part_time',
-            'date_hired' => 'nullable|date',
-            'basic_salary' => 'nullable|numeric|min:0',
-            'salary_type' => 'nullable|in:daily,monthly',
-            // Allowances
-            'has_water_allowance' => 'nullable|boolean',
-            'water_allowance' => 'nullable|numeric|min:0',
-            'has_cola' => 'nullable|boolean',
-            'cola' => 'nullable|numeric|min:0',
-            'has_incentives' => 'nullable|boolean',
-            'incentives' => 'nullable|numeric|min:0',
-            'has_ppe' => 'nullable|boolean',
-            'ppe' => 'nullable|numeric|min:0',
-        ]);
+        // Validation is handled by StoreEmployeeRequest
+        $validated = $request->validated();
 
         // Validate role separately (it's for user account, not employee record)
         $role = $request->validate([

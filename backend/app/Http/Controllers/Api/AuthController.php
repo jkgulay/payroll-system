@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -50,14 +51,10 @@ class AuthController extends Controller
     /**
      * Login user and create token
      */
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'email' => 'required|string',
-            'password' => 'required|string',
-            'role' => 'required|in:admin,accountant,employee',
-        ]);
-
+        // Validation is handled by LoginRequest
+        
         // Check if input is email or username
         $loginField = filter_var($request->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
