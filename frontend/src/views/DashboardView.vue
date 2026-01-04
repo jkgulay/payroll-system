@@ -1,717 +1,322 @@
 <template>
-  <div>
-    <!-- Page Header with Construction Theme -->
+  <div class="modern-dashboard">
+    <!-- Modern Header -->
+    <div class="dashboard-header mb-6">
+      <div>
+        <h1 class="text-h4 font-weight-bold mb-1">Dashboard</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">
+          Welcome back! Here's what's happening today
+        </p>
+      </div>
+      <div class="d-flex align-center gap-3">
+        <!-- Date Range Selector -->
+        <v-chip
+          prepend-icon="mdi-calendar-range"
+          variant="outlined"
+          class="px-4"
+        >
+          {{ currentDateRange }}
+        </v-chip>
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-refresh"
+          variant="flat"
+          @click="refreshData"
+          :loading="refreshing"
+          elevation="0"
+        >
+          Refresh
+        </v-btn>
+      </div>
+    </div>
+
+    <!-- Statistics Cards Row -->
     <v-row class="mb-6">
-      <v-col cols="12">
-        <div class="d-flex align-center justify-space-between">
-          <div>
-            <h1 class="construction-header text-h3 mb-2">Dashboard</h1>
-            <p class="text-subtitle-1 text-medium-emphasis">
-              <v-icon size="small" class="mr-1">mdi-calendar-today</v-icon>
-              {{ currentDate }}
-            </p>
-          </div>
-          <v-btn
-            color="primary"
-            size="large"
-            prepend-icon="mdi-refresh"
-            variant="elevated"
-            @click="refreshData"
-            :loading="refreshing"
-            class="construction-btn"
-          >
-            Refresh Data
-          </v-btn>
-        </div>
-        <div class="steel-divider mt-4"></div>
+      <v-col cols="12" sm="6" lg="3">
+        <v-card class="modern-card stat-card" elevation="0">
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">Total Revenue</span>
+              <v-icon size="20" color="success">mdi-trending-up</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              ₱{{ formatNumber(stats.periodPayroll) }}
+            </div>
+            <div class="d-flex align-center">
+              <span class="text-caption text-medium-emphasis">Current period total</span>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" lg="3">
+        <v-card class="modern-card stat-card" elevation="0">
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">Active Employees</span>
+              <v-icon size="20" color="primary">mdi-account-group</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              {{ stats.activeEmployees }}
+            </div>
+            <div class="d-flex align-center">
+              <span class="text-caption text-medium-emphasis">Currently active</span>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" lg="3">
+        <v-card class="modern-card stat-card" elevation="0">
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">Attendance Today</span>
+              <v-icon size="20" color="info">mdi-clock-check</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              {{ stats.presentToday }}
+            </div>
+            <div class="d-flex align-center">
+              <span class="text-caption text-medium-emphasis">Present today</span>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" lg="3">
+        <v-card class="modern-card stat-card" elevation="0">
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">Total Employees</span>
+              <v-icon size="20" color="warning">mdi-account-hard-hat</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              {{ stats.totalEmployees }}
+            </div>
+            <div class="d-flex align-center">
+              <span class="text-caption text-medium-emphasis">Total in system</span>
+            </div>
+          </v-card-text>
+        </v-card>
       </v-col>
     </v-row>
 
-    <!-- Statistics Cards with Construction Theme -->
+    <!-- Main Content Row -->
     <v-row>
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="industrial-card stat-card stat-card-primary">
-          <v-card-text class="pa-5">
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div
-                  class="text-overline text-medium-emphasis font-weight-bold"
-                >
-                  Total Workers
-                </div>
-                <div class="text-h3 font-weight-bold mt-2 mb-2">
-                  {{ stats.totalEmployees }}
-                </div>
-                <div class="text-caption">
-                  <v-chip size="x-small" color="success" variant="flat">
-                    <v-icon start size="x-small">mdi-arrow-up</v-icon>
-                    {{ stats.activeEmployees }} active
-                  </v-chip>
-                </div>
+      <!-- Left Column - Charts and Payroll -->
+      <v-col cols="12" lg="8">
+        <!-- Revenue Chart -->
+        <v-card class="modern-card mb-6" elevation="0">
+          <v-card-title class="pa-5 d-flex justify-space-between align-center">
+            <div>
+              <div class="text-h6 font-weight-bold">Total Revenue</div>
+              <div class="text-caption text-medium-emphasis mt-1">
+                Monthly payroll overview
               </div>
-              <v-avatar color="primary" size="72" class="stat-avatar">
-                <v-icon size="40">mdi-hard-hat</v-icon>
-              </v-avatar>
             </div>
+            <v-btn-toggle
+              v-model="revenueFilter"
+              mandatory
+              density="compact"
+              variant="outlined"
+              divided
+            >
+              <v-btn value="earnings" size="small">Earnings</v-btn>
+              <v-btn value="spendings" size="small">Spendings</v-btn>
+            </v-btn-toggle>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-5">
+            <PayrollTrendChart v-if="revenueFilter === 'earnings'" :months="6" />
+            <PayrollComparisonChart v-else />
           </v-card-text>
+        </v-card>
+
+        <!-- Statistics Cards -->
+        <v-row class="mb-6">
+          <v-col cols="12" md="6">
+            <v-card class="modern-card" elevation="0">
+              <v-card-title class="pa-5">
+                <div class="text-subtitle-1 font-weight-bold">Employee Distribution</div>
+              </v-card-title>
+              <v-divider></v-divider>
+              <v-card-text class="pa-5" style="height: 300px">
+                <EmployeeDistributionChart />
+              </v-card-text>
+            </v-card>
+          </v-col>
+
+          <v-col cols="12" md="6">
+            <v-card class="modern-card" elevation="0">
+              <v-card-title class="pa-5">
+                <div class="text-subtitle-1 font-weight-bold">Attendance Rate</div>
+              </v-card-title>
+              <v-divider></v-divider>
+              <v-card-text class="pa-5" style="height: 300px">
+                <AttendanceRateChart />
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+
+        <!-- Payroll Summary Table -->
+        <v-card class="modern-card" elevation="0">
+          <v-card-title class="pa-5 d-flex justify-space-between align-center">
+            <div>
+              <div class="text-h6 font-weight-bold">Employees Payroll</div>
+              <div class="text-caption text-medium-emphasis mt-1">
+                Recent payroll transactions
+              </div>
+            </div>
+            <v-btn
+              variant="text"
+              color="primary"
+              append-icon="mdi-arrow-right"
+              to="/payroll"
+            >
+              View All
+            </v-btn>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-data-table
+            :headers="payrollHeaders"
+            :items="recentPayrolls"
+            :items-per-page="5"
+            class="modern-table"
+          >
+            <template v-slot:item.payroll_number="{ item }">
+              <span class="font-weight-medium">#{{ item.payroll_number }}</span>
+            </template>
+
+            <template v-slot:item.period="{ item }">
+              <div class="text-body-2">
+                {{ formatDateShort(item.period_start_date) }} - {{ formatDateShort(item.period_end_date) }}
+              </div>
+            </template>
+
+            <template v-slot:item.amount="{ item }">
+              <span class="font-weight-bold">₱{{ formatNumber(item.total_gross) }}</span>
+            </template>
+
+            <template v-slot:item.status="{ item }">
+              <v-chip
+                :color="getPayrollColor(item.status)"
+                size="small"
+                variant="flat"
+              >
+                {{ item.status }}
+              </v-chip>
+            </template>
+
+            <template v-slot:item.actions="{ item }">
+              <v-btn
+                icon="mdi-eye"
+                size="small"
+                variant="text"
+                :to="`/payroll/${item.id}`"
+              ></v-btn>
+            </template>
+          </v-data-table>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="industrial-card stat-card stat-card-success">
-          <v-card-text class="pa-5">
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div
-                  class="text-overline text-medium-emphasis font-weight-bold"
-                >
-                  This Period
-                </div>
-                <div class="text-h3 font-weight-bold mt-2 mb-2">
-                  ₱{{ formatNumber(stats.periodPayroll) }}
-                </div>
-                <div class="text-caption text-medium-emphasis">
-                  Total Payroll
-                </div>
+      <!-- Right Column - Calendar & Info -->
+      <v-col cols="12" lg="4">
+        <!-- Calendar Widget -->
+        <DashboardCalendar class="mb-6" />
+
+        <!-- Quick Stats Card -->
+        <v-card class="modern-card mb-6" elevation="0">
+          <v-card-title class="pa-5">
+            <div class="text-subtitle-1 font-weight-bold">Community Growth</div>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-5 text-center">
+            <div class="position-relative d-inline-block mb-4">
+              <svg width="120" height="120" class="circular-progress">
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="50"
+                  fill="none"
+                  stroke="#e0e0e0"
+                  stroke-width="10"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="50"
+                  fill="none"
+                  stroke="#6366f1"
+                  stroke-width="10"
+                  :stroke-dasharray="circumference"
+                  :stroke-dashoffset="progressOffset"
+                  transform="rotate(-90 60 60)"
+                  class="progress-circle"
+                />
+              </svg>
+              <div class="progress-text">
+                <div class="text-h4 font-weight-bold">{{ employeeGrowthPercentage }}%</div>
               </div>
-              <v-avatar color="success" size="72" class="stat-avatar">
-                <v-icon size="40">mdi-currency-php</v-icon>
-              </v-avatar>
+            </div>
+            <div class="d-flex align-center justify-center">
+              <span class="text-body-2 text-medium-emphasis">Employee growth rate</span>
             </div>
           </v-card-text>
         </v-card>
-      </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="industrial-card stat-card stat-card-info">
-          <v-card-text class="pa-5">
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div
-                  class="text-overline text-medium-emphasis font-weight-bold"
-                >
-                  Attendance Today
-                </div>
-                <div class="text-h3 font-weight-bold mt-2 mb-2">
-                  {{ stats.presentToday }}
-                </div>
-                <div class="text-caption text-medium-emphasis">
-                  of {{ stats.totalEmployees }} workers
-                </div>
-              </div>
-              <v-avatar color="info" size="72" class="stat-avatar">
-                <v-icon size="40">mdi-clock-check-outline</v-icon>
-              </v-avatar>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="industrial-card stat-card stat-card-warning">
-          <v-card-text class="pa-5">
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div
-                  class="text-overline text-medium-emphasis font-weight-bold"
-                >
-                  Pending Tasks
-                </div>
-                <div class="text-h3 font-weight-bold mt-2 mb-2">
-                  {{ stats.pendingApprovals }}
-                </div>
-                <div class="text-caption">
-                  <v-chip size="x-small" color="warning" variant="flat">
-                    <v-icon start size="x-small">mdi-alert</v-icon>
-                    Action Required
-                  </v-chip>
-                </div>
-              </div>
-              <v-avatar color="warning" size="72" class="stat-avatar">
-                <v-icon size="40">mdi-clipboard-alert-outline</v-icon>
-              </v-avatar>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- Pending Employee Applications -->
-    <v-row class="mt-6" v-if="pendingApplications.length > 0">
-      <v-col cols="12">
-        <v-card class="industrial-card">
-          <v-card-title class="construction-header pa-5 bg-warning">
-            <v-icon start size="24">mdi-account-clock</v-icon>
-            Pending Employee Applications
-            <v-chip size="small" color="error" class="ml-2">
+        <!-- Pending Applications (if any) -->
+        <v-card v-if="pendingApplications.length > 0" class="modern-card" elevation="0">
+          <v-card-title class="pa-5 d-flex justify-space-between align-center">
+            <div class="text-subtitle-1 font-weight-bold">Pending Applications</div>
+            <v-chip size="small" color="warning" variant="flat">
               {{ pendingApplications.length }}
             </v-chip>
           </v-card-title>
-          <v-divider class="steel-divider"></v-divider>
-          <v-card-text>
-            <v-data-table
-              :headers="applicationHeaders"
-              :items="pendingApplications"
-              :items-per-page="5"
-              density="comfortable"
+          <v-divider></v-divider>
+          <v-list class="py-0">
+            <v-list-item
+              v-for="app in pendingApplications.slice(0, 3)"
+              :key="app.id"
+              @click="viewApplication(app)"
+              class="px-5"
             >
-              <template v-slot:item.full_name="{ item }">
-                <strong
-                  >{{ item.first_name }} {{ item.middle_name }}
-                  {{ item.last_name }}</strong
-                >
+              <template v-slot:prepend>
+                <v-avatar color="warning" size="40">
+                  <v-icon>mdi-account</v-icon>
+                </v-avatar>
               </template>
-
-              <template v-slot:item.project="{ item }">
-                {{ item.project?.name || "N/A" }}
+              <v-list-item-title class="font-weight-medium">
+                {{ app.first_name }} {{ app.last_name }}
+              </v-list-item-title>
+              <v-list-item-subtitle>{{ app.position }}</v-list-item-subtitle>
+              <template v-slot:append>
+                <v-btn icon="mdi-chevron-right" size="small" variant="text"></v-btn>
               </template>
-
-              <template v-slot:item.submitted_at="{ item }">
-                {{ formatDate(item.submitted_at) }}
-              </template>
-
-              <template v-slot:item.created_by="{ item }">
-                {{ item.creator?.username || "Unknown" }}
-              </template>
-
-              <template v-slot:item.application_status="{ item }">
-                <v-chip
-                  size="small"
-                  :color="getApplicationStatusColor(item.application_status)"
-                >
-                  {{ item.application_status }}
-                </v-chip>
-              </template>
-
-              <template v-slot:item.actions="{ item }">
-                <v-btn
-                  icon="mdi-eye"
-                  size="small"
-                  variant="text"
-                  color="info"
-                  @click="viewApplication(item)"
-                  title="View Details"
-                ></v-btn>
-              </template>
-            </v-data-table>
-          </v-card-text>
+            </v-list-item>
+          </v-list>
+          <v-divider v-if="pendingApplications.length > 3"></v-divider>
+          <v-card-actions v-if="pendingApplications.length > 3" class="pa-3">
+            <v-btn
+              block
+              variant="text"
+              size="small"
+              color="primary"
+              append-icon="mdi-arrow-right"
+            >
+              View All ({{ pendingApplications.length }})
+            </v-btn>
+          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Quick Actions with Construction Theme -->
-    <v-row class="mt-6">
-      <v-col cols="12">
-        <v-card class="industrial-card quick-actions-card">
-          <v-card-title class="construction-header pa-5">
-            <v-icon start size="24">mdi-toolbox-outline</v-icon>
-            Quick Actions
-          </v-card-title>
-          <v-divider class="steel-divider"></v-divider>
-          <v-card-text class="pa-5">
-            <v-row>
-              <v-col cols="6" sm="4" md="3">
-                <v-btn
-                  color="primary"
-                  variant="elevated"
-                  block
-                  size="x-large"
-                  class="construction-btn action-btn"
-                  @click="showAddEmployeeDialog = true"
-                >
-                  <v-icon size="28" class="mb-2"
-                    >mdi-account-plus-outline</v-icon
-                  >
-                  <div class="text-caption">Add Worker</div>
-                </v-btn>
-              </v-col>
-              <v-col cols="6" sm="4" md="3">
-                <v-btn
-                  color="info"
-                  variant="elevated"
-                  block
-                  size="x-large"
-                  class="construction-btn action-btn"
-                  to="/attendance"
-                >
-                  <v-icon size="28" class="mb-2"
-                    >mdi-clock-check-outline</v-icon
-                  >
-                  <div class="text-caption">Attendance</div>
-                </v-btn>
-              </v-col>
-              <v-col cols="6" sm="4" md="3">
-                <v-btn
-                  color="success"
-                  variant="elevated"
-                  block
-                  size="x-large"
-                  class="construction-btn action-btn"
-                  to="/payroll/create"
-                >
-                  <v-icon size="28" class="mb-2">mdi-cash-plus</v-icon>
-                  <div class="text-caption">New Payroll</div>
-                </v-btn>
-              </v-col>
-              <v-col cols="6" sm="4" md="3">
-                <v-btn
-                  color="accent"
-                  variant="elevated"
-                  block
-                  size="x-large"
-                  class="construction-btn action-btn"
-                  to="/reports"
-                >
-                  <v-icon size="28" class="mb-2">mdi-file-chart-outline</v-icon>
-                  <div class="text-caption">Reports</div>
-                </v-btn>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- Recent Activity with Construction Theme -->
-    <v-row class="mt-6">
-      <v-col cols="12" md="6">
-        <v-card class="industrial-card" height="450">
-          <v-card-title class="construction-header pa-5">
-            <v-icon start size="24">mdi-clock-check-outline</v-icon>
-            Recent Attendance
-          </v-card-title>
-          <v-divider class="steel-divider"></v-divider>
-          <v-card-text>
-            <v-list density="compact">
-              <v-list-item
-                v-for="attendance in recentAttendance"
-                :key="attendance.id"
-                :subtitle="`${attendance.time_in || 'N/A'} - ${
-                  attendance.time_out || 'Ongoing'
-                }`"
-              >
-                <template v-slot:prepend>
-                  <v-avatar :color="getAttendanceColor(attendance.status)">
-                    <v-icon>{{ getAttendanceIcon(attendance.status) }}</v-icon>
-                  </v-avatar>
-                </template>
-                <v-list-item-title>{{
-                  attendance.employee_name
-                }}</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" md="6">
-        <v-card class="industrial-card" height="450">
-          <v-card-title class="construction-header pa-5">
-            <v-icon start size="24">mdi-cash-clock</v-icon>
-            Recent Payrolls
-          </v-card-title>
-          <v-divider class="steel-divider"></v-divider>
-          <v-card-text>
-            <v-list density="compact">
-              <v-list-item
-                v-for="payroll in recentPayrolls"
-                :key="payroll.id"
-                :subtitle="`${payroll.period_start_date} to ${payroll.period_end_date}`"
-                :to="`/payroll/${payroll.id}`"
-              >
-                <template v-slot:prepend>
-                  <v-avatar :color="getPayrollColor(payroll.status)">
-                    <v-icon>mdi-cash</v-icon>
-                  </v-avatar>
-                </template>
-                <v-list-item-title>{{
-                  payroll.payroll_number
-                }}</v-list-item-title>
-                <template v-slot:append>
-                  <v-chip :color="getPayrollColor(payroll.status)" size="small">
-                    {{ payroll.status }}
-                  </v-chip>
-                </template>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- Add Employee Dialog -->
-    <v-dialog v-model="showAddEmployeeDialog" max-width="900px" persistent>
-      <v-card>
-        <v-card-title class="text-h5 py-4 bg-primary">
-          <v-icon start>mdi-account-plus</v-icon>
-          Add Employee
-        </v-card-title>
-        <v-divider></v-divider>
-
-        <v-card-text class="pt-6">
-          <v-form ref="employeeForm">
-            <v-row>
-              <!-- Personal Information -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2">Personal Information</div>
-                <v-divider class="mb-4"></v-divider>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="employeeData.first_name"
-                  label="First Name"
-                  prepend-inner-icon="mdi-account"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="employeeData.middle_name"
-                  label="Middle Name (Optional)"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Optional"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="employeeData.last_name"
-                  label="Last Name"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.email"
-                  label="Email (Optional)"
-                  type="email"
-                  prepend-inner-icon="mdi-email"
-                  :rules="[rules.emailOptional]"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="If no email, username will be firstname.lastname"
-                  persistent-hint
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.mobile_number"
-                  label="Phone Number"
-                  prepend-inner-icon="mdi-phone"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.date_of_birth"
-                  label="Date of Birth"
-                  type="date"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.gender"
-                  :items="[
-                    { title: 'Male', value: 'male' },
-                    { title: 'Female', value: 'female' },
-                    { title: 'Other', value: 'other' },
-                  ]"
-                  label="Gender"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12">
-                <v-textarea
-                  v-model="employeeData.worker_address"
-                  label="Worker Address"
-                  prepend-inner-icon="mdi-map-marker"
-                  rows="1"
-                  hint="Enter the worker's complete home address"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-textarea>
-              </v-col>
-
-              <!-- Employment Information -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">Employment Information</div>
-                <v-divider class="mb-4"></v-divider>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.employee_number"
-                  label="Employee Number (Auto-Generated)"
-                  prepend-inner-icon="mdi-identifier"
-                  readonly
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Will be automatically generated (EMP001, EMP002...)"
-                  persistent-hint
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.project_id"
-                  :items="projects"
-                  item-title="name"
-                  item-value="id"
-                  label="Project"
-                  prepend-inner-icon="mdi-office-building"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.position"
-                  label="Position"
-                  prepend-inner-icon="mdi-badge-account"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="employeeData.date_hired"
-                  label="Hire Date"
-                  type="date"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.employment_status"
-                  :items="[
-                    { title: 'Active', value: 'active' },
-                    { title: 'Probationary', value: 'probationary' },
-                  ]"
-                  label="Employment Status"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Current work status"
-                  persistent-hint
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.employment_type"
-                  :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Contractual', value: 'contractual' },
-                    { title: 'Part Time', value: 'part_time' },
-                  ]"
-                  label="Employment Type"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Type of employment contract"
-                  persistent-hint
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.salary_type"
-                  :items="[
-                    { title: 'Daily', value: 'daily' },
-                    { title: 'Monthly', value: 'monthly' },
-                  ]"
-                  label="Salary Type"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="employeeData.basic_salary"
-                  label="Basic Pay Rate"
-                  type="number"
-                  prepend-inner-icon="mdi-cash"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Default: ₱450 per day (can be modified)"
-                  persistent-hint
-                ></v-text-field>
-              </v-col>
-
-              <!-- Allowances Section -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">Allowances</div>
-                <v-divider class="mb-2"></v-divider>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_water_allowance"
-                  label="Water Allowance"
-                  color="primary"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_water_allowance"
-                  v-model.number="employeeData.water_allowance"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_cola"
-                  label="COLA (Cost of Living Allowance)"
-                  color="primary"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_cola"
-                  v-model.number="employeeData.cola"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_incentives"
-                  label="Incentives"
-                  color="primary"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_incentives"
-                  v-model.number="employeeData.incentives"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_ppe"
-                  label="PPE (Personal Protective Equipment)"
-                  color="primary"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_ppe"
-                  v-model.number="employeeData.ppe"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <!-- User Account Section -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">User Account</div>
-                <v-divider class="mb-4"></v-divider>
-              </v-col>
-
-              <v-col cols="12">
-                <v-alert type="info" variant="tonal" density="compact">
-                  <ul class="mt-2">
-                    <li>
-                      <strong>Username:</strong> Email if provided, otherwise
-                      firstname.lastname
-                    </li>
-                    <li>
-                      <strong>Password:</strong> Auto-generated (LastName +
-                      EmpID + 2 random digits)
-                    </li>
-                    <li><strong>Role:</strong> Selected below</li>
-                    <li><strong>Status:</strong> Active</li>
-                    <li>Employee must change password on first login</li>
-                  </ul>
-                </v-alert>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="employeeData.role"
-                  :items="[
-                    { title: 'Accountant', value: 'accountant' },
-                    { title: 'Employee', value: 'employee' },
-                  ]"
-                  label="User Role"
-                  prepend-inner-icon="mdi-shield-account"
-                  :rules="[rules.required]"
-                  hint="Admin can assign accountant or employee role"
-                  persistent-hint
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-            </v-row>
-          </v-form>
-        </v-card-text>
-
-        <v-divider></v-divider>
-
-        <v-card-actions class="pa-4">
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeEmployeeDialog" :disabled="saving">
-            Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            variant="elevated"
-            @click="saveEmployee"
-            :loading="saving"
-          >
-            <v-icon start>mdi-check</v-icon>
-            Add Employee
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <!-- All Dialogs from Original -->
+    <AddEmployeeDialog
+      v-model="showAddEmployeeDialog"
+      :projects="projects"
+      @save="saveEmployee"
+    />
 
     <!-- Temporary Password Dialog -->
     <v-dialog v-model="showPasswordDialog" max-width="600px" persistent>
@@ -761,7 +366,7 @@
               <div>
                 <div class="text-caption text-grey-darken-2">Role</div>
                 <div class="text-body-1 font-weight-bold text-capitalize">
-                  {{ newEmployeeData?.role || employeeData.role }}
+                  {{ newEmployeeData?.role || 'employee' }}
                 </div>
               </div>
             </v-sheet>
@@ -771,11 +376,6 @@
             <v-icon start>mdi-alert</v-icon>
             <strong>Important:</strong> The employee must change this password
             on their first login.
-          </v-alert>
-
-          <v-alert type="info" variant="tonal" density="compact" class="mt-2">
-            <v-icon start>mdi-information</v-icon>
-            Please save or share these credentials securely with the employee.
           </v-alert>
         </v-card-text>
 
@@ -873,37 +473,6 @@
               ></v-text-field>
             </v-col>
 
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="selectedApplication.date_of_birth"
-                label="Date of Birth"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="selectedApplication.gender"
-                label="Gender"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12">
-              <v-textarea
-                :model-value="selectedApplication.worker_address"
-                label="Worker Address"
-                rows="2"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-textarea>
-            </v-col>
-
             <!-- Employment Information -->
             <v-col cols="12">
               <div class="text-h6 mb-2 mt-4">
@@ -932,397 +501,12 @@
               ></v-text-field>
             </v-col>
 
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="selectedApplication.date_hired"
-                label="Hire Date"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="selectedApplication.employment_status"
-                label="Employment Status"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="selectedApplication.employment_type"
-                label="Employment Type"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="selectedApplication.salary_type"
-                label="Salary Type"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="`₱${selectedApplication.basic_salary}`"
-                label="Basic Pay Rate"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <!-- Allowances -->
-            <v-col cols="12" v-if="hasAllowances(selectedApplication)">
-              <div class="text-h6 mb-2 mt-4">Section 3: Allowances</div>
-              <v-divider class="mb-4"></v-divider>
-            </v-col>
-
-            <v-col
-              cols="12"
-              md="6"
-              v-if="selectedApplication.has_water_allowance"
-            >
-              <v-text-field
-                :model-value="`Water Allowance: ₱${selectedApplication.water_allowance}`"
-                label="Water Allowance"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6" v-if="selectedApplication.has_cola">
-              <v-text-field
-                :model-value="`COLA: ₱${selectedApplication.cola}`"
-                label="COLA"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6" v-if="selectedApplication.has_incentives">
-              <v-text-field
-                :model-value="`Incentives: ₱${selectedApplication.incentives}`"
-                label="Incentives"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6" v-if="selectedApplication.has_ppe">
-              <v-text-field
-                :model-value="`PPE: ₱${selectedApplication.ppe}`"
-                label="PPE"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <!-- Documents -->
-            <v-col cols="12">
-              <div class="text-h6 mb-2 mt-4">Section 4: Documents</div>
-              <v-divider class="mb-4"></v-divider>
-            </v-col>
-
-            <v-col cols="12">
-              <v-expansion-panels>
-                <!-- Resume -->
-                <v-expansion-panel v-if="selectedApplication.resume_path">
-                  <v-expansion-panel-title>
-                    <v-icon class="mr-3" color="primary"
-                      >mdi-file-document</v-icon
-                    >
-                    <span class="font-weight-bold">Resume (Required)</span>
-                  </v-expansion-panel-title>
-                  <v-expansion-panel-text>
-                    <div class="mb-3">
-                      <v-btn
-                        size="small"
-                        color="primary"
-                        variant="elevated"
-                        :href="getStorageUrl(selectedApplication.resume_path)"
-                        target="_blank"
-                        prepend-icon="mdi-open-in-new"
-                      >
-                        Open in New Tab
-                      </v-btn>
-                      <v-btn
-                        size="small"
-                        color="secondary"
-                        variant="elevated"
-                        :href="getStorageUrl(selectedApplication.resume_path)"
-                        download
-                        prepend-icon="mdi-download"
-                        class="ml-2"
-                      >
-                        Download
-                      </v-btn>
-                    </div>
-                    <!-- Preview -->
-                    <div
-                      v-if="
-                        getFileExtension(selectedApplication.resume_path) ===
-                        'pdf'
-                      "
-                    >
-                      <iframe
-                        :src="getStorageUrl(selectedApplication.resume_path)"
-                        width="100%"
-                        height="600px"
-                        style="border: 1px solid #ddd; border-radius: 4px"
-                      ></iframe>
-                    </div>
-                    <div v-else>
-                      <v-img
-                        :src="getStorageUrl(selectedApplication.resume_path)"
-                        max-height="600"
-                        contain
-                      ></v-img>
-                    </div>
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-
-                <!-- ID Document -->
-                <v-expansion-panel v-if="selectedApplication.id_path">
-                  <v-expansion-panel-title>
-                    <v-icon class="mr-3" color="info"
-                      >mdi-card-account-details</v-icon
-                    >
-                    <span class="font-weight-bold">ID Document</span>
-                  </v-expansion-panel-title>
-                  <v-expansion-panel-text>
-                    <div class="mb-3">
-                      <v-btn
-                        size="small"
-                        color="primary"
-                        variant="elevated"
-                        :href="getStorageUrl(selectedApplication.id_path)"
-                        target="_blank"
-                        prepend-icon="mdi-open-in-new"
-                      >
-                        Open in New Tab
-                      </v-btn>
-                      <v-btn
-                        size="small"
-                        color="secondary"
-                        variant="elevated"
-                        :href="getStorageUrl(selectedApplication.id_path)"
-                        download
-                        prepend-icon="mdi-download"
-                        class="ml-2"
-                      >
-                        Download
-                      </v-btn>
-                    </div>
-                    <!-- Preview -->
-                    <div
-                      v-if="
-                        getFileExtension(selectedApplication.id_path) === 'pdf'
-                      "
-                    >
-                      <iframe
-                        :src="getStorageUrl(selectedApplication.id_path)"
-                        width="100%"
-                        height="600px"
-                        style="border: 1px solid #ddd; border-radius: 4px"
-                      ></iframe>
-                    </div>
-                    <div v-else>
-                      <v-img
-                        :src="getStorageUrl(selectedApplication.id_path)"
-                        max-height="600"
-                        contain
-                      ></v-img>
-                    </div>
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-
-                <!-- Contract -->
-                <v-expansion-panel v-if="selectedApplication.contract_path">
-                  <v-expansion-panel-title>
-                    <v-icon class="mr-3" color="success">mdi-file-sign</v-icon>
-                    <span class="font-weight-bold">Contract</span>
-                  </v-expansion-panel-title>
-                  <v-expansion-panel-text>
-                    <div class="mb-3">
-                      <v-btn
-                        size="small"
-                        color="primary"
-                        variant="elevated"
-                        :href="getStorageUrl(selectedApplication.contract_path)"
-                        target="_blank"
-                        prepend-icon="mdi-open-in-new"
-                      >
-                        Open in New Tab
-                      </v-btn>
-                      <v-btn
-                        size="small"
-                        color="secondary"
-                        variant="elevated"
-                        :href="getStorageUrl(selectedApplication.contract_path)"
-                        download
-                        prepend-icon="mdi-download"
-                        class="ml-2"
-                      >
-                        Download
-                      </v-btn>
-                    </div>
-                    <!-- Preview -->
-                    <div
-                      v-if="
-                        getFileExtension(selectedApplication.contract_path) ===
-                        'pdf'
-                      "
-                    >
-                      <iframe
-                        :src="getStorageUrl(selectedApplication.contract_path)"
-                        width="100%"
-                        height="600px"
-                        style="border: 1px solid #ddd; border-radius: 4px"
-                      ></iframe>
-                    </div>
-                    <div v-else>
-                      <v-img
-                        :src="getStorageUrl(selectedApplication.contract_path)"
-                        max-height="600"
-                        contain
-                      ></v-img>
-                    </div>
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-
-                <!-- Certificates -->
-                <v-expansion-panel v-if="selectedApplication.certificates_path">
-                  <v-expansion-panel-title>
-                    <v-icon class="mr-3" color="warning"
-                      >mdi-certificate</v-icon
-                    >
-                    <span class="font-weight-bold">Certificates</span>
-                  </v-expansion-panel-title>
-                  <v-expansion-panel-text>
-                    <div class="mb-3">
-                      <v-btn
-                        size="small"
-                        color="primary"
-                        variant="elevated"
-                        :href="
-                          getStorageUrl(selectedApplication.certificates_path)
-                        "
-                        target="_blank"
-                        prepend-icon="mdi-open-in-new"
-                      >
-                        Open in New Tab
-                      </v-btn>
-                      <v-btn
-                        size="small"
-                        color="secondary"
-                        variant="elevated"
-                        :href="
-                          getStorageUrl(selectedApplication.certificates_path)
-                        "
-                        download
-                        prepend-icon="mdi-download"
-                        class="ml-2"
-                      >
-                        Download
-                      </v-btn>
-                    </div>
-                    <!-- Preview -->
-                    <div
-                      v-if="
-                        getFileExtension(
-                          selectedApplication.certificates_path
-                        ) === 'pdf'
-                      "
-                    >
-                      <iframe
-                        :src="
-                          getStorageUrl(selectedApplication.certificates_path)
-                        "
-                        width="100%"
-                        height="600px"
-                        style="border: 1px solid #ddd; border-radius: 4px"
-                      ></iframe>
-                    </div>
-                    <div v-else>
-                      <v-img
-                        :src="
-                          getStorageUrl(selectedApplication.certificates_path)
-                        "
-                        max-height="600"
-                        contain
-                      ></v-img>
-                    </div>
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-              </v-expansion-panels>
-
-              <!-- No documents message -->
-              <v-alert
-                v-if="
-                  !selectedApplication.resume_path &&
-                  !selectedApplication.id_path &&
-                  !selectedApplication.contract_path &&
-                  !selectedApplication.certificates_path
-                "
-                type="info"
-                variant="tonal"
-              >
-                No documents uploaded with this application
-              </v-alert>
-            </v-col>
-
-            <!-- Application Status -->
-            <v-col cols="12">
-              <div class="text-h6 mb-2 mt-4">
-                Section 5: Application Details
-              </div>
-              <v-divider class="mb-4"></v-divider>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="
-                  selectedApplication.creator?.username || 'Unknown'
-                "
-                label="Submitted By"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
-                :model-value="formatDate(selectedApplication.submitted_at)"
-                label="Submitted At"
-                readonly
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
             <!-- Hire Date (required for approval) -->
             <v-col cols="12" md="6" v-if="applicationAction === 'approve'">
               <v-text-field
                 v-model="approvalHireDate"
                 label="Hire Date (Required)"
                 type="date"
-                :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
                 hint="Set the official hire date for this employee"
@@ -1330,13 +514,12 @@
               ></v-text-field>
             </v-col>
 
-            <!-- Rejection Reason (only for approve/reject) -->
+            <!-- Rejection Reason -->
             <v-col cols="12" v-if="applicationAction === 'reject'">
               <v-textarea
                 v-model="rejectionReason"
                 label="Rejection Reason"
                 rows="3"
-                :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
                 hint="Please provide a reason for rejection"
@@ -1463,6 +646,12 @@
 import { ref, onMounted, computed } from "vue";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
+import DashboardCalendar from "@/components/DashboardCalendar.vue";
+import PayrollTrendChart from "@/components/charts/PayrollTrendChart.vue";
+import PayrollComparisonChart from "@/components/charts/PayrollComparisonChart.vue";
+import EmployeeDistributionChart from "@/components/charts/EmployeeDistributionChart.vue";
+import AttendanceRateChart from "@/components/charts/AttendanceRateChart.vue";
 
 const toast = useToast();
 
@@ -1474,23 +663,15 @@ const stats = ref({
   pendingApprovals: 0,
 });
 
-const recentAttendance = ref([]);
 const recentPayrolls = ref([]);
+const revenueFilter = ref('earnings');
+const refreshing = ref(false);
 
 // Application management
 const pendingApplications = ref([]);
-const applicationHeaders = ref([
-  { title: "Name", key: "full_name" },
-  { title: "Position", key: "position" },
-  { title: "Project", key: "project" },
-  { title: "Submitted By", key: "created_by" },
-  { title: "Submitted At", key: "submitted_at" },
-  { title: "Status", key: "application_status" },
-  { title: "Actions", key: "actions", sortable: false },
-]);
 const showApplicationDialog = ref(false);
 const selectedApplication = ref(null);
-const applicationAction = ref("approve"); // 'approve' or 'reject'
+const applicationAction = ref("approve");
 const rejectionReason = ref("");
 const approvalHireDate = ref("");
 const processing = ref(false);
@@ -1504,55 +685,34 @@ const showPasswordDialog = ref(false);
 const temporaryPassword = ref("");
 const newEmployeeData = ref(null);
 const createdEmployeeUsername = ref("");
-const saving = ref(false);
-const refreshing = ref(false);
-const employeeForm = ref(null);
 const projects = ref([]);
 
-const employeeData = ref({
-  employee_number: "",
-  first_name: "",
-  middle_name: "",
-  last_name: "",
-  date_of_birth: "",
-  gender: "",
-  email: "",
-  mobile_number: "",
-  worker_address: "",
-  project_id: null,
-  position: "",
-  date_hired: "",
-  employment_status: "active",
-  employment_type: "regular",
-  salary_type: "daily",
-  basic_salary: 450, // Default pay rate
-  // Allowances
-  has_water_allowance: false,
-  water_allowance: 0,
-  has_cola: false,
-  cola: 0,
-  has_incentives: false,
-  incentives: 0,
-  has_ppe: false,
-  ppe: 0,
-  // User account auto-created
-  role: "employee",
+const currentDateRange = computed(() => {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 });
 
-const rules = {
-  required: (v) => !!v || "This field is required",
-  email: (v) => /.+@.+\..+/.test(v) || "Email must be valid",
-  emailOptional: (v) => !v || /.+@.+\..+/.test(v) || "Email must be valid",
-  minLength: (v) => v.length >= 8 || "Password must be at least 8 characters",
-};
+const payrollHeaders = [
+  { title: 'Payroll Number', key: 'payroll_number' },
+  { title: 'Period', key: 'period' },
+  { title: 'Amount', key: 'amount' },
+  { title: 'Status', key: 'status' },
+  { title: 'Actions', key: 'actions', sortable: false }
+];
 
-const currentDate = computed(() => {
-  return new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+// Circular progress for community growth
+const circumference = 2 * Math.PI * 50;
+
+const employeeGrowthPercentage = computed(() => {
+  if (stats.value.totalEmployees === 0) return 0;
+  return Math.round((stats.value.activeEmployees / stats.value.totalEmployees) * 100);
+});
+
+const progressOffset = computed(() => {
+  const progress = employeeGrowthPercentage.value;
+  return circumference - (progress / 100) * circumference;
 });
 
 onMounted(async () => {
@@ -1565,7 +725,6 @@ async function fetchDashboardData() {
   try {
     const response = await api.get("/dashboard");
     stats.value = response.data.stats;
-    recentAttendance.value = response.data.recent_attendance || [];
     recentPayrolls.value = response.data.recent_payrolls || [];
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
@@ -1595,39 +754,24 @@ async function fetchProjects() {
   }
 }
 
-async function saveEmployee() {
-  if (!employeeForm.value) return;
+async function saveEmployee(payload) {
+  const { data: employeeData, setSaving } = payload;
 
-  const isValid = await employeeForm.value.validate();
-  if (!isValid.valid) {
-    toast.warning("Please fill in all required fields");
-    return;
-  }
-
-  saving.value = true;
   try {
-    const response = await api.post("/employees", employeeData.value);
-
-    // Store temporary password and employee data
+    const response = await api.post("/employees", employeeData);
     temporaryPassword.value = response.data.temporary_password;
     newEmployeeData.value = response.data.employee;
-    newEmployeeData.value.role = response.data.role; // Add role from response
+    newEmployeeData.value.role = response.data.role;
     createdEmployeeUsername.value = response.data.username;
 
     toast.success("Employee created successfully!");
-    closeEmployeeDialog();
-
-    // Show password dialog
+    showAddEmployeeDialog.value = false;
     showPasswordDialog.value = true;
 
-    await fetchDashboardData(); // Refresh dashboard stats
+    await fetchDashboardData();
   } catch (error) {
     console.error("Error creating employee:", error);
-    console.error("Full error response:", error.response?.data);
-    console.error("Validation errors:", error.response?.data?.errors);
-
     if (error.response?.data?.errors) {
-      // Show specific validation errors
       const errors = error.response.data.errors;
       Object.keys(errors).forEach((field) => {
         toast.error(`${field}: ${errors[field][0]}`);
@@ -1640,42 +784,8 @@ async function saveEmployee() {
       toast.error(message);
     }
   } finally {
-    saving.value = false;
+    setSaving(false);
   }
-}
-
-function closeEmployeeDialog() {
-  showAddEmployeeDialog.value = false;
-  employeeForm.value?.reset();
-
-  // Reset form data
-  employeeData.value = {
-    employee_number: "",
-    first_name: "",
-    middle_name: "",
-    last_name: "",
-    date_of_birth: "",
-    gender: "",
-    email: "",
-    mobile_number: "",
-    worker_address: "",
-    project_id: null,
-    position: "",
-    date_hired: "",
-    employment_status: "",
-    employment_type: "",
-    salary_type: "daily",
-    basic_salary: 450,
-    has_water_allowance: false,
-    water_allowance: 0,
-    has_cola: false,
-    cola: 0,
-    has_incentives: false,
-    incentives: 0,
-    has_ppe: false,
-    ppe: 0,
-    role: "employee",
-  };
 }
 
 function copyCredentials() {
@@ -1689,7 +799,7 @@ Username: ${
     createdEmployeeUsername.value || newEmployeeData.value?.email
   }${emailInfo}
 Temporary Password: ${temporaryPassword.value}
-Role: ${newEmployeeData.value?.role || employeeData.value.role}
+Role: ${newEmployeeData.value?.role}
 
 ⚠️ Employee must change password on first login.`;
 
@@ -1704,24 +814,10 @@ function formatNumber(value) {
   }).format(value || 0);
 }
 
-function getAttendanceColor(status) {
-  const colors = {
-    present: "success",
-    absent: "error",
-    late: "warning",
-    halfday: "info",
-  };
-  return colors[status] || "grey";
-}
-
-function getAttendanceIcon(status) {
-  const icons = {
-    present: "mdi-check-circle",
-    absent: "mdi-close-circle",
-    late: "mdi-clock-alert",
-    halfday: "mdi-clock-half",
-  };
-  return icons[status] || "mdi-help-circle";
+function formatDateShort(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function getPayrollColor(status) {
@@ -1775,7 +871,7 @@ async function approveApplication() {
     closeApplicationDialog();
     showApprovalSuccessDialog.value = true;
     await fetchPendingApplications();
-    await fetchDashboardData(); // Update stats
+    await fetchDashboardData();
   } catch (error) {
     console.error("Error approving application:", error);
     toast.error(
@@ -1836,164 +932,72 @@ Role: Employee
       toast.error("Failed to copy credentials");
     });
 }
-
-function hasAllowances(application) {
-  return (
-    application.has_water_allowance ||
-    application.has_cola ||
-    application.has_incentives ||
-    application.has_ppe
-  );
-}
-
-function getApplicationStatusColor(status) {
-  const colors = {
-    pending: "warning",
-    approved: "success",
-    rejected: "error",
-  };
-  return colors[status] || "default";
-}
-
-function formatDate(dateString) {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function getStorageUrl(path) {
-  const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-  const backendURL = baseURL.replace("/api", "");
-  return `${backendURL}/storage/${path}`;
-}
-
-function getFileExtension(path) {
-  if (!path) return "";
-  return path.split(".").pop().toLowerCase();
-}
 </script>
 
 <style scoped lang="scss">
-// Construction-themed Dashboard Styling
-
-.construction-header {
-  font-family: "Roboto Condensed", sans-serif;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: #37474f;
+.modern-dashboard {
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-.construction-btn {
-  text-transform: none;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  @media (max-width: 960px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 }
 
-// Stat Cards with Construction Theme
+.modern-card {
+  border-radius: 16px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-2px);
+  }
+}
+
 .stat-card {
   position: relative;
   overflow: hidden;
-  transition: all 0.3s ease;
-
+  
   &::before {
-    content: "";
+    content: '';
     position: absolute;
     top: 0;
+    left: 0;
     right: 0;
-    width: 100px;
-    height: 100px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 50%;
-    transform: translate(30%, -30%);
-  }
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
-  }
-
-  &.stat-card-primary {
-    border-left-color: #d84315 !important;
-  }
-
-  &.stat-card-success {
-    border-left-color: #2e7d32 !important;
-  }
-
-  &.stat-card-info {
-    border-left-color: #0277bd !important;
-  }
-
-  &.stat-card-warning {
-    border-left-color: #f9a825 !important;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
   }
 }
 
-.stat-avatar {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 3px solid rgba(255, 255, 255, 0.3);
-}
-
-// Quick Actions Card
-.quick-actions-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%) !important;
-}
-
-.action-btn {
-  height: 100px !important;
-  flex-direction: column;
-  gap: 8px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  :deep(.v-btn__content) {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  &:hover {
-    transform: translateY(-4px) scale(1.02);
+.circular-progress {
+  .progress-circle {
+    transition: stroke-dashoffset 1s ease;
   }
 }
 
-// List items with construction accents
-:deep(.v-list-item) {
-  border-left: 3px solid transparent;
-  transition: all 0.2s ease;
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
 
-  &:hover {
-    border-left-color: #d84315;
-    background: rgba(216, 67, 21, 0.05);
+.modern-table {
+  :deep(thead) {
+    background-color: #f8fafc;
   }
-}
-
-// Card title styling
-:deep(.v-card-title) {
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-// Chart card styling
-.chart-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%) !important;
-
-  canvas {
-    max-height: 300px;
+  
+  :deep(tbody tr:hover) {
+    background-color: #f1f5f9 !important;
   }
 }
 </style>

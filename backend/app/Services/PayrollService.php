@@ -43,13 +43,17 @@ class PayrollService
     public function createPayroll(array $data): Payroll
     {
         $payrollNumber = $this->generatePayrollNumber($data['period_start_date']);
+        $periodStart = Carbon::parse($data['period_start_date']);
 
         return Payroll::create([
             'payroll_number' => $payrollNumber,
-            'period_start_date' => $data['period_start_date'],
-            'period_end_date' => $data['period_end_date'],
+            'period_type' => 'semi_monthly', // Use underscore, not hyphen
+            'period_start' => $data['period_start_date'],
+            'period_end' => $data['period_end_date'],
             'payment_date' => $data['payment_date'],
             'pay_period_number' => $data['pay_period_number'] ?? $this->determinePeriodNumber($data['period_start_date']),
+            'month' => $periodStart->month,
+            'year' => $periodStart->year,
             'status' => 'draft',
             'prepared_by' => auth()->id(),
             'prepared_at' => now(),
@@ -66,7 +70,7 @@ class PayrollService
             $query = Employee::active()->with([
                 'governmentInfo',
                 'allowances' => function ($q) use ($payroll) {
-                    $q->active()->where('effective_date', '<=', $payroll->period_end_date);
+                    $q->active()->where('effective_date', '<=', $payroll->period_end);
                 },
                 'loans' => function ($q) {
                     $q->active();
@@ -104,7 +108,7 @@ class PayrollService
     {
         // Get attendance records for the period
         $attendance = Attendance::where('employee_id', $employee->id)
-            ->whereBetween('attendance_date', [$payroll->period_start_date, $payroll->period_end_date])
+            ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
             ->where('status', 'present')
             ->get();
 
@@ -175,23 +179,16 @@ class PayrollService
             'water_allowance' => $allowances['water_allowance'],
             'cola' => $allowances['cola'],
             'other_allowances' => $allowances['other_allowances'],
-            'other_earnings' => 0,
             'gross_pay' => $grossPay,
             'sss_contribution' => $sssContribution,
             'philhealth_contribution' => $philhealthContribution,
             'pagibig_contribution' => $pagibigContribution,
             'withholding_tax' => $withholdingTax,
-            'sss_loan' => $loanDeductions['sss_loan'],
-            'pagibig_loan' => $loanDeductions['pagibig_loan'],
-            'other_loans' => $loanDeductions['other_loans'],
-            'ppe_deduction' => $otherDeductions['ppe_deduction'],
-            'other_deductions' => $otherDeductions['other_deductions'],
+            'total_other_deductions' => $otherDeductions['ppe_deduction'] + $otherDeductions['other_deductions'],
+            'total_loan_deductions' => $loanDeductions['sss_loan'] + $loanDeductions['pagibig_loan'] + $loanDeductions['other_loans'],
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
             'days_worked' => $attendance->where('status', 'present')->count(),
-            'regular_hours' => $attendance->sum('regular_hours'),
-            'overtime_hours' => $attendance->sum('overtime_hours'),
-            'night_differential_hours' => $attendance->sum('night_differential_hours'),
         ]);
 
         // Create detailed breakdown
@@ -312,7 +309,7 @@ class PayrollService
         switch ($allowance->frequency) {
             case 'daily':
                 // Calculate days in period
-                $days = Carbon::parse($payroll->period_start_date)->diffInDays($payroll->period_end_date) + 1;
+                $days = Carbon::parse($payroll->period_start)->diffInDays($payroll->period_end) + 1;
                 return $allowance->amount * $days;
             case 'weekly':
                 return $allowance->amount / 2; // Semi-monthly approximation
@@ -511,8 +508,8 @@ class PayrollService
         $date = Carbon::parse($periodStart);
         $prefix = 'PR';
         $yearMonth = $date->format('Ym');
-        $sequence = str_pad(Payroll::whereYear('period_start_date', $date->year)
-            ->whereMonth('period_start_date', $date->month)
+        $sequence = str_pad(Payroll::where('year', $date->year)
+            ->where('month', $date->month)
             ->count() + 1, 2, '0', STR_PAD_LEFT);
 
         return "{$prefix}{$yearMonth}{$sequence}";

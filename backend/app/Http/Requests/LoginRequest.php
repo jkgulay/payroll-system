@@ -1,0 +1,69 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
+
+class LoginRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     */
+    public function rules(): array
+    {
+        return [
+            'email' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+            ],
+            'role' => [
+                'required',
+                'in:admin,accountant,employee',
+            ],
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     */
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'Email or username is required',
+            'password.required' => 'Password is required',
+            'password.min' => 'Password must be at least 8 characters',
+            'role.required' => 'Role selection is required',
+            'role.in' => 'Invalid role selected',
+        ];
+    }
+
+    /**
+     * Handle a failed validation attempt.
+     */
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(
+            response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422)
+        );
+    }
+}

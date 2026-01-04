@@ -15,25 +15,25 @@
     <!-- Dashboard Content -->
     <div v-else>
       <!-- Quick Action Cards -->
-      <v-row>
+      <v-row class="mb-6">
         <v-col cols="12" sm="6" md="3">
-          <v-card class="hover-card" @click="scrollToSection('attendance')">
+          <v-card class="modern-card hover-card" elevation="0" @click="scrollToSection('attendance')">
             <v-card-text class="text-center pa-6">
-              <v-icon size="48" color="info" class="mb-2"
+              <v-icon size="48" color="info" class="mb-3"
                 >mdi-calendar-check</v-icon
               >
-              <div class="text-h6">My Attendance</div>
+              <div class="text-h6 font-weight-bold mb-1">My Attendance</div>
               <div class="text-caption text-medium-emphasis">View records</div>
             </v-card-text>
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="hover-card" @click="scrollToSection('payslip')">
+          <v-card class="modern-card hover-card" elevation="0" @click="scrollToSection('payslip')">
             <v-card-text class="text-center pa-6">
-              <v-icon size="48" color="success" class="mb-2"
+              <v-icon size="48" color="success" class="mb-3"
                 >mdi-cash-multiple</v-icon
               >
-              <div class="text-h6">Current Payslip</div>
+              <div class="text-h6 font-weight-bold mb-1">Current Payslip</div>
               <div class="text-caption text-medium-emphasis">
                 Latest payment
               </div>
@@ -41,23 +41,23 @@
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="hover-card" @click="scrollToSection('history')">
+          <v-card class="modern-card hover-card" elevation="0" @click="scrollToSection('history')">
             <v-card-text class="text-center pa-6">
-              <v-icon size="48" color="warning" class="mb-2"
+              <v-icon size="48" color="warning" class="mb-3"
                 >mdi-history</v-icon
               >
-              <div class="text-h6">Payslip History</div>
+              <div class="text-h6 font-weight-bold mb-1">Payslip History</div>
               <div class="text-caption text-medium-emphasis">Past records</div>
             </v-card-text>
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="hover-card" @click="downloadCurrentPayslip">
+          <v-card class="modern-card hover-card" elevation="0" @click="downloadCurrentPayslip">
             <v-card-text class="text-center pa-6">
-              <v-icon size="48" color="primary" class="mb-2"
+              <v-icon size="48" color="primary" class="mb-3"
                 >mdi-download</v-icon
               >
-              <div class="text-h6">Download</div>
+              <div class="text-h6 font-weight-bold mb-1">Download</div>
               <div class="text-caption text-medium-emphasis">
                 Export payslip
               </div>
@@ -69,18 +69,18 @@
       <!-- Employee Info Card -->
       <v-row v-if="employee">
         <v-col cols="12">
-          <v-card>
-            <v-card-text>
+          <v-card class="modern-card" elevation="0">
+            <v-card-text class="pa-5">
               <div class="d-flex align-center">
-                <v-avatar color="primary" size="64" class="mr-4">
-                  <v-icon size="32">mdi-account</v-icon>
+                <v-avatar color="primary" size="72" class="mr-4">
+                  <v-icon size="36">mdi-account</v-icon>
                 </v-avatar>
                 <div>
-                  <h2 class="text-h5">{{ employee.full_name }}</h2>
-                  <p class="text-body-1 mb-0">
+                  <h2 class="text-h5 font-weight-bold mb-1">{{ employee.full_name }}</h2>
+                  <p class="text-body-1 mb-1">
                     {{ employee.position }} - {{ employee.project?.name }}
                   </p>
-                  <p class="text-caption text-medium-emphasis">
+                  <p class="text-caption text-medium-emphasis mb-0">
                     Employee No: {{ employee.employee_number }}
                   </p>
                 </div>
@@ -93,45 +93,46 @@
       <!-- Attendance Summary -->
       <v-row class="mt-4" id="attendance">
         <v-col cols="12">
-          <v-card>
-            <v-card-title class="d-flex align-center justify-space-between">
-              <span>
-                <v-icon class="mr-2">mdi-calendar-check</v-icon>
-                Attendance Summary - {{ currentMonth }}
-              </span>
+          <v-card class="modern-card" elevation="0">
+            <v-card-title class="pa-5 d-flex align-center justify-space-between">
+              <div>
+                <v-icon class="mr-2" size="20">mdi-calendar-check</v-icon>
+                <span class="text-h6 font-weight-bold">Attendance Summary - {{ currentMonth }}</span>
+              </div>
             </v-card-title>
-            <v-card-text>
+            <v-divider></v-divider>
+            <v-card-text class="pa-5">
               <v-row>
                 <v-col cols="6" sm="3">
                   <div class="text-center">
-                    <div class="text-h4 text-success">
+                    <div class="text-h3 font-weight-bold text-success">
                       {{ attendanceSummary.present }}
                     </div>
-                    <div class="text-caption">Present</div>
+                    <div class="text-caption text-medium-emphasis mt-1">Present</div>
                   </div>
                 </v-col>
                 <v-col cols="6" sm="3">
                   <div class="text-center">
-                    <div class="text-h4 text-error">
+                    <div class="text-h3 font-weight-bold text-error">
                       {{ attendanceSummary.absent }}
                     </div>
-                    <div class="text-caption">Absent</div>
+                    <div class="text-caption text-medium-emphasis mt-1">Absent</div>
                   </div>
                 </v-col>
                 <v-col cols="6" sm="3">
                   <div class="text-center">
-                    <div class="text-h4 text-warning">
+                    <div class="text-h3 font-weight-bold text-warning">
                       {{ attendanceSummary.late }}
                     </div>
-                    <div class="text-caption">Late</div>
+                    <div class="text-caption text-medium-emphasis mt-1">Late</div>
                   </div>
                 </v-col>
                 <v-col cols="6" sm="3">
                   <div class="text-center">
-                    <div class="text-h4 text-primary">
+                    <div class="text-h3 font-weight-bold text-primary">
                       {{ attendanceSummary.total_hours?.toFixed(2) || 0 }}
                     </div>
-                    <div class="text-caption">Total Hours</div>
+                    <div class="text-caption text-medium-emphasis mt-1">Total Hours</div>
                   </div>
                 </v-col>
               </v-row>

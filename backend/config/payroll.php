@@ -114,4 +114,42 @@ return [
         'computation_basis' => 'basic_salary', // Only basic salary
         'payment_month' => 12, // December
     ],
+
+    // Position-based default daily rates (construction industry standard)
+    'position_rates' => [
+        // Skilled Workers
+        'Carpenter' => 550,
+        'Mason' => 550,
+        'Plumber' => 520,
+        'Electrician' => 570,
+        'Welder' => 560,
+        'Painter' => 480,
+        'Steel Worker' => 550,
+        'Heavy Equipment Operator' => 650,
+
+        // Semi-Skilled Workers
+        'Construction Worker' => 450,
+        'Helper' => 420,
+        'Laborer' => 400,
+        'Rigger' => 480,
+        'Scaffolder' => 480,
+
+        // Technical/Supervisory
+        'Foreman' => 750,
+        'Site Engineer' => 1200,
+        'Project Engineer' => 1500,
+        'Safety Officer' => 800,
+        'Quality Control Inspector' => 700,
+        'Surveyor' => 650,
+
+        // Support Staff
+        'Warehouse Keeper' => 450,
+        'Timekeeper' => 450,
+        'Security Guard' => 400,
+        'Driver' => 480,
+    ],
+
+    // Working days calculation
+    'working_days_per_month' => 22,
+    'standard_hours_per_day' => 8,
 ];

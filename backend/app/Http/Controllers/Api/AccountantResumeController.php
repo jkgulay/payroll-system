@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UploadResumeRequest;
+use App\Services\FileSecurityService;
 use App\Models\AccountantResume;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
@@ -16,23 +18,42 @@ class AccountantResumeController extends Controller
     /**
      * Upload a new resume (Accountant)
      */
-    public function upload(Request $request)
+    public function upload(UploadResumeRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'resume' => 'required|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240', // Max 10MB
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
+        // Validation is handled by UploadResumeRequest
+        $fileSecurityService = new FileSecurityService();
+        
         try {
             $file = $request->file('resume');
+            
+            // Additional security validation
+            $securityCheck = $fileSecurityService->validateFile($file);
+            if (!$securityCheck['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File security validation failed',
+                    'errors' => $securityCheck['errors']
+                ], 422);
+            }
+
+            // Optional virus scan (basic check)
+            $virusScan = $fileSecurityService->scanForViruses($file);
+            if ($virusScan['suspicious']) {
+                Log::warning('Suspicious file upload attempt', [
+                    'user_id' => auth()->id(),
+                    'filename' => $file->getClientOriginalName(),
+                    'reason' => $virusScan['reason']
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File failed security scan: ' . $virusScan['reason'],
+                ], 422);
+            }
+
             $originalFilename = $file->getClientOriginalName();
+            // Sanitize filename
+            $sanitizedFilename = $fileSecurityService->sanitizeFilename($originalFilename);
             $extension = $file->getClientOriginalExtension();
             $fileType = $extension;
             $fileSize = $file->getSize();

@@ -63,6 +63,12 @@ const router = createRouter({
           meta: { title: "Employees", roles: ["admin"] },
         },
         {
+          path: "projects",
+          name: "projects",
+          component: () => import("@/views/projects/ProjectManagementView.vue"),
+          meta: { title: "Project Management", roles: ["admin"] },
+        },
+        {
           path: "attendance",
           name: "attendance",
           component: () => import("@/views/attendance/AttendanceView.vue"),
@@ -99,6 +105,15 @@ const router = createRouter({
           meta: { title: "Payroll Details" },
         },
         {
+          path: "payroll/pay-rates",
+          name: "pay-rates",
+          component: () => import("@/views/payroll/PayRateManagementView.vue"),
+          meta: {
+            title: "Compensation & Pay Rates",
+            roles: ["admin", "accountant"],
+          },
+        },
+        {
           path: "payroll/:id/process",
           name: "payroll-process",
           component: () => import("@/views/payroll/PayrollProcessView.vue"),
@@ -127,6 +142,12 @@ const router = createRouter({
           name: "reports",
           component: () => import("@/views/reports/ReportsView.vue"),
           meta: { title: "Reports" },
+        },
+        {
+          path: "analytics",
+          name: "analytics",
+          component: () => import("@/views/AnalyticsDashboard.vue"),
+          meta: { title: "Analytics Dashboard", roles: ["admin", "accountant"] },
         },
         {
           path: "settings",

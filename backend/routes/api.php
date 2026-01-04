@@ -10,13 +10,15 @@ use App\Http\Controllers\Api\PayrollController;
 |--------------------------------------------------------------------------
 */
 
-// Authentication routes (Laravel Sanctum)
-Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+// Authentication routes with rate limiting to prevent brute force
+Route::middleware(['throttle:login'])->group(function () {
+    Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+    Route::post('/two-factor/verify', [App\Http\Controllers\Api\TwoFactorController::class, 'verify']);
+});
+
 Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 // Two-Factor Authentication routes
-Route::post('/two-factor/verify', [App\Http\Controllers\Api\TwoFactorController::class, 'verify']);
-
 // Registration disabled - accounts created by admin/accountant through employee management
 
 // Protected routes
@@ -57,6 +59,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Projects & Locations
     Route::apiResource('projects', App\Http\Controllers\Api\ProjectController::class);
+    Route::get('projects/{project}/employees', [App\Http\Controllers\Api\ProjectController::class, 'employees']);
+    Route::post('projects/{project}/mark-complete', [App\Http\Controllers\Api\ProjectController::class, 'markComplete']);
+    Route::post('projects/{project}/reactivate', [App\Http\Controllers\Api\ProjectController::class, 'reactivate']);
+    Route::post('projects/{project}/generate-payroll', [App\Http\Controllers\Api\ProjectController::class, 'generatePayroll']);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
     // Attendance
@@ -84,6 +90,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/payslips/{payrollItem}/pdf', [App\Http\Controllers\Api\PayslipController::class, 'downloadPdf']);
     Route::get('/payslips/{payrollItem}/excel', [App\Http\Controllers\Api\PayslipController::class, 'downloadExcel']);
     Route::get('/payslips/{payrollItem}/view', [App\Http\Controllers\Api\PayslipController::class, 'view']);
+
+    // Position Rates
+    Route::apiResource('position-rates', App\Http\Controllers\Api\PositionRateController::class);
+    Route::post('/position-rates/{positionRate}/bulk-update', [App\Http\Controllers\Api\PositionRateController::class, 'bulkUpdateEmployees']);
+    Route::get('/position-rates/by-name/search', [App\Http\Controllers\Api\PositionRateController::class, 'getByName']);
+    Route::get('/positions/names', [App\Http\Controllers\Api\PositionRateController::class, 'getPositionNames']);
 
     // Employee Benefits
     Route::apiResource('allowances', App\Http\Controllers\Api\AllowanceController::class);
@@ -182,6 +194,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Dashboard / Analytics
     Route::get('/dashboard/stats', [App\Http\Controllers\Api\DashboardController::class, 'stats']);
+    
+    // Payroll Analytics
     Route::get('/dashboard/payroll-trends', [App\Http\Controllers\Api\DashboardController::class, 'payrollTrends']);
+    Route::get('/dashboard/payroll-breakdown', [App\Http\Controllers\Api\DashboardController::class, 'payrollBreakdown']);
+    Route::get('/dashboard/payroll-comparison', [App\Http\Controllers\Api\DashboardController::class, 'payrollComparison']);
+    Route::get('/dashboard/government-contribution-trends', [App\Http\Controllers\Api\DashboardController::class, 'governmentContributionTrends']);
+    
+    // Employee Analytics
     Route::get('/dashboard/employee-distribution', [App\Http\Controllers\Api\DashboardController::class, 'employeeDistribution']);
+    Route::get('/dashboard/employment-status-distribution', [App\Http\Controllers\Api\DashboardController::class, 'employmentStatusDistribution']);
+    Route::get('/dashboard/employee-by-location', [App\Http\Controllers\Api\DashboardController::class, 'employeeByLocation']);
+    Route::get('/dashboard/employee-growth-trend', [App\Http\Controllers\Api\DashboardController::class, 'employeeGrowthTrend']);
+    
+    // Attendance Analytics
+    Route::get('/dashboard/attendance-rate', [App\Http\Controllers\Api\DashboardController::class, 'attendanceRate']);
+    Route::get('/dashboard/attendance-status-distribution', [App\Http\Controllers\Api\DashboardController::class, 'attendanceStatusDistribution']);
+    Route::get('/dashboard/overtime-trend', [App\Http\Controllers\Api\DashboardController::class, 'overtimeTrend']);
+    Route::get('/dashboard/leave-utilization', [App\Http\Controllers\Api\DashboardController::class, 'leaveUtilization']);
 });
+

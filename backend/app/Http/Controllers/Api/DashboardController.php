@@ -114,4 +114,345 @@ class DashboardController extends Controller
             'payslip_history' => $payslipHistory,
         ]);
     }
+
+    // PAYROLL ANALYTICS
+    public function payrollTrends(Request $request)
+    {
+        $months = $request->input('months', 12);
+        
+        $trends = [];
+        $startDate = Carbon::now()->subMonths($months - 1)->startOfMonth();
+        
+        for ($i = 0; $i < $months; $i++) {
+            $date = $startDate->copy()->addMonths($i);
+            $monthYear = $date->format('Y-m');
+            
+            $payrollData = PayrollItem::whereHas('payroll', function ($query) use ($monthYear) {
+                $query->whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$monthYear]);
+            })->selectRaw('
+                SUM(basic_pay) as total_basic_pay,
+                SUM(overtime_pay) as total_overtime,
+                SUM(allowances) as total_allowances,
+                SUM(deductions) as total_deductions,
+                SUM(net_pay) as total_net_pay
+            ')->first();
+            
+            $trends[] = [
+                'month' => $date->format('M Y'),
+                'basic_pay' => (float) ($payrollData->total_basic_pay ?? 0),
+                'overtime' => (float) ($payrollData->total_overtime ?? 0),
+                'allowances' => (float) ($payrollData->total_allowances ?? 0),
+                'deductions' => (float) ($payrollData->total_deductions ?? 0),
+                'net_pay' => (float) ($payrollData->total_net_pay ?? 0),
+            ];
+        }
+        
+        return response()->json($trends);
+    }
+
+    public function payrollBreakdown(Request $request)
+    {
+        $period = $request->input('period', 'current-month');
+        
+        [$startDate, $endDate] = $this->getPeriodDates($period);
+        
+        $breakdown = PayrollItem::whereHas('payroll', function ($query) use ($startDate, $endDate) {
+            $query->whereBetween('period_start', [$startDate, $endDate]);
+        })->selectRaw('
+            SUM(basic_pay) as total_basic_pay,
+            SUM(overtime_pay) as total_overtime,
+            SUM(allowances) as total_allowances,
+            SUM(deductions) as total_deductions,
+            SUM(net_pay) as total_net_pay
+        ')->first();
+        
+        return response()->json([
+            'basic_pay' => (float) ($breakdown->total_basic_pay ?? 0),
+            'overtime' => (float) ($breakdown->total_overtime ?? 0),
+            'allowances' => (float) ($breakdown->total_allowances ?? 0),
+            'deductions' => (float) abs($breakdown->total_deductions ?? 0),
+            'net_pay' => (float) ($breakdown->total_net_pay ?? 0),
+        ]);
+    }
+
+    public function payrollComparison(Request $request)
+    {
+        $currentStart = Carbon::now()->startOfMonth();
+        $currentEnd = Carbon::now()->endOfMonth();
+        $previousStart = Carbon::now()->subMonth()->startOfMonth();
+        $previousEnd = Carbon::now()->subMonth()->endOfMonth();
+        
+        $current = PayrollItem::whereHas('payroll', function ($query) use ($currentStart, $currentEnd) {
+            $query->whereBetween('period_start', [$currentStart, $currentEnd]);
+        })->sum('net_pay');
+        
+        $previous = PayrollItem::whereHas('payroll', function ($query) use ($previousStart, $previousEnd) {
+            $query->whereBetween('period_start', [$previousStart, $previousEnd]);
+        })->sum('net_pay');
+        
+        return response()->json([
+            'current_period' => [
+                'label' => $currentStart->format('M Y'),
+                'amount' => (float) ($current ?? 0)
+            ],
+            'previous_period' => [
+                'label' => $previousStart->format('M Y'),
+                'amount' => (float) ($previous ?? 0)
+            ],
+            'change_percentage' => $previous > 0 ? (($current - $previous) / $previous * 100) : 0
+        ]);
+    }
+
+    public function governmentContributionTrends(Request $request)
+    {
+        $months = $request->input('months', 12);
+        
+        $trends = [];
+        $startDate = Carbon::now()->subMonths($months - 1)->startOfMonth();
+        
+        for ($i = 0; $i < $months; $i++) {
+            $date = $startDate->copy()->addMonths($i);
+            $monthYear = $date->format('Y-m');
+            
+            $contributions = PayrollItem::whereHas('payroll', function ($query) use ($monthYear) {
+                $query->whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$monthYear]);
+            })->selectRaw('
+                SUM(sss_contribution) as total_sss,
+                SUM(philhealth_contribution) as total_philhealth,
+                SUM(pagibig_contribution) as total_pagibig,
+                SUM(tax_withheld) as total_tax
+            ')->first();
+            
+            $trends[] = [
+                'month' => $date->format('M Y'),
+                'sss' => (float) ($contributions->total_sss ?? 0),
+                'philhealth' => (float) ($contributions->total_philhealth ?? 0),
+                'pagibig' => (float) ($contributions->total_pagibig ?? 0),
+                'tax' => (float) ($contributions->total_tax ?? 0),
+            ];
+        }
+        
+        return response()->json($trends);
+    }
+
+    // EMPLOYEE ANALYTICS
+    public function employeeDistribution(Request $request)
+    {
+        $type = $request->input('type', 'project');
+        
+        if ($type === 'project') {
+            $distribution = Employee::where('is_active', true)
+                ->select('project_id', DB::raw('COUNT(*) as count'))
+                ->with('project:id,name')
+                ->groupBy('project_id')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'label' => $item->project->name ?? 'Unassigned',
+                        'value' => $item->count
+                    ];
+                });
+        } else {
+            $distribution = Employee::where('is_active', true)
+                ->select('department', DB::raw('COUNT(*) as count'))
+                ->groupBy('department')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'label' => $item->department ?? 'Unassigned',
+                        'value' => $item->count
+                    ];
+                });
+        }
+        
+        return response()->json($distribution);
+    }
+
+    public function employmentStatusDistribution(Request $request)
+    {
+        $distribution = Employee::where('is_active', true)
+            ->select('employment_status', DB::raw('COUNT(*) as count'))
+            ->groupBy('employment_status')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'label' => ucfirst($item->employment_status ?? 'Unknown'),
+                    'value' => $item->count
+                ];
+            });
+        
+        return response()->json($distribution);
+    }
+
+    public function employeeByLocation(Request $request)
+    {
+        $distribution = Employee::where('is_active', true)
+            ->select('location_id', DB::raw('COUNT(*) as count'))
+            ->with('location:id,name')
+            ->groupBy('location_id')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'label' => $item->location->name ?? 'Unassigned',
+                    'value' => $item->count
+                ];
+            });
+        
+        return response()->json($distribution);
+    }
+
+    public function employeeGrowthTrend(Request $request)
+    {
+        $months = $request->input('months', 12);
+        
+        $trends = [];
+        $startDate = Carbon::now()->subMonths($months - 1)->startOfMonth();
+        
+        for ($i = 0; $i < $months; $i++) {
+            $date = $startDate->copy()->addMonths($i);
+            
+            $hired = Employee::whereYear('hire_date', $date->year)
+                ->whereMonth('hire_date', $date->month)
+                ->count();
+            
+            $resigned = Employee::whereYear('resignation_date', $date->year)
+                ->whereMonth('resignation_date', $date->month)
+                ->count();
+            
+            $trends[] = [
+                'month' => $date->format('M Y'),
+                'hired' => $hired,
+                'resigned' => $resigned,
+                'net_change' => $hired - $resigned
+            ];
+        }
+        
+        return response()->json($trends);
+    }
+
+    // ATTENDANCE ANALYTICS
+    public function attendanceRate(Request $request)
+    {
+        $days = $request->input('days', 30);
+        
+        $rates = [];
+        $startDate = Carbon::now()->subDays($days - 1);
+        
+        for ($i = 0; $i < $days; $i++) {
+            $date = $startDate->copy()->addDays($i);
+            $dateStr = $date->format('Y-m-d');
+            
+            $totalEmployees = Employee::where('is_active', true)
+                ->where('hire_date', '<=', $date)
+                ->where(function ($query) use ($date) {
+                    $query->whereNull('resignation_date')
+                        ->orWhere('resignation_date', '>=', $date);
+                })
+                ->count();
+            
+            $present = Attendance::whereDate('date', $dateStr)
+                ->whereIn('status', ['present', 'late', 'undertime'])
+                ->count();
+            
+            $attendanceRate = $totalEmployees > 0 ? ($present / $totalEmployees * 100) : 0;
+            
+            $rates[] = [
+                'date' => $date->format('M d'),
+                'rate' => round($attendanceRate, 2),
+                'present' => $present,
+                'total' => $totalEmployees
+            ];
+        }
+        
+        return response()->json($rates);
+    }
+
+    public function attendanceStatusDistribution(Request $request)
+    {
+        $period = $request->input('period', 'current-month');
+        
+        [$startDate, $endDate] = $this->getPeriodDates($period);
+        
+        $distribution = Attendance::whereBetween('date', [$startDate, $endDate])
+            ->select('status', DB::raw('COUNT(*) as count'))
+            ->groupBy('status')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'label' => ucfirst($item->status ?? 'Unknown'),
+                    'value' => $item->count
+                ];
+            });
+        
+        return response()->json($distribution);
+    }
+
+    public function overtimeTrend(Request $request)
+    {
+        $days = $request->input('days', 30);
+        
+        $trends = [];
+        $startDate = Carbon::now()->subDays($days - 1);
+        
+        for ($i = 0; $i < $days; $i++) {
+            $date = $startDate->copy()->addDays($i);
+            $dateStr = $date->format('Y-m-d');
+            
+            $overtimeHours = Attendance::whereDate('date', $dateStr)
+                ->sum('overtime_hours');
+            
+            $trends[] = [
+                'date' => $date->format('M d'),
+                'hours' => (float) ($overtimeHours ?? 0)
+            ];
+        }
+        
+        return response()->json($trends);
+    }
+
+    public function leaveUtilization(Request $request)
+    {
+        $totalEmployees = Employee::where('is_active', true)->count();
+        
+        if ($totalEmployees === 0) {
+            return response()->json([
+                'on_leave' => 0,
+                'available' => 0,
+                'utilization_rate' => 0
+            ]);
+        }
+        
+        $onLeave = Employee::where('is_active', true)
+            ->where('employment_status', 'on-leave')
+            ->count();
+        
+        $utilizationRate = ($onLeave / $totalEmployees) * 100;
+        
+        return response()->json([
+            'on_leave' => $onLeave,
+            'available' => $totalEmployees - $onLeave,
+            'total' => $totalEmployees,
+            'utilization_rate' => round($utilizationRate, 2)
+        ]);
+    }
+
+    // HELPER METHODS
+    private function getPeriodDates($period)
+    {
+        switch ($period) {
+            case 'current-month':
+                return [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()];
+            case 'last-month':
+                return [
+                    Carbon::now()->subMonth()->startOfMonth(),
+                    Carbon::now()->subMonth()->endOfMonth()
+                ];
+            case 'current-quarter':
+                return [Carbon::now()->startOfQuarter(), Carbon::now()->endOfQuarter()];
+            case 'current-year':
+                return [Carbon::now()->startOfYear(), Carbon::now()->endOfYear()];
+            default:
+                return [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()];
+        }
+    }
 }
