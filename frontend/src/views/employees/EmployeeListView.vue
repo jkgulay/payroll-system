@@ -6,6 +6,14 @@
       </v-col>
       <v-col cols="12" md="6" class="text-right">
         <v-btn
+          color="success"
+          prepend-icon="mdi-file-upload"
+          class="mr-2"
+          :to="{ name: 'employees-import' }"
+        >
+          Import Employees
+        </v-btn>
+        <v-btn
           color="primary"
           prepend-icon="mdi-account-plus"
           @click="showAddEmployeeDialog = true"
@@ -82,6 +90,26 @@
             {{ item.first_name }} {{ item.middle_name }} {{ item.last_name }}
           </template>
 
+          <template v-slot:item.gender="{ item }">
+            <v-chip
+              :color="
+                item.gender === 'Male' || item.gender === 'male'
+                  ? 'blue'
+                  : item.gender === 'Female' || item.gender === 'female'
+                  ? 'pink'
+                  : 'grey'
+              "
+              size="small"
+              variant="tonal"
+            >
+              {{
+                item.gender
+                  ? item.gender.charAt(0).toUpperCase() + item.gender.slice(1)
+                  : "N/A"
+              }}
+            </v-chip>
+          </template>
+
           <template v-slot:item.project="{ item }">
             {{ item.project?.name || "N/A" }}
           </template>
@@ -133,6 +161,13 @@
                 ></v-btn>
               </template>
               <v-list>
+                <v-list-item @click="viewCredentials(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="info">mdi-account-key</v-icon>
+                  </template>
+                  <v-list-item-title>View Credentials</v-list-item-title>
+                </v-list-item>
+                <v-divider></v-divider>
                 <v-list-item @click="suspendEmployee(item)">
                   <template v-slot:prepend>
                     <v-icon color="warning">mdi-pause-circle</v-icon>
@@ -297,13 +332,21 @@
               </v-col>
 
               <v-col cols="12" md="6">
-                <v-text-field
+                <v-autocomplete
                   v-model="selectedEmployee.position"
+                  :items="positionOptions"
                   label="Position"
                   :readonly="!isEditing"
                   :variant="isEditing ? 'outlined' : 'plain'"
                   density="comfortable"
-                ></v-text-field>
+                  clearable
+                  hint="Salary will auto-update based on position"
+                  :persistent-hint="isEditing"
+                >
+                  <template v-slot:prepend-inner v-if="isEditing">
+                    <v-icon size="small">mdi-briefcase</v-icon>
+                  </template>
+                </v-autocomplete>
               </v-col>
 
               <v-col cols="12" md="6">
@@ -487,11 +530,116 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- View Credentials Dialog -->
+    <v-dialog v-model="showCredentialsDialog" max-width="600px">
+      <v-card>
+        <v-card-title class="text-h5 py-4 bg-info">
+          <v-icon start>mdi-account-key</v-icon>
+          Employee Credentials
+        </v-card-title>
+        <v-divider></v-divider>
+
+        <v-card-text class="pt-6">
+          <v-alert type="info" variant="tonal" class="mb-4">
+            <div class="text-h6 mb-2">
+              {{ selectedCredentialsEmployee?.employee_number }} -
+              {{ selectedCredentialsEmployee?.first_name }}
+              {{ selectedCredentialsEmployee?.last_name }}
+            </div>
+          </v-alert>
+
+          <div class="mb-4">
+            <div class="text-subtitle-1 font-weight-bold mb-2">
+              Current Login Credentials:
+            </div>
+            <v-sheet color="grey-lighten-4" rounded class="pa-4">
+              <div class="mb-3">
+                <div class="text-caption">Username</div>
+                <div class="text-body-1 font-weight-bold">
+                  {{ employeeCredentials?.username || "N/A" }}
+                </div>
+              </div>
+              <div class="mb-3" v-if="employeeCredentials?.email">
+                <div class="text-caption">Email</div>
+                <div class="text-body-1 font-weight-bold">
+                  {{ employeeCredentials?.email }}
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="text-caption">Role</div>
+                <div class="text-body-1 font-weight-bold text-capitalize">
+                  {{ employeeCredentials?.role }}
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="text-caption">Account Status</div>
+                <v-chip
+                  :color="employeeCredentials?.is_active ? 'success' : 'error'"
+                  size="small"
+                >
+                  {{ employeeCredentials?.is_active ? "Active" : "Inactive" }}
+                </v-chip>
+              </div>
+            </v-sheet>
+          </div>
+
+          <v-alert
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            Password is not stored for security. Generate a new temporary
+            password if needed.
+          </v-alert>
+
+          <div v-if="newGeneratedPassword">
+            <v-divider class="mb-4"></v-divider>
+            <div class="text-subtitle-1 font-weight-bold mb-2">
+              New Temporary Password Generated:
+            </div>
+            <v-sheet color="success-lighten-4" rounded class="pa-4">
+              <div class="text-h6 font-weight-bold text-success">
+                {{ newGeneratedPassword }}
+              </div>
+            </v-sheet>
+            <v-alert type="info" variant="tonal" density="compact" class="mt-2">
+              Employee must change this password on first login
+            </v-alert>
+          </div>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-4">
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-content-copy"
+            @click="copyEmployeeCredentials"
+            :disabled="loadingCredentials"
+          >
+            Copy
+          </v-btn>
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-lock-reset"
+            color="warning"
+            @click="resetEmployeePassword"
+            :loading="resettingPassword"
+          >
+            Generate New Password
+          </v-btn>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="closeCredentialsDialog"> Close </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useEmployeeStore } from "@/stores/employee";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
@@ -500,7 +648,7 @@ import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
 
 const toast = useToast();
 const employeeStore = useEmployeeStore();
-const { positionOptions, getRate } = usePositionRates();
+const { positionOptions, getRate, loadPositionRates } = usePositionRates();
 
 const search = ref("");
 const filters = ref({
@@ -524,6 +672,14 @@ const createdEmployee = ref(null);
 const createdEmployeeUsername = ref("");
 const savingNew = ref(false);
 
+// Credentials Dialog
+const showCredentialsDialog = ref(false);
+const selectedCredentialsEmployee = ref(null);
+const employeeCredentials = ref(null);
+const newGeneratedPassword = ref("");
+const loadingCredentials = ref(false);
+const resettingPassword = ref(false);
+
 const projects = ref([]);
 const employeeForm = ref(null);
 
@@ -544,6 +700,7 @@ const employmentTypeOptions = [
 const headers = [
   { title: "Employee #", key: "employee_number", sortable: true },
   { title: "Name", key: "full_name", sortable: true },
+  { title: "Gender", key: "gender", sortable: true },
   { title: "Project", key: "project", sortable: false },
   { title: "Position", key: "position", sortable: true },
   { title: "Type", key: "employment_type", sortable: true },
@@ -554,7 +711,22 @@ const headers = [
 onMounted(async () => {
   await fetchEmployees();
   await fetchProjects();
+  await loadPositionRates();
 });
+
+// Watch for position changes and auto-update basic_salary (only when editing)
+watch(
+  () => selectedEmployee.value?.position,
+  (newPosition) => {
+    if (isEditing.value && selectedEmployee.value && newPosition) {
+      const rate = getRate(newPosition);
+      if (rate && selectedEmployee.value.basic_salary !== rate) {
+        selectedEmployee.value.basic_salary = rate;
+        toast.info(`Salary updated to ₱${rate}/day based on position`);
+      }
+    }
+  }
+);
 
 async function fetchEmployees() {
   await employeeStore.fetchEmployees({
@@ -735,5 +907,87 @@ Role: ${createdEmployee.value.role}
     .catch(() => {
       toast.error("Failed to copy credentials");
     });
+}
+
+// View Credentials functions
+async function viewCredentials(employee) {
+  selectedCredentialsEmployee.value = employee;
+  newGeneratedPassword.value = "";
+  loadingCredentials.value = true;
+  showCredentialsDialog.value = true;
+
+  try {
+    // Fetch user credentials from backend
+    const response = await api.get(`/employees/${employee.id}/credentials`);
+    employeeCredentials.value = response.data;
+  } catch (error) {
+    console.error("Error fetching credentials:", error);
+    toast.error("Failed to load credentials");
+    employeeCredentials.value = {
+      username: "Error loading",
+      email: null,
+      role: "N/A",
+      is_active: false,
+    };
+  } finally {
+    loadingCredentials.value = false;
+  }
+}
+
+async function resetEmployeePassword() {
+  if (
+    !confirm(
+      `Generate new temporary password for ${selectedCredentialsEmployee.value.first_name} ${selectedCredentialsEmployee.value.last_name}?`
+    )
+  ) {
+    return;
+  }
+
+  resettingPassword.value = true;
+  try {
+    const response = await api.post(
+      `/employees/${selectedCredentialsEmployee.value.id}/reset-password`
+    );
+    newGeneratedPassword.value = response.data.temporary_password;
+    toast.success("New temporary password generated!");
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    toast.error("Failed to generate new password");
+  } finally {
+    resettingPassword.value = false;
+  }
+}
+
+function copyEmployeeCredentials() {
+  const emailInfo = employeeCredentials.value?.email
+    ? `\nEmail: ${employeeCredentials.value.email}`
+    : "";
+  const passwordInfo = newGeneratedPassword.value
+    ? `\nTemporary Password: ${newGeneratedPassword.value}\n\n⚠️ Employee must change password on first login`
+    : `\n\n⚠️ Password not available. Generate new temporary password if needed.`;
+
+  const credentials = `Employee: ${
+    selectedCredentialsEmployee.value.employee_number
+  } - ${selectedCredentialsEmployee.value.first_name} ${
+    selectedCredentialsEmployee.value.last_name
+  }
+Username: ${employeeCredentials.value?.username || "N/A"}${emailInfo}
+Role: ${employeeCredentials.value?.role || "N/A"}${passwordInfo}`;
+
+  navigator.clipboard
+    .writeText(credentials)
+    .then(() => {
+      toast.success("Credentials copied to clipboard!");
+    })
+    .catch(() => {
+      toast.error("Failed to copy credentials");
+    });
+}
+
+function closeCredentialsDialog() {
+  showCredentialsDialog.value = false;
+  selectedCredentialsEmployee.value = null;
+  employeeCredentials.value = null;
+  newGeneratedPassword.value = "";
 }
 </script>

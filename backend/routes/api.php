@@ -46,11 +46,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/two-factor/disable', [App\Http\Controllers\Api\TwoFactorController::class, 'disable']);
     Route::post('/two-factor/recovery-codes', [App\Http\Controllers\Api\TwoFactorController::class, 'regenerateRecoveryCodes']);
 
+    // Employee Import - MUST come before employees apiResource
+    Route::post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']);
+    Route::get('/employees/import/template', [App\Http\Controllers\Api\EmployeeImportController::class, 'downloadTemplate']);
+
     // Employees
     Route::apiResource('employees', App\Http\Controllers\Api\EmployeeController::class);
     Route::get('/employees/{employee}/allowances', [App\Http\Controllers\Api\EmployeeController::class, 'allowances']);
     Route::get('/employees/{employee}/loans', [App\Http\Controllers\Api\EmployeeController::class, 'loans']);
     Route::get('/employees/{employee}/deductions', [App\Http\Controllers\Api\EmployeeController::class, 'deductions']);
+    Route::get('/employees/{employee}/credentials', [App\Http\Controllers\Api\EmployeeController::class, 'getCredentials']);
+    Route::post('/employees/{employee}/reset-password', [App\Http\Controllers\Api\EmployeeController::class, 'resetPassword']);
 
     // Employee Applications
     Route::apiResource('employee-applications', App\Http\Controllers\Api\EmployeeApplicationController::class);

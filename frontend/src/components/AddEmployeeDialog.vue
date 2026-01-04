@@ -413,7 +413,7 @@ const formData = ref({
   middle_name: "",
   last_name: "",
   date_of_birth: "",
-  gender: "",
+  gender: "male",
   email: "",
   mobile_number: "",
   worker_address: "",

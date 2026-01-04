@@ -21,7 +21,7 @@ class AttendanceController extends Controller
     protected $biometricService;
     protected $yunattService;
 
-    public function __construct(AttendanceService $attendanceService, BiometricService $biometricService, YunattApiService $yunattService = null)
+    public function __construct(AttendanceService $attendanceService, BiometricService $biometricService, ?YunattApiService $yunattService = null)
     {
         $this->attendanceService = $attendanceService;
         $this->biometricService = $biometricService;

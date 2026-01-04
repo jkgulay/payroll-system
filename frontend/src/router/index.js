@@ -63,6 +63,12 @@ const router = createRouter({
           meta: { title: "Employees", roles: ["admin"] },
         },
         {
+          path: "employees/import",
+          name: "employees-import",
+          component: () => import("@/views/employees/ImportEmployeesView.vue"),
+          meta: { title: "Import Employees", roles: ["admin", "accountant"] },
+        },
+        {
           path: "projects",
           name: "projects",
           component: () => import("@/views/projects/ProjectManagementView.vue"),
@@ -147,7 +153,10 @@ const router = createRouter({
           path: "analytics",
           name: "analytics",
           component: () => import("@/views/AnalyticsDashboard.vue"),
-          meta: { title: "Analytics Dashboard", roles: ["admin", "accountant"] },
+          meta: {
+            title: "Analytics Dashboard",
+            roles: ["admin", "accountant"],
+          },
         },
         {
           path: "settings",
