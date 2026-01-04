@@ -7,8 +7,11 @@ use App\Models\Employee;
 use App\Models\Department;
 use App\Models\Attendance;
 use App\Models\Payroll;
+use App\Models\EmployeeAllowance;
+use App\Models\EmployeeDeduction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AccountantController extends Controller
 {
@@ -18,12 +21,12 @@ class AccountantController extends Controller
         $activeEmployees = Employee::whereIn('employment_status', ['regular', 'probationary', 'contractual', 'active'])
             ->count();
         $pendingRequests = 0; // Will be implemented with approval system
-        
+
         $currentPayroll = Payroll::latest()->first();
-        $periodPayroll = $currentPayroll && $currentPayroll->payslips 
+        $periodPayroll = $currentPayroll && $currentPayroll->payslips
             ? $currentPayroll->payslips->sum('net_pay')
             : 0;
-            
+
         $presentToday = Attendance::whereDate('attendance_date', today())
             ->where('status', 'present')
             ->count();
@@ -41,97 +44,99 @@ class AccountantController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
-            'additional_allowance' => 'nullable|numeric|min:0',
-            'additional_deduction' => 'nullable|numeric|min:0',
+            'additional_allowance' => 'nullable|numeric|min:0|max:50000',
+            'additional_deduction' => 'nullable|numeric|min:0|max:50000',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        // Store the modification request
-        // For now, we'll directly update the current payslip
-        $currentPayroll = Payroll::latest()->first();
-        
-        if (!$currentPayroll) {
+        // Require at least one modification
+        if (empty($validated['additional_allowance']) && empty($validated['additional_deduction'])) {
             return response()->json([
-                'message' => 'No active payroll period found'
-            ], 404);
+                'error' => 'Please specify at least one modification (allowance or deduction)'
+            ], 422);
         }
 
-        $payslip = $currentPayroll->payslips()
-            ->where('employee_id', $validated['employee_id'])
-            ->first();
+        DB::beginTransaction();
+        try {
+            $currentPayroll = Payroll::latest()->first();
 
-        if (!$payslip) {
+            if (!$currentPayroll) {
+                return response()->json([
+                    'message' => 'No active payroll period found'
+                ], 404);
+            }
+
+            // Check if payroll can be modified
+            if (!$currentPayroll->canEdit()) {
+                return response()->json([
+                    'error' => 'Payroll cannot be modified in current status'
+                ], 422);
+            }
+
+            $payslip = $currentPayroll->payrollItems()
+                ->where('employee_id', $validated['employee_id'])
+                ->first();
+
+            if (!$payslip) {
+                return response()->json([
+                    'message' => 'No payslip found for this employee in current period'
+                ], 404);
+            }
+
+            // Add allowance using Eloquent model
+            if (!empty($validated['additional_allowance']) && $validated['additional_allowance'] > 0) {
+                EmployeeAllowance::create([
+                    'employee_id' => $validated['employee_id'],
+                    'allowance_type' => 'other',
+                    'amount' => $validated['additional_allowance'],
+                    'frequency' => 'semi_monthly',
+                    'description' => $validated['notes'] ?? 'Additional allowance by accountant',
+                    'is_taxable' => true,
+                    'is_active' => true,
+                    'effective_date' => now(),
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Log the modification
+                Log::info('Allowance added by accountant', [
+                    'employee_id' => $validated['employee_id'],
+                    'amount' => $validated['additional_allowance'],
+                    'by_user' => auth()->id(),
+                ]);
+            }
+
+            // Add deduction using Eloquent model
+            if (!empty($validated['additional_deduction']) && $validated['additional_deduction'] > 0) {
+                EmployeeDeduction::create([
+                    'employee_id' => $validated['employee_id'],
+                    'deduction_type' => 'other',
+                    'amount' => $validated['additional_deduction'],
+                    'amount_per_cutoff' => $validated['additional_deduction'],
+                    'description' => $validated['notes'] ?? 'Additional deduction by accountant',
+                    'status' => 'active',
+                    'effective_date' => now(),
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Log the modification
+                Log::info('Deduction added by accountant', [
+                    'employee_id' => $validated['employee_id'],
+                    'amount' => $validated['additional_deduction'],
+                    'by_user' => auth()->id(),
+                ]);
+            }
+
+            DB::commit();
+
             return response()->json([
-                'message' => 'No payslip found for this employee in current period'
-            ], 404);
-        }
-
-        // Add to earnings or deductions
-        if ($validated['additional_allowance'] > 0) {
-            DB::table('employee_allowances')->insert([
-                'employee_id' => $validated['employee_id'],
-                'allowance_type' => 'other',
-                'amount' => $validated['additional_allowance'],
-                'description' => $validated['notes'] ?? 'Additional allowance by accountant',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'message' => 'Payslip modification submitted successfully. Payroll needs to be reprocessed.',
+                'note' => 'Please reprocess the payroll to apply these changes.'
             ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Payslip modification failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to submit modification'], 500);
         }
-
-        if ($validated['additional_deduction'] > 0) {
-            DB::table('employee_deductions')->insert([
-                'employee_id' => $validated['employee_id'],
-                'deduction_type' => 'other',
-                'amount' => $validated['additional_deduction'],
-                'description' => $validated['notes'] ?? 'Additional deduction by accountant',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        // Recalculate payslip
-        $this->recalculatePayslip($payslip);
-
-        return response()->json([
-            'message' => 'Payslip modification submitted successfully',
-            'payslip' => $payslip->fresh()
-        ]);
-    }
-
-    private function recalculatePayslip($payslip)
-    {
-        $employee = $payslip->employee;
-        
-        // Calculate total earnings
-        $basicSalary = $employee->basic_salary;
-        $allowances = DB::table('employee_allowances')
-            ->where('employee_id', $employee->id)
-            ->sum('amount');
-        $bonuses = DB::table('employee_bonuses')
-            ->where('employee_id', $employee->id)
-            ->whereNull('paid_at')
-            ->sum('amount');
-            
-        $grossPay = $basicSalary + $allowances + $bonuses;
-        
-        // Calculate total deductions
-        $sss = $grossPay * 0.045; // 4.5% SSS
-        $philhealth = $grossPay * 0.02; // 2% PhilHealth
-        $pagibig = min($grossPay * 0.02, 100); // 2% HDMF, max 100
-        
-        $otherDeductions = DB::table('employee_deductions')
-            ->where('employee_id', $employee->id)
-            ->sum('amount');
-        
-        $totalDeductions = $sss + $philhealth + $pagibig + $otherDeductions;
-        
-        // Update payslip
-        $payslip->update([
-            'basic_salary' => $basicSalary,
-            'gross_pay' => $grossPay,
-            'total_deductions' => $totalDeductions,
-            'net_pay' => $grossPay - $totalDeductions,
-        ]);
     }
 
     public function updateAttendance(Request $request, $id)
@@ -159,9 +164,9 @@ class AccountantController extends Controller
         $year = $request->input('year', now()->year);
 
         $attendance = Attendance::where('employee_id', $employeeId)
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->orderBy('date', 'asc')
+            ->whereYear('attendance_date', $year)
+            ->whereMonth('attendance_date', $month)
+            ->orderBy('attendance_date', 'asc')
             ->get();
 
         return response()->json($attendance);

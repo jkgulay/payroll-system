@@ -65,12 +65,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('projects/{project}/generate-payroll', [App\Http\Controllers\Api\ProjectController::class, 'generatePayroll']);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
-    // Attendance
-    Route::apiResource('attendance', App\Http\Controllers\Api\AttendanceController::class);
+    // Attendance - Specific routes MUST come before apiResource
     Route::post('/attendance/import-biometric', [App\Http\Controllers\Api\AttendanceController::class, 'importBiometric']);
+    Route::post('/attendance/fetch-from-device', [App\Http\Controllers\Api\AttendanceController::class, 'fetchFromDevice']);
+    // Yunatt Integration - Coming Soon (Disabled)
+    // Route::post('/attendance/fetch-from-yunatt', [App\Http\Controllers\Api\AttendanceController::class, 'fetchFromYunatt']);
+    // Route::get('/attendance/test-yunatt-connection', [App\Http\Controllers\Api\AttendanceController::class, 'testYunattConnection']);
+    Route::post('/attendance/sync-employees', [App\Http\Controllers\Api\AttendanceController::class, 'syncEmployees']);
+    Route::post('/attendance/clear-device-logs', [App\Http\Controllers\Api\AttendanceController::class, 'clearDeviceLogs']);
+    Route::get('/attendance/device-info', [App\Http\Controllers\Api\AttendanceController::class, 'deviceInfo']);
+    Route::get('/attendance/pending-approvals', [App\Http\Controllers\Api\AttendanceController::class, 'pendingApprovals']);
+    Route::get('/attendance/summary', [App\Http\Controllers\Api\AttendanceController::class, 'summary']);
+    Route::get('/attendance/employee/{employee}/summary', [App\Http\Controllers\Api\AttendanceController::class, 'employeeSummary']);
+    Route::post('/attendance/mark-absent', [App\Http\Controllers\Api\AttendanceController::class, 'markAbsent']);
     Route::post('/attendance/{attendance}/approve', [App\Http\Controllers\Api\AttendanceController::class, 'approve']);
     Route::post('/attendance/{attendance}/reject', [App\Http\Controllers\Api\AttendanceController::class, 'reject']);
-    Route::get('/attendance/employee/{employee}/summary', [App\Http\Controllers\Api\AttendanceController::class, 'employeeSummary']);
+    Route::apiResource('attendance', App\Http\Controllers\Api\AttendanceController::class);
 
     // Payroll
     Route::apiResource('payroll', PayrollController::class);
@@ -194,23 +204,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Dashboard / Analytics
     Route::get('/dashboard/stats', [App\Http\Controllers\Api\DashboardController::class, 'stats']);
-    
+
     // Payroll Analytics
     Route::get('/dashboard/payroll-trends', [App\Http\Controllers\Api\DashboardController::class, 'payrollTrends']);
     Route::get('/dashboard/payroll-breakdown', [App\Http\Controllers\Api\DashboardController::class, 'payrollBreakdown']);
     Route::get('/dashboard/payroll-comparison', [App\Http\Controllers\Api\DashboardController::class, 'payrollComparison']);
     Route::get('/dashboard/government-contribution-trends', [App\Http\Controllers\Api\DashboardController::class, 'governmentContributionTrends']);
-    
+
     // Employee Analytics
     Route::get('/dashboard/employee-distribution', [App\Http\Controllers\Api\DashboardController::class, 'employeeDistribution']);
     Route::get('/dashboard/employment-status-distribution', [App\Http\Controllers\Api\DashboardController::class, 'employmentStatusDistribution']);
     Route::get('/dashboard/employee-by-location', [App\Http\Controllers\Api\DashboardController::class, 'employeeByLocation']);
     Route::get('/dashboard/employee-growth-trend', [App\Http\Controllers\Api\DashboardController::class, 'employeeGrowthTrend']);
-    
+
     // Attendance Analytics
     Route::get('/dashboard/attendance-rate', [App\Http\Controllers\Api\DashboardController::class, 'attendanceRate']);
     Route::get('/dashboard/attendance-status-distribution', [App\Http\Controllers\Api\DashboardController::class, 'attendanceStatusDistribution']);
     Route::get('/dashboard/overtime-trend', [App\Http\Controllers\Api\DashboardController::class, 'overtimeTrend']);
     Route::get('/dashboard/leave-utilization', [App\Http\Controllers\Api\DashboardController::class, 'leaveUtilization']);
 });
-

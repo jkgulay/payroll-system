@@ -16,6 +16,7 @@ class Employee extends Model
     protected $fillable = [
         'user_id',
         'employee_number',
+        'biometric_id',
         'first_name',
         'middle_name',
         'last_name',
@@ -182,8 +183,9 @@ class Employee extends Model
     public function getSemiMonthlyRate(): float
     {
         if ($this->salary_type === 'daily') {
-            // Assume 11 working days per semi-monthly period
-            return $this->basic_salary * 11;
+            // Use configured working days per semi-monthly period
+            $workingDaysPerSemiMonth = config('payroll.working_days_per_semi_month', 11);
+            return $this->basic_salary * $workingDaysPerSemiMonth;
         }
         return $this->basic_salary / 2;
     }
@@ -191,7 +193,6 @@ class Employee extends Model
     public function getMonthlyRate(): float
     {
         if ($this->salary_type === 'daily') {
-            // Assume 22 working days per month (or use config)
             $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
             return $this->basic_salary * $workingDaysPerMonth;
         }
@@ -201,6 +202,15 @@ class Employee extends Model
     public function getHourlyRate(): float
     {
         $standardHours = config('payroll.standard_hours_per_day', 8);
-        return $this->basic_salary / $standardHours;
+
+        if ($this->salary_type === 'daily') {
+            // For daily workers, divide daily rate by hours per day
+            return $this->basic_salary / $standardHours;
+        }
+
+        // For monthly workers, calculate from monthly rate
+        $monthlyRate = $this->basic_salary;
+        $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
+        return $monthlyRate / ($workingDaysPerMonth * $standardHours);
     }
 }

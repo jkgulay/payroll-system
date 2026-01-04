@@ -2,8 +2,24 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import vuetify from "vite-plugin-vuetify";
 import { fileURLToPath, URL } from "node:url";
-import viteCompression from "vite-plugin-compression";
-import { visualizer } from "rollup-plugin-visualizer";
+
+// Optional plugins - gracefully handle if not installed
+let viteCompression = null;
+let visualizer = null;
+
+try {
+  viteCompression = (await import("vite-plugin-compression")).default;
+} catch (e) {
+  console.warn("vite-plugin-compression not installed - compression disabled");
+}
+
+try {
+  visualizer = (await import("rollup-plugin-visualizer")).visualizer;
+} catch (e) {
+  console.warn(
+    "rollup-plugin-visualizer not installed - bundle analysis disabled"
+  );
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,28 +31,31 @@ export default defineConfig({
         configFile: "src/styles/settings.scss",
       },
     }),
-    // Gzip compression
-    viteCompression({
-      algorithm: "gzip",
-      ext: ".gz",
-      threshold: 10240, // Only compress files > 10KB
-      deleteOriginFile: false,
-    }),
-    // Brotli compression (better compression than gzip)
-    viteCompression({
-      algorithm: "brotliCompress",
-      ext: ".br",
-      threshold: 10240,
-      deleteOriginFile: false,
-    }),
-    // Bundle analyzer (only in build mode)
-    visualizer({
-      filename: "./dist/stats.html",
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-    }),
-  ],
+    // Gzip compression (optional)
+    viteCompression &&
+      viteCompression({
+        algorithm: "gzip",
+        ext: ".gz",
+        threshold: 10240, // Only compress files > 10KB
+        deleteOriginFile: false,
+      }),
+    // Brotli compression (optional)
+    viteCompression &&
+      viteCompression({
+        algorithm: "brotliCompress",
+        ext: ".br",
+        threshold: 10240,
+        deleteOriginFile: false,
+      }),
+    // Bundle analyzer (optional, only in build mode)
+    visualizer &&
+      visualizer({
+        filename: "./dist/stats.html",
+        open: false,
+        gzipSize: true,
+        brotliSize: true,
+      }),
+  ].filter(Boolean), // Remove null/false plugins
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -69,9 +88,11 @@ export default defineConfig({
         // Manual chunk splitting for better caching
         manualChunks: (id) => {
           // Core Vue libraries
-          if (id.includes("node_modules/vue") || 
-              id.includes("node_modules/vue-router") || 
-              id.includes("node_modules/pinia")) {
+          if (
+            id.includes("node_modules/vue") ||
+            id.includes("node_modules/vue-router") ||
+            id.includes("node_modules/pinia")
+          ) {
             return "vendor-vue";
           }
           // Vuetify components
@@ -79,18 +100,24 @@ export default defineConfig({
             return "vendor-vuetify";
           }
           // Chart libraries
-          if (id.includes("node_modules/chart.js") || 
-              id.includes("node_modules/vue-chartjs")) {
+          if (
+            id.includes("node_modules/chart.js") ||
+            id.includes("node_modules/vue-chartjs")
+          ) {
             return "vendor-charts";
           }
           // PDF/Excel libraries
-          if (id.includes("node_modules/jspdf") || 
-              id.includes("node_modules/exceljs")) {
+          if (
+            id.includes("node_modules/jspdf") ||
+            id.includes("node_modules/exceljs")
+          ) {
             return "vendor-export";
           }
           // Utilities
-          if (id.includes("node_modules/axios") || 
-              id.includes("node_modules/date-fns")) {
+          if (
+            id.includes("node_modules/axios") ||
+            id.includes("node_modules/date-fns")
+          ) {
             return "vendor-utils";
           }
           // Other node_modules
@@ -122,12 +149,6 @@ export default defineConfig({
   },
   // Optimize dependencies
   optimizeDeps: {
-    include: [
-      "vue",
-      "vue-router",
-      "pinia",
-      "axios",
-      "date-fns",
-    ],
+    include: ["vue", "vue-router", "pinia", "axios", "date-fns"],
   },
 });

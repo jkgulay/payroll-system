@@ -69,8 +69,8 @@ class DashboardController extends Controller
         // Get attendance for current month
         $currentMonth = Carbon::now()->format('Y-m');
         $attendance = Attendance::where('employee_id', $employee->id)
-            ->whereRaw("TO_CHAR(date, 'YYYY-MM') = ?", [$currentMonth])
-            ->orderBy('date', 'desc')
+            ->whereRaw("TO_CHAR(attendance_date, 'YYYY-MM') = ?", [$currentMonth])
+            ->orderBy('attendance_date', 'desc')
             ->get();
 
         // Calculate attendance summary
@@ -80,7 +80,7 @@ class DashboardController extends Controller
             'absent' => $attendance->where('status', 'absent')->count(),
             'late' => $attendance->where('status', 'late')->count(),
             'undertime' => $attendance->where('status', 'undertime')->count(),
-            'total_hours' => $attendance->sum('total_hours_worked'),
+            'total_hours' => $attendance->sum('regular_hours'),
             'overtime_hours' => $attendance->sum('overtime_hours'),
         ];
 
@@ -119,24 +119,24 @@ class DashboardController extends Controller
     public function payrollTrends(Request $request)
     {
         $months = $request->input('months', 12);
-        
+
         $trends = [];
         $startDate = Carbon::now()->subMonths($months - 1)->startOfMonth();
-        
+
         for ($i = 0; $i < $months; $i++) {
             $date = $startDate->copy()->addMonths($i);
             $monthYear = $date->format('Y-m');
-            
+
             $payrollData = PayrollItem::whereHas('payroll', function ($query) use ($monthYear) {
                 $query->whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$monthYear]);
             })->selectRaw('
                 SUM(basic_pay) as total_basic_pay,
                 SUM(overtime_pay) as total_overtime,
-                SUM(allowances) as total_allowances,
-                SUM(deductions) as total_deductions,
+                SUM(total_allowances) as total_allowances,
+                SUM(total_deductions) as total_deductions,
                 SUM(net_pay) as total_net_pay
             ')->first();
-            
+
             $trends[] = [
                 'month' => $date->format('M Y'),
                 'basic_pay' => (float) ($payrollData->total_basic_pay ?? 0),
@@ -146,26 +146,26 @@ class DashboardController extends Controller
                 'net_pay' => (float) ($payrollData->total_net_pay ?? 0),
             ];
         }
-        
+
         return response()->json($trends);
     }
 
     public function payrollBreakdown(Request $request)
     {
         $period = $request->input('period', 'current-month');
-        
+
         [$startDate, $endDate] = $this->getPeriodDates($period);
-        
+
         $breakdown = PayrollItem::whereHas('payroll', function ($query) use ($startDate, $endDate) {
             $query->whereBetween('period_start', [$startDate, $endDate]);
         })->selectRaw('
             SUM(basic_pay) as total_basic_pay,
             SUM(overtime_pay) as total_overtime,
-            SUM(allowances) as total_allowances,
-            SUM(deductions) as total_deductions,
+            SUM(total_allowances) as total_allowances,
+            SUM(total_deductions) as total_deductions,
             SUM(net_pay) as total_net_pay
         ')->first();
-        
+
         return response()->json([
             'basic_pay' => (float) ($breakdown->total_basic_pay ?? 0),
             'overtime' => (float) ($breakdown->total_overtime ?? 0),
@@ -181,15 +181,15 @@ class DashboardController extends Controller
         $currentEnd = Carbon::now()->endOfMonth();
         $previousStart = Carbon::now()->subMonth()->startOfMonth();
         $previousEnd = Carbon::now()->subMonth()->endOfMonth();
-        
+
         $current = PayrollItem::whereHas('payroll', function ($query) use ($currentStart, $currentEnd) {
             $query->whereBetween('period_start', [$currentStart, $currentEnd]);
         })->sum('net_pay');
-        
+
         $previous = PayrollItem::whereHas('payroll', function ($query) use ($previousStart, $previousEnd) {
             $query->whereBetween('period_start', [$previousStart, $previousEnd]);
         })->sum('net_pay');
-        
+
         return response()->json([
             'current_period' => [
                 'label' => $currentStart->format('M Y'),
@@ -206,14 +206,14 @@ class DashboardController extends Controller
     public function governmentContributionTrends(Request $request)
     {
         $months = $request->input('months', 12);
-        
+
         $trends = [];
         $startDate = Carbon::now()->subMonths($months - 1)->startOfMonth();
-        
+
         for ($i = 0; $i < $months; $i++) {
             $date = $startDate->copy()->addMonths($i);
             $monthYear = $date->format('Y-m');
-            
+
             $contributions = PayrollItem::whereHas('payroll', function ($query) use ($monthYear) {
                 $query->whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$monthYear]);
             })->selectRaw('
@@ -222,7 +222,7 @@ class DashboardController extends Controller
                 SUM(pagibig_contribution) as total_pagibig,
                 SUM(tax_withheld) as total_tax
             ')->first();
-            
+
             $trends[] = [
                 'month' => $date->format('M Y'),
                 'sss' => (float) ($contributions->total_sss ?? 0),
@@ -231,7 +231,7 @@ class DashboardController extends Controller
                 'tax' => (float) ($contributions->total_tax ?? 0),
             ];
         }
-        
+
         return response()->json($trends);
     }
 
@@ -239,7 +239,7 @@ class DashboardController extends Controller
     public function employeeDistribution(Request $request)
     {
         $type = $request->input('type', 'project');
-        
+
         if ($type === 'project') {
             $distribution = Employee::where('is_active', true)
                 ->select('project_id', DB::raw('COUNT(*) as count'))
@@ -264,7 +264,7 @@ class DashboardController extends Controller
                     ];
                 });
         }
-        
+
         return response()->json($distribution);
     }
 
@@ -280,7 +280,7 @@ class DashboardController extends Controller
                     'value' => $item->count
                 ];
             });
-        
+
         return response()->json($distribution);
     }
 
@@ -297,28 +297,28 @@ class DashboardController extends Controller
                     'value' => $item->count
                 ];
             });
-        
+
         return response()->json($distribution);
     }
 
     public function employeeGrowthTrend(Request $request)
     {
         $months = $request->input('months', 12);
-        
+
         $trends = [];
         $startDate = Carbon::now()->subMonths($months - 1)->startOfMonth();
-        
+
         for ($i = 0; $i < $months; $i++) {
             $date = $startDate->copy()->addMonths($i);
-            
-            $hired = Employee::whereYear('hire_date', $date->year)
-                ->whereMonth('hire_date', $date->month)
+
+            $hired = Employee::whereYear('date_hired', $date->year)
+                ->whereMonth('date_hired', $date->month)
                 ->count();
-            
-            $resigned = Employee::whereYear('resignation_date', $date->year)
-                ->whereMonth('resignation_date', $date->month)
+
+            $resigned = Employee::whereYear('date_separated', $date->year)
+                ->whereMonth('date_separated', $date->month)
                 ->count();
-            
+
             $trends[] = [
                 'month' => $date->format('M Y'),
                 'hired' => $hired,
@@ -326,7 +326,7 @@ class DashboardController extends Controller
                 'net_change' => $hired - $resigned
             ];
         }
-        
+
         return response()->json($trends);
     }
 
@@ -334,28 +334,28 @@ class DashboardController extends Controller
     public function attendanceRate(Request $request)
     {
         $days = $request->input('days', 30);
-        
+
         $rates = [];
         $startDate = Carbon::now()->subDays($days - 1);
-        
+
         for ($i = 0; $i < $days; $i++) {
             $date = $startDate->copy()->addDays($i);
             $dateStr = $date->format('Y-m-d');
-            
+
             $totalEmployees = Employee::where('is_active', true)
-                ->where('hire_date', '<=', $date)
+                ->where('date_hired', '<=', $date)
                 ->where(function ($query) use ($date) {
-                    $query->whereNull('resignation_date')
-                        ->orWhere('resignation_date', '>=', $date);
+                    $query->whereNull('date_separated')
+                        ->orWhere('date_separated', '>=', $date);
                 })
                 ->count();
-            
-            $present = Attendance::whereDate('date', $dateStr)
+
+            $present = Attendance::whereDate('attendance_date', $dateStr)
                 ->whereIn('status', ['present', 'late', 'undertime'])
                 ->count();
-            
+
             $attendanceRate = $totalEmployees > 0 ? ($present / $totalEmployees * 100) : 0;
-            
+
             $rates[] = [
                 'date' => $date->format('M d'),
                 'rate' => round($attendanceRate, 2),
@@ -363,17 +363,17 @@ class DashboardController extends Controller
                 'total' => $totalEmployees
             ];
         }
-        
+
         return response()->json($rates);
     }
 
     public function attendanceStatusDistribution(Request $request)
     {
         $period = $request->input('period', 'current-month');
-        
+
         [$startDate, $endDate] = $this->getPeriodDates($period);
-        
-        $distribution = Attendance::whereBetween('date', [$startDate, $endDate])
+
+        $distribution = Attendance::whereBetween('attendance_date', [$startDate, $endDate])
             ->select('status', DB::raw('COUNT(*) as count'))
             ->groupBy('status')
             ->get()
@@ -383,37 +383,37 @@ class DashboardController extends Controller
                     'value' => $item->count
                 ];
             });
-        
+
         return response()->json($distribution);
     }
 
     public function overtimeTrend(Request $request)
     {
         $days = $request->input('days', 30);
-        
+
         $trends = [];
         $startDate = Carbon::now()->subDays($days - 1);
-        
+
         for ($i = 0; $i < $days; $i++) {
             $date = $startDate->copy()->addDays($i);
             $dateStr = $date->format('Y-m-d');
-            
-            $overtimeHours = Attendance::whereDate('date', $dateStr)
+
+            $overtimeHours = Attendance::whereDate('attendance_date', $dateStr)
                 ->sum('overtime_hours');
-            
+
             $trends[] = [
                 'date' => $date->format('M d'),
                 'hours' => (float) ($overtimeHours ?? 0)
             ];
         }
-        
+
         return response()->json($trends);
     }
 
     public function leaveUtilization(Request $request)
     {
         $totalEmployees = Employee::where('is_active', true)->count();
-        
+
         if ($totalEmployees === 0) {
             return response()->json([
                 'on_leave' => 0,
@@ -421,13 +421,13 @@ class DashboardController extends Controller
                 'utilization_rate' => 0
             ]);
         }
-        
+
         $onLeave = Employee::where('is_active', true)
             ->where('employment_status', 'on-leave')
             ->count();
-        
+
         $utilizationRate = ($onLeave / $totalEmployees) * 100;
-        
+
         return response()->json([
             'on_leave' => $onLeave,
             'available' => $totalEmployees - $onLeave,

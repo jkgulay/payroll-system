@@ -151,5 +151,40 @@ return [
 
     // Working days calculation
     'working_days_per_month' => 22,
+    'working_days_per_semi_month' => 11,
     'standard_hours_per_day' => 8,
+    'rest_day' => 0, // 0 = Sunday, 6 = Saturday
+
+    // Attendance settings
+    'attendance' => [
+        'standard_time_in' => '08:00',
+        'standard_time_out' => '17:00',
+        'grace_period_minutes' => 15, // Late if more than this
+        'half_day_hours' => 4,
+        'break_duration_minutes' => 60,
+        'night_shift_start' => '22:00',
+        'night_shift_end' => '06:00',
+        'auto_mark_absent' => true, // Auto-mark absent for missing records
+        'require_approval_manual_entry' => true,
+    ],
+
+    // Biometric settings
+    'biometric' => [
+        'enabled' => env('BIOMETRIC_ENABLED', false),
+        'device_type' => env('BIOMETRIC_DEVICE_TYPE', 'zkteco'), // zkteco, suprema, etc.
+        'device_ip' => env('BIOMETRIC_DEVICE_IP', ''),
+        'device_port' => env('BIOMETRIC_DEVICE_PORT', 4370),
+        'import_format' => 'csv', // csv, json, api
+    ],
+
+    // Yunatt Cloud API settings (for web portal integration)
+    'yunatt' => [
+        'enabled' => env('YUNATT_ENABLED', false),
+        'api_url' => env('YUNATT_API_URL', 'https://api.yunatt.com/v1'), // Replace with actual URL
+        'api_key' => env('YUNATT_API_KEY', ''),
+        'company_id' => env('YUNATT_COMPANY_ID', ''),
+        'username' => env('YUNATT_USERNAME', ''),
+        'password' => env('YUNATT_PASSWORD', ''),
+        'sync_interval_minutes' => 60, // Auto-sync every hour
+    ],
 ];

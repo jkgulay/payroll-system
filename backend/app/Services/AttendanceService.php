@@ -24,7 +24,7 @@ class AttendanceService
         try {
             foreach ($records as $record) {
                 try {
-                    $result = $this->processBBiometricRecord($record);
+                    $result = $this->processBiometricRecord($record);
                     if ($result['action'] === 'created') {
                         $imported++;
                     } elseif ($result['action'] === 'updated') {
@@ -60,8 +60,8 @@ class AttendanceService
     {
         // Find employee by biometric ID or employee number
         $employee = Employee::where('employee_number', $record['employee_number'])
-                          ->orWhere('biometric_id', $record['biometric_id'] ?? null)
-                          ->first();
+            ->orWhere('biometric_id', $record['biometric_id'] ?? null)
+            ->first();
 
         if (!$employee) {
             throw new \Exception("Employee not found: {$record['employee_number']}");
@@ -72,15 +72,15 @@ class AttendanceService
 
         // Find existing attendance record
         $attendance = Attendance::where('employee_id', $employee->id)
-                               ->where('attendance_date', $attendanceDate)
-                               ->first();
+            ->where('attendance_date', $attendanceDate)
+            ->first();
 
         if (!$attendance) {
             // Create new attendance record
             $attendance = Attendance::create([
                 'employee_id' => $employee->id,
                 'attendance_date' => $attendanceDate,
-                'time_in' => $timestamp,
+                'time_in' => $timestamp->format('H:i:s'),
                 'status' => 'present',
                 'is_manual_entry' => false,
                 'approval_status' => 'approved',
@@ -99,27 +99,30 @@ class AttendanceService
      */
     protected function updateAttendanceTime(Attendance $attendance, Carbon $timestamp): void
     {
+        $timeString = $timestamp->format('H:i:s');
+
         // Logic to determine if this is time_in, time_out, break_start, or break_end
         if (!$attendance->time_in) {
-            $attendance->time_in = $timestamp;
+            $attendance->time_in = $timeString;
         } elseif (!$attendance->time_out) {
-            // Check if this could be break start
-            if ($attendance->time_in->diffInHours($timestamp) >= 3 && $attendance->time_in->diffInHours($timestamp) <= 6) {
+            // Check if this could be break start - parse time_in with date for comparison
+            $timeIn = Carbon::parse($attendance->attendance_date . ' ' . $attendance->time_in);
+            if ($timeIn->diffInHours($timestamp) >= 3 && $timeIn->diffInHours($timestamp) <= 6) {
                 if (!$attendance->break_start) {
-                    $attendance->break_start = $timestamp;
+                    $attendance->break_start = $timeString;
                 } elseif (!$attendance->break_end) {
-                    $attendance->break_end = $timestamp;
+                    $attendance->break_end = $timeString;
                 } else {
-                    $attendance->time_out = $timestamp;
+                    $attendance->time_out = $timeString;
                 }
             } else {
-                $attendance->time_out = $timestamp;
+                $attendance->time_out = $timeString;
             }
         } elseif (!$attendance->break_end && $attendance->break_start) {
-            $attendance->break_end = $timestamp;
+            $attendance->break_end = $timeString;
         } else {
             // Update time out with latest timestamp
-            $attendance->time_out = $timestamp;
+            $attendance->time_out = $timeString;
         }
 
         $attendance->save();
@@ -131,6 +134,8 @@ class AttendanceService
      */
     public function createManualEntry(array $data): Attendance
     {
+        $requiresApproval = $data['requires_approval'] ?? true;
+
         $attendance = Attendance::create([
             'employee_id' => $data['employee_id'],
             'attendance_date' => $data['attendance_date'],
@@ -140,8 +145,12 @@ class AttendanceService
             'break_end' => $data['break_end'] ?? null,
             'status' => $data['status'] ?? 'present',
             'is_manual_entry' => true,
-            'manual_reason' => $data['reason'],
-            'approval_status' => 'pending',
+            'manual_reason' => $data['reason'] ?? null,
+            'approval_status' => $requiresApproval ? 'pending' : 'approved',
+            'is_approved' => !$requiresApproval,
+            'approved_by' => $requiresApproval ? null : ($data['created_by'] ?? null),
+            'approved_at' => $requiresApproval ? null : now(),
+            'created_by' => $data['created_by'] ?? null,
         ]);
 
         $attendance->calculateHours();
@@ -209,8 +218,8 @@ class AttendanceService
     public function getAttendanceSummary(int $employeeId, string $startDate, string $endDate): array
     {
         $attendance = Attendance::where('employee_id', $employeeId)
-                               ->whereBetween('attendance_date', [$startDate, $endDate])
-                               ->get();
+            ->whereBetween('attendance_date', [$startDate, $endDate])
+            ->get();
 
         return [
             'total_days' => $attendance->count(),
@@ -231,7 +240,7 @@ class AttendanceService
     public function markAbsences(string $date, ?array $employeeIds = null): int
     {
         $query = Employee::active();
-        
+
         if ($employeeIds) {
             $query->whereIn('id', $employeeIds);
         }
@@ -242,13 +251,14 @@ class AttendanceService
         foreach ($employees as $employee) {
             // Check if attendance record exists
             $exists = Attendance::where('employee_id', $employee->id)
-                               ->where('attendance_date', $date)
-                               ->exists();
+                ->where('attendance_date', $date)
+                ->exists();
 
             if (!$exists) {
                 // Check if it's a rest day or holiday
                 $dayOfWeek = Carbon::parse($date)->dayOfWeek;
-                if ($dayOfWeek == 0) { // Sunday
+                $restDay = config('payroll.rest_day', 0);
+                if ($dayOfWeek == $restDay) {
                     continue;
                 }
 
