@@ -104,7 +104,7 @@ export async function exportEmployees(employees) {
     { header: "Position", key: "position", width: 25 },
     { header: "Department", key: "department", width: 20 },
     { header: "Status", key: "employment_status", width: 15 },
-    { header: "Hire Date", key: "hire_date", width: 15 },
+    { header: "Hire Date", key: "date_hired", width: 15 },
     { header: "Basic Rate", key: "basic_rate", width: 15 },
   ];
 
@@ -116,7 +116,7 @@ export async function exportEmployees(employees) {
     position: emp.position,
     department: emp.department?.name || "",
     employment_status: emp.employment_status,
-    hire_date: emp.hire_date,
+    hire_date: emp.date_hired,
     basic_rate: emp.basic_rate,
   }));
 

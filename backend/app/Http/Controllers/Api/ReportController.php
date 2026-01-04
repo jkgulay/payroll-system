@@ -96,7 +96,7 @@ class ReportController extends Controller
         $employeeId = $request->input('employee_id');
 
         $query = Attendance::with('employee')
-            ->whereBetween('date', [$dateFrom, $dateTo]);
+            ->whereBetween('attendance_date', [$dateFrom, $dateTo]);
 
         if ($employeeId) {
             $query->where('employee_id', $employeeId);

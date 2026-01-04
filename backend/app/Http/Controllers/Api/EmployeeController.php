@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends Controller
 {
@@ -48,7 +49,8 @@ class EmployeeController extends Controller
             $query->where('position', $request->position);
         }
 
-        $employees = $query->paginate($request->get('per_page', 15));
+        $perPage = $request->get('per_page', 50); // Increased default from 15 to 50
+        $employees = $query->latest('created_at')->paginate($perPage);
 
         return response()->json($employees);
     }
@@ -71,6 +73,13 @@ class EmployeeController extends Controller
         $validated['date_hired'] = $validated['date_hired'] ?? now()->format('Y-m-d');
         $validated['basic_salary'] = $validated['basic_salary'] ?? 0;
         $validated['salary_type'] = $validated['salary_type'] ?? 'daily';
+
+        // Normalize gender to lowercase for consistency
+        if (!empty($validated['gender'])) {
+            $validated['gender'] = strtolower($validated['gender']);
+        } else {
+            $validated['gender'] = 'male'; // Default
+        }
 
         DB::beginTransaction();
         try {
@@ -147,6 +156,7 @@ class EmployeeController extends Controller
             'employee_number' => 'sometimes|string|unique:employees,employee_number,' . $employee->id,
             'first_name' => 'sometimes|required|string|max:100',
             'last_name' => 'sometimes|required|string|max:100',
+            'gender' => 'nullable|in:male,female,other',
             'email' => 'nullable|email|unique:employees,email,' . $employee->id,
             'mobile_number' => 'nullable|string|max:20',
             'project_id' => 'nullable|exists:projects,id',
@@ -167,6 +177,11 @@ class EmployeeController extends Controller
             'has_ppe' => 'nullable|boolean',
             'ppe' => 'nullable|numeric|min:0',
         ]);
+
+        // Normalize gender to lowercase for consistency
+        if (isset($validated['gender'])) {
+            $validated['gender'] = strtolower($validated['gender']);
+        }
 
         $employee->update($validated);
 
@@ -192,5 +207,53 @@ class EmployeeController extends Controller
     public function deductions(Employee $employee)
     {
         return response()->json($employee->deductions);
+    }
+
+    /**
+     * Get employee credentials (username, email, role)
+     */
+    public function getCredentials(Employee $employee)
+    {
+        $user = User::where('id', $employee->user_id)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'User account not found'], 404);
+        }
+
+        return response()->json([
+            'username' => $user->username,
+            'email' => $user->email,
+            'role' => $user->role,
+            'is_active' => $user->is_active,
+        ]);
+    }
+
+    /**
+     * Reset employee password and generate new temporary password
+     */
+    public function resetPassword(Employee $employee)
+    {
+        $user = User::where('id', $employee->user_id)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'User account not found'], 404);
+        }
+
+        // Generate new temporary password: LastName + EmployeeNumber + @ + 2 random digits
+        $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+        $newPassword = $employee->last_name . $employee->employee_number . '@' . $randomDigits;
+
+        // Update user password
+        $user->password = Hash::make($newPassword);
+        $user->must_change_password = true;
+        $user->save();
+
+        // Log the action
+        Log::info("Password reset for employee {$employee->employee_number} by user " . auth()->id());
+
+        return response()->json([
+            'message' => 'Password reset successfully',
+            'temporary_password' => $newPassword,
+        ]);
     }
 }

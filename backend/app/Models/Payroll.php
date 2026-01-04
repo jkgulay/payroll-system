@@ -125,8 +125,8 @@ class Payroll extends Model
 
     public function scopeByPeriod($query, $year, $month)
     {
-        return $query->whereYear('period_start_date', $year)
-            ->whereMonth('period_start_date', $month);
+        return $query->whereYear('period_start', $year)
+            ->whereMonth('period_start', $month);
     }
 
     public function scopePending($query)

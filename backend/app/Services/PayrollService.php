@@ -10,6 +10,7 @@ use App\Models\Attendance;
 use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
+use App\Models\LoanPayment;
 use App\Services\Government\SSSComputationService;
 use App\Services\Government\PhilHealthComputationService;
 use App\Services\Government\PagIbigComputationService;
@@ -112,6 +113,15 @@ class PayrollService
             ->where('status', 'present')
             ->get();
 
+        // Check for missing attendance records for daily workers
+        if ($employee->salary_type === 'daily' && $attendance->isEmpty()) {
+            Log::warning("No attendance records found for daily employee during payroll processing", [
+                'employee_id' => $employee->id,
+                'payroll_id' => $payroll->id,
+                'period' => $payroll->period_start . ' to ' . $payroll->period_end
+            ]);
+        }
+
         // Calculate earnings
         $earnings = $this->calculateEarnings($employee, $attendance, $payroll);
 
@@ -127,12 +137,17 @@ class PayrollService
             + $allowances['cola']
             + $allowances['other_allowances'];
 
-        // Calculate government contributions
-        $monthlyBasicSalary = $employee->getMonthlyRate();
+        // Calculate government contributions based on actual earnings
+        // For semi-monthly: use actual gross pay * 2 to estimate monthly, then divide contributions
+        // For daily workers: this ensures contributions align with actual work
+        $estimatedMonthlySalary = $employee->salary_type === 'daily'
+            ? ($grossPay * 2) // Estimate monthly from this period
+            : $employee->getMonthlyRate();
+
         $contributions = [
-            'sss' => $this->sssService->computeContribution($monthlyBasicSalary),
-            'philhealth' => $this->philHealthService->computeContribution($monthlyBasicSalary),
-            'pagibig' => $this->pagIbigService->computeContribution($monthlyBasicSalary),
+            'sss' => $this->sssService->computeContribution($estimatedMonthlySalary),
+            'philhealth' => $this->philHealthService->computeContribution($estimatedMonthlySalary),
+            'pagibig' => $this->pagIbigService->computeContribution($estimatedMonthlySalary),
         ];
 
         // Semi-monthly government contributions (divide by 2)
@@ -141,11 +156,15 @@ class PayrollService
         $pagibigContribution = $contributions['pagibig']['employee_share'] / 2;
 
         // Calculate taxable income for semi-monthly period
+        // Remove non-taxable allowances (they're already in gross_pay)
         $taxableIncome = $grossPay
+            - $allowances['non_taxable_allowances']
             - $sssContribution
             - $philhealthContribution
-            - $pagibigContribution
-            - $allowances['non_taxable_allowances'];
+            - $pagibigContribution;
+
+        // Ensure taxable income is not negative
+        $taxableIncome = max(0, $taxableIncome);
 
         $withholdingTax = $this->taxService->computeTax($taxableIncome, 'semi-monthly');
 
@@ -254,11 +273,15 @@ class PayrollService
         if ($attendance->is_holiday) {
             return $attendance->holiday_type === 'regular' ? 2.6 : 1.69;
         }
+
         // Check if rest day (Sunday or designated rest day)
         $dayOfWeek = Carbon::parse($attendance->attendance_date)->dayOfWeek;
-        if ($dayOfWeek == 0) { // Sunday
-            return 1.69;
+        $restDay = config('payroll.rest_day', Carbon::SUNDAY);
+
+        if ($dayOfWeek == $restDay) {
+            return 1.69; // Rest day overtime
         }
+
         return 1.25; // Regular overtime
     }
 
@@ -308,15 +331,31 @@ class PayrollService
     {
         switch ($allowance->frequency) {
             case 'daily':
-                // Calculate days in period
-                $days = Carbon::parse($payroll->period_start)->diffInDays($payroll->period_end) + 1;
-                return $allowance->amount * $days;
+                // Calculate actual working days in period (not calendar days)
+                $periodStart = Carbon::parse($payroll->period_start);
+                $periodEnd = Carbon::parse($payroll->period_end);
+
+                // Count working days (exclude Sundays)
+                $workingDays = 0;
+                for ($date = $periodStart->copy(); $date->lte($periodEnd); $date->addDay()) {
+                    if ($date->dayOfWeek !== Carbon::SUNDAY) {
+                        $workingDays++;
+                    }
+                }
+                return $allowance->amount * $workingDays;
+
             case 'weekly':
-                return $allowance->amount / 2; // Semi-monthly approximation
+                // Semi-monthly is approximately 2.17 weeks
+                $weeksInSemiMonth = 2.17;
+                return $allowance->amount * $weeksInSemiMonth;
+
+            case 'semi_monthly':
             case 'semi-monthly':
                 return $allowance->amount;
+
             case 'monthly':
                 return $allowance->amount / 2;
+
             default:
                 return $allowance->amount;
         }
@@ -523,12 +562,70 @@ class PayrollService
 
     protected function updateLoanPayments(Payroll $payroll): void
     {
-        // Implementation to record loan payments and update balances
-        // This creates LoanPayment records for each loan deduction
+        // Get all payroll items with loan deductions
+        $payrollItems = $payroll->payrollItems()->with(['employee.loans' => function ($q) {
+            $q->active();
+        }])->get();
+
+        foreach ($payrollItems as $payrollItem) {
+            foreach ($payrollItem->employee->loans as $loan) {
+                if ($loan->balance <= 0) continue;
+
+                // Calculate the deduction amount for this semi-monthly period
+                $deductionAmount = min($loan->monthly_amortization / 2, $loan->balance);
+
+                if ($deductionAmount > 0) {
+                    // Create loan payment record
+                    $payment = LoanPayment::create([
+                        'employee_loan_id' => $loan->id,
+                        'payroll_id' => $payroll->id,
+                        'payroll_item_id' => $payrollItem->id,
+                        'payment_date' => $payroll->payment_date,
+                        'amount' => $deductionAmount,
+                        'principal_payment' => $deductionAmount, // Simplified - could calculate interest
+                        'interest_payment' => 0,
+                        'balance_after_payment' => $loan->balance - $deductionAmount,
+                        'payment_method' => 'payroll_deduction',
+                        'remarks' => "Payroll deduction - {$payroll->payroll_number}",
+                    ]);
+
+                    // Update loan balance and amount paid
+                    $loan->amount_paid += $deductionAmount;
+                    $loan->balance -= $deductionAmount;
+
+                    // If fully paid, update status
+                    if ($loan->balance <= 0) {
+                        $loan->status = 'paid';
+                        $loan->balance = 0;
+                    }
+
+                    $loan->save();
+                }
+            }
+        }
     }
 
     protected function updateDeductionInstallments(Payroll $payroll): void
     {
-        // Implementation to update deduction installment counts
+        // Get all payroll items with deductions
+        $payrollItems = $payroll->payrollItems()->with(['employee.deductions' => function ($q) {
+            $q->where('status', 'active');
+        }])->get();
+
+        foreach ($payrollItems as $payrollItem) {
+            foreach ($payrollItem->employee->deductions as $deduction) {
+                // If deduction has installments, track the payment
+                if ($deduction->total_installments > 0) {
+                    $deduction->paid_installments = ($deduction->paid_installments ?? 0) + 1;
+
+                    // Mark as completed if all installments paid
+                    if ($deduction->paid_installments >= $deduction->total_installments) {
+                        $deduction->status = 'completed';
+                    }
+
+                    $deduction->save();
+                }
+            }
+        }
     }
 }

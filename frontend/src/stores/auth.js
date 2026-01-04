@@ -24,7 +24,7 @@ export const useAuthStore = defineStore("auth", () => {
     loading.value = true;
     try {
       const response = await api.post("/login", credentials);
-      
+
       // Check if 2FA is required
       if (response.data.requires_2fa) {
         loading.value = false;
@@ -34,6 +34,9 @@ export const useAuthStore = defineStore("auth", () => {
       token.value = response.data.token;
       user.value = response.data.user;
       rememberMe.value = credentials.remember || false;
+
+      // Store user data in localStorage
+      localStorage.setItem("user", JSON.stringify(user.value));
 
       // Store token based on remember me preference
       if (rememberMe.value) {
@@ -73,6 +76,7 @@ export const useAuthStore = defineStore("auth", () => {
 
       // Clear both localStorage and sessionStorage
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       localStorage.removeItem("rememberMe");
       sessionStorage.removeItem("token");
 
@@ -95,6 +99,9 @@ export const useAuthStore = defineStore("auth", () => {
       const response = await api.get("/user");
       user.value = response.data;
 
+      // Store user data in localStorage
+      localStorage.setItem("user", JSON.stringify(user.value));
+
       return true;
     } catch (error) {
       // Token invalid, clear auth
@@ -102,6 +109,7 @@ export const useAuthStore = defineStore("auth", () => {
       token.value = null;
       rememberMe.value = false;
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       localStorage.removeItem("rememberMe");
       sessionStorage.removeItem("token");
       delete api.defaults.headers.common["Authorization"];
@@ -117,6 +125,9 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const response = await api.get("/user");
       user.value = response.data;
+
+      // Store user data in localStorage
+      localStorage.setItem("user", JSON.stringify(user.value));
     } catch (error) {
       console.error("Fetch user error:", error);
     } finally {

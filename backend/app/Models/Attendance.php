@@ -39,15 +39,17 @@ class Attendance extends Model
         'approved_by',
         'approved_at',
         'rejection_reason',
-        'remarks',
+        'created_by',
+        'updated_by',
+        'is_approved',
+        'is_rejected',
+        'rejected_by',
+        'rejected_at',
+        'approval_notes',
     ];
 
     protected $casts = [
         'attendance_date' => 'date',
-        'time_in' => 'datetime',
-        'time_out' => 'datetime',
-        'break_start' => 'datetime',
-        'break_end' => 'datetime',
         'regular_hours' => 'decimal:2',
         'overtime_hours' => 'decimal:2',
         'undertime_hours' => 'decimal:2',
@@ -56,9 +58,20 @@ class Attendance extends Model
         'is_holiday' => 'boolean',
         'is_manual_entry' => 'boolean',
         'is_edited' => 'boolean',
+        'is_approved' => 'boolean',
+        'is_rejected' => 'boolean',
         'edited_at' => 'datetime',
         'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
     ];
+
+    protected $appends = ['hours_worked'];
+
+    // Accessors
+    public function getHoursWorkedAttribute(): float
+    {
+        return round(($this->regular_hours ?? 0) + ($this->overtime_hours ?? 0), 2);
+    }
 
     // Relationships
     public function employee(): BelongsTo
@@ -74,6 +87,16 @@ class Attendance extends Model
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     // Scopes
@@ -109,14 +132,26 @@ class Attendance extends Model
             return;
         }
 
-        $timeIn = Carbon::parse($this->time_in);
-        $timeOut = Carbon::parse($this->time_out);
+        // Parse time fields - combine with attendance date to get full datetime
+        $timeIn = Carbon::parse($this->attendance_date . ' ' . $this->time_in);
+        $timeOut = Carbon::parse($this->attendance_date . ' ' . $this->time_out);
+
+        // Handle overnight shifts (time_out is next day)
+        if ($timeOut->lt($timeIn)) {
+            $timeOut->addDay();
+        }
 
         // Calculate break duration
         $breakMinutes = 0;
         if ($this->break_start && $this->break_end) {
-            $breakStart = Carbon::parse($this->break_start);
-            $breakEnd = Carbon::parse($this->break_end);
+            $breakStart = Carbon::parse($this->attendance_date . ' ' . $this->break_start);
+            $breakEnd = Carbon::parse($this->attendance_date . ' ' . $this->break_end);
+
+            // Handle overnight break
+            if ($breakEnd->lt($breakStart)) {
+                $breakEnd->addDay();
+            }
+
             $breakMinutes = $breakStart->diffInMinutes($breakEnd);
         }
 
@@ -152,8 +187,10 @@ class Attendance extends Model
 
     private function calculateNightDifferentialHours(Carbon $timeIn, Carbon $timeOut): float
     {
-        $nightStart = Carbon::parse($timeIn->toDateString() . ' 22:00:00');
-        $nightEnd = Carbon::parse($timeIn->toDateString() . ' 06:00:00')->addDay();
+        $nightStartTime = config('payroll.attendance.night_shift_start', '22:00');
+        $nightEndTime = config('payroll.attendance.night_shift_end', '06:00');
+        $nightStart = Carbon::parse($timeIn->toDateString() . ' ' . $nightStartTime);
+        $nightEnd = Carbon::parse($timeIn->toDateString() . ' ' . $nightEndTime)->addDay();
 
         $ndHours = 0;
 
@@ -172,8 +209,10 @@ class Attendance extends Model
 
     private function calculateLateHours(Carbon $timeIn): float
     {
-        // Assuming standard time in is 8:00 AM (configurable)
-        $standardTimeIn = Carbon::parse($timeIn->toDateString() . ' 08:00:00');
+        $standardTimeInConfig = config('payroll.attendance.standard_time_in', '08:00');
+        $gracePeriod = config('payroll.attendance.grace_period_minutes', 15);
+        $standardTimeIn = Carbon::parse($timeIn->toDateString() . ' ' . $standardTimeInConfig)
+            ->addMinutes($gracePeriod);
 
         if ($timeIn->gt($standardTimeIn)) {
             $lateMinutes = $standardTimeIn->diffInMinutes($timeIn);

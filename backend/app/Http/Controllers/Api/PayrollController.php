@@ -17,6 +17,13 @@ class PayrollController extends Controller
     public function __construct(PayrollService $payrollService)
     {
         $this->payrollService = $payrollService;
+
+        // Apply authorization middleware to sensitive actions
+        $this->middleware('payroll.permission:process')->only(['process']);
+        $this->middleware('payroll.permission:check')->only(['check']);
+        $this->middleware('payroll.permission:recommend')->only(['recommend']);
+        $this->middleware('payroll.permission:approve')->only(['approve']);
+        $this->middleware('payroll.permission:mark_paid')->only(['markPaid']);
     }
 
     /**
@@ -51,6 +58,22 @@ class PayrollController extends Controller
             'payment_date' => 'required|date',
             'pay_period_number' => 'nullable|integer|in:1,2',
         ]);
+
+        // Check for overlapping payroll periods
+        $overlapping = Payroll::where(function ($query) use ($validated) {
+            $query->whereBetween('period_start', [$validated['period_start_date'], $validated['period_end_date']])
+                ->orWhereBetween('period_end', [$validated['period_start_date'], $validated['period_end_date']])
+                ->orWhere(function ($q) use ($validated) {
+                    $q->where('period_start', '<=', $validated['period_start_date'])
+                        ->where('period_end', '>=', $validated['period_end_date']);
+                });
+        })->exists();
+
+        if ($overlapping) {
+            return response()->json([
+                'error' => 'A payroll period already exists for this date range. Please check existing payroll periods.'
+            ], 422);
+        }
 
         try {
             $payroll = $this->payrollService->createPayroll($validated);

@@ -5,63 +5,124 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\AuditLog;
+use App\Services\AttendanceService;
+use App\Services\BiometricService;
+use App\Services\YunattApiService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
+    protected $attendanceService;
+    protected $biometricService;
+    protected $yunattService;
+
+    public function __construct(AttendanceService $attendanceService, BiometricService $biometricService, ?YunattApiService $yunattService = null)
+    {
+        $this->attendanceService = $attendanceService;
+        $this->biometricService = $biometricService;
+        $this->yunattService = $yunattService;
+
+        // Manual entry and editing: admin and accountant only
+        $this->middleware('role:admin,accountant')->only(['store', 'update', 'destroy', 'markAbsent']);
+
+        // Approval actions: admin, accountant, and manager
+        $this->middleware('role:admin,accountant,manager')->only(['approve', 'reject']);
+
+        // Biometric import and device management: admin and accountant only
+        $this->middleware('role:admin,accountant')->only(['importBiometric', 'fetchFromDevice', 'syncEmployees', 'clearDeviceLogs', 'fetchFromYunatt']);
+    }
     public function index(Request $request)
     {
-        $query = Attendance::with(['employee.department', 'employee.location']);
+        $query = Attendance::with(['employee']);
 
         if ($request->has('employee_id')) {
             $query->where('employee_id', $request->employee_id);
         }
 
         if ($request->has('date_from')) {
-            $query->where('date', '>=', $request->date_from);
+            $query->where('attendance_date', '>=', $request->date_from);
         }
 
         if ($request->has('date_to')) {
-            $query->where('date', '<=', $request->date_to);
+            $query->where('attendance_date', '<=', $request->date_to);
         }
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
-        return response()->json($query->latest('date')->paginate(15));
+        return response()->json($query->latest('attendance_date')->paginate(15));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
-            'date' => 'required|date',
-            'time_in' => 'nullable|date_format:H:i',
-            'time_out' => 'nullable|date_format:H:i',
+            'attendance_date' => 'required|date|before_or_equal:today',
+            'time_in' => 'nullable|date_format:H:i:s',
+            'time_out' => 'nullable|date_format:H:i:s|after:time_in',
+            'break_start' => 'nullable|date_format:H:i:s',
+            'break_end' => 'nullable|date_format:H:i:s|after:break_start',
             'status' => 'required|in:present,absent,late,half_day,on_leave',
+            'notes' => 'nullable|string|max:500',
+            'requires_approval' => 'boolean',
         ]);
 
-        // Calculate hours if both times provided
-        $hoursWorked = null;
-        if ($request->time_in && $request->time_out) {
-            $timeIn = Carbon::parse($request->time_in);
-            $timeOut = Carbon::parse($request->time_out);
-            $hoursWorked = $timeOut->diffInHours($timeIn);
+        // Check for duplicate attendance
+        $exists = Attendance::where('employee_id', $validated['employee_id'])
+            ->where('attendance_date', $validated['attendance_date'])
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'Attendance record already exists for this date',
+            ], 422);
         }
 
-        $attendance = Attendance::create([
-            'employee_id' => $validated['employee_id'],
-            'date' => $validated['date'],
-            'time_in' => $validated['time_in'],
-            'time_out' => $validated['time_out'],
-            'status' => $validated['status'],
-            'hours_worked' => $hoursWorked,
-            'notes' => $request->notes,
-        ]);
+        $employee = Employee::find($validated['employee_id']);
 
-        return response()->json($attendance->load('employee'), 201);
+        try {
+            $attendance = $this->attendanceService->createManualEntry([
+                'employee_id' => $validated['employee_id'],
+                'attendance_date' => $validated['attendance_date'],
+                'time_in' => $validated['time_in'] ?? null,
+                'time_out' => $validated['time_out'] ?? null,
+                'break_start' => $validated['break_start'] ?? null,
+                'break_end' => $validated['break_end'] ?? null,
+                'status' => $validated['status'],
+                'reason' => $validated['notes'] ?? 'Manual entry by ' . $request->user()->name,
+                'created_by' => $request->user()->id,
+                'requires_approval' => $validated['requires_approval'] ?? true,
+            ]);
+
+            // Log manual entry
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'manual_attendance_entry',
+                'auditable_type' => Attendance::class,
+                'auditable_id' => $attendance->id,
+                'old_values' => null,
+                'new_values' => $attendance->toArray(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'message' => 'Manual attendance entry created successfully',
+                'attendance' => $attendance->load('employee'),
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Failed to create manual attendance: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to create attendance record',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function show(Attendance $attendance)
@@ -71,27 +132,65 @@ class AttendanceController extends Controller
 
     public function update(Request $request, Attendance $attendance)
     {
-        $validated = $request->validate([
-            'time_in' => 'nullable|date_format:H:i',
-            'time_out' => 'nullable|date_format:H:i',
-            'status' => 'in:present,absent,late,half_day,on_leave',
-        ]);
-
-        $data = $request->only(['time_in', 'time_out', 'status', 'notes']);
-
-        // Recalculate hours if times changed
-        if ($request->has('time_in') || $request->has('time_out')) {
-            $timeIn = $request->time_in ?? $attendance->time_in;
-            $timeOut = $request->time_out ?? $attendance->time_out;
-
-            if ($timeIn && $timeOut) {
-                $data['hours_worked'] = Carbon::parse($timeOut)->diffInHours(Carbon::parse($timeIn));
-            }
+        // Prevent editing approved records without proper permission
+        if ($attendance->is_approved && !$request->user()->hasRole(['admin', 'accountant'])) {
+            return response()->json([
+                'message' => 'Cannot edit approved attendance records',
+            ], 403);
         }
 
-        $attendance->update($data);
+        $validated = $request->validate([
+            'time_in' => 'nullable|date_format:H:i:s',
+            'time_out' => 'nullable|date_format:H:i:s|after:time_in',
+            'break_start' => 'nullable|date_format:H:i:s',
+            'break_end' => 'nullable|date_format:H:i:s|after:break_start',
+            'status' => 'in:present,absent,late,half_day,on_leave',
+            'notes' => 'nullable|string|max:500',
+        ]);
 
-        return response()->json($attendance);
+        $oldValues = $attendance->toArray();
+
+        try {
+            $updateData = array_filter([
+                'time_in' => $validated['time_in'] ?? null,
+                'time_out' => $validated['time_out'] ?? null,
+                'break_start' => $validated['break_start'] ?? null,
+                'break_end' => $validated['break_end'] ?? null,
+                'status' => $validated['status'] ?? null,
+                'edit_reason' => $validated['notes'] ?? null,
+            ], function ($value) {
+                return !is_null($value);
+            });
+
+            $this->attendanceService->updateAttendance(
+                $attendance,
+                $updateData,
+                $request->user()->id
+            );
+
+            // Log the update
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'update_attendance',
+                'auditable_type' => Attendance::class,
+                'auditable_id' => $attendance->id,
+                'old_values' => $oldValues,
+                'new_values' => $attendance->fresh()->toArray(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'message' => 'Attendance updated successfully',
+                'attendance' => $attendance->fresh()->load('employee'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update attendance: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to update attendance',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function destroy(Attendance $attendance)
@@ -104,33 +203,141 @@ class AttendanceController extends Controller
     public function importBiometric(Request $request)
     {
         $validated = $request->validate([
-            'file' => 'required|file|mimes:csv,txt,xlsx',
+            'file' => 'required|file|mimes:csv,txt',
+            'file_type' => 'required|in:csv,text',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
         ]);
 
-        // TODO: Implement biometric file parsing logic
-        return response()->json([
-            'message' => 'Biometric import functionality will be implemented',
-            'imported' => 0,
-        ]);
+        try {
+            $file = $request->file('file');
+            $filePath = $file->storeAs('biometric_imports', 'import_' . time() . '.' . $file->getClientOriginalExtension());
+            $fullPath = Storage::path($filePath);
+
+            // Parse the file based on type
+            $records = $validated['file_type'] === 'csv'
+                ? $this->biometricService->parseCSVExport($fullPath)
+                : $this->biometricService->parseTextExport($fullPath);
+
+            // Filter by date range if provided
+            if ($validated['date_from'] ?? false) {
+                $records = array_filter($records, function ($record) use ($validated) {
+                    $date = Carbon::parse($record['date']);
+                    return $date->gte(Carbon::parse($validated['date_from'])) &&
+                        $date->lte(Carbon::parse($validated['date_to'] ?? 'today'));
+                });
+            }
+
+            // Import the records
+            $result = $this->attendanceService->importBiometric($records);
+
+            // Log the import
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'biometric_import',
+                'auditable_type' => Attendance::class,
+                'auditable_id' => null,
+                'old_values' => null,
+                'new_values' => [
+                    'file' => $file->getClientOriginalName(),
+                    'records_imported' => $result['imported'],
+                    'records_updated' => $result['updated'] ?? 0,
+                    'records_failed' => $result['errors'],
+                ],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            // Clean up temp file
+            Storage::delete($filePath);
+
+            return response()->json([
+                'message' => 'Biometric data imported successfully',
+                'imported' => $result['imported'],
+                'updated' => $result['updated'] ?? 0,
+                'failed' => $result['errors'],
+                'errors' => $result['error_details'] ?? [],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Biometric import failed: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to import biometric data',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
-    public function approve(Attendance $attendance)
+    public function approve(Request $request, Attendance $attendance)
     {
-        $attendance->update(['status' => 'approved']);
+        if ($attendance->is_approved) {
+            return response()->json([
+                'message' => 'Attendance is already approved',
+            ], 422);
+        }
+
+        $oldValues = $attendance->toArray();
+
+        $attendance->update([
+            'is_approved' => true,
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+            'approval_notes' => $request->input('notes'),
+        ]);
+
+        // Log approval
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'approve_attendance',
+            'auditable_type' => Attendance::class,
+            'auditable_id' => $attendance->id,
+            'old_values' => $oldValues,
+            'new_values' => $attendance->fresh()->toArray(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
 
         return response()->json([
             'message' => 'Attendance approved successfully',
-            'attendance' => $attendance,
+            'attendance' => $attendance->fresh()->load('employee', 'approvedBy'),
         ]);
     }
 
-    public function reject(Attendance $attendance)
+    public function reject(Request $request, Attendance $attendance)
     {
-        $attendance->update(['status' => 'rejected']);
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        if ($attendance->is_approved) {
+            return response()->json([
+                'message' => 'Cannot reject approved attendance',
+            ], 422);
+        }
+
+        $oldValues = $attendance->toArray();
+
+        $attendance->update([
+            'is_rejected' => true,
+            'rejected_by' => $request->user()->id,
+            'rejected_at' => now(),
+            'rejection_reason' => $validated['reason'],
+        ]);
+
+        // Log rejection
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'reject_attendance',
+            'auditable_type' => Attendance::class,
+            'auditable_id' => $attendance->id,
+            'old_values' => $oldValues,
+            'new_values' => $attendance->fresh()->toArray(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
 
         return response()->json([
             'message' => 'Attendance rejected',
-            'attendance' => $attendance,
+            'attendance' => $attendance->fresh()->load('employee', 'rejectedBy'),
         ]);
     }
 
@@ -143,9 +350,392 @@ class AttendanceController extends Controller
             'total_present' => Attendance::where('employee_id', $employeeId)->where('status', 'present')->count(),
             'total_absent' => Attendance::where('employee_id', $employeeId)->where('status', 'absent')->count(),
             'total_late' => Attendance::where('employee_id', $employeeId)->where('status', 'late')->count(),
-            'total_hours' => Attendance::where('employee_id', $employeeId)->sum('hours_worked'),
+            'total_hours' => Attendance::where('employee_id', $employeeId)->sum('regular_hours'),
         ];
 
         return response()->json($summary);
+    }
+
+    /**
+     * Get attendance summary for a date range
+     */
+    public function summary(Request $request)
+    {
+        $validated = $request->validate([
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+            'employee_id' => 'nullable|exists:employees,id',
+        ]);
+
+        $query = Attendance::query()
+            ->whereBetween('attendance_date', [$validated['date_from'], $validated['date_to']]);
+
+        if ($validated['employee_id'] ?? false) {
+            $query->where('employee_id', $validated['employee_id']);
+        }
+
+        $attendances = $query->with('employee')->get();
+
+        $summary = [
+            'date_from' => $validated['date_from'],
+            'date_to' => $validated['date_to'],
+            'total_records' => $attendances->count(),
+            'total_present' => $attendances->where('status', 'present')->count(),
+            'total_absent' => $attendances->where('status', 'absent')->count(),
+            'total_late' => $attendances->where('status', 'late')->count(),
+            'total_on_leave' => $attendances->where('status', 'on_leave')->count(),
+            'total_hours_worked' => $attendances->sum('regular_hours') + $attendances->sum('overtime_hours'),
+            'total_regular_hours' => $attendances->sum('regular_hours'),
+            'total_overtime_hours' => $attendances->sum('overtime_hours'),
+            'total_night_differential_hours' => $attendances->sum('night_differential_hours'),
+            'pending_approval' => $attendances->where('is_approved', false)->where('is_rejected', false)->count(),
+        ];
+
+        if (!($validated['employee_id'] ?? false)) {
+            // Group by employee
+            $byEmployee = $attendances->groupBy('employee_id')->map(function ($records) {
+                return [
+                    'employee' => $records->first()->employee->only(['id', 'employee_number', 'full_name']),
+                    'total_present' => $records->where('status', 'present')->count(),
+                    'total_absent' => $records->where('status', 'absent')->count(),
+                    'total_hours' => $records->sum('regular_hours') + $records->sum('overtime_hours'),
+                ];
+            })->values();
+
+            $summary['by_employee'] = $byEmployee;
+        }
+
+        return response()->json($summary);
+    }
+
+    /**
+     * Mark employees as absent for a specific date
+     */
+    public function markAbsent(Request $request)
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+            'employee_ids' => 'nullable|array',
+            'employee_ids.*' => 'exists:employees,id',
+            'exclude_on_leave' => 'boolean',
+        ]);
+
+        $date = $validated['date'];
+        $excludeOnLeave = $validated['exclude_on_leave'] ?? true;
+
+        // Get employees who don't have attendance for this date
+        $query = Employee::active();
+
+        if ($validated['employee_ids'] ?? false) {
+            $query->whereIn('id', $validated['employee_ids']);
+        }
+
+        $employees = $query->get();
+
+        $marked = 0;
+        foreach ($employees as $employee) {
+            // Check if attendance already exists
+            $exists = Attendance::where('employee_id', $employee->id)
+                ->where('attendance_date', $date)
+                ->exists();
+
+            if ($exists) {
+                continue;
+            }
+
+            // Check if employee is on leave
+            if ($excludeOnLeave) {
+                $onLeave = $employee->leaves()
+                    ->where('start_date', '<=', $date)
+                    ->where('end_date', '>=', $date)
+                    ->where('status', 'approved')
+                    ->exists();
+
+                if ($onLeave) {
+                    continue;
+                }
+            }
+
+            // Create absent record
+            Attendance::create([
+                'employee_id' => $employee->id,
+                'attendance_date' => $date,
+                'status' => 'absent',
+                'is_approved' => true,
+                'is_manual_entry' => true,
+                'manual_reason' => 'Marked absent automatically',
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
+            ]);
+
+            $marked++;
+        }
+
+        // Log the action
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'mark_absent',
+            'auditable_type' => Attendance::class,
+            'auditable_id' => null,
+            'old_values' => null,
+            'new_values' => [
+                'date' => $date,
+                'marked_count' => $marked,
+            ],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'message' => "Marked {$marked} employees as absent",
+            'date' => $date,
+            'marked' => $marked,
+        ]);
+    }
+
+    /**
+     * Get pending approvals
+     */
+    public function pendingApprovals(Request $request)
+    {
+        $query = Attendance::where('is_approved', false)
+            ->where('is_rejected', false)
+            ->with(['employee', 'createdBy']);
+
+        if ($request->has('date_from')) {
+            $query->where('attendance_date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->where('attendance_date', '<=', $request->date_to);
+        }
+
+        return response()->json($query->latest('attendance_date')->paginate(15));
+    }
+
+    /**
+     * Fetch attendance directly from biometric device
+     */
+    public function fetchFromDevice(Request $request)
+    {
+        $validated = $request->validate([
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+        ]);
+
+        try {
+            $records = $this->biometricService->fetchFromDevice(
+                $validated['date_from'] ?? null,
+                $validated['date_to'] ?? null
+            );
+
+            $result = $this->attendanceService->importBiometric($records);
+
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'fetch_from_device',
+                'auditable_type' => Attendance::class,
+                'auditable_id' => null,
+                'old_values' => null,
+                'new_values' => [
+                    'records_imported' => $result['imported'],
+                    'records_updated' => $result['updated'] ?? 0,
+                    'records_failed' => $result['errors'],
+                ],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'message' => 'Attendance fetched from device successfully',
+                'imported' => $result['imported'],
+                'updated' => $result['updated'] ?? 0,
+                'failed' => $result['errors'],
+                'errors' => $result['error_details'] ?? [],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch from device: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch from biometric device',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Sync employees to biometric device
+     */
+    public function syncEmployees(Request $request)
+    {
+        try {
+            $result = $this->biometricService->syncEmployeesToDevice();
+
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'sync_employees_to_device',
+                'auditable_type' => Employee::class,
+                'auditable_id' => null,
+                'old_values' => null,
+                'new_values' => $result,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'message' => 'Employees synced to device successfully',
+                'synced' => $result['synced'],
+                'total' => $result['total'],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to sync employees: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to sync employees to device',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get biometric device information
+     */
+    public function deviceInfo()
+    {
+        $info = $this->biometricService->getDeviceInfo();
+        return response()->json($info);
+    }
+
+    /**
+     * Clear device attendance logs
+     */
+    public function clearDeviceLogs(Request $request)
+    {
+        try {
+            $result = $this->biometricService->clearDeviceLogs();
+
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'clear_device_logs',
+                'auditable_type' => Attendance::class,
+                'auditable_id' => null,
+                'old_values' => null,
+                'new_values' => ['cleared' => $result],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'message' => 'Device logs cleared successfully',
+                'success' => $result,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to clear device logs: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to clear device logs',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Fetch attendance from Yunatt Cloud API
+     */
+    public function fetchFromYunatt(Request $request)
+    {
+        if (!config('payroll.yunatt.enabled')) {
+            return response()->json([
+                'message' => 'Yunatt integration is not enabled',
+            ], 400);
+        }
+
+        if (!$this->yunattService) {
+            return response()->json([
+                'message' => 'Yunatt service is not available',
+            ], 500);
+        }
+
+        $validated = $request->validate([
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+        ]);
+
+        try {
+            // Fetch from Yunatt API
+            $records = $this->yunattService->fetchAttendance(
+                $validated['date_from'],
+                $validated['date_to']
+            );
+
+            if (empty($records)) {
+                return response()->json([
+                    'message' => 'No attendance records found for the specified date range',
+                    'imported' => 0,
+                    'failed' => 0,
+                ]);
+            }
+
+            // Import using existing attendance service
+            $result = $this->attendanceService->importBiometric($records);
+
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'fetch_from_yunatt',
+                'auditable_type' => Attendance::class,
+                'auditable_id' => null,
+                'old_values' => null,
+                'new_values' => [
+                    'date_from' => $validated['date_from'],
+                    'date_to' => $validated['date_to'],
+                    'records_imported' => $result['imported'],
+                    'records_updated' => $result['updated'] ?? 0,
+                    'records_failed' => $result['errors'],
+                ],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'message' => 'Attendance fetched from Yunatt successfully',
+                'imported' => $result['imported'],
+                'updated' => $result['updated'] ?? 0,
+                'failed' => $result['errors'],
+                'errors' => $result['error_details'] ?? [],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch from Yunatt: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch from Yunatt API',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Test Yunatt API connection
+     */
+    public function testYunattConnection()
+    {
+        if (!config('payroll.yunatt.enabled')) {
+            return response()->json([
+                'status' => 'disabled',
+                'message' => 'Yunatt integration is not enabled',
+            ]);
+        }
+
+        if (!$this->yunattService) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Yunatt service is not available',
+            ], 500);
+        }
+
+        try {
+            $result = $this->yunattService->testConnection();
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

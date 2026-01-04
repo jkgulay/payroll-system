@@ -468,7 +468,7 @@
                 density="compact"
                 class="mb-4"
               >
-                <v-icon start>mdi-information</v-icon>
+          
                 Set default daily rates for job positions. These rates will be
                 automatically assigned when creating new employees.
               </v-alert>
