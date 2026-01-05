@@ -238,14 +238,19 @@
                   {{ item.full_name }}
                 </div>
               </template>
-              <template v-slot:item.employment_status="{ item }">
+              <template v-slot:item.contract_type="{ item }">
+                <v-chip :color="item.contract_type === 'regular' ? 'success' : 'info'" size="small">
+                  {{ item.contract_type }}
+                </v-chip>
+              </template>
+              <template v-slot:item.activity_status="{ item }">
                 <v-chip
                   :color="
-                    item.employment_status === 'active' ? 'success' : 'grey'
+                    item.activity_status === 'active' ? 'success' : 'grey'
                   "
                   size="small"
                 >
-                  {{ item.employment_status }}
+                  {{ item.activity_status }}
                 </v-chip>
               </template>
               <template v-slot:item.actions="{ item }">
@@ -415,14 +420,30 @@
 
               <v-col cols="12" md="6">
                 <v-select
-                  v-model="employeeData.employment_status"
+                  v-model="employeeData.contract_type"
                   :items="[
                     { title: 'Regular', value: 'regular' },
                     { title: 'Probationary', value: 'probationary' },
                     { title: 'Contractual', value: 'contractual' },
-                    { title: 'Active', value: 'active' },
                   ]"
-                  label="Employment Status"
+                  label="Contract Type"
+                  :rules="[rules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="employeeData.activity_status"
+                  :items="[
+                    { title: 'Active', value: 'active' },
+                    { title: 'On Leave', value: 'on_leave' },
+                    { title: 'Resigned', value: 'resigned' },
+                    { title: 'Terminated', value: 'terminated' },
+                    { title: 'Retired', value: 'retired' },
+                  ]"
+                  label="Activity Status"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
@@ -478,76 +499,25 @@
                 <v-divider class="mb-4"></v-divider>
               </v-col>
 
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_water_allowance"
-                  label="Water Allowance"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_water_allowance"
-                  v-model.number="employeeData.water_allowance"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
+              <v-col cols="12">
+                <v-alert
+                  type="info"
+                  variant="tonal"
                   density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_cola"
-                  label="COLA"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_cola"
-                  v-model.number="employeeData.cola"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_incentives"
-                  label="Incentives"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_incentives"
-                  v-model.number="employeeData.incentives"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-checkbox
-                  v-model="employeeData.has_ppe"
-                  label="PPE"
-                  hide-details
-                ></v-checkbox>
-                <v-text-field
-                  v-if="employeeData.has_ppe"
-                  v-model.number="employeeData.ppe"
-                  label="Amount"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  density="compact"
-                  class="mt-2"
-                ></v-text-field>
+                  class="mb-4"
+                >
+                  <div class="d-flex align-center justify-space-between">
+                    <span>Allowances are now managed in a dedicated page with more options (type, frequency, dates, taxability)</span>
+                    <v-btn
+                      size="small"
+                      color="primary"
+                      variant="flat"
+                      to="/benefits/allowances"
+                    >
+                      Manage Allowances
+                    </v-btn>
+                  </div>
+                </v-alert>
               </v-col>
 
               <!-- Document Upload -->
@@ -885,8 +855,23 @@
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="selectedEmployee.employment_status"
-                  label="Employment Status"
+                  v-model="selectedEmployee.contract_type"
+                  label="Contract Type"
+                  readonly
+                  variant="plain"
+                  density="comfortable"
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="selectedEmployee.activity_status"
+                  label="Activity Status"
+                  readonly
+                  variant="plain"
+                  density="comfortable"
+                ></v-text-field>
+              </v-col>
                   readonly
                   variant="plain"
                   density="comfortable"
@@ -941,56 +926,30 @@
                 <v-divider class="mb-4"></v-divider>
               </v-col>
 
-              <v-col cols="12" md="6">
-                <v-text-field
-                  :model-value="
-                    selectedEmployee.has_water_allowance
-                      ? `₱${selectedEmployee.water_allowance}`
-                      : 'N/A'
-                  "
-                  label="Water Allowance"
-                  readonly
-                  variant="plain"
-                  density="comfortable"
-                ></v-text-field>
+              <v-col cols="12">
+                <v-alert
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                >
+                  <div class="d-flex align-center justify-space-between">
+                    <span>View and manage this employee's allowances in the dedicated allowances page</span>
+                    <v-btn
+                      size="small"
+                      color="primary"
+                      variant="flat"
+                      :to="`/benefits/allowances?employee_id=${selectedEmployee.id}`"
+                    >
+                      View Allowances
+                    </v-btn>
+                  </div>
+                </v-alert>
               </v-col>
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  :model-value="
-                    selectedEmployee.has_cola
-                      ? `₱${selectedEmployee.cola}`
-                      : 'N/A'
-                  "
-                  label="COLA"
-                  readonly
-                  variant="plain"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  :model-value="
-                    selectedEmployee.has_incentives
-                      ? `₱${selectedEmployee.incentives}`
-                      : 'N/A'
-                  "
-                  label="Incentives"
-                  readonly
-                  variant="plain"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  :model-value="
-                    selectedEmployee.has_ppe
-                      ? `₱${selectedEmployee.ppe}`
-                      : 'N/A'
-                  "
-                  label="PPE"
+                  model-value="See Allowances Page"
+                  label="Allowances"
                   readonly
                   variant="plain"
                   density="comfortable"
@@ -1220,6 +1179,12 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import {
+  GENDERS,
+  CONTRACT_TYPES,
+  ACTIVITY_STATUSES,
+  EMPLOYMENT_TYPES,
+} from "@/utils/constants";
 
 const router = useRouter();
 const toast = useToast();
@@ -1261,18 +1226,11 @@ const employeeData = ref({
   position: "",
   project_id: null,
   worker_address: "",
-  employment_status: "regular",
+  contract_type: "regular",
+  activity_status: "active",
   employment_type: "regular",
   basic_salary: 450,
   salary_type: "daily",
-  has_water_allowance: false,
-  water_allowance: 0,
-  has_cola: false,
-  cola: 0,
-  has_incentives: false,
-  incentives: 0,
-  has_ppe: false,
-  ppe: 0,
 });
 
 const documents = ref({
@@ -1299,7 +1257,8 @@ const employeeHeaders = [
   { title: "Employee No.", key: "employee_number" },
   { title: "Position", key: "position" },
   { title: "Project", key: "project.name" },
-  { title: "Status", key: "employment_status" },
+  { title: "Contract", key: "contract_type" },
+  { title: "Status", key: "activity_status" },
   { title: "Actions", key: "actions", sortable: false },
 ];
 
@@ -1562,18 +1521,11 @@ function closeEmployeeDialog() {
     position: "",
     project_id: null,
     worker_address: "",
-    employment_status: "regular",
+    contract_type: "regular",
+    activity_status: "active",
     employment_type: "regular",
     basic_salary: 450,
     salary_type: "daily",
-    has_water_allowance: false,
-    water_allowance: 0,
-    has_cola: false,
-    cola: 0,
-    has_incentives: false,
-    incentives: 0,
-    has_ppe: false,
-    ppe: 0,
   };
   documents.value = {
     resume: null,

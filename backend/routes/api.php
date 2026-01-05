@@ -46,8 +46,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/two-factor/disable', [App\Http\Controllers\Api\TwoFactorController::class, 'disable']);
     Route::post('/two-factor/recovery-codes', [App\Http\Controllers\Api\TwoFactorController::class, 'regenerateRecoveryCodes']);
 
-    // Employee Import - MUST come before employees apiResource
-    Route::post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']);
+    // Employee Import - MUST come before employees apiResource (rate limited)
+    Route::middleware(['throttle:10,1'])->post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']);
     Route::get('/employees/import/template', [App\Http\Controllers\Api\EmployeeImportController::class, 'downloadTemplate']);
 
     // Employees
@@ -90,7 +90,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Payroll
     Route::apiResource('payroll', PayrollController::class);
-    Route::post('/payroll/{payroll}/process', [PayrollController::class, 'process']);
+    Route::middleware(['throttle:10,1'])->post('/payroll/{payroll}/process', [PayrollController::class, 'process']);
     Route::post('/payroll/{payroll}/check', [PayrollController::class, 'check']);
     Route::post('/payroll/{payroll}/recommend', [PayrollController::class, 'recommend']);
     Route::post('/payroll/{payroll}/approve', [PayrollController::class, 'approve']);

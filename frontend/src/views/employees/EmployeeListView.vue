@@ -48,9 +48,18 @@
           </v-col>
           <v-col cols="12" md="2">
             <v-select
-              v-model="filters.employment_status"
-              :items="statusOptions"
-              label="Status"
+              v-model="filters.contract_type"
+              :items="contractTypeOptions"
+              label="Contract Type"
+              clearable
+              @update:model-value="fetchEmployees"
+            ></v-select>
+          </v-col>
+          <v-col cols="12" md="2">
+            <v-select
+              v-model="filters.activity_status"
+              :items="activityStatusOptions"
+              label="Activity Status"
               clearable
               @update:model-value="fetchEmployees"
             ></v-select>
@@ -362,14 +371,30 @@
 
               <v-col cols="12" md="6">
                 <v-select
-                  v-model="selectedEmployee.employment_status"
+                  v-model="selectedEmployee.contract_type"
                   :items="[
                     { title: 'Regular', value: 'regular' },
                     { title: 'Probationary', value: 'probationary' },
                     { title: 'Contractual', value: 'contractual' },
-                    { title: 'Active', value: 'active' },
                   ]"
-                  label="Employment Status"
+                  label="Contract Type"
+                  :readonly="!isEditing"
+                  :variant="isEditing ? 'outlined' : 'plain'"
+                  density="comfortable"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="selectedEmployee.activity_status"
+                  :items="[
+                    { title: 'Active', value: 'active' },
+                    { title: 'On Leave', value: 'on_leave' },
+                    { title: 'Resigned', value: 'resigned' },
+                    { title: 'Terminated', value: 'terminated' },
+                    { title: 'Retired', value: 'retired' },
+                  ]"
+                  label="Activity Status"
                   :readonly="!isEditing"
                   :variant="isEditing ? 'outlined' : 'plain'"
                   density="comfortable"
@@ -645,6 +670,11 @@ import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { usePositionRates } from "@/composables/usePositionRates";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
+import {
+  CONTRACT_TYPES,
+  ACTIVITY_STATUSES,
+  EMPLOYMENT_TYPES,
+} from "@/utils/constants";
 
 const toast = useToast();
 const employeeStore = useEmployeeStore();
@@ -653,7 +683,8 @@ const { positionOptions, getRate, loadPositionRates } = usePositionRates();
 const search = ref("");
 const filters = ref({
   project_id: null,
-  employment_status: null,
+  contract_type: null,
+  activity_status: null,
   employment_type: null,
   position: null,
 });
@@ -683,19 +714,9 @@ const resettingPassword = ref(false);
 const projects = ref([]);
 const employeeForm = ref(null);
 
-const statusOptions = [
-  { title: "Active", value: "active" },
-  { title: "Probationary", value: "probationary" },
-  { title: "Resigned", value: "resigned" },
-  { title: "Terminated", value: "terminated" },
-  { title: "Retired", value: "retired" },
-];
-
-const employmentTypeOptions = [
-  { title: "Regular", value: "regular" },
-  { title: "Contractual", value: "contractual" },
-  { title: "Part Time", value: "part_time" },
-];
+const contractTypeOptions = CONTRACT_TYPES;
+const activityStatusOptions = ACTIVITY_STATUSES;
+const employmentTypeOptions = EMPLOYMENT_TYPES;
 
 const headers = [
   { title: "Employee #", key: "employee_number", sortable: true },
@@ -775,7 +796,7 @@ async function suspendEmployee(employee) {
   try {
     await api.put(`/employees/${employee.id}`, {
       ...employee,
-      employment_status: "suspended",
+      activity_status: "on_leave",
       is_active: false,
     });
     toast.success("Employee suspended successfully!");
@@ -798,7 +819,7 @@ async function terminateEmployee(employee) {
   try {
     await api.put(`/employees/${employee.id}`, {
       ...employee,
-      employment_status: "terminated",
+      activity_status: "terminated",
       is_active: false,
       date_separated: new Date().toISOString().split("T")[0],
     });

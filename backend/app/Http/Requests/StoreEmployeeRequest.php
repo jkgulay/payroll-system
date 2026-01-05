@@ -32,22 +32,14 @@ class StoreEmployeeRequest extends FormRequest
             'project_id' => ['nullable', 'exists:projects,id'],
             'worker_address' => ['nullable', 'string', 'max:500'],
             'position' => ['required', 'string', 'max:100'],
-            'employment_status' => ['nullable', 'in:regular,probationary,contractual'],
+            'position_id' => ['nullable', 'exists:position_rates,id'],
+            'contract_type' => ['nullable', 'in:regular,probationary,contractual'],
+            'activity_status' => ['nullable', 'in:active,on_leave,resigned,terminated,retired'],
             'employment_type' => ['nullable', 'in:regular,contractual,part_time'],
             'date_hired' => ['nullable', 'date', 'before_or_equal:today'],
-            'basic_salary' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
-            'salary_type' => ['nullable', 'in:daily,monthly'],
-            
-            // Allowances
-            'has_water_allowance' => ['nullable', 'boolean'],
-            'water_allowance' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'has_cola' => ['nullable', 'boolean'],
-            'cola' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'has_incentives' => ['nullable', 'boolean'],
-            'incentives' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'has_ppe' => ['nullable', 'boolean'],
-            'ppe' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            
+            'basic_salary' => ['nullable', 'numeric', 'min:450', 'max:999999.99'],
+            'salary_type' => ['nullable', 'in:daily,monthly,hourly'],
+
             // Government IDs
             'sss_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'philhealth_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],

@@ -18,7 +18,7 @@ class AccountantController extends Controller
     public function getDashboardStats()
     {
         $totalEmployees = Employee::count();
-        $activeEmployees = Employee::whereIn('employment_status', ['regular', 'probationary', 'contractual', 'active'])
+        $activeEmployees = Employee::where('activity_status', 'active')
             ->count();
         $pendingRequests = 0; // Will be implemented with approval system
 

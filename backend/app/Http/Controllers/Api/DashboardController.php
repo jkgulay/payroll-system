@@ -18,9 +18,9 @@ class DashboardController extends Controller
         // Count all active employees (is_active = true)
         $totalEmployees = Employee::where('is_active', true)->count();
 
-        // Count active employees with 'active' employment status
+        // Count active employees with 'active' activity status
         $activeStatus = Employee::where('is_active', true)
-            ->where('employment_status', 'active')
+            ->where('activity_status', 'active')
             ->count();
 
         $data = [
@@ -271,12 +271,12 @@ class DashboardController extends Controller
     public function employmentStatusDistribution(Request $request)
     {
         $distribution = Employee::where('is_active', true)
-            ->select('employment_status', DB::raw('COUNT(*) as count'))
-            ->groupBy('employment_status')
+            ->select('contract_type', DB::raw('COUNT(*) as count'))
+            ->groupBy('contract_type')
             ->get()
             ->map(function ($item) {
                 return [
-                    'label' => ucfirst($item->employment_status ?? 'Unknown'),
+                    'label' => ucfirst($item->contract_type ?? 'Unknown'),
                     'value' => $item->count
                 ];
             });
@@ -423,7 +423,7 @@ class DashboardController extends Controller
         }
 
         $onLeave = Employee::where('is_active', true)
-            ->where('employment_status', 'on-leave')
+            ->where('activity_status', 'on_leave')
             ->count();
 
         $utilizationRate = ($onLeave / $totalEmployees) * 100;

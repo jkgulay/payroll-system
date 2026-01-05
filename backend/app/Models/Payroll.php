@@ -37,9 +37,13 @@ class Payroll extends Model
         'approved_at',
         'paid_by',
         'paid_at',
+        'cancelled_by',
+        'cancelled_at',
+        'cancellation_reason',
         'notes',
         'created_by',
         'updated_by',
+        'version',
     ];
 
     protected $casts = [
@@ -54,32 +58,12 @@ class Payroll extends Model
         'recommended_at' => 'datetime',
         'approved_at' => 'datetime',
         'paid_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     protected $appends = [
         'period_label',
     ];
-
-    // Accessors for backward compatibility
-    public function getPeriodStartDateAttribute()
-    {
-        return $this->period_start;
-    }
-
-    public function getPeriodEndDateAttribute()
-    {
-        return $this->period_end;
-    }
-
-    public function setPeriodStartDateAttribute($value)
-    {
-        $this->attributes['period_start'] = $value;
-    }
-
-    public function setPeriodEndDateAttribute($value)
-    {
-        $this->attributes['period_end'] = $value;
-    }
 
     public function getPeriodLabelAttribute(): string
     {
@@ -115,6 +99,11 @@ class Payroll extends Model
     public function paidBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'paid_by');
+    }
+
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     // Scopes

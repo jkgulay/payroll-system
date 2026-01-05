@@ -318,14 +318,12 @@
               <div class="text-caption text-grey">{{ item.salary_type }}</div>
             </template>
 
-            <template v-slot:item.employment_status="{ item }">
+            <template v-slot:item.activity_status="{ item }">
               <v-chip
-                :color="
-                  item.employment_status === 'active' ? 'success' : 'grey'
-                "
+                :color="item.activity_status === 'active' ? 'success' : 'grey'"
                 size="small"
               >
-                {{ item.employment_status }}
+                {{ item.activity_status }}
               </v-chip>
             </template>
           </v-data-table>
@@ -459,7 +457,7 @@ const employeeHeaders = [
   { title: "Employee", key: "full_name", sortable: true },
   { title: "Position", key: "position", sortable: true },
   { title: "Salary", key: "basic_salary", sortable: true },
-  { title: "Status", key: "employment_status", sortable: true },
+  { title: "Status", key: "activity_status", sortable: true },
   { title: "Date Hired", key: "date_hired", sortable: true },
 ];
 

@@ -106,8 +106,8 @@ class EmployeeImportController extends Controller
                     // Parse full name into first, middle, last
                     $nameParts = $this->parseFullName($data['name']);
 
-                    // Map entry status to employment_status
-                    $employmentStatus = $this->mapEntryStatus($data['entry_status']);
+                    // Map entry status to contract_type
+                    $contractType = $this->mapEntryStatus($data['entry_status']);
 
                     // Set default gender if not provided
                     $gender = !empty($data['gender']) ? strtolower(trim($data['gender'])) : 'male';
@@ -146,14 +146,25 @@ class EmployeeImportController extends Controller
                     $username = $this->generateUsername($nameParts['first_name'], $nameParts['last_name']);
                     $password = $this->generatePassword($nameParts['last_name'], $data['staff_code']);
 
-                    $user = User::create([
-                        'name' => $data['name'],
-                        'username' => $username,
-                        'email' => !empty($data['email']) ? $data['email'] : $username . '@company.com',
-                        'password' => Hash::make($password),
-                        'role' => 'employee',
-                        'is_active' => true,
-                    ]);
+                    try {
+                        $user = User::create([
+                            'name' => $data['name'],
+                            'username' => $username,
+                            'email' => !empty($data['email']) ? $data['email'] : $username . '@company.com',
+                            'password' => Hash::make($password),
+                            'role' => 'employee',
+                            'is_active' => true,
+                            'must_change_password' => true, // Force password change on first login
+                        ]);
+                    } catch (\Exception $e) {
+                        $errors[] = [
+                            'row' => $index + 1,
+                            'staff_code' => $data['staff_code'],
+                            'error' => 'Failed to create user account: ' . $e->getMessage(),
+                        ];
+                        $failed++;
+                        continue;
+                    }
 
                     // Determine position and salary
                     $position = !empty($data['position']) ? trim($data['position']) : 'General Worker';
@@ -183,13 +194,14 @@ class EmployeeImportController extends Controller
                         'mobile_number' => !empty($data['mobile_no']) ? $data['mobile_no'] : null,
                         'email' => !empty($data['email']) ? $data['email'] : null,
                         'date_hired' => $data['entry_date'],
-                        'employment_status' => $employmentStatus,
+                        'contract_type' => $contractType,
+                        'activity_status' => 'active', // All imported employees are active
                         'employment_type' => $employmentType,
                         'project_id' => 1, // Default to first project
                         'position' => $position,
                         'basic_salary' => $basicSalary,
                         'salary_type' => 'daily', // Default for construction
-                        'is_active' => $employmentStatus === 'regular',
+                        'is_active' => true,
                         'username' => $username,
                         'created_by' => $request->user()->id,
                     ];
@@ -213,8 +225,8 @@ class EmployeeImportController extends Controller
                     $errorMessage = $e->getMessage();
                     if (strpos($errorMessage, 'employment_type_check') !== false) {
                         $errorMessage = "Invalid employment type. Must be: regular, contractual, or part_time";
-                    } elseif (strpos($errorMessage, 'employment_status_check') !== false) {
-                        $errorMessage = "Invalid employment status. Must be: regular, probationary, or contractual";
+                    } elseif (strpos($errorMessage, 'contract_type') !== false || strpos($errorMessage, 'activity_status') !== false) {
+                        $errorMessage = "Invalid contract type or activity status";
                     } elseif (strpos($errorMessage, 'gender') !== false) {
                         $errorMessage = "Invalid gender. Must be: male, female, or other";
                     } elseif (strpos($errorMessage, 'Duplicate entry') !== false || strpos($errorMessage, 'unique') !== false) {
@@ -287,7 +299,7 @@ class EmployeeImportController extends Controller
     }
 
     /**
-     * Map entry status to employment_status
+     * Map entry status to contract_type
      */
     private function mapEntryStatus(string $entryStatus): string
     {
@@ -306,11 +318,14 @@ class EmployeeImportController extends Controller
 
     /**
      * Generate username from name
+     * Uses firstname.lastname pattern (consistent with EmployeeController)
      */
     private function generateUsername(string $firstName, string $lastName): string
     {
-        $base = strtolower($firstName[0] . $lastName);
-        $base = preg_replace('/[^a-z0-9]/', '', $base);
+        // Use firstname.lastname pattern for consistency
+        $base = strtolower($firstName . '.' . $lastName);
+        // Remove special characters except period
+        $base = preg_replace('/[^a-z0-9.]/', '', $base);
 
         $username = $base;
         $counter = 1;
@@ -325,10 +340,12 @@ class EmployeeImportController extends Controller
 
     /**
      * Generate temporary password
+     * Uses LastName + StaffCode + @ + 2RandomDigits pattern (consistent with EmployeeController)
      */
     private function generatePassword(string $lastName, string $staffCode): string
     {
-        return $lastName . $staffCode . '@' . date('y');
+        $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+        return $lastName . $staffCode . '@' . $randomDigits;
     }
 
     /**

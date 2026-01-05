@@ -85,11 +85,7 @@
             <v-col cols="12" md="6">
               <v-select
                 v-model="formData.gender"
-                :items="[
-                  { title: 'Male', value: 'male' },
-                  { title: 'Female', value: 'female' },
-                  { title: 'Other', value: 'other' },
-                ]"
+                :items="GENDERS"
                 label="Gender"
                 :rules="[rules.required]"
                 variant="outlined"
@@ -171,13 +167,22 @@
 
             <v-col cols="12" md="6">
               <v-select
-                v-model="formData.employment_status"
-                :items="[
-                  { title: 'Regular', value: 'regular' },
-                  { title: 'Probationary', value: 'probationary' },
-                  { title: 'Contractual', value: 'contractual' },
-                ]"
-                label="Employment Status"
+                v-model="formData.contract_type"
+                :items="CONTRACT_TYPES"
+                label="Contract Type"
+                :rules="[rules.required]"
+                variant="outlined"
+                density="comfortable"
+                hint="Type of employment contract"
+                persistent-hint
+              ></v-select>
+            </v-col>
+
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="formData.activity_status"
+                :items="ACTIVITY_STATUSES"
+                label="Activity Status"
                 :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
@@ -189,11 +194,7 @@
             <v-col cols="12" md="6">
               <v-select
                 v-model="formData.employment_type"
-                :items="[
-                  { title: 'Regular', value: 'regular' },
-                  { title: 'Contractual', value: 'contractual' },
-                  { title: 'Part Time', value: 'part_time' },
-                ]"
+                :items="EMPLOYMENT_TYPES"
                 label="Employment Type"
                 :rules="[rules.required]"
                 variant="outlined"
@@ -206,10 +207,7 @@
             <v-col cols="12" md="6">
               <v-select
                 v-model="formData.salary_type"
-                :items="[
-                  { title: 'Daily', value: 'daily' },
-                  { title: 'Monthly', value: 'monthly' },
-                ]"
+                :items="SALARY_TYPES"
                 label="Salary Type"
                 :rules="[rules.required]"
                 variant="outlined"
@@ -239,80 +237,12 @@
               <v-divider class="mb-2"></v-divider>
             </v-col>
 
-            <v-col cols="12" md="6">
-              <v-checkbox
-                v-model="formData.has_water_allowance"
-                label="Water Allowance"
-                color="primary"
-                hide-details
-              ></v-checkbox>
-              <v-text-field
-                v-if="formData.has_water_allowance"
-                v-model.number="formData.water_allowance"
-                label="Amount"
-                type="number"
-                prefix="₱"
-                variant="outlined"
-                density="compact"
-                class="mt-2"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-checkbox
-                v-model="formData.has_cola"
-                label="COLA (Cost of Living Allowance)"
-                color="primary"
-                hide-details
-              ></v-checkbox>
-              <v-text-field
-                v-if="formData.has_cola"
-                v-model.number="formData.cola"
-                label="Amount"
-                type="number"
-                prefix="₱"
-                variant="outlined"
-                density="compact"
-                class="mt-2"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-checkbox
-                v-model="formData.has_incentives"
-                label="Incentives"
-                color="primary"
-                hide-details
-              ></v-checkbox>
-              <v-text-field
-                v-if="formData.has_incentives"
-                v-model.number="formData.incentives"
-                label="Amount"
-                type="number"
-                prefix="₱"
-                variant="outlined"
-                density="compact"
-                class="mt-2"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-checkbox
-                v-model="formData.has_ppe"
-                label="PPE (Personal Protective Equipment)"
-                color="primary"
-                hide-details
-              ></v-checkbox>
-              <v-text-field
-                v-if="formData.has_ppe"
-                v-model.number="formData.ppe"
-                label="Amount"
-                type="number"
-                prefix="₱"
-                variant="outlined"
-                density="compact"
-                class="mt-2"
-              ></v-text-field>
+            <v-col cols="12">
+              <v-alert type="info" variant="tonal" density="compact">
+                Allowances can be added after creating the employee through the
+                Benefits > Allowances page. This allows for more flexible
+                management with custom types, frequencies, and date ranges.
+              </v-alert>
             </v-col>
 
             <!-- User Account Section -->
@@ -383,6 +313,13 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { usePositionRates } from "@/composables/usePositionRates";
+import {
+  GENDERS,
+  CONTRACT_TYPES,
+  ACTIVITY_STATUSES,
+  EMPLOYMENT_TYPES,
+  SALARY_TYPES,
+} from "@/utils/constants";
 
 const props = defineProps({
   modelValue: {
@@ -420,18 +357,11 @@ const formData = ref({
   project_id: null,
   position: "",
   date_hired: "",
-  employment_status: "regular",
+  contract_type: "regular",
+  activity_status: "active",
   employment_type: "regular",
   salary_type: "daily",
   basic_salary: 450,
-  has_water_allowance: false,
-  water_allowance: 0,
-  has_cola: false,
-  cola: 0,
-  has_incentives: false,
-  incentives: 0,
-  has_ppe: false,
-  ppe: 0,
   role: "employee",
 });
 
@@ -474,18 +404,11 @@ function resetForm() {
     project_id: null,
     position: "",
     date_hired: "",
-    employment_status: "regular",
+    contract_type: "regular",
+    activity_status: "active",
     employment_type: "regular",
     salary_type: "daily",
     basic_salary: 450,
-    has_water_allowance: false,
-    water_allowance: 0,
-    has_cola: false,
-    cola: 0,
-    has_incentives: false,
-    incentives: 0,
-    has_ppe: false,
-    ppe: 0,
     role: "employee",
   };
   if (employeeForm.value) {

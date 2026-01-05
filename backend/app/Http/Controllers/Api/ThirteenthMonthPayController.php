@@ -63,9 +63,8 @@ class ThirteenthMonthPayController extends Controller
                 'total_amount' => 0,
             ]);
 
-            // Get all active employees
-            $employees = Employee::where('employment_status', '!=', 'resigned')
-                ->where('employment_status', '!=', 'terminated')
+            // Get all active employees (not resigned or terminated)
+            $employees = Employee::whereNotIn('activity_status', ['resigned', 'terminated'])
                 ->get();
 
             $totalAmount = 0;

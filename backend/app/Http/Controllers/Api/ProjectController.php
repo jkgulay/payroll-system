@@ -101,8 +101,9 @@ class ProjectController extends Controller
     public function employees(Project $project): JsonResponse
     {
         $employees = $project->employees()
+            ->with('positionRate')
             ->select('employees.*')
-            ->orderBy('position')
+            ->orderBy('position_id')
             ->orderBy('last_name')
             ->get()
             ->map(function ($employee) {
@@ -110,10 +111,12 @@ class ProjectController extends Controller
                     'id' => $employee->id,
                     'employee_number' => $employee->employee_number,
                     'full_name' => $employee->first_name . ' ' . $employee->last_name,
-                    'position' => $employee->position,
+                    'position' => $employee->positionRate?->position_name ?? 'N/A',
+                    'position_id' => $employee->position_id,
                     'basic_salary' => $employee->basic_salary,
                     'salary_type' => $employee->salary_type,
-                    'employment_status' => $employee->employment_status,
+                    'contract_type' => $employee->contract_type,
+                    'activity_status' => $employee->activity_status,
                     'date_hired' => $employee->date_hired,
                 ];
             });
@@ -160,7 +163,7 @@ class ProjectController extends Controller
 
         // Get all active employees in this project
         $employeeIds = $project->employees()
-            ->where('employment_status', 'active')
+            ->where('activity_status', 'active')
             ->pluck('id')
             ->toArray();
 
