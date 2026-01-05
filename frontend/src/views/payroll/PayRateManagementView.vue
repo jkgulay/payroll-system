@@ -192,7 +192,8 @@
                     selectedEmployee.employee_number
                   }})
                   <br />
-                  <strong>Current Position:</strong> {{ selectedEmployee.position }}
+                  <strong>Current Position:</strong>
+                  {{ selectedEmployee.position }}
                 </v-alert>
               </v-col>
 
@@ -214,7 +215,9 @@
                     <v-list-item v-bind="props">
                       <template v-slot:append>
                         <v-chip size="x-small" color="info">
-                          ₱{{ formatNumber(getPositionDefaultRate(item.value)) }}/day
+                          ₱{{
+                            formatNumber(getPositionDefaultRate(item.value))
+                          }}/day
                         </v-chip>
                       </template>
                     </v-list-item>
@@ -244,7 +247,13 @@
               </v-col>
 
               <!-- Position Default Rate (if available) -->
-              <v-col cols="12" v-if="editData.new_position && getPositionDefaultRate(editData.new_position)">
+              <v-col
+                cols="12"
+                v-if="
+                  editData.new_position &&
+                  getPositionDefaultRate(editData.new_position)
+                "
+              >
                 <v-card variant="outlined" color="success">
                   <v-card-text>
                     <div class="d-flex justify-space-between align-center">
@@ -253,7 +262,11 @@
                           New Position Default Rate
                         </div>
                         <div class="text-h6 font-weight-bold">
-                          ₱{{ formatNumber(getPositionDefaultRate(editData.new_position)) }}/day
+                          ₱{{
+                            formatNumber(
+                              getPositionDefaultRate(editData.new_position)
+                            )
+                          }}/day
                         </div>
                       </div>
                       <v-btn
@@ -268,9 +281,15 @@
                   </v-card-text>
                 </v-card>
               </v-col>
-              
+
               <!-- Current Position Rate (if no position change) -->
-              <v-col cols="12" v-else-if="!editData.new_position && getPositionDefaultRate(selectedEmployee.position)">
+              <v-col
+                cols="12"
+                v-else-if="
+                  !editData.new_position &&
+                  getPositionDefaultRate(selectedEmployee.position)
+                "
+              >
                 <v-card variant="outlined" color="info">
                   <v-card-text>
                     <div class="d-flex justify-space-between align-center">
@@ -279,7 +298,11 @@
                           Current Position Default Rate
                         </div>
                         <div class="text-h6 font-weight-bold">
-                          ₱{{ formatNumber(getPositionDefaultRate(selectedEmployee.position)) }}/day
+                          ₱{{
+                            formatNumber(
+                              getPositionDefaultRate(selectedEmployee.position)
+                            )
+                          }}/day
                         </div>
                       </div>
                       <v-btn
@@ -307,7 +330,11 @@
                     label="Use Position Default Rate"
                     :value="false"
                     color="info"
-                    :disabled="!getPositionDefaultRate(editData.new_position || selectedEmployee.position)"
+                    :disabled="
+                      !getPositionDefaultRate(
+                        editData.new_position || selectedEmployee.position
+                      )
+                    "
                   ></v-radio>
                   <v-radio
                     label="Set Custom Rate"
@@ -339,7 +366,11 @@
               <!-- Position Rate Display (when using default) -->
               <v-col cols="12" v-else>
                 <v-text-field
-                  :model-value="getPositionDefaultRate(editData.new_position || selectedEmployee.position)"
+                  :model-value="
+                    getPositionDefaultRate(
+                      editData.new_position || selectedEmployee.position
+                    )
+                  "
                   label="Pay Rate (Position Default)"
                   type="number"
                   prepend-inner-icon="mdi-cash"
@@ -382,63 +413,117 @@
               </v-col>
 
               <!-- Preview -->
-              <v-col cols="12" v-if="editData.useCustomRate ? editData.new_rate : getPositionDefaultRate(editData.new_position || selectedEmployee.position)">
+              <v-col
+                cols="12"
+                v-if="
+                  editData.useCustomRate
+                    ? editData.new_rate
+                    : getPositionDefaultRate(
+                        editData.new_position || selectedEmployee.position
+                      )
+                "
+              >
                 <v-card variant="outlined" color="success">
                   <v-card-text>
                     <div class="text-caption text-medium-emphasis">
                       Change Preview
                     </div>
-                    
+
                     <!-- Position Change -->
-                    <div v-if="editData.new_position" class="mb-3 pb-3" style="border-bottom: 1px solid rgba(0,0,0,0.1)">
+                    <div
+                      v-if="editData.new_position"
+                      class="mb-3 pb-3"
+                      style="border-bottom: 1px solid rgba(0, 0, 0, 0.1)"
+                    >
                       <div class="text-subtitle-2 mb-2">Position Change:</div>
                       <div class="d-flex align-center gap-2">
-                        <v-chip size="small" color="grey">{{ selectedEmployee.position }}</v-chip>
+                        <v-chip size="small" color="grey">{{
+                          selectedEmployee.position
+                        }}</v-chip>
                         <v-icon>mdi-arrow-right</v-icon>
-                        <v-chip size="small" color="success">{{ editData.new_position }}</v-chip>
+                        <v-chip size="small" color="success">{{
+                          editData.new_position
+                        }}</v-chip>
                       </div>
                     </div>
-                    
+
                     <!-- Rate Change -->
                     <div class="text-subtitle-2 mb-2">Rate Change:</div>
                     <div class="d-flex justify-space-between align-center">
                       <div>
-                        <div class="text-caption text-medium-emphasis">Current</div>
+                        <div class="text-caption text-medium-emphasis">
+                          Current
+                        </div>
                         <div class="font-weight-bold">
                           ₱{{ formatNumber(selectedEmployee.basic_salary) }}
                         </div>
                       </div>
                       <v-icon size="large">mdi-arrow-right</v-icon>
                       <div>
-                        <div class="text-caption text-medium-emphasis">New Rate</div>
+                        <div class="text-caption text-medium-emphasis">
+                          New Rate
+                        </div>
                         <div class="font-weight-bold text-success">
-                          ₱{{ formatNumber(editData.useCustomRate ? editData.new_rate : getPositionDefaultRate(editData.new_position || selectedEmployee.position)) }}
+                          ₱{{
+                            formatNumber(
+                              editData.useCustomRate
+                                ? editData.new_rate
+                                : getPositionDefaultRate(
+                                    editData.new_position ||
+                                      selectedEmployee.position
+                                  )
+                            )
+                          }}
                         </div>
                       </div>
                       <div>
-                        <div class="text-caption text-medium-emphasis">Difference</div>
+                        <div class="text-caption text-medium-emphasis">
+                          Difference
+                        </div>
                         <div
                           class="font-weight-bold"
                           :class="
-                            (editData.useCustomRate ? editData.new_rate : getPositionDefaultRate(editData.new_position || selectedEmployee.position)) - selectedEmployee.basic_salary >
+                            (editData.useCustomRate
+                              ? editData.new_rate
+                              : getPositionDefaultRate(
+                                  editData.new_position ||
+                                    selectedEmployee.position
+                                )) -
+                              selectedEmployee.basic_salary >
                             0
                               ? 'text-success'
                               : 'text-error'
                           "
                         >
                           {{
-                            (editData.useCustomRate ? editData.new_rate : getPositionDefaultRate(editData.new_position || selectedEmployee.position)) - selectedEmployee.basic_salary >
+                            (editData.useCustomRate
+                              ? editData.new_rate
+                              : getPositionDefaultRate(
+                                  editData.new_position ||
+                                    selectedEmployee.position
+                                )) -
+                              selectedEmployee.basic_salary >
                             0
                               ? "+"
                               : ""
                           }}₱{{
                             formatNumber(
-                              (editData.useCustomRate ? editData.new_rate : getPositionDefaultRate(editData.new_position || selectedEmployee.position)) - selectedEmployee.basic_salary
+                              (editData.useCustomRate
+                                ? editData.new_rate
+                                : getPositionDefaultRate(
+                                    editData.new_position ||
+                                      selectedEmployee.position
+                                  )) - selectedEmployee.basic_salary
                             )
                           }}
                           ({{
                             formatPercentage(
-                              (((editData.useCustomRate ? editData.new_rate : getPositionDefaultRate(editData.new_position || selectedEmployee.position)) -
+                              (((editData.useCustomRate
+                                ? editData.new_rate
+                                : getPositionDefaultRate(
+                                    editData.new_position ||
+                                      selectedEmployee.position
+                                  )) -
                                 selectedEmployee.basic_salary) /
                                 selectedEmployee.basic_salary) *
                                 100
@@ -597,7 +682,6 @@
                 density="compact"
                 class="mb-4"
               >
-          
                 Set default daily rates for job positions. These rates will be
                 automatically assigned when creating new employees.
               </v-alert>
@@ -1113,8 +1197,9 @@ async function savePayRate() {
   if (!valid) return;
 
   // Determine which position to use for getting the default rate
-  const positionToUse = editData.value.new_position || selectedEmployee.value.position;
-  
+  const positionToUse =
+    editData.value.new_position || selectedEmployee.value.position;
+
   // Determine the rate to use based on whether custom rate is selected
   const rateToUse = editData.value.useCustomRate
     ? editData.value.new_rate
@@ -1130,12 +1215,12 @@ async function savePayRate() {
     const updateData = {
       basic_salary: rateToUse,
     };
-    
+
     // Include position change if a new position is selected
     if (editData.value.new_position) {
       updateData.position = editData.value.new_position;
     }
-    
+
     await api.put(`/employees/${selectedEmployee.value.id}`, updateData);
 
     // TODO: Create audit log entry with reason and effective date
@@ -1152,7 +1237,7 @@ async function savePayRate() {
     const message = editData.value.new_position
       ? `Position changed to ${editData.value.new_position} and pay rate updated to ₱${rateToUse}`
       : "Pay rate updated successfully!";
-    
+
     toast.success(message);
     await fetchEmployees();
     closeEditDialog();

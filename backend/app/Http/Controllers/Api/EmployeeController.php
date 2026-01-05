@@ -109,7 +109,7 @@ class EmployeeController extends Controller
                 }
             }
         }
-        
+
         // Remove position string from validated data (we only save position_id)
         unset($validated['position']);
 
@@ -193,7 +193,7 @@ class EmployeeController extends Controller
                 $validated['position_id'] = $positionRate->id;
             }
         }
-        
+
         // Remove position string from validated data (we only save position_id)
         unset($validated['position']);
 
