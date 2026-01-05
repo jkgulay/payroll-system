@@ -165,7 +165,12 @@ Net Pay
 
 ## License
 
-MIT License - See LICENSE file for details
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
+
+**Free for personal, educational, and non-commercial use.**  
+For commercial licensing inquiries, please contact the project maintainer.
+
+See [LICENSE](LICENSE) file for full details.
 
 ## Support
 
