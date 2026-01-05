@@ -1,12 +1,84 @@
 # Construction Payroll Management System
 
-Philippine payroll system for construction companies built with Laravel 10 and Vue 3.
+A comprehensive Philippine payroll management system designed specifically for construction companies. Built with modern technologies to handle complex payroll computations, employee management, attendance tracking, and government compliance requirements.
+
+## Overview
+
+This system streamlines payroll operations for construction companies by automating calculations for Philippine labor laws and government contributions (SSS, PhilHealth, Pag-IBIG, and Withholding Tax). It features multi-user access with role-based permissions, offline-first architecture for field operations, and comprehensive reporting capabilities.
 
 ## Tech Stack
 
 - **Backend**: Laravel 10 + PostgreSQL
-- **Frontend**: Vue 3 + Vuetify
-- **Auth**: Laravel Sanctum
+- **Frontend**: Vue 3 + Vuetify 3
+- **Desktop**: Electron
+- **Authentication**: Laravel Sanctum
+- **Offline Support**: IndexedDB with sync capabilities
+
+## Key Features
+
+### Employee Management
+
+- Complete employee records with government IDs
+- Position and project assignment tracking
+- Resume upload and approval workflow
+- Employee documents management
+- Activity status monitoring
+
+### Attendance & Time Tracking
+
+- Biometric device integration
+- Manual attendance entry
+- Overtime and night differential tracking
+- Holiday pay calculations
+- Leave management
+
+### Payroll Processing
+
+- Automated Philippine payroll computation
+- Basic pay, overtime, holiday pay, night differential
+- Multiple allowance types (rice, transportation, communication, etc.)
+- Bonus management (13th month, performance, project completion)
+- Loan and cash advance tracking
+- Deduction management
+
+### Government Compliance
+
+- **SSS Contributions**: Automatic computation based on 2025 rates
+- **PhilHealth**: 4% premium calculation
+- **Pag-IBIG**: 1-2% contributions with ₱200 cap
+- **Withholding Tax**: TRAIN Law 2025 compliance
+- Government reports and remittance tracking
+
+### Benefits & Compensation
+
+- 14 types of allowances (daily, weekly, monthly)
+- Multiple bonus categories
+- Loan management with automatic deductions
+- Flexible deduction system
+- 13th month pay computation
+
+### Reporting & Analytics
+
+- Payroll reports with Excel export
+- Attendance summaries
+- Employee payslips (PDF)
+- Government contribution reports
+- Audit trails and system logs
+
+### Access Control
+
+- **Admin**: Full system access
+- **Accountant**: Payroll and reports access
+- **Employee**: Personal dashboard and payslip viewing
+
+### Additional Features
+
+- Offline-first architecture for remote sites
+- Data synchronization when online
+- Construction-themed professional UI
+- Multi-project support
+- Responsive design for mobile and desktop
+- Secure authentication with 2FA support
 
 ## Quick Start
 
@@ -19,7 +91,7 @@ Philippine payroll system for construction companies built with Laravel 10 and V
 ### Installation
 
 ```bash
-# Backend
+# Backend Setup
 cd backend
 composer install
 cp .env.example .env
@@ -28,7 +100,7 @@ php artisan migrate
 php artisan db:seed
 php artisan serve
 
-# Frontend
+# Frontend Setup
 cd frontend
 npm install
 npm run dev
@@ -36,174 +108,13 @@ npm run dev
 
 ### Default Credentials
 
-- Admin: `admin@payroll.com` / `admin123`
-- Accountant: `accountant@payroll.com` / `accountant123`
-- Employee: `employee@payroll.com` / `employee123`
-
-## Features
-
-- Employee management with government IDs
-- Attendance tracking and biometric import
-- Payroll processing with Philippine tax compliance
-- Government contributions (SSS, PhilHealth, Pag-IBIG, Withholding Tax)
-- Benefits, allowances, loans, and deductions
-- Multi-stage approval workflow
-- **Resume upload and approval system** (NEW)
-- Excel export capabilities
-- Offline-first architecture
-
-**What it covers:**
-
-- Step-by-step Philippine payroll computation
-- Basic pay, overtime, holiday pay calculations
-- SSS, PhilHealth, Pag-IBIG formulas
-- Withholding tax (TRAIN Law) computation
-- Complete worked examples
-- Special cases (13th month, minimum wage, etc.)
-- Validation rules
-
-**Read this if you need:**
-✅ What's Completed
-
-### Backend (100% Complete)
-
-- ✅ **9 Database Migrations** (35+ tables)
-
-  - Users, employees, departments, locations
-  - Attendance tracking with biometric import
-  - Payroll with construction workflow
-  - Employee benefits (allowances, loans, deductions, 13th month)
-  - Government contribution tables (SSS, PhilHealth, Pag-IBIG, Tax)
-  - Recruitment module, leave management
-  - System tables (holidays, settings, audit logs)
-
-- ✅ **18 Eloquent Models** with relationships
-
-  - Complete CRUD operations
-  - Auto-calculations (attendance hours, payroll totals)
-  - Scopes and query builders
-  - Audit trail support
-
-- ✅ **6 Service Classes**
-
-  - `PayrollService` (650+ lines) - Complete payroll engine
-  - `AttendanceService` - Biometric import, hours calculation
-  - `SSSComputationService` - 2025 SSS rates
-  - `PhilHealthComputationService` - 4% premium
-  - `PagIbigComputationService` - 1-2% with ₱200 cap
-  - `TaxComputationService` - TRAIN Law 2025
-
-- ✅ **API Structure** (70+ endpoints)
-  - Authentication (Sanctum)
-  - Employee management
-  - Attendance tracking
-  - Payroll processing with approval workflow
-  - Benefits management (allowances, loans, deductions)
-  - 13th month pay computation
-  - Recruitment module
-  - Leave management
-  - Reports and analytics
-
-**See [BACKEND-COMPLETE.md](BACKEND-COMPLETE.md) for detailed documentation.**
-
----
-
-## 📋 Implementation Checklist
-
-### Phase 1: Backend ✅ COMPLETE
-
-- [x] Database schema design
-- [x] Laravel migrations
-- [x] Eloquent models with relationships
-- [x] Service layer (PayrollService, AttendanceService)
-- [x] Government computation services (SSS, PhilHealth, Pag-IBIG, Tax)
-- [x] API controllers and routes
-- [x] Configuration files
-
-### Phase 2: Frontend ✅ COMPLETE
-
-- [x] Initialize Vue 3 + Vite project
-- [x] Install Vuetify 3
-- [x] Set up Pinia stores (auth, employee, payroll, attendance, sync)
-- [x] Create core layouts (MainLayout with sidebar)
-- [x] Implement authentication views (LoginView)
-- [x] Create dashboard with statistics
-- [x] Build employee management views
-- [x] Create payroll management views
-- [x] Set up offline support with IndexedDB
-- [x] API integration with Axios interceptors
-
-**See [FRONTEND-COMPLETE.md](FRONTEND-COMPLETE.md) for detailed documentation.**
-
-### Phase 3: Desktop App ✅ COMPLETE
-
-- [x] Electron wrapper setup
-- [x] IPC communication (main ↔ renderer)
-- [x] File system operations
-- [x] Print to PDF support
-- [x] Build configuration for Windows/Mac/Linux
-
-### Phase 4: Production 📋 NEXT STEPS
-
-- [x] Construction payslip PDF template (Blade)
-- [ ] Complete remaining frontend views (employee form, payroll processing)
-- [ ] Database seeders (test data)
-- [ ] API tests (PHPUnit)
-- [ ] User acceptance testing
-- [ ] Deployment
-      (✅ Backend Complete!)
-
-1. Review [BACKEND-COMPLETE.md](BACKEND-COMPLETE.md) for what's built
-2. Study [02-DATABASE-SCHEMA.md](02-DATABASE-SCHEMA.md) for data structure
-3. Check [03-API-STRUCTURE.md](03-API-STRUCTURE.md) for API endpoints
-4. See [05-PAYROLL-COMPUTATION.md](05-PAYROLL-COMPUTATION.md) for formulas
-5. Test API endpoints with Postman/Insomnia
-
-### Phase 4: Production 📋 PLANNED
-
-- [ ] Construction payslip PDF template
-- [ ] Database seeders
-- [ ] API tests
-- [ ] User acceptance testing
-- [ ] Deployment
-
----
-
-## 🎓 Developer
-
-- Payroll calculation formulas
-- Government contribution rates
-- Tax computation logic
-- Verification of computations
-
-**Computation Flow:**
-
-```
-Basic Pay → Overtime → Holiday Pay → Night Diff → Allowances → Bonuses
-    ↓
-Gross Pay
-    ↓
-SSS → PhilHealth → Pag-IBIG → Tax → Other Deductions → Loans
-    ↓
-Net Pay
-```
-
----
-
-### 6. [Development Roadmap](06-DEVELOPMENT-ROADMAP.md)
-
-**What it covers:**
-
-- 9-phase implementation plan
-- Detailed task breakdown per phase
-- Timeline estimates (4-6 months total)
-- MVP first, then progressive enhancement
-- Testing and deployment strategy
-- Maintenance plan
+- **Admin**: `admin@payroll.com` / `admin123`
+- **Accountant**: `accountant@payroll.com` / `accountant123`
+- **Employee**: `employee@payroll.com` / `employee123`
 
 ## Configuration
 
-Database settings in `backend/.env`:
+Configure your database in `backend/.env`:
 
 ```env
 DB_CONNECTION=pgsql
@@ -212,6 +123,50 @@ DB_USERNAME=postgres
 DB_PASSWORD=your_password
 ```
 
+## Documentation
+
+Detailed documentation available in the `/docs` directory:
+
+- **Database Schema**: Complete table structure and relationships
+- **API Structure**: All available endpoints with examples
+- **Payroll Computation**: Step-by-step formulas and calculations
+- **Setup Guide**: Detailed installation instructions
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│          Vue 3 Frontend (Vuetify)          │
+│         Offline-First with IndexedDB        │
+└─────────────────┬───────────────────────────┘
+                  │ REST API
+┌─────────────────▼───────────────────────────┐
+│         Laravel 10 Backend API              │
+│   Service Layer + Repository Pattern        │
+└─────────────────┬───────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────┐
+│         PostgreSQL Database                 │
+│        35+ Tables with Relationships        │
+└─────────────────────────────────────────────┘
+```
+
+## Payroll Computation Flow
+
+```
+Basic Pay → Overtime → Holiday Pay → Night Diff → Allowances → Bonuses
+    ↓
+Gross Pay
+    ↓
+SSS → PhilHealth → Pag-IBIG → Withholding Tax → Other Deductions → Loans
+    ↓
+Net Pay
+```
+
 ## License
 
-MIT
+MIT License - See LICENSE file for details
+
+## Support
+
+For issues, questions, or contributions, please refer to the project documentation or contact the development team.
