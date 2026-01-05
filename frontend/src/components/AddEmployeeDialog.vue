@@ -259,13 +259,10 @@
             </v-col>
 
             <v-col cols="12">
-              <v-alert
-                type="info"
-                variant="tonal"
-                density="compact"
-              >
-                Allowances can be added after creating the employee through the Benefits > Allowances page. 
-                This allows for more flexible management with custom types, frequencies, and date ranges.
+              <v-alert type="info" variant="tonal" density="compact">
+                Allowances can be added after creating the employee through the
+                Benefits > Allowances page. This allows for more flexible
+                management with custom types, frequencies, and date ranges.
               </v-alert>
             </v-col>
 

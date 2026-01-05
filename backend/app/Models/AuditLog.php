@@ -41,9 +41,9 @@ class AuditLog extends Model
             'user_id' => auth()->id(),
             'module' => 'employees',
             'action' => 'salary_changed',
-            'description' => "Basic salary changed from ₱" . number_format($oldSalary, 2) . 
-                           " to ₱" . number_format($newSalary, 2) . 
-                           " for employee {$employee->employee_number} ({$employee->full_name})",
+            'description' => "Basic salary changed from ₱" . number_format($oldSalary, 2) .
+                " to ₱" . number_format($newSalary, 2) .
+                " for employee {$employee->employee_number} ({$employee->full_name})",
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
             'old_values' => ['basic_salary' => $oldSalary],
@@ -59,14 +59,14 @@ class AuditLog extends Model
         $description = "Position changed from '{$oldPosition}' to '{$newPosition}'";
         $oldValues = ['position' => $oldPosition];
         $newValues = ['position' => $newPosition];
-        
+
         if ($oldSalary !== null && $newSalary !== null && $oldSalary != $newSalary) {
-            $description .= " (salary adjusted from ₱" . number_format($oldSalary, 2) . 
-                          " to ₱" . number_format($newSalary, 2) . ")";
+            $description .= " (salary adjusted from ₱" . number_format($oldSalary, 2) .
+                " to ₱" . number_format($newSalary, 2) . ")";
             $oldValues['basic_salary'] = $oldSalary;
             $newValues['basic_salary'] = $newSalary;
         }
-        
+
         $description .= " for employee {$employee->employee_number} ({$employee->full_name})";
 
         return self::create([

@@ -88,7 +88,9 @@
         </template>
 
         <template v-slot:item.amount="{ item }">
-          <span class="font-weight-medium">₱{{ formatNumber(item.amount) }}</span>
+          <span class="font-weight-medium"
+            >₱{{ formatNumber(item.amount) }}</span
+          >
         </template>
 
         <template v-slot:item.frequency="{ item }">
@@ -100,12 +102,12 @@
         </template>
 
         <template v-slot:item.end_date="{ item }">
-          {{ item.end_date ? formatDate(item.end_date) : 'Ongoing' }}
+          {{ item.end_date ? formatDate(item.end_date) : "Ongoing" }}
         </template>
 
         <template v-slot:item.is_taxable="{ item }">
           <v-icon :color="item.is_taxable ? 'warning' : 'success'" size="small">
-            {{ item.is_taxable ? 'mdi-check-circle' : 'mdi-close-circle' }}
+            {{ item.is_taxable ? "mdi-check-circle" : "mdi-close-circle" }}
           </v-icon>
         </template>
 
@@ -115,7 +117,7 @@
             size="small"
             variant="flat"
           >
-            {{ item.is_active ? 'Active' : 'Inactive' }}
+            {{ item.is_active ? "Active" : "Inactive" }}
           </v-chip>
         </template>
 
@@ -151,7 +153,7 @@
     <v-dialog v-model="dialog" max-width="600px" persistent>
       <v-card>
         <v-card-title class="text-h5">
-          {{ editMode ? 'Edit Allowance' : 'Add Allowance' }}
+          {{ editMode ? "Edit Allowance" : "Add Allowance" }}
         </v-card-title>
 
         <v-card-text>
@@ -285,7 +287,7 @@
             :disabled="!formValid"
             @click="saveAllowance"
           >
-            {{ editMode ? 'Update' : 'Add' }}
+            {{ editMode ? "Update" : "Add" }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -298,9 +300,16 @@
         <v-card-text>
           Are you sure you want to delete this allowance?
           <div class="mt-4 pa-3 bg-grey-lighten-4 rounded">
-            <div><strong>Employee:</strong> {{ deleteItem?.employee?.full_name }}</div>
-            <div><strong>Type:</strong> {{ formatAllowanceType(deleteItem?.allowance_type) }}</div>
-            <div><strong>Amount:</strong> ₱{{ formatNumber(deleteItem?.amount) }}</div>
+            <div>
+              <strong>Employee:</strong> {{ deleteItem?.employee?.full_name }}
+            </div>
+            <div>
+              <strong>Type:</strong>
+              {{ formatAllowanceType(deleteItem?.allowance_type) }}
+            </div>
+            <div>
+              <strong>Amount:</strong> ₱{{ formatNumber(deleteItem?.amount) }}
+            </div>
           </div>
         </v-card-text>
         <v-card-actions>
@@ -326,9 +335,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import api from '@/services/api';
+import { ref, onMounted, computed, watch } from "vue";
+import { useRoute } from "vue-router";
+import api from "@/services/api";
 
 const route = useRoute();
 const loading = ref(false);
@@ -355,7 +364,7 @@ const formData = ref({
   allowance_type: null,
   allowance_name: null,
   amount: 0,
-  frequency: 'semi_monthly',
+  frequency: "semi_monthly",
   effective_date: null,
   end_date: null,
   is_taxable: false,
@@ -364,48 +373,48 @@ const formData = ref({
 });
 
 const snackbar = ref(false);
-const snackbarText = ref('');
-const snackbarColor = ref('success');
+const snackbarText = ref("");
+const snackbarColor = ref("success");
 
 const headers = [
-  { title: 'Employee', key: 'employee', sortable: true },
-  { title: 'Type', key: 'allowance_type', sortable: true },
-  { title: 'Amount', key: 'amount', sortable: true },
-  { title: 'Frequency', key: 'frequency', sortable: true },
-  { title: 'Start Date', key: 'effective_date', sortable: true },
-  { title: 'End Date', key: 'end_date', sortable: true },
-  { title: 'Taxable', key: 'is_taxable', sortable: true },
-  { title: 'Status', key: 'is_active', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center' },
+  { title: "Employee", key: "employee", sortable: true },
+  { title: "Type", key: "allowance_type", sortable: true },
+  { title: "Amount", key: "amount", sortable: true },
+  { title: "Frequency", key: "frequency", sortable: true },
+  { title: "Start Date", key: "effective_date", sortable: true },
+  { title: "End Date", key: "end_date", sortable: true },
+  { title: "Taxable", key: "is_taxable", sortable: true },
+  { title: "Status", key: "is_active", sortable: true },
+  { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
 const allowanceTypes = [
-  { title: 'Water Allowance', value: 'water' },
-  { title: 'COLA (Cost of Living)', value: 'cola' },
-  { title: 'Incentive', value: 'incentive' },
-  { title: 'PPE (Personal Protective Equipment)', value: 'ppe' },
-  { title: 'Transportation', value: 'transportation' },
-  { title: 'Meal Allowance', value: 'meal' },
-  { title: 'Communication', value: 'communication' },
-  { title: 'Housing', value: 'housing' },
-  { title: 'Clothing', value: 'clothing' },
-  { title: 'Other', value: 'other' },
+  { title: "Water Allowance", value: "water" },
+  { title: "COLA (Cost of Living)", value: "cola" },
+  { title: "Incentive", value: "incentive" },
+  { title: "PPE (Personal Protective Equipment)", value: "ppe" },
+  { title: "Transportation", value: "transportation" },
+  { title: "Meal Allowance", value: "meal" },
+  { title: "Communication", value: "communication" },
+  { title: "Housing", value: "housing" },
+  { title: "Clothing", value: "clothing" },
+  { title: "Other", value: "other" },
 ];
 
 const frequencyOptions = [
-  { title: 'Daily', value: 'daily' },
-  { title: 'Semi-Monthly', value: 'semi_monthly' },
-  { title: 'Monthly', value: 'monthly' },
+  { title: "Daily", value: "daily" },
+  { title: "Semi-Monthly", value: "semi_monthly" },
+  { title: "Monthly", value: "monthly" },
 ];
 
 const statusOptions = [
-  { title: 'Active', value: 'active' },
-  { title: 'Inactive', value: 'inactive' },
+  { title: "Active", value: "active" },
+  { title: "Inactive", value: "inactive" },
 ];
 
 const rules = {
-  required: (value) => !!value || 'Required',
-  positive: (value) => value > 0 || 'Must be greater than 0',
+  required: (value) => !!value || "Required",
+  positive: (value) => value > 0 || "Must be greater than 0",
 };
 
 onMounted(() => {
@@ -418,19 +427,22 @@ onMounted(() => {
 });
 
 // Watch for route query changes
-watch(() => route.query.employee_id, (newEmployeeId) => {
-  if (newEmployeeId) {
-    filters.value.employee_id = parseInt(newEmployeeId);
-    fetchAllowances();
+watch(
+  () => route.query.employee_id,
+  (newEmployeeId) => {
+    if (newEmployeeId) {
+      filters.value.employee_id = parseInt(newEmployeeId);
+      fetchAllowances();
+    }
   }
-});
+);
 
 async function fetchEmployees() {
   try {
-    const response = await api.get('/employees?per_page=1000');
+    const response = await api.get("/employees?per_page=1000");
     employees.value = response.data.data;
   } catch (error) {
-    showSnackbar('Failed to load employees', 'error');
+    showSnackbar("Failed to load employees", "error");
   }
 }
 
@@ -438,21 +450,23 @@ async function fetchAllowances() {
   loading.value = true;
   try {
     const params = new URLSearchParams();
-    if (filters.value.employee_id) params.append('employee_id', filters.value.employee_id);
-    if (filters.value.allowance_type) params.append('allowance_type', filters.value.allowance_type);
-    
+    if (filters.value.employee_id)
+      params.append("employee_id", filters.value.employee_id);
+    if (filters.value.allowance_type)
+      params.append("allowance_type", filters.value.allowance_type);
+
     const response = await api.get(`/allowances?${params.toString()}`);
     let data = response.data.data || response.data;
-    
+
     // Filter by status if selected
     if (filters.value.status) {
-      const isActive = filters.value.status === 'active';
-      data = data.filter(item => item.is_active === isActive);
+      const isActive = filters.value.status === "active";
+      data = data.filter((item) => item.is_active === isActive);
     }
-    
+
     allowances.value = data;
   } catch (error) {
-    showSnackbar('Failed to load allowances', 'error');
+    showSnackbar("Failed to load allowances", "error");
   } finally {
     loading.value = false;
   }
@@ -502,7 +516,7 @@ function resetForm() {
     allowance_type: null,
     allowance_name: null,
     amount: 0,
-    frequency: 'semi_monthly',
+    frequency: "semi_monthly",
     effective_date: null,
     end_date: null,
     is_taxable: false,
@@ -519,15 +533,18 @@ async function saveAllowance() {
   try {
     if (editMode.value) {
       await api.put(`/allowances/${formData.value.id}`, formData.value);
-      showSnackbar('Allowance updated successfully', 'success');
+      showSnackbar("Allowance updated successfully", "success");
     } else {
-      await api.post('/allowances', formData.value);
-      showSnackbar('Allowance added successfully', 'success');
+      await api.post("/allowances", formData.value);
+      showSnackbar("Allowance added successfully", "success");
     }
     closeDialog();
     fetchAllowances();
   } catch (error) {
-    showSnackbar(error.response?.data?.message || 'Failed to save allowance', 'error');
+    showSnackbar(
+      error.response?.data?.message || "Failed to save allowance",
+      "error"
+    );
   } finally {
     saving.value = false;
   }
@@ -542,43 +559,43 @@ async function deleteAllowance() {
   deleting.value = true;
   try {
     await api.delete(`/allowances/${deleteItem.value.id}`);
-    showSnackbar('Allowance deleted successfully', 'success');
+    showSnackbar("Allowance deleted successfully", "success");
     deleteDialog.value = false;
     fetchAllowances();
   } catch (error) {
-    showSnackbar('Failed to delete allowance', 'error');
+    showSnackbar("Failed to delete allowance", "error");
   } finally {
     deleting.value = false;
   }
 }
 
-function showSnackbar(text, color = 'success') {
+function showSnackbar(text, color = "success") {
   snackbarText.value = text;
   snackbarColor.value = color;
   snackbar.value = true;
 }
 
 function formatAllowanceType(type) {
-  const found = allowanceTypes.find(item => item.value === type);
+  const found = allowanceTypes.find((item) => item.value === type);
   return found ? found.title : type;
 }
 
 function formatFrequency(freq) {
-  const found = frequencyOptions.find(item => item.value === freq);
+  const found = frequencyOptions.find((item) => item.value === freq);
   return found ? found.title : freq;
 }
 
 function formatDate(date) {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
 function formatNumber(num) {
-  return Number(num).toLocaleString('en-US', {
+  return Number(num).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -586,17 +603,17 @@ function formatNumber(num) {
 
 function getTypeColor(type) {
   const colors = {
-    water: 'blue',
-    cola: 'green',
-    incentive: 'purple',
-    ppe: 'orange',
-    transportation: 'cyan',
-    meal: 'pink',
-    communication: 'indigo',
-    housing: 'teal',
-    clothing: 'amber',
-    other: 'grey',
+    water: "blue",
+    cola: "green",
+    incentive: "purple",
+    ppe: "orange",
+    transportation: "cyan",
+    meal: "pink",
+    communication: "indigo",
+    housing: "teal",
+    clothing: "amber",
+    other: "grey",
   };
-  return colors[type] || 'grey';
+  return colors[type] || "grey";
 }
 </script>

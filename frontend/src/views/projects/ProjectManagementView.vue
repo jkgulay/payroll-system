@@ -320,9 +320,7 @@
 
             <template v-slot:item.activity_status="{ item }">
               <v-chip
-                :color="
-                  item.activity_status === 'active' ? 'success' : 'grey'
-                "
+                :color="item.activity_status === 'active' ? 'success' : 'grey'"
                 size="small"
               >
                 {{ item.activity_status }}

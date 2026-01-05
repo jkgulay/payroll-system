@@ -37,7 +37,7 @@ class StoreEmployeeRequest extends FormRequest
             'date_hired' => ['nullable', 'date', 'before_or_equal:today'],
             'basic_salary' => ['nullable', 'numeric', 'min:450', 'max:999999.99'],
             'salary_type' => ['nullable', 'in:daily,monthly,hourly'],
-            
+
             // Government IDs
             'sss_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'philhealth_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],

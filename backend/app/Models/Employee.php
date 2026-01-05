@@ -203,13 +203,13 @@ class Employee extends Model
             $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
             return $this->basic_salary * $workingDaysPerMonth;
         }
-        
+
         if ($this->salary_type === 'hourly') {
             $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
             $standardHours = config('payroll.standard_hours_per_day', 8);
             return $this->basic_salary * $standardHours * $workingDaysPerMonth;
         }
-        
+
         return $this->basic_salary;
     }
 

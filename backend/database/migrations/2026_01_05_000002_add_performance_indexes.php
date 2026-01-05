@@ -19,7 +19,7 @@ return new class extends Migration
         Schema::table('payroll_items', function (Blueprint $table) {
             // Composite index for employee payroll queries
             $table->index(['employee_id', 'payroll_id'], 'payroll_items_employee_payroll_index');
-            
+
             // Add soft deletes for consistency with Payroll table
             if (!Schema::hasColumn('payroll_items', 'deleted_at')) {
                 $table->softDeletes();

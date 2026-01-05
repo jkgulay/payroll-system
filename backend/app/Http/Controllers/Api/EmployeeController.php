@@ -193,8 +193,8 @@ class EmployeeController extends Controller
             $oldSalary = $employee->basic_salary;
             $newSalary = $validated['basic_salary'] ?? $oldSalary;
             AuditLog::logPositionChange(
-                $employee, 
-                $employee->position, 
+                $employee,
+                $employee->position,
                 $validated['position'],
                 $oldSalary,
                 $newSalary
