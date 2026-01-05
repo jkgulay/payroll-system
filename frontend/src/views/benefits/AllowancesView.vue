@@ -338,6 +338,11 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import api from "@/services/api";
+import {
+  ALLOWANCE_TYPES,
+  ALLOWANCE_FREQUENCIES,
+  getLabelByValue,
+} from "@/utils/constants";
 
 const route = useRoute();
 const loading = ref(false);
@@ -388,24 +393,8 @@ const headers = [
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
-const allowanceTypes = [
-  { title: "Water Allowance", value: "water" },
-  { title: "COLA (Cost of Living)", value: "cola" },
-  { title: "Incentive", value: "incentive" },
-  { title: "PPE (Personal Protective Equipment)", value: "ppe" },
-  { title: "Transportation", value: "transportation" },
-  { title: "Meal Allowance", value: "meal" },
-  { title: "Communication", value: "communication" },
-  { title: "Housing", value: "housing" },
-  { title: "Clothing", value: "clothing" },
-  { title: "Other", value: "other" },
-];
-
-const frequencyOptions = [
-  { title: "Daily", value: "daily" },
-  { title: "Semi-Monthly", value: "semi_monthly" },
-  { title: "Monthly", value: "monthly" },
-];
+const allowanceTypes = ALLOWANCE_TYPES;
+const frequencyOptions = ALLOWANCE_FREQUENCIES;
 
 const statusOptions = [
   { title: "Active", value: "active" },
@@ -576,13 +565,11 @@ function showSnackbar(text, color = "success") {
 }
 
 function formatAllowanceType(type) {
-  const found = allowanceTypes.find((item) => item.value === type);
-  return found ? found.title : type;
+  return getLabelByValue(allowanceTypes, type);
 }
 
 function formatFrequency(freq) {
-  const found = frequencyOptions.find((item) => item.value === freq);
-  return found ? found.title : freq;
+  return getLabelByValue(frequencyOptions, freq);
 }
 
 function formatDate(date) {
@@ -612,6 +599,10 @@ function getTypeColor(type) {
     communication: "indigo",
     housing: "teal",
     clothing: "amber",
+    medical: "red",
+    education: "deep-purple",
+    performance: "lime",
+    hazard: "deep-orange",
     other: "grey",
   };
   return colors[type] || "grey";

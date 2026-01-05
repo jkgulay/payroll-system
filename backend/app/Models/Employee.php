@@ -34,7 +34,7 @@ class Employee extends Model
         'emergency_contact_number',
         'project_id',
         'worker_address',
-        'position',
+        'position_id',
         'employment_type',
         'contract_type',
         'activity_status',
@@ -68,6 +68,7 @@ class Employee extends Model
 
     protected $appends = [
         'full_name',
+        'position',
     ];
 
     // Accessors
@@ -82,6 +83,26 @@ class Employee extends Model
             $name .= " {$this->suffix}";
         }
         return $name;
+    }
+
+    public function getPositionAttribute(): ?string
+    {
+        // First check if position_id exists and try to load the relationship
+        if ($this->position_id) {
+            // If relationship is already loaded, use it
+            if ($this->relationLoaded('positionRate') && $this->positionRate) {
+                return $this->positionRate->position_name;
+            }
+            // If not loaded, load it now
+            try {
+                $positionRate = $this->positionRate;
+                return $positionRate?->position_name ?? 'N/A';
+            } catch (\Exception $e) {
+                return 'N/A';
+            }
+        }
+        // Fallback to the position column if it exists in attributes
+        return $this->attributes['position'] ?? 'N/A';
     }
 
     // Relationships

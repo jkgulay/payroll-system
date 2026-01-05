@@ -27,10 +27,10 @@ class AllowanceController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
-            'allowance_type' => 'required|in:water,cola,incentive,ppe,transportation,meal,communication,housing,clothing,other',
+            'allowance_type' => 'required|in:water,cola,incentive,ppe,transportation,meal,communication,housing,clothing,medical,education,performance,hazard,other',
             'allowance_name' => 'nullable|string|max:100',
             'amount' => 'required|numeric|min:0',
-            'frequency' => 'required|in:daily,semi_monthly,monthly',
+            'frequency' => 'required|in:daily,weekly,semi_monthly,monthly',
             'effective_date' => 'required|date',
             'end_date' => 'nullable|date|after:effective_date',
             'is_taxable' => 'boolean',
@@ -59,10 +59,10 @@ class AllowanceController extends Controller
     public function update(Request $request, EmployeeAllowance $allowance)
     {
         $validated = $request->validate([
-            'allowance_type' => 'sometimes|in:water,cola,incentive,ppe,transportation,meal,communication,housing,clothing,other',
+            'allowance_type' => 'sometimes|in:water,cola,incentive,ppe,transportation,meal,communication,housing,clothing,medical,education,performance,hazard,other',
             'allowance_name' => 'nullable|string|max:100',
             'amount' => 'sometimes|numeric|min:0',
-            'frequency' => 'sometimes|in:daily,semi_monthly,monthly',
+            'frequency' => 'sometimes|in:daily,weekly,semi_monthly,monthly',
             'effective_date' => 'sometimes|date',
             'end_date' => 'nullable|date|after:effective_date',
             'is_taxable' => 'boolean',

@@ -670,6 +670,11 @@ import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { usePositionRates } from "@/composables/usePositionRates";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
+import {
+  CONTRACT_TYPES,
+  ACTIVITY_STATUSES,
+  EMPLOYMENT_TYPES,
+} from "@/utils/constants";
 
 const toast = useToast();
 const employeeStore = useEmployeeStore();
@@ -709,25 +714,9 @@ const resettingPassword = ref(false);
 const projects = ref([]);
 const employeeForm = ref(null);
 
-const contractTypeOptions = [
-  { title: "Regular", value: "regular" },
-  { title: "Probationary", value: "probationary" },
-  { title: "Contractual", value: "contractual" },
-];
-
-const activityStatusOptions = [
-  { title: "Active", value: "active" },
-  { title: "On Leave", value: "on_leave" },
-  { title: "Resigned", value: "resigned" },
-  { title: "Terminated", value: "terminated" },
-  { title: "Retired", value: "retired" },
-];
-
-const employmentTypeOptions = [
-  { title: "Regular", value: "regular" },
-  { title: "Contractual", value: "contractual" },
-  { title: "Part Time", value: "part_time" },
-];
+const contractTypeOptions = CONTRACT_TYPES;
+const activityStatusOptions = ACTIVITY_STATUSES;
+const employmentTypeOptions = EMPLOYMENT_TYPES;
 
 const headers = [
   { title: "Employee #", key: "employee_number", sortable: true },

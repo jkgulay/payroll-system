@@ -18,7 +18,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Employee::with(['project']);
+        $query = Employee::with(['project', 'positionRate']);
 
         // Search
         if ($request->has('search')) {
@@ -53,7 +53,16 @@ class EmployeeController extends Controller
 
         // Filter by position
         if ($request->has('position') && $request->position) {
-            $query->where('position_id', $request->position);
+            // Check if it's a position ID (numeric) or position name (string)
+            if (is_numeric($request->position)) {
+                $query->where('position_id', $request->position);
+            } else {
+                // Convert position name to position_id
+                $positionRate = \App\Models\PositionRate::where('position_name', $request->position)->first();
+                if ($positionRate) {
+                    $query->where('position_id', $positionRate->id);
+                }
+            }
         }
 
         $perPage = $request->get('per_page', 50); // Increased default from 15 to 50
@@ -88,6 +97,21 @@ class EmployeeController extends Controller
         } else {
             $validated['gender'] = 'male'; // Default
         }
+
+        // Map position string to position_id if position is provided but position_id is not
+        if (!empty($validated['position']) && empty($validated['position_id'])) {
+            $positionRate = \App\Models\PositionRate::where('position_name', $validated['position'])->first();
+            if ($positionRate) {
+                $validated['position_id'] = $positionRate->id;
+                // Also set basic_salary from position rate if not provided
+                if (empty($validated['basic_salary'])) {
+                    $validated['basic_salary'] = $positionRate->daily_rate;
+                }
+            }
+        }
+        
+        // Remove position string from validated data (we only save position_id)
+        unset($validated['position']);
 
         DB::beginTransaction();
         try {
@@ -158,25 +182,20 @@ class EmployeeController extends Controller
         return response()->json($employee);
     }
 
-    public function update(Request $request, Employee $employee)
+    public function update(UpdateEmployeeRequest $request, Employee $employee)
     {
-        $validated = $request->validate([
-            'employee_number' => 'sometimes|string|unique:employees,employee_number,' . $employee->id,
-            'first_name' => 'sometimes|required|string|max:100',
-            'last_name' => 'sometimes|required|string|max:100',
-            'gender' => 'nullable|in:male,female,other',
-            'email' => 'nullable|email|unique:employees,email,' . $employee->id,
-            'mobile_number' => 'nullable|string|max:20',
-            'project_id' => 'nullable|exists:projects,id',
-            'worker_address' => 'nullable|string',
-            'position' => 'nullable|string|max:100',
-            'contract_type' => 'nullable|in:regular,probationary,contractual',
-            'activity_status' => 'nullable|in:active,on_leave,resigned,terminated,retired',
-            'employment_type' => 'nullable|in:regular,contractual,part_time',
-            'date_hired' => 'nullable|date',
-            'basic_salary' => 'nullable|numeric|min:450',
-            'salary_type' => 'nullable|in:daily,monthly,hourly',
-        ]);
+        $validated = $request->validated();
+
+        // Map position string to position_id if position is provided but position_id is not
+        if (!empty($validated['position']) && empty($validated['position_id'])) {
+            $positionRate = \App\Models\PositionRate::where('position_name', $validated['position'])->first();
+            if ($positionRate) {
+                $validated['position_id'] = $positionRate->id;
+            }
+        }
+        
+        // Remove position string from validated data (we only save position_id)
+        unset($validated['position']);
 
         // Normalize gender to lowercase for consistency
         if (isset($validated['gender'])) {
@@ -202,6 +221,7 @@ class EmployeeController extends Controller
         }
 
         $employee->update($validated);
+        $employee->load(['project', 'positionRate']); // Load relationships for response
 
         return response()->json($employee);
     }

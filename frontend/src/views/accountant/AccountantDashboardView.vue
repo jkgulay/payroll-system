@@ -1179,6 +1179,12 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import {
+  GENDERS,
+  CONTRACT_TYPES,
+  ACTIVITY_STATUSES,
+  EMPLOYMENT_TYPES,
+} from "@/utils/constants";
 
 const router = useRouter();
 const toast = useToast();

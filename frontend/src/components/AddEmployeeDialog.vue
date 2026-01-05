@@ -85,11 +85,7 @@
             <v-col cols="12" md="6">
               <v-select
                 v-model="formData.gender"
-                :items="[
-                  { title: 'Male', value: 'male' },
-                  { title: 'Female', value: 'female' },
-                  { title: 'Other', value: 'other' },
-                ]"
+                :items="GENDERS"
                 label="Gender"
                 :rules="[rules.required]"
                 variant="outlined"
@@ -172,11 +168,7 @@
             <v-col cols="12" md="6">
               <v-select
                 v-model="formData.contract_type"
-                :items="[
-                  { title: 'Regular', value: 'regular' },
-                  { title: 'Probationary', value: 'probationary' },
-                  { title: 'Contractual', value: 'contractual' },
-                ]"
+                :items="CONTRACT_TYPES"
                 label="Contract Type"
                 :rules="[rules.required]"
                 variant="outlined"
@@ -189,13 +181,7 @@
             <v-col cols="12" md="6">
               <v-select
                 v-model="formData.activity_status"
-                :items="[
-                  { title: 'Active', value: 'active' },
-                  { title: 'On Leave', value: 'on_leave' },
-                  { title: 'Resigned', value: 'resigned' },
-                  { title: 'Terminated', value: 'terminated' },
-                  { title: 'Retired', value: 'retired' },
-                ]"
+                :items="ACTIVITY_STATUSES"
                 label="Activity Status"
                 :rules="[rules.required]"
                 variant="outlined"
@@ -208,11 +194,7 @@
             <v-col cols="12" md="6">
               <v-select
                 v-model="formData.employment_type"
-                :items="[
-                  { title: 'Regular', value: 'regular' },
-                  { title: 'Contractual', value: 'contractual' },
-                  { title: 'Part Time', value: 'part_time' },
-                ]"
+                :items="EMPLOYMENT_TYPES"
                 label="Employment Type"
                 :rules="[rules.required]"
                 variant="outlined"
@@ -225,10 +207,7 @@
             <v-col cols="12" md="6">
               <v-select
                 v-model="formData.salary_type"
-                :items="[
-                  { title: 'Daily', value: 'daily' },
-                  { title: 'Monthly', value: 'monthly' },
-                ]"
+                :items="SALARY_TYPES"
                 label="Salary Type"
                 :rules="[rules.required]"
                 variant="outlined"
@@ -334,6 +313,13 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { usePositionRates } from "@/composables/usePositionRates";
+import {
+  GENDERS,
+  CONTRACT_TYPES,
+  ACTIVITY_STATUSES,
+  EMPLOYMENT_TYPES,
+  SALARY_TYPES,
+} from "@/utils/constants";
 
 const props = defineProps({
   modelValue: {

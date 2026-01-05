@@ -39,8 +39,10 @@ class UpdateEmployeeRequest extends FormRequest
             'mobile_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\+\-\(\)\s]+$/'],
             'project_id' => ['nullable', 'exists:projects,id'],
             'worker_address' => ['nullable', 'string', 'max:500'],
-            'position' => ['sometimes', 'required', 'string', 'max:100'],
-            'employment_status' => ['nullable', 'in:regular,probationary,contractual'],
+            'position' => ['nullable', 'string', 'max:100'],
+            'position_id' => ['nullable', 'exists:position_rates,id'],
+            'contract_type' => ['nullable', 'in:regular,probationary,contractual'],
+            'activity_status' => ['nullable', 'in:active,on_leave,resigned,terminated,retired'],
             'employment_type' => ['nullable', 'in:regular,contractual,part_time'],
             'date_hired' => ['nullable', 'date', 'before_or_equal:today'],
             'basic_salary' => ['nullable', 'numeric', 'min:450', 'max:999999.99'],
@@ -64,7 +66,6 @@ class UpdateEmployeeRequest extends FormRequest
             'first_name.regex' => 'First name can only contain letters, spaces, hyphens, and periods',
             'last_name.required' => 'Last name is required',
             'email.unique' => 'This email is already registered',
-            'position.required' => 'Position is required',
         ];
     }
 

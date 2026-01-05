@@ -5,134 +5,139 @@
 
 // Employment Status Constants
 export const CONTRACT_TYPES = [
-  { value: "regular", label: "Regular", color: "success" },
-  { value: "probationary", label: "Probationary", color: "warning" },
-  { value: "contractual", label: "Contractual", color: "info" },
+  { value: "regular", title: "Regular", color: "success" },
+  { value: "probationary", title: "Probationary", color: "warning" },
+  { value: "contractual", title: "Contractual", color: "info" },
 ];
 
 export const ACTIVITY_STATUSES = [
-  { value: "active", label: "Active", color: "success" },
-  { value: "on_leave", label: "On Leave", color: "warning" },
-  { value: "resigned", label: "Resigned", color: "error" },
-  { value: "terminated", label: "Terminated", color: "error" },
-  { value: "retired", label: "Retired", color: "grey" },
+  { value: "active", title: "Active", color: "success" },
+  { value: "on_leave", title: "On Leave", color: "warning" },
+  { value: "resigned", title: "Resigned", color: "error" },
+  { value: "terminated", title: "Terminated", color: "error" },
+  { value: "retired", title: "Retired", color: "grey" },
 ];
 
 // Salary Types
 export const SALARY_TYPES = [
-  { value: "daily", label: "Daily" },
-  { value: "monthly", label: "Monthly" },
-  { value: "hourly", label: "Hourly" },
+  { value: "daily", title: "Daily" },
+  { value: "monthly", title: "Monthly" },
+  { value: "hourly", title: "Hourly" },
 ];
 
 // Employment Types
 export const EMPLOYMENT_TYPES = [
-  { value: "regular", label: "Regular" },
-  { value: "contractual", label: "Contractual" },
-  { value: "part_time", label: "Part Time" },
+  { value: "regular", title: "Regular" },
+  { value: "contractual", title: "Contractual" },
+  { value: "part_time", title: "Part Time" },
 ];
 
 // Gender Options
 export const GENDERS = [
-  { value: "male", label: "Male" },
-  { value: "female", label: "Female" },
-  { value: "other", label: "Other" },
+  { value: "male", title: "Male" },
+  { value: "female", title: "Female" },
+  { value: "other", title: "Other" },
 ];
 
 // Payroll Status
 export const PAYROLL_STATUSES = [
-  { value: "draft", label: "Draft", color: "grey" },
-  { value: "processing", label: "Processing", color: "info" },
-  { value: "checked", label: "Checked", color: "primary" },
-  { value: "recommended", label: "Recommended", color: "warning" },
-  { value: "approved", label: "Approved", color: "success" },
-  { value: "paid", label: "Paid", color: "success" },
-  { value: "cancelled", label: "Cancelled", color: "error" },
+  { value: "draft", title: "Draft", color: "grey" },
+  { value: "processing", title: "Processing", color: "info" },
+  { value: "checked", title: "Checked", color: "primary" },
+  { value: "recommended", title: "Recommended", color: "warning" },
+  { value: "approved", title: "Approved", color: "success" },
+  { value: "paid", title: "Paid", color: "success" },
+  { value: "cancelled", title: "Cancelled", color: "error" },
 ];
 
 // Period Types
 export const PERIOD_TYPES = [
-  { value: "semi_monthly", label: "Semi-Monthly" },
-  { value: "monthly", label: "Monthly" },
+  { value: "semi_monthly", title: "Semi-Monthly" },
+  { value: "monthly", title: "Monthly" },
 ];
 
 // Allowance Types
 export const ALLOWANCE_TYPES = [
-  { value: "transportation", label: "Transportation Allowance" },
-  { value: "meal", label: "Meal Allowance" },
-  { value: "housing", label: "Housing Allowance" },
-  { value: "communication", label: "Communication Allowance" },
-  { value: "clothing", label: "Clothing Allowance" },
-  { value: "medical", label: "Medical Allowance" },
-  { value: "education", label: "Education Allowance" },
-  { value: "performance", label: "Performance Allowance" },
-  { value: "hazard", label: "Hazard Pay" },
-  { value: "other", label: "Other Allowance" },
+  { value: "water", title: "Water Allowance" },
+  { value: "cola", title: "COLA (Cost of Living)" },
+  { value: "incentive", title: "Incentive" },
+  { value: "ppe", title: "PPE (Personal Protective Equipment)" },
+  { value: "transportation", title: "Transportation Allowance" },
+  { value: "meal", title: "Meal Allowance" },
+  { value: "communication", title: "Communication Allowance" },
+  { value: "housing", title: "Housing Allowance" },
+  { value: "clothing", title: "Clothing Allowance" },
+  { value: "medical", title: "Medical Allowance" },
+  { value: "education", title: "Education Allowance" },
+  { value: "performance", title: "Performance Allowance" },
+  { value: "hazard", title: "Hazard Pay" },
+  { value: "other", title: "Other Allowance" },
 ];
 
 // Allowance Frequencies
 export const ALLOWANCE_FREQUENCIES = [
-  { value: "daily", label: "Daily" },
-  { value: "semi_monthly", label: "Semi-Monthly" },
-  { value: "monthly", label: "Monthly" },
+  { value: "daily", title: "Daily" },
+  { value: "weekly", title: "Weekly" },
+  { value: "semi_monthly", title: "Semi-Monthly" },
+  { value: "monthly", title: "Monthly" },
 ];
 
 // Attendance Status
 export const ATTENDANCE_STATUSES = [
-  { value: "present", label: "Present", color: "success" },
-  { value: "absent", label: "Absent", color: "error" },
-  { value: "late", label: "Late", color: "warning" },
-  { value: "half_day", label: "Half Day", color: "info" },
-  { value: "on_leave", label: "On Leave", color: "grey" },
-  { value: "holiday", label: "Holiday", color: "purple" },
-  { value: "rest_day", label: "Rest Day", color: "grey" },
+  { value: "present", title: "Present", color: "success" },
+  { value: "absent", title: "Absent", color: "error" },
+  { value: "late", title: "Late", color: "warning" },
+  { value: "half_day", title: "Half Day", color: "info" },
+  { value: "on_leave", title: "On Leave", color: "grey" },
+  { value: "holiday", title: "Holiday", color: "purple" },
+  { value: "rest_day", title: "Rest Day", color: "grey" },
 ];
 
 // Leave Types
 export const LEAVE_TYPES = [
-  { value: "sick", label: "Sick Leave" },
-  { value: "vacation", label: "Vacation Leave" },
-  { value: "emergency", label: "Emergency Leave" },
-  { value: "maternity", label: "Maternity Leave" },
-  { value: "paternity", label: "Paternity Leave" },
-  { value: "bereavement", label: "Bereavement Leave" },
+  { value: "sick", title: "Sick Leave" },
+  { value: "vacation", title: "Vacation Leave" },
+  { value: "emergency", title: "Emergency Leave" },
+  { value: "maternity", title: "Maternity Leave" },
+  { value: "paternity", title: "Paternity Leave" },
+  { value: "bereavement", title: "Bereavement Leave" },
 ];
 
 // Holiday Types
 export const HOLIDAY_TYPES = [
-  { value: "regular", label: "Regular Holiday" },
-  { value: "special", label: "Special Non-Working Holiday" },
+  { value: "regular", title: "Regular Holiday" },
+  { value: "special", title: "Special Non-Working Holiday" },
 ];
 
 // Loan Types
 export const LOAN_TYPES = [
-  { value: "sss", label: "SSS Loan" },
-  { value: "pagibig", label: "Pag-IBIG Loan" },
-  { value: "company", label: "Company Loan" },
-  { value: "emergency", label: "Emergency Loan" },
-  { value: "other", label: "Other Loan" },
+  { value: "sss", title: "SSS Loan" },
+  { value: "pagibig", title: "Pag-IBIG Loan" },
+  { value: "company", title: "Company Loan" },
+  { value: "emergency", title: "Emergency Loan" },
+  { value: "other", title: "Other Loan" },
 ];
 
 // Deduction Types
 export const DEDUCTION_TYPES = [
-  { value: "government", label: "Government" },
-  { value: "loan", label: "Loan" },
-  { value: "tax", label: "Tax" },
-  { value: "other", label: "Other" },
+  { value: "government", title: "Government" },
+  { value: "loan", title: "Loan" },
+  { value: "tax", title: "Tax" },
+  { value: "other", title: "Other" },
 ];
 
 // User Roles
 export const USER_ROLES = [
-  { value: "admin", label: "Administrator" },
-  { value: "accountant", label: "Accountant" },
-  { value: "hr", label: "HR" },
-  { value: "employee", label: "Employee" },
+  { value: "admin", title: "Administrator" },
+  { value: "accountant", title: "Accountant" },
+  { value: "hr", title: "HR" },
+  { value: "employee", title: "Employee" },
 ];
 
 // Helper functions
 export function getLabelByValue(constantArray, value) {
   const item = constantArray.find((item) => item.value === value);
-  return item ? item.label : value;
+  return item ? item.title : value;
 }
 
 export function getColorByValue(constantArray, value) {
