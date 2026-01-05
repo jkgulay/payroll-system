@@ -103,7 +103,8 @@ export async function exportEmployees(employees) {
     { header: "Middle Name", key: "middle_name", width: 20 },
     { header: "Position", key: "position", width: 25 },
     { header: "Department", key: "department", width: 20 },
-    { header: "Status", key: "employment_status", width: 15 },
+    { header: "Contract Type", key: "contract_type", width: 15 },
+    { header: "Activity Status", key: "activity_status", width: 15 },
     { header: "Hire Date", key: "date_hired", width: 15 },
     { header: "Basic Rate", key: "basic_rate", width: 15 },
   ];
@@ -115,7 +116,8 @@ export async function exportEmployees(employees) {
     middle_name: emp.middle_name || "",
     position: emp.position,
     department: emp.department?.name || "",
-    employment_status: emp.employment_status,
+    contract_type: emp.contract_type,
+    activity_status: emp.activity_status,
     hire_date: emp.date_hired,
     basic_rate: emp.basic_rate,
   }));

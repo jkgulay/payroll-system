@@ -48,7 +48,7 @@ class PayrollService
 
         return Payroll::create([
             'payroll_number' => $payrollNumber,
-            'period_type' => 'semi_monthly', // Use underscore, not hyphen
+            'period_type' => $data['period_type'] ?? 'semi_monthly', // Use provided value or default
             'period_start' => $data['period_start_date'],
             'period_end' => $data['period_end_date'],
             'payment_date' => $data['payment_date'],
@@ -113,13 +113,16 @@ class PayrollService
             ->where('status', 'present')
             ->get();
 
-        // Check for missing attendance records for daily workers
+        // CRITICAL: Throw exception for daily workers with no attendance
+        // Cannot calculate pay without attendance data for daily-paid employees
         if ($employee->salary_type === 'daily' && $attendance->isEmpty()) {
-            Log::warning("No attendance records found for daily employee during payroll processing", [
+            Log::error("Cannot process payroll: No attendance records for daily employee", [
                 'employee_id' => $employee->id,
+                'employee_number' => $employee->employee_number,
                 'payroll_id' => $payroll->id,
                 'period' => $payroll->period_start . ' to ' . $payroll->period_end
             ]);
+            throw new \Exception("Cannot process payroll for employee {$employee->employee_number} ({$employee->full_name}): No attendance records found for daily-paid employee during period {$payroll->period_start} to {$payroll->period_end}");
         }
 
         // Calculate earnings
@@ -137,23 +140,23 @@ class PayrollService
             + $allowances['cola']
             + $allowances['other_allowances'];
 
-        // Calculate government contributions based on actual earnings
-        // For semi-monthly: use actual gross pay * 2 to estimate monthly, then divide contributions
-        // For daily workers: this ensures contributions align with actual work
-        $estimatedMonthlySalary = $employee->salary_type === 'daily'
-            ? ($grossPay * 2) // Estimate monthly from this period
-            : $employee->getMonthlyRate();
+        // Calculate government contributions based on MONTHLY salary
+        // SSS/PhilHealth/Pag-IBIG require consistent monthly contributions
+        // Use the employee's actual monthly rate, not period estimates
+        $monthlySalary = $employee->getMonthlyRate();
 
         $contributions = [
-            'sss' => $this->sssService->computeContribution($estimatedMonthlySalary),
-            'philhealth' => $this->philHealthService->computeContribution($estimatedMonthlySalary),
-            'pagibig' => $this->pagIbigService->computeContribution($estimatedMonthlySalary),
+            'sss' => $this->sssService->computeContribution($monthlySalary),
+            'philhealth' => $this->philHealthService->computeContribution($monthlySalary),
+            'pagibig' => $this->pagIbigService->computeContribution($monthlySalary),
         ];
 
-        // Semi-monthly government contributions (divide by 2)
-        $sssContribution = $contributions['sss']['employee_share'] / 2;
-        $philhealthContribution = $contributions['philhealth']['employee_share'] / 2;
-        $pagibigContribution = $contributions['pagibig']['employee_share'] / 2;
+        // For semi-monthly payroll: divide monthly contributions by 2
+        // This ensures consistent contributions regardless of actual days worked
+        $divisor = $payroll->period_type === 'semi_monthly' ? 2 : 1;
+        $sssContribution = $contributions['sss']['employee_share'] / $divisor;
+        $philhealthContribution = $contributions['philhealth']['employee_share'] / $divisor;
+        $pagibigContribution = $contributions['pagibig']['employee_share'] / $divisor;
 
         // Calculate taxable income for semi-monthly period
         // Remove non-taxable allowances (they're already in gross_pay)
@@ -232,7 +235,10 @@ class PayrollService
             // Basic pay
             if ($employee->salary_type === 'daily') {
                 $basicPay += $employee->basic_salary * ($record->regular_hours / 8);
+            } elseif ($employee->salary_type === 'hourly') {
+                $basicPay += $employee->basic_salary * $record->regular_hours;
             } else {
+                // Monthly salary - calculate based on hourly rate
                 $basicPay += $hourlyRate * $record->regular_hours;
             }
 
@@ -438,9 +444,9 @@ class PayrollService
             ['type' => 'earning', 'category' => 'allowance', 'description' => 'Other Allowances', 'amount' => $allowances['other_allowances']],
 
             // Deductions
-            ['type' => 'deduction', 'category' => 'government', 'description' => 'SSS Contribution', 'amount' => $contributions['sss']['employee_share'] / 2],
-            ['type' => 'deduction', 'category' => 'government', 'description' => 'PhilHealth Contribution', 'amount' => $contributions['philhealth']['employee_share'] / 2],
-            ['type' => 'deduction', 'category' => 'government', 'description' => 'Pag-IBIG Contribution', 'amount' => $contributions['pagibig']['employee_share'] / 2],
+            ['type' => 'deduction', 'category' => 'government', 'description' => 'SSS Contribution', 'amount' => $contributions['sss']['employee_share']],
+            ['type' => 'deduction', 'category' => 'government', 'description' => 'PhilHealth Contribution', 'amount' => $contributions['philhealth']['employee_share']],
+            ['type' => 'deduction', 'category' => 'government', 'description' => 'Pag-IBIG Contribution', 'amount' => $contributions['pagibig']['employee_share']],
             ['type' => 'deduction', 'category' => 'tax', 'description' => 'Withholding Tax', 'amount' => $payrollItem->withholding_tax],
             ['type' => 'deduction', 'category' => 'loan', 'description' => 'SSS Loan', 'amount' => $loanDeductions['sss_loan']],
             ['type' => 'deduction', 'category' => 'loan', 'description' => 'Pag-IBIG Loan', 'amount' => $loanDeductions['pagibig_loan']],
@@ -626,6 +632,140 @@ class PayrollService
                     $deduction->save();
                 }
             }
+        }
+    }
+
+    /**
+     * Recalculate payroll for specific employees (when attendance changes)
+     * Only works for payrolls in 'draft' or 'processing' status
+     */
+    public function recalculatePayroll(Payroll $payroll, ?array $employeeIds = null): void
+    {
+        if (!in_array($payroll->status, ['draft', 'processing'])) {
+            throw new \Exception("Cannot recalculate payroll in '{$payroll->status}' status. Only 'draft' and 'processing' can be recalculated.");
+        }
+
+        DB::beginTransaction();
+        try {
+            // Delete existing payroll items for employees to recalculate
+            $query = $payroll->payrollItems();
+            if ($employeeIds) {
+                $query->whereIn('employee_id', $employeeIds);
+            }
+            $query->delete();
+
+            // Reprocess the payroll
+            $this->processPayroll($payroll, $employeeIds);
+
+            Log::info("Payroll recalculated", [
+                'payroll_id' => $payroll->id,
+                'employee_ids' => $employeeIds,
+                'user_id' => auth()->id(),
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Payroll recalculation failed: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Reverse a payroll (undo processing)
+     * Restores loan balances and deduction installments
+     * Sets payroll to 'cancelled' status
+     */
+    public function reversePayroll(Payroll $payroll, ?string $reason = null): void
+    {
+        if ($payroll->status === 'cancelled') {
+            throw new \Exception("Payroll is already cancelled.");
+        }
+
+        if ($payroll->status === 'paid') {
+            throw new \Exception("Cannot reverse a paid payroll. Contact accounting department.");
+        }
+
+        DB::beginTransaction();
+        try {
+            // Get all payroll items before deletion
+            $payrollItems = $payroll->payrollItems()->with(['employee.loans', 'employee.deductions'])->get();
+
+            // Reverse loan payments
+            foreach ($payrollItems as $item) {
+                foreach ($item->employee->loans as $loan) {
+                    // Find loan deductions in this payroll
+                    $loanPayments = LoanPayment::where('payroll_id', $payroll->id)
+                        ->where('loan_id', $loan->id)
+                        ->get();
+
+                    foreach ($loanPayments as $payment) {
+                        // Restore loan balance
+                        $loan->amount_paid -= $payment->amount;
+                        $loan->balance += $payment->amount;
+                        $loan->status = 'active'; // Set back to active
+                        $loan->save();
+
+                        // Delete loan payment record
+                        $payment->delete();
+                    }
+                }
+
+                // Reverse deduction installments
+                foreach ($item->employee->deductions as $deduction) {
+                    if ($deduction->total_installments > 0) {
+                        $deduction->paid_installments = max(0, ($deduction->paid_installments ?? 0) - 1);
+                        $deduction->status = 'active';
+                        $deduction->save();
+                    }
+                }
+            }
+
+            // Delete payroll items (soft delete if enabled)
+            $payroll->payrollItems()->delete();
+
+            // Update payroll status
+            $payroll->update([
+                'status' => 'cancelled',
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancellation_reason' => $reason,
+            ]);
+
+            // Create audit log entry
+            \App\Models\AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'cancelled',
+                'description' => "Payroll {$payroll->payroll_number} was cancelled. Reason: {$reason}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'old_values' => [
+                    'status' => 'processing',
+                    'payroll_number' => $payroll->payroll_number,
+                    'period_start' => $payroll->period_start->format('Y-m-d'),
+                    'period_end' => $payroll->period_end->format('Y-m-d'),
+                ],
+                'new_values' => [
+                    'status' => 'cancelled',
+                    'cancelled_by' => auth()->id(),
+                    'cancelled_at' => now()->format('Y-m-d H:i:s'),
+                    'cancellation_reason' => $reason,
+                ],
+            ]);
+
+            Log::warning("Payroll reversed", [
+                'payroll_id' => $payroll->id,
+                'payroll_number' => $payroll->payroll_number,
+                'reason' => $reason,
+                'user_id' => auth()->id(),
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Payroll reversal failed: ' . $e->getMessage());
+            throw $e;
         }
     }
 }

@@ -51,6 +51,6 @@ class PositionRate extends Model
     // Helper methods
     public function getEmployeeCount(): int
     {
-        return \App\Models\Employee::where('position', $this->position_name)->count();
+        return \App\Models\Employee::where('position_id', $this->id)->count();
     }
 }

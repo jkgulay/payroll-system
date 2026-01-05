@@ -137,7 +137,7 @@ class PositionRateController extends Controller
             ]);
 
             // Update all employees with this position
-            $updatedCount = Employee::where('position', $positionRate->position_name)
+            $updatedCount = Employee::where('position_id', $positionRate->id)
                 ->update([
                     'basic_salary' => $validated['new_rate'],
                     'updated_by' => auth()->id(),

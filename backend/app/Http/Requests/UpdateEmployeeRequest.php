@@ -43,18 +43,8 @@ class UpdateEmployeeRequest extends FormRequest
             'employment_status' => ['nullable', 'in:regular,probationary,contractual'],
             'employment_type' => ['nullable', 'in:regular,contractual,part_time'],
             'date_hired' => ['nullable', 'date', 'before_or_equal:today'],
-            'basic_salary' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
-            'salary_type' => ['nullable', 'in:daily,monthly'],
-            
-            // Allowances
-            'has_water_allowance' => ['nullable', 'boolean'],
-            'water_allowance' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'has_cola' => ['nullable', 'boolean'],
-            'cola' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'has_incentives' => ['nullable', 'boolean'],
-            'incentives' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-            'has_ppe' => ['nullable', 'boolean'],
-            'ppe' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
+            'basic_salary' => ['nullable', 'numeric', 'min:450', 'max:999999.99'],
+            'salary_type' => ['nullable', 'in:daily,monthly,hourly'],
             
             // Government IDs
             'sss_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],

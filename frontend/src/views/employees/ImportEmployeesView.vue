@@ -72,7 +72,7 @@
               >
             </div>
             <div>
-              <v-btn color="grey" variant="text" @click="step = 1" class="mr-2">
+              <v-btn color="grey" variant="text" @click="step = 1" class="mr-2" :disabled="importing">
                 Back
               </v-btn>
               <v-btn color="primary" @click="submitImport" :loading="importing">
@@ -81,7 +81,29 @@
             </div>
           </v-card-title>
 
-          <v-card-text>
+          <!-- Import Progress Indicator -->
+          <v-card-text v-if="importing" class="py-6">
+            <v-progress-linear
+              v-model="importProgress"
+              color="primary"
+              height="25"
+              rounded
+              class="mb-2"
+            >
+              <template v-slot:default="{ value }">
+                <strong>{{ Math.ceil(value) }}%</strong>
+              </template>
+            </v-progress-linear>
+            <div class="text-center text-body-2 text-medium-emphasis">
+              {{ importStatus }}
+            </div>
+            <v-alert v-if="employees.length > 100" type="info" variant="tonal" class="mt-4">
+              <v-icon start>mdi-information</v-icon>
+              Importing {{ employees.length }} employees. This may take a few minutes...
+            </v-alert>
+          </v-card-text>
+
+          <v-card-text v-else>
             <v-alert type="info" class="mb-4" variant="tonal">
               <p class="font-weight-bold mb-2">Fill missing required fields:</p>
               <ul>
@@ -93,7 +115,7 @@
                   <strong>Basic Salary:</strong> Daily rate (minimum ₱570)
                 </li>
                 <li>
-                  <strong>Employment Type:</strong> Full-time, Part-time, or
+                  <strong>Employment Type:</strong> Regular, Part-time, or
                   Contractual
                 </li>
               </ul>
@@ -153,7 +175,7 @@
                     <v-select
                       v-model="bulkDefaults.employment_type"
                       label="Employment Type"
-                      :items="['full-time', 'part-time', 'contractual']"
+                      :items="['regular', 'part_time', 'contractual']""
                       density="compact"
                       hide-details
                     ></v-select>
@@ -328,6 +350,8 @@ const isDragging = ref(false);
 const uploadError = ref("");
 const employees = ref([]);
 const importing = ref(false);
+const importProgress = ref(0); // Progress percentage
+const importStatus = ref(""); // Current status message
 const importResult = ref({ imported: 0, failed: 0, errors: [] });
 const positionRates = ref({}); // Store position name -> daily rate mapping
 const missingPositions = ref(new Set()); // Track positions not in pay rates table
@@ -335,7 +359,7 @@ const missingPositions = ref(new Set()); // Track positions not in pay rates tab
 const bulkDefaults = ref({
   position: "",
   basic_salary: null,
-  employment_type: "full-time",
+  employment_type: "regular",
 });
 
 // Position options from pay rates table
@@ -464,7 +488,7 @@ const parseEmployeeData = (data) => {
       position: position,
       basic_salary: basic_salary,
       employment_type:
-        row["Employment Type"] || row["employment_type"] || "full-time",
+        row["Employment Type"] || row["employment_type"] || "regular",
     };
   });
 
@@ -561,6 +585,9 @@ const submitImport = async () => {
 
   try {
     // Clean up empty strings and convert to null
+    importProgress.value = 10;
+    importStatus.value = "Preparing employee data...";
+    
     const cleanedEmployees = employees.value.map((emp) => {
       const cleaned = {};
       Object.keys(emp).forEach((key) => {
@@ -577,6 +604,9 @@ const submitImport = async () => {
     console.log(`Sending ${cleanedEmployees.length} employees to import`);
     console.log("First employee sample:", cleanedEmployees[0]);
 
+    importProgress.value = 30;
+    importStatus.value = `Uploading ${cleanedEmployees.length} employees...`;
+
     const response = await api.post(
       "/employees/import",
       {
@@ -584,10 +614,25 @@ const submitImport = async () => {
       },
       {
         timeout: 300000, // 5 minutes for very large imports
+        onUploadProgress: (progressEvent) => {
+          // Update progress during upload (30% - 90%)
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 60) / progressEvent.total
+          );
+          importProgress.value = 30 + percentCompleted;
+          importStatus.value = `Processing employees... ${Math.round((progressEvent.loaded / progressEvent.total) * 100)}%`;
+        },
       }
     );
 
+    importProgress.value = 95;
+    importStatus.value = "Finalizing import...";
+
     importResult.value = response.data;
+    
+    importProgress.value = 100;
+    importStatus.value = "Import complete!";
+    
     step.value = 3;
 
     if (response.data.failed === 0) {
@@ -692,11 +737,14 @@ const resetImport = () => {
   step.value = 1;
   employees.value = [];
   uploadError.value = "";
+  importing.value = false;
+  importProgress.value = 0;
+  importStatus.value = "";
   importResult.value = { imported: 0, failed: 0, errors: [] };
   bulkDefaults.value = {
     position: "",
     basic_salary: null,
-    employment_type: "full-time",
+    employment_type: "regular",
   };
 };
 

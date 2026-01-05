@@ -7,6 +7,8 @@ use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\User;
+use App\Models\AuditLog;
+use App\Helpers\DateHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -34,9 +36,14 @@ class EmployeeController extends Controller
             $query->where('project_id', $request->project_id);
         }
 
-        // Filter by status
-        if ($request->has('employment_status')) {
-            $query->where('employment_status', $request->employment_status);
+        // Filter by contract type
+        if ($request->has('contract_type')) {
+            $query->where('contract_type', $request->contract_type);
+        }
+
+        // Filter by activity status
+        if ($request->has('activity_status')) {
+            $query->where('activity_status', $request->activity_status);
         }
 
         // Filter by employment type
@@ -46,7 +53,7 @@ class EmployeeController extends Controller
 
         // Filter by position
         if ($request->has('position') && $request->position) {
-            $query->where('position', $request->position);
+            $query->where('position_id', $request->position);
         }
 
         $perPage = $request->get('per_page', 50); // Increased default from 15 to 50
@@ -66,12 +73,13 @@ class EmployeeController extends Controller
         ])['role'] ?? 'employee'; // Default to 'employee' if not provided
 
         // Set defaults for required database fields if not provided
-        $validated['date_of_birth'] = $validated['date_of_birth'] ?? now()->subYears(25)->format('Y-m-d');
+        $validated['date_of_birth'] = $validated['date_of_birth'] ?? DateHelper::yearsAgo(25);
         $validated['project_id'] = $validated['project_id'] ?? 1; // Default to first project
-        $validated['employment_status'] = $validated['employment_status'] ?? 'regular';
+        $validated['contract_type'] = $validated['contract_type'] ?? 'regular';
+        $validated['activity_status'] = $validated['activity_status'] ?? 'active';
         $validated['employment_type'] = $validated['employment_type'] ?? 'regular';
-        $validated['date_hired'] = $validated['date_hired'] ?? now()->format('Y-m-d');
-        $validated['basic_salary'] = $validated['basic_salary'] ?? 0;
+        $validated['date_hired'] = $validated['date_hired'] ?? DateHelper::today();
+        $validated['basic_salary'] = $validated['basic_salary'] ?? 450; // Minimum wage default
         $validated['salary_type'] = $validated['salary_type'] ?? 'daily';
 
         // Normalize gender to lowercase for consistency
@@ -162,25 +170,35 @@ class EmployeeController extends Controller
             'project_id' => 'nullable|exists:projects,id',
             'worker_address' => 'nullable|string',
             'position' => 'nullable|string|max:100',
-            'employment_status' => 'nullable|in:regular,probationary,contractual',
+            'contract_type' => 'nullable|in:regular,probationary,contractual',
+            'activity_status' => 'nullable|in:active,on_leave,resigned,terminated,retired',
             'employment_type' => 'nullable|in:regular,contractual,part_time',
             'date_hired' => 'nullable|date',
-            'basic_salary' => 'nullable|numeric|min:0',
+            'basic_salary' => 'nullable|numeric|min:450',
             'salary_type' => 'nullable|in:daily,monthly,hourly',
-            // Allowances
-            'has_water_allowance' => 'nullable|boolean',
-            'water_allowance' => 'nullable|numeric|min:0',
-            'has_cola' => 'nullable|boolean',
-            'cola' => 'nullable|numeric|min:0',
-            'has_incentives' => 'nullable|boolean',
-            'incentives' => 'nullable|numeric|min:0',
-            'has_ppe' => 'nullable|boolean',
-            'ppe' => 'nullable|numeric|min:0',
         ]);
 
         // Normalize gender to lowercase for consistency
         if (isset($validated['gender'])) {
             $validated['gender'] = strtolower($validated['gender']);
+        }
+
+        // Track salary changes for audit
+        if (isset($validated['basic_salary']) && $validated['basic_salary'] != $employee->basic_salary) {
+            AuditLog::logSalaryChange($employee, $employee->basic_salary, $validated['basic_salary']);
+        }
+
+        // Track position changes (may affect salary)
+        if (isset($validated['position']) && $validated['position'] != $employee->position) {
+            $oldSalary = $employee->basic_salary;
+            $newSalary = $validated['basic_salary'] ?? $oldSalary;
+            AuditLog::logPositionChange(
+                $employee, 
+                $employee->position, 
+                $validated['position'],
+                $oldSalary,
+                $newSalary
+            );
         }
 
         $employee->update($validated);

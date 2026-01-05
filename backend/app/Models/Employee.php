@@ -36,22 +36,14 @@ class Employee extends Model
         'worker_address',
         'position',
         'employment_type',
-        'employment_status',
+        'contract_type',
+        'activity_status',
         'date_hired',
         'date_regularized',
         'date_separated',
         'separation_reason',
         'salary_type',
         'basic_salary',
-        // Allowances
-        'has_water_allowance',
-        'water_allowance',
-        'has_cola',
-        'cola',
-        'has_incentives',
-        'incentives',
-        'has_ppe',
-        'ppe',
         // Government IDs
         'sss_number',
         'philhealth_number',
@@ -96,6 +88,11 @@ class Employee extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function positionRate(): BelongsTo
+    {
+        return $this->belongsTo(PositionRate::class, 'position_id');
     }
 
     public function attendance(): HasMany
@@ -164,6 +161,16 @@ class Employee extends Model
         return $query->where('employment_type', $type);
     }
 
+    public function scopeByContractType($query, $type)
+    {
+        return $query->where('contract_type', $type);
+    }
+
+    public function scopeByActivityStatus($query, $status)
+    {
+        return $query->where('activity_status', $status);
+    }
+
     public function scopeByProject($query, $projectId)
     {
         return $query->where('project_id', $projectId);
@@ -196,6 +203,13 @@ class Employee extends Model
             $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
             return $this->basic_salary * $workingDaysPerMonth;
         }
+        
+        if ($this->salary_type === 'hourly') {
+            $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
+            $standardHours = config('payroll.standard_hours_per_day', 8);
+            return $this->basic_salary * $standardHours * $workingDaysPerMonth;
+        }
+        
         return $this->basic_salary;
     }
 

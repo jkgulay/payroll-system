@@ -27,11 +27,24 @@ class AllowanceController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
-            'allowance_type' => 'required|string',
+            'allowance_type' => 'required|in:water,cola,incentive,ppe,transportation,meal,communication,housing,clothing,other',
+            'allowance_name' => 'nullable|string|max:100',
             'amount' => 'required|numeric|min:0',
             'frequency' => 'required|in:daily,semi_monthly,monthly',
-            'start_date' => 'required|date',
+            'effective_date' => 'required|date',
+            'end_date' => 'nullable|date|after:effective_date',
+            'is_taxable' => 'boolean',
+            'is_active' => 'boolean',
+            'notes' => 'nullable|string|max:500',
         ]);
+
+        // Auto-generate allowance_name from allowance_type if not provided
+        if (empty($validated['allowance_name'])) {
+            $validated['allowance_name'] = ucwords(str_replace('_', ' ', $validated['allowance_type'])) . ' Allowance';
+        }
+
+        // Set created_by to authenticated user
+        $validated['created_by'] = auth()->id();
 
         $allowance = EmployeeAllowance::create($validated);
 
@@ -46,13 +59,20 @@ class AllowanceController extends Controller
     public function update(Request $request, EmployeeAllowance $allowance)
     {
         $validated = $request->validate([
-            'amount' => 'numeric|min:0',
-            'frequency' => 'in:daily,semi_monthly,monthly',
+            'allowance_type' => 'sometimes|in:water,cola,incentive,ppe,transportation,meal,communication,housing,clothing,other',
+            'allowance_name' => 'nullable|string|max:100',
+            'amount' => 'sometimes|numeric|min:0',
+            'frequency' => 'sometimes|in:daily,semi_monthly,monthly',
+            'effective_date' => 'sometimes|date',
+            'end_date' => 'nullable|date|after:effective_date',
+            'is_taxable' => 'boolean',
+            'is_active' => 'boolean',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $allowance->update($validated);
 
-        return response()->json($allowance);
+        return response()->json($allowance->load('employee'));
     }
 
     public function destroy(EmployeeAllowance $allowance)
