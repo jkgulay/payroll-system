@@ -64,11 +64,12 @@ class PayrollService
     /**
      * Process payroll for all active employees
      */
-    public function processPayroll(Payroll $payroll, ?array $employeeIds = null): void
+    public function processPayroll(Payroll $payroll, ?array $employeeIds = null, ?array $filters = null): void
     {
         DB::beginTransaction();
         try {
             $query = Employee::active()->with([
+                'positionRate', // CRITICAL: Load position rate for getBasicSalary()
                 'governmentInfo',
                 'allowances' => function ($q) use ($payroll) {
                     $q->active()->where('effective_date', '<=', $payroll->period_end);
@@ -80,6 +81,19 @@ class PayrollService
                     $q->active();
                 }
             ]);
+
+            // Apply filters for targeted payroll generation
+            if ($filters) {
+                if (!empty($filters['project_id'])) {
+                    $query->where('project_id', $filters['project_id']);
+                }
+                if (!empty($filters['contract_type'])) {
+                    $query->where('contract_type', $filters['contract_type']);
+                }
+                if (!empty($filters['position_id'])) {
+                    $query->where('position_id', $filters['position_id']);
+                }
+            }
 
             if ($employeeIds) {
                 $query->whereIn('id', $employeeIds);
@@ -229,14 +243,16 @@ class PayrollService
         $holidayPay = 0;
         $nightDifferential = 0;
 
+        // Use position rate instead of manual basic_salary
+        $basicSalary = $employee->getBasicSalary();
         $hourlyRate = $employee->getHourlyRate();
 
         foreach ($attendance as $record) {
             // Basic pay
             if ($employee->salary_type === 'daily') {
-                $basicPay += $employee->basic_salary * ($record->regular_hours / 8);
+                $basicPay += $basicSalary * ($record->regular_hours / 8);
             } elseif ($employee->salary_type === 'hourly') {
-                $basicPay += $employee->basic_salary * $record->regular_hours;
+                $basicPay += $basicSalary * $record->regular_hours;
             } else {
                 // Monthly salary - calculate based on hourly rate
                 $basicPay += $hourlyRate * $record->regular_hours;

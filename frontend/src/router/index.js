@@ -7,12 +7,14 @@ const router = createRouter({
     {
       path: "/login",
       name: "login",
-      component: () => import(/* webpackChunkName: "auth" */ "@/views/auth/LoginView.vue"),
+      component: () =>
+        import(/* webpackChunkName: "auth" */ "@/views/auth/LoginView.vue"),
       meta: { requiresAuth: false },
     },
     {
       path: "/",
-      component: () => import(/* webpackChunkName: "layout" */ "@/layouts/MainLayout.vue"),
+      component: () =>
+        import(/* webpackChunkName: "layout" */ "@/layouts/MainLayout.vue"),
       meta: { requiresAuth: true },
       children: [
         {
@@ -31,26 +33,37 @@ const router = createRouter({
         {
           path: "admin-dashboard",
           name: "admin-dashboard",
-          component: () => import(/* webpackChunkName: "dashboard" */ "@/views/DashboardView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "dashboard" */ "@/views/DashboardView.vue"
+            ),
           meta: { title: "Dashboard", roles: ["admin"] },
         },
         {
           path: "accountant-dashboard",
           name: "accountant-dashboard",
           component: () =>
-            import(/* webpackChunkName: "dashboard" */ "@/views/accountant/AccountantDashboardView.vue"),
+            import(
+              /* webpackChunkName: "dashboard" */ "@/views/accountant/AccountantDashboardView.vue"
+            ),
           meta: { title: "Dashboard", roles: ["accountant"] },
         },
         {
           path: "employee-dashboard",
           name: "employee-dashboard",
-          component: () => import(/* webpackChunkName: "dashboard" */ "@/views/employee/EmployeeDashboardView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "dashboard" */ "@/views/employee/EmployeeDashboardView.vue"
+            ),
           meta: { title: "Dashboard", roles: ["employee"] },
         },
         {
           path: "profile",
           name: "profile",
-          component: () => import(/* webpackChunkName: "profile" */ "@/views/employee/ProfileView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "profile" */ "@/views/employee/ProfileView.vue"
+            ),
           meta: {
             title: "My Profile",
             roles: ["admin", "accountant", "employee"],
@@ -59,61 +72,91 @@ const router = createRouter({
         {
           path: "employees",
           name: "employees",
-          component: () => import(/* webpackChunkName: "employees" */ "@/views/employees/EmployeeListView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "employees" */ "@/views/employees/EmployeeListView.vue"
+            ),
           meta: { title: "Employees", roles: ["admin"] },
         },
         {
           path: "employees/import",
           name: "employees-import",
-          component: () => import(/* webpackChunkName: "employees" */ "@/views/employees/ImportEmployeesView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "employees" */ "@/views/employees/ImportEmployeesView.vue"
+            ),
           meta: { title: "Import Employees", roles: ["admin", "accountant"] },
         },
         {
           path: "projects",
           name: "projects",
-          component: () => import(/* webpackChunkName: "projects" */ "@/views/projects/ProjectManagementView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "projects" */ "@/views/projects/ProjectManagementView.vue"
+            ),
           meta: { title: "Project Management", roles: ["admin"] },
         },
         {
           path: "attendance",
           name: "attendance",
-          component: () => import(/* webpackChunkName: "attendance" */ "@/views/attendance/AttendanceView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "attendance" */ "@/views/attendance/AttendanceView.vue"
+            ),
           meta: { title: "Attendance", roles: ["admin", "accountant"] },
         },
         {
           path: "resumes",
           name: "resumes",
-          component: () => import(/* webpackChunkName: "accountant" */ "@/views/accountant/ResumeManagement.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "accountant" */ "@/views/accountant/ResumeManagement.vue"
+            ),
           meta: { title: "My Resumes", roles: ["accountant"] },
         },
         {
           path: "resume-review",
           name: "resume-review",
-          component: () => import(/* webpackChunkName: "accountant" */ "@/views/accountant/AdminResumeReview.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "accountant" */ "@/views/accountant/AdminResumeReview.vue"
+            ),
           meta: { title: "Resume Review", roles: ["admin"] },
         },
         {
           path: "payroll",
           name: "payroll",
-          component: () => import(/* webpackChunkName: "payroll" */ "@/views/payroll/PayrollListView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollListView.vue"
+            ),
           meta: { title: "Payroll", roles: ["admin", "accountant"] },
         },
         {
           path: "payroll/create",
           name: "payroll-create",
-          component: () => import(/* webpackChunkName: "payroll" */ "@/views/payroll/PayrollFormView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollFormView.vue"
+            ),
           meta: { title: "Create Payroll" },
         },
         {
           path: "payroll/:id",
           name: "payroll-detail",
-          component: () => import(/* webpackChunkName: "payroll" */ "@/views/payroll/PayrollDetailView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollDetailView.vue"
+            ),
           meta: { title: "Payroll Details" },
         },
         {
           path: "payroll/pay-rates",
           name: "pay-rates",
-          component: () => import(/* webpackChunkName: "payroll" */ "@/views/payroll/PayRateManagementView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayRateManagementView.vue"
+            ),
           meta: {
             title: "Compensation & Pay Rates",
             roles: ["admin", "accountant"],
@@ -122,37 +165,55 @@ const router = createRouter({
         {
           path: "payroll/:id/process",
           name: "payroll-process",
-          component: () => import(/* webpackChunkName: "payroll" */ "@/views/payroll/PayrollProcessView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollProcessView.vue"
+            ),
           meta: { title: "Process Payroll" },
         },
         {
           path: "allowances",
           name: "allowances",
-          component: () => import(/* webpackChunkName: "benefits" */ "@/views/benefits/AllowancesView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/AllowancesView.vue"
+            ),
           meta: { title: "Allowances" },
         },
         {
           path: "loans",
           name: "loans",
-          component: () => import(/* webpackChunkName: "benefits" */ "@/views/benefits/LoansView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/LoansView.vue"
+            ),
           meta: { title: "Loans" },
         },
         {
           path: "deductions",
           name: "deductions",
-          component: () => import(/* webpackChunkName: "benefits" */ "@/views/benefits/DeductionsView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/DeductionsView.vue"
+            ),
           meta: { title: "Deductions" },
         },
         {
           path: "reports",
           name: "reports",
-          component: () => import(/* webpackChunkName: "reports" */ "@/views/reports/ReportsView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "reports" */ "@/views/reports/ReportsView.vue"
+            ),
           meta: { title: "Reports" },
         },
         {
           path: "analytics",
           name: "analytics",
-          component: () => import(/* webpackChunkName: "analytics" */ "@/views/AnalyticsDashboard.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "analytics" */ "@/views/AnalyticsDashboard.vue"
+            ),
           meta: {
             title: "Analytics Dashboard",
             roles: ["admin", "accountant"],
@@ -161,13 +222,19 @@ const router = createRouter({
         {
           path: "settings",
           name: "settings",
-          component: () => import(/* webpackChunkName: "settings" */ "@/views/settings/SettingsView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/SettingsView.vue"
+            ),
           meta: { title: "Settings", roles: ["admin"] },
         },
         {
           path: "security",
           name: "security",
-          component: () => import(/* webpackChunkName: "settings" */ "@/views/settings/SecurityView.vue"),
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/SecurityView.vue"
+            ),
           meta: { title: "Security Settings" },
         },
       ],
@@ -175,7 +242,8 @@ const router = createRouter({
     {
       path: "/:pathMatch(.*)*",
       name: "not-found",
-      component: () => import(/* webpackChunkName: "error" */ "@/views/NotFoundView.vue"),
+      component: () =>
+        import(/* webpackChunkName: "error" */ "@/views/NotFoundView.vue"),
     },
   ],
 });
@@ -191,9 +259,12 @@ router.beforeEach(async (to, from, next) => {
       return next({ name: "login", query: { redirect: to.fullPath } });
     }
 
-    // Ensure user data is loaded
+    // Ensure user data is loaded (checkAuth now caches, so safe to call)
     if (!authStore.user) {
-      await authStore.checkAuth();
+      const isValid = await authStore.checkAuth();
+      if (!isValid) {
+        return next({ name: "login", query: { redirect: to.fullPath } });
+      }
     }
 
     // Handle root path redirect
@@ -229,10 +300,6 @@ router.beforeEach(async (to, from, next) => {
   } else {
     // Route doesn't require auth (login page)
     if (authStore.isAuthenticated && to.name === "login") {
-      // Ensure user data is loaded
-      if (!authStore.user) {
-        await authStore.checkAuth();
-      }
       // Already authenticated, redirect to appropriate dashboard based on role
       let targetRoute;
       if (authStore.userRole === "employee") {

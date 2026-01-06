@@ -217,18 +217,21 @@
 
             <v-col cols="12" md="6">
               <v-text-field
-                v-model.number="formData.basic_salary"
-                label="Basic Pay Rate (Auto-Set)"
-                type="number"
+                :model-value="formatSalaryDisplay()"
+                label="Basic Pay Rate (from Position)"
                 prepend-inner-icon="mdi-cash"
-                :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
                 readonly
-                hint="Rate is automatically set based on position. Can be adjusted later."
+                :bg-color="formData.position ? 'blue-lighten-5' : undefined"
+                hint="Rate is automatically set from selected position"
                 persistent-hint
                 suffix="₱/day"
-              ></v-text-field>
+              >
+                <template v-slot:prepend-inner>
+                  <v-icon size="small" color="primary">mdi-information</v-icon>
+                </template>
+              </v-text-field>
             </v-col>
 
             <!-- Allowances Section -->
@@ -433,5 +436,20 @@ function handleClose() {
   if (!saving.value) {
     show.value = false;
   }
+}
+
+// Format salary display based on selected position
+function formatSalaryDisplay() {
+  if (!formData.value.position) return "0.00";
+
+  const rate = getRate(formData.value.position);
+  if (rate) {
+    return rate.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  return "0.00";
 }
 </script>

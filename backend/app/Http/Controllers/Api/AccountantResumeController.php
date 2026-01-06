@@ -22,10 +22,10 @@ class AccountantResumeController extends Controller
     {
         // Validation is handled by UploadResumeRequest
         $fileSecurityService = new FileSecurityService();
-        
+
         try {
             $file = $request->file('resume');
-            
+
             // Additional security validation
             $securityCheck = $fileSecurityService->validateFile($file);
             if (!$securityCheck['valid']) {
@@ -44,7 +44,7 @@ class AccountantResumeController extends Controller
                     'filename' => $file->getClientOriginalName(),
                     'reason' => $virusScan['reason']
                 ]);
-                
+
                 return response()->json([
                     'success' => false,
                     'message' => 'File failed security scan: ' . $virusScan['reason'],
@@ -79,6 +79,7 @@ class AccountantResumeController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
+                    'module' => 'accountant_resume',
                     'action' => 'resume_uploaded',
                     'description' => "Uploaded resume: {$originalFilename}",
                     'ip_address' => $request->ip(),
@@ -183,6 +184,7 @@ class AccountantResumeController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
+                    'module' => 'accountant_resume',
                     'action' => 'resume_deleted',
                     'description' => "Deleted resume: {$originalFilename}",
                     'ip_address' => request()->ip(),
@@ -362,6 +364,7 @@ class AccountantResumeController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
+                    'module' => 'accountant_resume',
                     'action' => 'resume_approved',
                     'description' => "Approved resume for user ID: {$resume->user_id}",
                     'ip_address' => $request->ip(),
@@ -432,6 +435,7 @@ class AccountantResumeController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
+                    'module' => 'accountant_resume',
                     'action' => 'resume_rejected',
                     'description' => "Rejected resume for user ID: {$resume->user_id}",
                     'ip_address' => $request->ip(),

@@ -436,14 +436,22 @@
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model.number="selectedEmployee.basic_salary"
-                  label="Basic Salary"
-                  type="number"
+                  :model-value="formatSalaryDisplay(selectedEmployee)"
+                  label="Basic Salary (from Position Rate)"
                   prefix="₱"
-                  :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  readonly
+                  variant="outlined"
                   density="comfortable"
-                ></v-text-field>
+                  hint="Salary is automatically set based on job position"
+                  persistent-hint
+                  :bg-color="isEditing ? 'blue-lighten-5' : undefined"
+                >
+                  <template v-slot:prepend-inner>
+                    <v-icon size="small" color="primary"
+                      >mdi-information</v-icon
+                    >
+                  </template>
+                </v-text-field>
               </v-col>
             </v-row>
           </v-form>
@@ -764,7 +772,7 @@ async function fetchEmployees() {
     per_page: itemsPerPage.value,
     ...filters.value,
   });
-  
+
   // Update pagination data if the API returns it
   if (response && response.meta) {
     totalEmployees.value = response.meta.total || response.total || 0;
@@ -1036,5 +1044,31 @@ function closeCredentialsDialog() {
   selectedCredentialsEmployee.value = null;
   employeeCredentials.value = null;
   newGeneratedPassword.value = "";
+}
+
+// Format salary display based on position rate
+function formatSalaryDisplay(employee) {
+  if (!employee) return "N/A";
+
+  // If employee has position, get the rate from position
+  if (employee.position) {
+    const rate = getRate(employee.position);
+    if (rate) {
+      return rate.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+  }
+
+  // Fallback to basic_salary field
+  if (employee.basic_salary) {
+    return Number(employee.basic_salary).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  return "0.00";
 }
 </script>

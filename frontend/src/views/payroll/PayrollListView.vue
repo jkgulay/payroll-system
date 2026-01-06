@@ -186,6 +186,18 @@
                 </template>
                 <v-list-item-title>Export PDF</v-list-item-title>
               </v-list-item>
+
+              <v-divider v-if="item.status === 'draft'"></v-divider>
+
+              <v-list-item
+                v-if="item.status === 'draft'"
+                @click="confirmDeletePayroll(item)"
+              >
+                <template v-slot:prepend>
+                  <v-icon color="error">mdi-delete</v-icon>
+                </template>
+                <v-list-item-title>Delete Payroll</v-list-item-title>
+              </v-list-item>
             </v-list>
           </v-menu>
         </template>
@@ -271,7 +283,52 @@
                   label="Pay Period"
                   variant="outlined"
                   prepend-inner-icon="mdi-numeric"
+                  clearable
                 ></v-select>
+              </v-col>
+
+              <!-- Optional Filters Section -->
+              <v-col cols="12">
+                <v-divider class="my-2"></v-divider>
+                <v-alert
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-4"
+                >
+                  <strong>Optional Filters:</strong> Generate payroll for
+                  specific groups of employees
+                </v-alert>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="newPayroll.contract_type"
+                  :items="[
+                    { title: 'Regular', value: 'regular' },
+                    { title: 'Probationary', value: 'probationary' },
+                    { title: 'Contractual', value: 'contractual' },
+                  ]"
+                  label="Contract Type (Optional)"
+                  variant="outlined"
+                  prepend-inner-icon="mdi-file-document-outline"
+                  clearable
+                  hint="Leave empty to include all contract types"
+                  persistent-hint
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="newPayroll.project_id"
+                  label="Project ID (Optional)"
+                  type="number"
+                  variant="outlined"
+                  prepend-inner-icon="mdi-folder-outline"
+                  clearable
+                  hint="Leave empty to include all projects"
+                  persistent-hint
+                ></v-text-field>
               </v-col>
             </v-row>
           </v-form>
@@ -368,6 +425,11 @@ const newPayroll = ref({
   period_end_date: "",
   payment_date: "",
   pay_period_number: null,
+  // Optional filters for targeted payroll generation
+  project_id: null,
+  contract_type: null,
+  position_id: null,
+  employee_ids: [],
 });
 
 const confirmAction = ref({
@@ -450,7 +512,34 @@ async function createPayroll() {
 
   saving.value = true;
   try {
-    const response = await api.post("/payroll", newPayroll.value);
+    // Clean up payload - remove empty/null optional fields
+    const payload = {
+      period_start_date: newPayroll.value.period_start_date,
+      period_end_date: newPayroll.value.period_end_date,
+      payment_date: newPayroll.value.payment_date,
+    };
+
+    // Add optional fields only if they have values
+    if (newPayroll.value.pay_period_number) {
+      payload.pay_period_number = newPayroll.value.pay_period_number;
+    }
+    if (newPayroll.value.project_id) {
+      payload.project_id = parseInt(newPayroll.value.project_id);
+    }
+    if (newPayroll.value.contract_type) {
+      payload.contract_type = newPayroll.value.contract_type;
+    }
+    if (newPayroll.value.position_id) {
+      payload.position_id = parseInt(newPayroll.value.position_id);
+    }
+    if (
+      newPayroll.value.employee_ids &&
+      newPayroll.value.employee_ids.length > 0
+    ) {
+      payload.employee_ids = newPayroll.value.employee_ids;
+    }
+
+    const response = await api.post("/payroll", payload);
     toast.success("Payroll period created successfully!");
     closeCreateDialog();
     await fetchPayrolls();
@@ -459,7 +548,11 @@ async function createPayroll() {
     router.push(`/payroll/${response.data.id}`);
   } catch (error) {
     console.error("Error creating payroll:", error);
-    toast.error(error.response?.data?.message || "Failed to create payroll");
+    toast.error(
+      error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to create payroll"
+    );
   } finally {
     saving.value = false;
   }
@@ -473,6 +566,10 @@ function closeCreateDialog() {
     period_end_date: "",
     payment_date: "",
     pay_period_number: null,
+    project_id: null,
+    contract_type: null,
+    position_id: null,
+    employee_ids: [],
   };
 }
 
@@ -556,15 +653,21 @@ async function confirmActionExecute() {
   const action = confirmAction.value.action;
 
   try {
-    let endpoint = `/payroll/${payroll.id}/${action}`;
-    const response = await api.post(endpoint);
+    // If action is a function, execute it directly
+    if (typeof action === "function") {
+      await action();
+    } else {
+      // Otherwise, treat it as a string endpoint
+      let endpoint = `/payroll/${payroll.id}/${action}`;
+      const response = await api.post(endpoint);
 
-    toast.success(response.data.message || "Action completed successfully");
-    showConfirmDialog.value = false;
-    await fetchPayrolls();
+      toast.success(response.data.message || "Action completed successfully");
+      showConfirmDialog.value = false;
+      await fetchPayrolls();
+    }
   } catch (error) {
     console.error(`Error executing ${action}:`, error);
-    toast.error(error.response?.data?.error || `Failed to ${action} payroll`);
+    toast.error(error.response?.data?.error || `Failed to execute action`);
   } finally {
     processing.value = false;
   }
@@ -648,6 +751,24 @@ function formatCurrency(amount) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+function confirmDeletePayroll(payroll) {
+  confirmAction.value = {
+    type: "warning",
+    title: "Delete Payroll Period",
+    message: `Are you sure you want to delete payroll ${payroll.payroll_number}? This will permanently remove the payroll period and all associated data.`,
+    buttonText: "Delete",
+    icon: "mdi-delete-alert",
+    color: "error",
+    action: async () => {
+      await api.delete(`/payroll/${payroll.id}`);
+      toast.success("Payroll deleted successfully!");
+      showConfirmDialog.value = false;
+      await fetchPayrolls();
+    },
+  };
+  showConfirmDialog.value = true;
 }
 </script>
 

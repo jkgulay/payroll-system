@@ -103,15 +103,24 @@ class EmployeeController extends Controller
             $positionRate = \App\Models\PositionRate::where('position_name', $validated['position'])->first();
             if ($positionRate) {
                 $validated['position_id'] = $positionRate->id;
-                // Also set basic_salary from position rate if not provided
-                if (empty($validated['basic_salary'])) {
-                    $validated['basic_salary'] = $positionRate->daily_rate;
-                }
+                // ALWAYS set basic_salary from position rate (this ensures consistency)
+                $validated['basic_salary'] = $positionRate->daily_rate;
             }
         }
 
-        // Remove position string from validated data (we only save position_id)
-        unset($validated['position']);
+        // If position_id is provided but basic_salary is not, get rate from PositionRate
+        if (!empty($validated['position_id']) && empty($validated['basic_salary'])) {
+            $positionRate = \App\Models\PositionRate::find($validated['position_id']);
+            if ($positionRate) {
+                $validated['basic_salary'] = $positionRate->daily_rate;
+            }
+        }
+
+        // CRITICAL: Remove position string from validated data BEFORE create
+        // We only save position_id, not position (column doesn't exist in DB)
+        if (isset($validated['position'])) {
+            unset($validated['position']);
+        }
 
         DB::beginTransaction();
         try {
@@ -191,11 +200,24 @@ class EmployeeController extends Controller
             $positionRate = \App\Models\PositionRate::where('position_name', $validated['position'])->first();
             if ($positionRate) {
                 $validated['position_id'] = $positionRate->id;
+                // ALWAYS set basic_salary from position rate when position changes
+                $validated['basic_salary'] = $positionRate->daily_rate;
             }
         }
 
-        // Remove position string from validated data (we only save position_id)
-        unset($validated['position']);
+        // If position_id is provided, always sync basic_salary with position rate
+        if (!empty($validated['position_id'])) {
+            $positionRate = \App\Models\PositionRate::find($validated['position_id']);
+            if ($positionRate) {
+                $validated['basic_salary'] = $positionRate->daily_rate;
+            }
+        }
+
+        // CRITICAL: Remove position string from validated data BEFORE filtering
+        // We only save position_id, not position
+        if (isset($validated['position'])) {
+            unset($validated['position']);
+        }
 
         // Normalize gender to lowercase for consistency
         if (isset($validated['gender'])) {
@@ -207,17 +229,21 @@ class EmployeeController extends Controller
             AuditLog::logSalaryChange($employee, $employee->basic_salary, $validated['basic_salary']);
         }
 
-        // Track position changes (may affect salary)
-        if (isset($validated['position']) && $validated['position'] != $employee->position) {
+        // Track position changes (may affect salary) - using position_id now
+        if (isset($validated['position_id']) && $validated['position_id'] != $employee->position_id) {
+            $oldPosition = $employee->positionRate;
+            $newPosition = \App\Models\PositionRate::find($validated['position_id']);
             $oldSalary = $employee->basic_salary;
             $newSalary = $validated['basic_salary'] ?? $oldSalary;
-            AuditLog::logPositionChange(
-                $employee,
-                $employee->position,
-                $validated['position'],
-                $oldSalary,
-                $newSalary
-            );
+            if ($oldPosition && $newPosition) {
+                AuditLog::logPositionChange(
+                    $employee,
+                    $oldPosition->position_name,
+                    $newPosition->position_name,
+                    $oldSalary,
+                    $newSalary
+                );
+            }
         }
 
         $employee->update($validated);
