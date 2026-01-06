@@ -1,18 +1,39 @@
 <template>
-  <v-dialog v-model="show" max-width="900px" persistent>
+  <v-dialog
+    :model-value="modelValue"
+    @update:model-value="handleDialogChange"
+    max-width="1000px"
+    persistent
+    scrollable
+  >
     <v-card>
       <v-card-title class="text-h5 py-4 bg-primary">
         <v-icon start>mdi-account-plus</v-icon>
-        Add Employee
+        Add New Employee
       </v-card-title>
       <v-divider></v-divider>
 
-      <v-card-text class="pt-6">
+      <v-card-text class="pt-4" style="max-height: 70vh">
         <v-form ref="employeeForm">
+          <!-- Info Alert -->
+          <v-alert
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+            icon="mdi-information"
+          >
+            Complete all required fields. Employee number and credentials will
+            be auto-generated upon saving.
+          </v-alert>
+
           <v-row>
-            <!-- Personal Information -->
+            <!-- Section 1: Personal Information -->
             <v-col cols="12">
-              <div class="text-h6 mb-2">Personal Information</div>
+              <div class="text-h6 mb-2 d-flex align-center">
+                <v-icon start color="primary">mdi-account-circle</v-icon>
+                Section 1: Personal Information
+              </div>
               <v-divider class="mb-4"></v-divider>
             </v-col>
 
@@ -30,10 +51,11 @@
             <v-col cols="12" md="4">
               <v-text-field
                 v-model="formData.middle_name"
-                label="Middle Name (Optional)"
+                label="Middle Name"
                 variant="outlined"
                 density="comfortable"
                 hint="Optional"
+                persistent-hint
               ></v-text-field>
             </v-col>
 
@@ -49,33 +71,10 @@
 
             <v-col cols="12" md="6">
               <v-text-field
-                v-model="formData.email"
-                label="Email (Optional)"
-                type="email"
-                prepend-inner-icon="mdi-email"
-                :rules="[rules.emailOptional]"
-                variant="outlined"
-                density="comfortable"
-                hint="If no email, username will be firstname.lastname"
-                persistent-hint
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
-                v-model="formData.mobile_number"
-                label="Phone Number"
-                prepend-inner-icon="mdi-phone"
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-text-field
                 v-model="formData.date_of_birth"
                 label="Date of Birth"
                 type="date"
+                prepend-inner-icon="mdi-calendar"
                 :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
@@ -87,16 +86,43 @@
                 v-model="formData.gender"
                 :items="GENDERS"
                 label="Gender"
+                prepend-inner-icon="mdi-gender-male-female"
                 :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
               ></v-select>
             </v-col>
 
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="formData.email"
+                label="Email Address"
+                type="email"
+                prepend-inner-icon="mdi-email"
+                :rules="[rules.emailOptional]"
+                variant="outlined"
+                density="comfortable"
+                hint="Optional - Used for notifications"
+                persistent-hint
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="formData.mobile_number"
+                label="Mobile Number"
+                prepend-inner-icon="mdi-cellphone"
+                variant="outlined"
+                density="comfortable"
+                hint="Format: 09171234567"
+                persistent-hint
+              ></v-text-field>
+            </v-col>
+
             <v-col cols="12">
               <v-textarea
                 v-model="formData.worker_address"
-                label="Worker Address"
+                label="Complete Address"
                 prepend-inner-icon="mdi-map-marker"
                 rows="1"
                 hint="Enter the worker's complete home address"
@@ -173,7 +199,7 @@
                 :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
-                hint="Type of employment contract"
+                hint="Regular, Probationary, or Contractual status"
                 persistent-hint
               ></v-select>
             </v-col>
@@ -193,13 +219,13 @@
 
             <v-col cols="12" md="6">
               <v-select
-                v-model="formData.employment_type"
-                :items="EMPLOYMENT_TYPES"
-                label="Employment Type"
+                v-model="formData.work_schedule"
+                :items="WORK_SCHEDULES"
+                label="Work Schedule"
                 :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
-                hint="Type of employment contract"
+                hint="Full-time or Part-time work schedule"
                 persistent-hint
               ></v-select>
             </v-col>
@@ -218,55 +244,107 @@
             <v-col cols="12" md="6">
               <v-text-field
                 :model-value="formatSalaryDisplay()"
-                label="Basic Pay Rate (from Position)"
+                label="Daily Rate"
                 prepend-inner-icon="mdi-cash"
+                readonly
                 variant="outlined"
                 density="comfortable"
-                readonly
-                :bg-color="formData.position ? 'blue-lighten-5' : undefined"
-                hint="Rate is automatically set from selected position"
+                hint="Based on selected position"
                 persistent-hint
-                suffix="₱/day"
-              >
-                <template v-slot:prepend-inner>
-                  <v-icon size="small" color="primary">mdi-information</v-icon>
-                </template>
-              </v-text-field>
+                prefix="₱"
+                suffix="/day"
+              ></v-text-field>
             </v-col>
 
-            <!-- Allowances Section -->
-            <v-col cols="12">
-              <div class="text-h6 mb-2 mt-4">Allowances</div>
-              <v-divider class="mb-2"></v-divider>
+            <!-- Section 3: Employment Type & Status -->
+            <v-col cols="12" class="mt-4">
+              <div class="text-h6 mb-2 d-flex align-center">
+                <v-icon start color="primary">mdi-file-document</v-icon>
+                Section 3: Contract & Status
+              </div>
+              <v-divider class="mb-4"></v-divider>
             </v-col>
 
-            <v-col cols="12">
-              <v-alert type="info" variant="tonal" density="compact">
-                Allowances can be added after creating the employee through the
-                Benefits > Allowances page. This allows for more flexible
-                management with custom types, frequencies, and date ranges.
-              </v-alert>
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="formData.contract_type"
+                :items="CONTRACT_TYPES"
+                label="Contract Type"
+                prepend-inner-icon="mdi-file-sign"
+                :rules="[rules.required]"
+                variant="outlined"
+                density="comfortable"
+                hint="Regular, Probationary, or Contractual"
+                persistent-hint
+              ></v-select>
             </v-col>
 
-            <!-- User Account Section -->
-            <v-col cols="12">
-              <div class="text-h6 mb-2 mt-4">User Account</div>
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="formData.activity_status"
+                :items="ACTIVITY_STATUSES"
+                label="Activity Status"
+                prepend-inner-icon="mdi-account-check"
+                :rules="[rules.required]"
+                variant="outlined"
+                density="comfortable"
+                hint="Current employment status"
+                persistent-hint
+              ></v-select>
+            </v-col>
+
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="formData.work_schedule"
+                :items="WORK_SCHEDULES"
+                label="Work Schedule"
+                prepend-inner-icon="mdi-clock-outline"
+                :rules="[rules.required]"
+                variant="outlined"
+                density="comfortable"
+                hint="Full-time or Part-time"
+                persistent-hint
+              ></v-select>
+            </v-col>
+
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="formData.salary_type"
+                :items="SALARY_TYPES"
+                label="Salary Type"
+                prepend-inner-icon="mdi-cash-multiple"
+                :rules="[rules.required]"
+                variant="outlined"
+                density="comfortable"
+              ></v-select>
+            </v-col>
+
+            <!-- Section 4: User Account -->
+            <v-col cols="12" class="mt-4">
+              <div class="text-h6 mb-2 d-flex align-center">
+                <v-icon start color="primary">mdi-account-key</v-icon>
+                Section 4: User Account
+              </div>
               <v-divider class="mb-4"></v-divider>
             </v-col>
 
             <v-col cols="12">
-              <v-alert type="info" variant="tonal" density="compact">
-                <ul class="mt-2">
+              <v-alert
+                type="warning"
+                variant="tonal"
+                density="compact"
+                class="mb-2"
+                icon="mdi-key"
+              >
+                <div class="text-subtitle-2 mb-2">
+                  Auto-Generated Credentials
+                </div>
+                <ul class="ml-4">
+                  <li>Username will be firstname.lastname (lowercase)</li>
                   <li>
-                    <strong>Username:</strong> Email if provided, otherwise
-                    firstname.lastname
+                    Temporary password: LastName + EmployeeNumber + 2 random
+                    digits
                   </li>
-                  <li>
-                    <strong>Password:</strong> Auto-generated (LastName + EmpID
-                    + 2 random digits)
-                  </li>
-                  <li><strong>Role:</strong> Selected below</li>
-                  <li><strong>Status:</strong> Active</li>
                   <li>Employee must change password on first login</li>
                 </ul>
               </v-alert>
@@ -282,7 +360,7 @@
                 label="User Role"
                 prepend-inner-icon="mdi-shield-account"
                 :rules="[rules.required]"
-                hint="Admin can assign accountant or employee role"
+                hint="System access level"
                 persistent-hint
                 variant="outlined"
                 density="comfortable"
@@ -296,7 +374,12 @@
 
       <v-card-actions class="pa-4">
         <v-spacer></v-spacer>
-        <v-btn variant="text" @click="handleClose" :disabled="saving">
+        <v-btn
+          variant="text"
+          @click="handleClose"
+          :disabled="saving"
+          size="large"
+        >
           Cancel
         </v-btn>
         <v-btn
@@ -304,9 +387,10 @@
           variant="elevated"
           @click="handleSave"
           :loading="saving"
+          size="large"
+          prepend-icon="mdi-content-save"
         >
-          <v-icon start>mdi-content-save</v-icon>
-          Save Employee
+          Create Employee
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -316,14 +400,8 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { usePositionRates } from "@/composables/usePositionRates";
-import {
-  GENDERS,
-  CONTRACT_TYPES,
-  ACTIVITY_STATUSES,
-  EMPLOYMENT_TYPES,
-  SALARY_TYPES,
-} from "@/utils/constants";
 
+const emit = defineEmits(["update:modelValue", "save"]);
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -335,46 +413,70 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "save"]);
-
 const { positionOptions, getRate, loadPositionRates } = usePositionRates();
-
-const show = computed({
-  get: () => props.modelValue,
-  set: (value) => emit("update:modelValue", value),
-});
 
 const employeeForm = ref(null);
 const saving = ref(false);
 
+// Constants - using value/title format for backend compatibility
+const GENDERS = [
+  { title: "Male", value: "male" },
+  { title: "Female", value: "female" },
+];
+const WORK_SCHEDULES = [
+  { title: "Full Time", value: "full_time" },
+  { title: "Part Time", value: "part_time" },
+];
+const CONTRACT_TYPES = [
+  { title: "Regular", value: "regular" },
+  { title: "Probationary", value: "probationary" },
+  { title: "Contractual", value: "contractual" },
+];
+const ACTIVITY_STATUSES = [
+  { title: "Active", value: "active" },
+  { title: "On Leave", value: "on_leave" },
+  { title: "Resigned", value: "resigned" },
+  { title: "Terminated", value: "terminated" },
+];
+const SALARY_TYPES = [
+  { title: "Daily", value: "daily" },
+  { title: "Monthly", value: "monthly" },
+];
+
 const formData = ref({
-  employee_number: "",
+  // Personal Information
   first_name: "",
   middle_name: "",
   last_name: "",
-  date_of_birth: "",
-  gender: "male",
-  email: "",
+  date_of_birth: null,
+  gender: "",
   mobile_number: "",
+  email: "",
   worker_address: "",
+
+  // Employment Details
+  employee_number: "",
   project_id: null,
   position: "",
-  date_hired: "",
-  contract_type: "regular",
+  date_hired: null,
+  work_schedule: "",
+  contract_type: "",
   activity_status: "active",
-  employment_type: "regular",
   salary_type: "daily",
-  basic_salary: 450,
+  basic_salary: 0,
+
+  // User Account
   role: "employee",
 });
 
 const rules = {
   required: (v) => !!v || "This field is required",
-  email: (v) => /.+@.+\..+/.test(v) || "Email must be valid",
+  email: (v) => !v || /.+@.+\..+/.test(v) || "Email must be valid",
   emailOptional: (v) => !v || /.+@.+\..+/.test(v) || "Email must be valid",
+  phone: (v) => !v || /^09\d{9}$/.test(v) || "Format: 09171234567",
 };
 
-// Load position rates from database on mount
+// Load position rates on mount
 onMounted(async () => {
   await loadPositionRates();
 });
@@ -386,59 +488,7 @@ function updateBasicSalary(position) {
   }
 }
 
-// Reset form when dialog closes
-watch(show, (newVal) => {
-  if (!newVal) {
-    resetForm();
-  }
-});
-
-function resetForm() {
-  formData.value = {
-    employee_number: "",
-    first_name: "",
-    middle_name: "",
-    last_name: "",
-    date_of_birth: "",
-    gender: "",
-    email: "",
-    mobile_number: "",
-    worker_address: "",
-    project_id: null,
-    position: "",
-    date_hired: "",
-    contract_type: "regular",
-    activity_status: "active",
-    employment_type: "regular",
-    salary_type: "daily",
-    basic_salary: 450,
-    role: "employee",
-  };
-  if (employeeForm.value) {
-    employeeForm.value.resetValidation();
-  }
-}
-
-async function handleSave() {
-  if (!employeeForm.value) return;
-
-  const { valid } = await employeeForm.value.validate();
-  if (!valid) return;
-
-  saving.value = true;
-  emit("save", {
-    data: formData.value,
-    setSaving: (val) => (saving.value = val),
-  });
-}
-
-function handleClose() {
-  if (!saving.value) {
-    show.value = false;
-  }
-}
-
-// Format salary display based on selected position
+// Format salary display
 function formatSalaryDisplay() {
   if (!formData.value.position) return "0.00";
 
@@ -452,4 +502,59 @@ function formatSalaryDisplay() {
 
   return "0.00";
 }
+
+const handleDialogChange = (value) => {
+  if (!value) {
+    handleClose();
+  }
+};
+
+const handleClose = () => {
+  emit("update:modelValue", false);
+};
+
+const handleSave = async () => {
+  if (!employeeForm.value) return;
+
+  const { valid } = await employeeForm.value.validate();
+  if (!valid) return;
+
+  saving.value = true;
+  const callback = (value) => {
+    saving.value = value;
+  };
+  emit("save", { data: formData.value, setSaving: callback });
+};
+
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (!newVal) {
+      formData.value = {
+        first_name: "",
+        middle_name: "",
+        last_name: "",
+        date_of_birth: null,
+        gender: "",
+        mobile_number: "",
+        email: "",
+        worker_address: "",
+        employee_number: "",
+        project_id: null,
+        position: "",
+        date_hired: null,
+        work_schedule: "",
+        contract_type: "",
+        activity_status: "active",
+        salary_type: "daily",
+        basic_salary: 0,
+        role: "employee",
+      };
+      saving.value = false;
+      if (employeeForm.value) {
+        employeeForm.value.resetValidation();
+      }
+    }
+  }
+);
 </script>

@@ -197,6 +197,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/government/tax-table/{periodType}', [App\Http\Controllers\Api\GovernmentController::class, 'taxTable']);
     Route::post('/government/compute-contributions', [App\Http\Controllers\Api\GovernmentController::class, 'computeContributions']);
 
+    // Employee Documents and Government Information
+    Route::get('/employees/{employeeId}/documents', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'index']);
+    Route::post('/employees/{employeeId}/documents', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'store']);
+    Route::get('/documents/{documentId}/download', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'download']);
+    Route::delete('/documents/{documentId}', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'destroy']);
+    Route::get('/employees/{employeeId}/government-info', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'getGovernmentInfo']);
+    Route::put('/employees/{employeeId}/government-info', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'updateGovernmentInfo']);
+
     // Reports
     Route::get('/reports/payroll-summary', [App\Http\Controllers\Api\ReportController::class, 'payrollSummary']);
     Route::get('/reports/employee-earnings', [App\Http\Controllers\Api\ReportController::class, 'employeeEarnings']);

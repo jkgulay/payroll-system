@@ -20,14 +20,27 @@ class EmployeeController extends Controller
     {
         $query = Employee::with(['project', 'positionRate']);
 
-        // Search
-        if ($request->has('search')) {
+        // Search - case-insensitive search across multiple fields
+        if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('employee_number', 'like', "%{$search}%")
-                    ->orWhere('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                $q->where('employee_number', 'ilike', "%{$search}%")
+                    ->orWhere('first_name', 'ilike', "%{$search}%")
+                    ->orWhere('last_name', 'ilike', "%{$search}%")
+                    ->orWhere('middle_name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%")
+                    ->orWhere('mobile_number', 'like', "%{$search}%")
+                    // Search by full name (first + last, first + middle + last)
+                    ->orWhereRaw("LOWER(CONCAT(first_name, ' ', last_name)) LIKE ?", ['%' . strtolower($search) . '%'])
+                    ->orWhereRaw("LOWER(CONCAT(first_name, ' ', COALESCE(middle_name, ''), ' ', last_name)) LIKE ?", ['%' . strtolower($search) . '%'])
+                    // Search by position name
+                    ->orWhereHas('positionRate', function ($posQuery) use ($search) {
+                        $posQuery->where('position_name', 'ilike', "%{$search}%");
+                    })
+                    // Search by project name
+                    ->orWhereHas('project', function ($projQuery) use ($search) {
+                        $projQuery->where('name', 'ilike', "%{$search}%");
+                    });
             });
         }
 
@@ -46,9 +59,13 @@ class EmployeeController extends Controller
             $query->where('activity_status', $request->activity_status);
         }
 
-        // Filter by employment type
-        if ($request->has('employment_type')) {
-            $query->where('employment_type', $request->employment_type);
+        // Filter by work schedule (new) or employment_type (legacy)
+        if ($request->has('work_schedule')) {
+            $query->where('work_schedule', $request->work_schedule);
+        } elseif ($request->has('employment_type')) {
+            // Legacy support: map old values to new
+            $schedule = $request->employment_type === 'part_time' ? 'part_time' : 'full_time';
+            $query->where('work_schedule', $schedule);
         }
 
         // Filter by position
@@ -86,7 +103,18 @@ class EmployeeController extends Controller
         $validated['project_id'] = $validated['project_id'] ?? 1; // Default to first project
         $validated['contract_type'] = $validated['contract_type'] ?? 'regular';
         $validated['activity_status'] = $validated['activity_status'] ?? 'active';
-        $validated['employment_type'] = $validated['employment_type'] ?? 'regular';
+
+        // Handle work_schedule (new) or employment_type (legacy)
+        if (isset($validated['work_schedule'])) {
+            // Already set, keep it
+        } elseif (isset($validated['employment_type'])) {
+            // Legacy: map old values to new
+            $validated['work_schedule'] = $validated['employment_type'] === 'part_time' ? 'part_time' : 'full_time';
+            unset($validated['employment_type']);
+        } else {
+            $validated['work_schedule'] = 'full_time'; // Default
+        }
+
         $validated['date_hired'] = $validated['date_hired'] ?? DateHelper::today();
         $validated['basic_salary'] = $validated['basic_salary'] ?? 450; // Minimum wage default
         $validated['salary_type'] = $validated['salary_type'] ?? 'daily';
@@ -105,6 +133,11 @@ class EmployeeController extends Controller
                 $validated['position_id'] = $positionRate->id;
                 // ALWAYS set basic_salary from position rate (this ensures consistency)
                 $validated['basic_salary'] = $positionRate->daily_rate;
+
+                // Auto-assign role: if position is "Accountant", set role to "accountant"
+                if (strtolower($validated['position']) === 'accountant') {
+                    $role = 'accountant';
+                }
             }
         }
 
@@ -113,6 +146,11 @@ class EmployeeController extends Controller
             $positionRate = \App\Models\PositionRate::find($validated['position_id']);
             if ($positionRate) {
                 $validated['basic_salary'] = $positionRate->daily_rate;
+
+                // Auto-assign role: if position is "Accountant", set role to "accountant"
+                if (strtolower($positionRate->position_name) === 'accountant') {
+                    $role = 'accountant';
+                }
             }
         }
 
@@ -195,10 +233,12 @@ class EmployeeController extends Controller
     {
         $validated = $request->validated();
 
-        // Map position string to position_id if position is provided but position_id is not
-        if (!empty($validated['position']) && empty($validated['position_id'])) {
+        // Map position string to position_id
+        // This handles both cases: new position provided OR position changed
+        if (!empty($validated['position'])) {
             $positionRate = \App\Models\PositionRate::where('position_name', $validated['position'])->first();
             if ($positionRate) {
+                // Update position_id and salary even if position_id was already set
                 $validated['position_id'] = $positionRate->id;
                 // ALWAYS set basic_salary from position rate when position changes
                 $validated['basic_salary'] = $positionRate->daily_rate;
@@ -243,6 +283,19 @@ class EmployeeController extends Controller
                     $oldSalary,
                     $newSalary
                 );
+
+                // Auto-update user role: if new position is "Accountant", set role to "accountant"
+                if (strtolower($newPosition->position_name) === 'accountant') {
+                    if ($employee->user_id) {
+                        \App\Models\User::where('id', $employee->user_id)->update(['role' => 'accountant']);
+                    }
+                }
+                // If changing FROM Accountant to something else, set role back to "employee"
+                elseif (strtolower($oldPosition->position_name) === 'accountant') {
+                    if ($employee->user_id) {
+                        \App\Models\User::where('id', $employee->user_id)->update(['role' => 'employee']);
+                    }
+                }
             }
         }
 
@@ -278,10 +331,15 @@ class EmployeeController extends Controller
      */
     public function getCredentials(Employee $employee)
     {
-        $user = User::where('id', $employee->user_id)->first();
-
-        if (!$user) {
-            return response()->json(['error' => 'User account not found'], 404);
+        // Check if user account exists, if not create one
+        if (!$employee->user_id) {
+            $user = $this->createUserForEmployee($employee);
+        } else {
+            $user = User::where('id', $employee->user_id)->first();
+            if (!$user) {
+                // User ID exists but user not found, create new user
+                $user = $this->createUserForEmployee($employee);
+            }
         }
 
         return response()->json([
@@ -289,6 +347,7 @@ class EmployeeController extends Controller
             'email' => $user->email,
             'role' => $user->role,
             'is_active' => $user->is_active,
+            'temporary_password' => $user->temporary_password ?? null, // Include if just created
         ]);
     }
 
@@ -297,10 +356,25 @@ class EmployeeController extends Controller
      */
     public function resetPassword(Employee $employee)
     {
+        // Check if user account exists, if not create one
+        if (!$employee->user_id) {
+            $user = $this->createUserForEmployee($employee);
+            // Return the newly created credentials
+            return response()->json([
+                'message' => 'User account created and password set',
+                'temporary_password' => $user->temporary_password,
+            ]);
+        }
+
         $user = User::where('id', $employee->user_id)->first();
 
         if (!$user) {
-            return response()->json(['error' => 'User account not found'], 404);
+            // User ID exists but user not found, create new user
+            $user = $this->createUserForEmployee($employee);
+            return response()->json([
+                'message' => 'User account created and password set',
+                'temporary_password' => $user->temporary_password,
+            ]);
         }
 
         // Generate new temporary password: LastName + EmployeeNumber + @ + 2 random digits
@@ -319,5 +393,57 @@ class EmployeeController extends Controller
             'message' => 'Password reset successfully',
             'temporary_password' => $newPassword,
         ]);
+    }
+
+    /**
+     * Create a user account for an employee without one
+     */
+    private function createUserForEmployee(Employee $employee)
+    {
+        // Generate username from name (firstname.lastname)
+        $username = strtolower($employee->first_name . '.' . $employee->last_name);
+
+        // Check if username exists, if so append number
+        $originalUsername = $username;
+        $counter = 1;
+        while (User::where('username', $username)->exists()) {
+            $username = $originalUsername . $counter;
+            $counter++;
+        }
+
+        // Generate temporary password: LastName + EmployeeNumber + @ + 2 random digits
+        $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+        $temporaryPassword = $employee->last_name . $employee->employee_number . '@' . $randomDigits;
+
+        // Determine role based on position
+        $role = 'employee'; // Default role
+        if ($employee->position_id) {
+            $position = \App\Models\PositionRate::find($employee->position_id);
+            if ($position && strtolower($position->position_name) === 'accountant') {
+                $role = 'accountant';
+            }
+        }
+
+        // Create user account
+        $user = User::create([
+            'username' => $username,
+            'email' => $employee->email ?? $username . '@company.com',
+            'password' => Hash::make($temporaryPassword),
+            'role' => $role,
+            'is_active' => true,
+            'must_change_password' => true,
+        ]);
+
+        // Store temporary password on user object (not saved to DB)
+        $user->temporary_password = $temporaryPassword;
+
+        // Link user to employee
+        $employee->user_id = $user->id;
+        $employee->save();
+
+        // Log the action
+        Log::info("User account created for employee {$employee->employee_number} (ID: {$employee->id}) by user " . auth()->id());
+
+        return $user;
     }
 }

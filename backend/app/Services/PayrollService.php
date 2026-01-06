@@ -11,6 +11,7 @@ use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
 use App\Models\LoanPayment;
+use App\Models\Holiday;
 use App\Services\Government\SSSComputationService;
 use App\Services\Government\PhilHealthComputationService;
 use App\Services\Government\PagIbigComputationService;
@@ -254,7 +255,23 @@ class PayrollService
         $basicSalary = $employee->getBasicSalary();
         $hourlyRate = $employee->getHourlyRate();
 
+        // Get holidays in the payroll period for automatic holiday pay calculation
+        $holidays = Holiday::whereBetween('holiday_date', [$payroll->period_start, $payroll->period_end])
+            ->pluck('holiday_type', 'holiday_date')
+            ->toArray();
+
         foreach ($attendance as $record) {
+            // Check if attendance date falls on a holiday
+            $attendanceDate = Carbon::parse($record->attendance_date)->format('Y-m-d');
+            $isHoliday = isset($holidays[$attendanceDate]);
+            $holidayType = $isHoliday ? $holidays[$attendanceDate] : null;
+
+            // Override attendance holiday flags with database holidays
+            if ($isHoliday) {
+                $record->is_holiday = true;
+                $record->holiday_type = $holidayType;
+            }
+
             // Basic pay
             if ($employee->salary_type === 'daily') {
                 $basicPay += $basicSalary * ($record->regular_hours / 8);
@@ -271,16 +288,28 @@ class PayrollService
                 $overtimePay += $hourlyRate * $record->overtime_hours * $overtimeRate;
             }
 
-            // Holiday pay
+            // Holiday pay - automatically calculated based on holidays table
             if ($record->is_holiday) {
+                // Regular holiday = 200% pay (2x), Special holiday = 130% pay (1.3x)
+                // If worked, employee gets base pay PLUS premium
                 $holidayRate = $record->holiday_type === 'regular' ? 2.0 : 1.3;
+
+                // If overtime on holiday, higher premium applies
                 if ($record->overtime_hours > 0) {
                     $holidayRate = $record->holiday_type === 'regular' ? 2.6 : 1.69;
                 }
+
+                // Holiday premium (subtract 1 because base pay already counted above)
                 $holidayPay += $hourlyRate * $record->regular_hours * ($holidayRate - 1);
             }
 
-            // Night differential (10% of hourly rate)
+            // Rest day premium (if employee worked on their rest day but it's not a holiday)
+            if (!$isHoliday && $record->is_rest_day && $record->regular_hours > 0) {
+                // Rest day work = 130% pay (30% premium)
+                $holidayPay += $hourlyRate * $record->regular_hours * 0.30;
+            }
+
+            // Night differential (10% of hourly rate for work between 10pm-6am)
             if ($record->night_differential_hours > 0) {
                 $nightDifferential += $hourlyRate * $record->night_differential_hours * 0.10;
             }

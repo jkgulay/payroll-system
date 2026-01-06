@@ -35,7 +35,7 @@ class Employee extends Model
         'project_id',
         'worker_address',
         'position_id',
-        'employment_type',
+        'work_schedule',
         'contract_type',
         'activity_status',
         'date_hired',
@@ -177,9 +177,17 @@ class Employee extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeByWorkSchedule($query, $schedule)
+    {
+        return $query->where('work_schedule', $schedule);
+    }
+
+    // Legacy alias
     public function scopeByEmploymentType($query, $type)
     {
-        return $query->where('employment_type', $type);
+        // Map old values to new
+        $schedule = $type === 'part_time' ? 'part_time' : 'full_time';
+        return $query->where('work_schedule', $schedule);
     }
 
     public function scopeByContractType($query, $type)

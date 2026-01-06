@@ -26,6 +26,7 @@ class LoginRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
+                // Accept both email and username formats
             ],
             'password' => [
                 'required',

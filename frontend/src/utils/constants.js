@@ -25,12 +25,14 @@ export const SALARY_TYPES = [
   { value: "hourly", title: "Hourly" },
 ];
 
-// Employment Types
-export const EMPLOYMENT_TYPES = [
-  { value: "regular", title: "Regular" },
-  { value: "contractual", title: "Contractual" },
+// Work Schedule (replaces confusing EMPLOYMENT_TYPES)
+export const WORK_SCHEDULES = [
+  { value: "full_time", title: "Full Time" },
   { value: "part_time", title: "Part Time" },
 ];
+
+// Legacy alias for backwards compatibility
+export const EMPLOYMENT_TYPES = WORK_SCHEDULES;
 
 // Gender Options
 export const GENDERS = [

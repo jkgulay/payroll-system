@@ -35,7 +35,8 @@ class StoreEmployeeRequest extends FormRequest
             'position_id' => ['nullable', 'exists:position_rates,id'],
             'contract_type' => ['nullable', 'in:regular,probationary,contractual'],
             'activity_status' => ['nullable', 'in:active,on_leave,resigned,terminated,retired'],
-            'employment_type' => ['nullable', 'in:regular,contractual,part_time'],
+            'work_schedule' => ['nullable', 'in:full_time,part_time'],
+            'employment_type' => ['nullable', 'in:regular,contractual,part_time'], // Legacy support
             'date_hired' => ['nullable', 'date', 'before_or_equal:today'],
             'basic_salary' => ['nullable', 'numeric', 'min:450', 'max:999999.99'],
             'salary_type' => ['nullable', 'in:daily,monthly,hourly'],

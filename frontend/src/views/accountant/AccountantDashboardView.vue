@@ -6,14 +6,21 @@
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Total Employees</span>
+              <span class="text-subtitle-2 text-medium-emphasis"
+                >Total Employees</span
+              >
               <v-icon size="20" color="primary">mdi-account-group</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               {{ stats.totalEmployees }}
             </div>
             <div class="d-flex align-center">
-              <v-chip size="x-small" color="success" variant="flat" class="mr-2">
+              <v-chip
+                size="x-small"
+                color="success"
+                variant="flat"
+                class="mr-2"
+              >
                 <v-icon start size="12">mdi-arrow-up</v-icon>
                 {{ stats.activeEmployees }} active
               </v-chip>
@@ -26,7 +33,9 @@
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Pending Requests</span>
+              <span class="text-subtitle-2 text-medium-emphasis"
+                >Pending Requests</span
+              >
               <v-icon size="20" color="warning">mdi-alert-circle</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
@@ -43,14 +52,18 @@
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">This Period</span>
+              <span class="text-subtitle-2 text-medium-emphasis"
+                >This Period</span
+              >
               <v-icon size="20" color="success">mdi-cash-multiple</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               ₱{{ formatNumber(stats.periodPayroll) }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Payroll amount</span>
+              <span class="text-caption text-medium-emphasis"
+                >Payroll amount</span
+              >
             </div>
           </v-card-text>
         </v-card>
@@ -60,14 +73,18 @@
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Attendance Today</span>
+              <span class="text-subtitle-2 text-medium-emphasis"
+                >Attendance Today</span
+              >
               <v-icon size="20" color="info">mdi-calendar-check</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               {{ stats.presentToday }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">of {{ stats.totalEmployees }} employees</span>
+              <span class="text-caption text-medium-emphasis"
+                >of {{ stats.totalEmployees }} employees</span
+              >
             </div>
           </v-card-text>
         </v-card>
@@ -239,7 +256,10 @@
                 </div>
               </template>
               <template v-slot:item.contract_type="{ item }">
-                <v-chip :color="item.contract_type === 'regular' ? 'success' : 'info'" size="small">
+                <v-chip
+                  :color="item.contract_type === 'regular' ? 'success' : 'info'"
+                  size="small"
+                >
                   {{ item.contract_type }}
                 </v-chip>
               </template>
@@ -452,13 +472,9 @@
 
               <v-col cols="12" md="6">
                 <v-select
-                  v-model="employeeData.employment_type"
-                  :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Contractual', value: 'contractual' },
-                    { title: 'Part Time', value: 'part_time' },
-                  ]"
-                  label="Employment Type"
+                  v-model="employeeData.work_schedule"
+                  :items="WORK_SCHEDULES"
+                  label="Work Schedule"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
@@ -507,7 +523,10 @@
                   class="mb-4"
                 >
                   <div class="d-flex align-center justify-space-between">
-                    <span>Allowances are now managed in a dedicated page with more options (type, frequency, dates, taxability)</span>
+                    <span
+                      >Allowances are now managed in a dedicated page with more
+                      options (type, frequency, dates, taxability)</span
+                    >
                     <v-btn
                       size="small"
                       color="primary"
@@ -872,16 +891,11 @@
                   density="comfortable"
                 ></v-text-field>
               </v-col>
-                  readonly
-                  variant="plain"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="selectedEmployee.employment_type"
-                  label="Employment Type"
+                  v-model="selectedEmployee.work_schedule"
+                  label="Work Schedule"
                   readonly
                   variant="plain"
                   density="comfortable"
@@ -927,13 +941,12 @@
               </v-col>
 
               <v-col cols="12">
-                <v-alert
-                  type="info"
-                  variant="tonal"
-                  density="compact"
-                >
+                <v-alert type="info" variant="tonal" density="compact">
                   <div class="d-flex align-center justify-space-between">
-                    <span>View and manage this employee's allowances in the dedicated allowances page</span>
+                    <span
+                      >View and manage this employee's allowances in the
+                      dedicated allowances page</span
+                    >
                     <v-btn
                       size="small"
                       color="primary"
@@ -1183,7 +1196,7 @@ import {
   GENDERS,
   CONTRACT_TYPES,
   ACTIVITY_STATUSES,
-  EMPLOYMENT_TYPES,
+  WORK_SCHEDULES,
 } from "@/utils/constants";
 
 const router = useRouter();
@@ -1228,7 +1241,7 @@ const employeeData = ref({
   worker_address: "",
   contract_type: "regular",
   activity_status: "active",
-  employment_type: "regular",
+  work_schedule: "full_time",
   basic_salary: 450,
   salary_type: "daily",
 });
@@ -1523,7 +1536,7 @@ function closeEmployeeDialog() {
     worker_address: "",
     contract_type: "regular",
     activity_status: "active",
-    employment_type: "regular",
+    work_schedule: "full_time",
     basic_salary: 450,
     salary_type: "daily",
   };

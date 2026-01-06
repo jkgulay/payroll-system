@@ -25,17 +25,20 @@
 
     <v-card>
       <v-card-text>
-        <v-row class="mb-4">
+        <v-row class="mb-4" align="center">
           <v-col cols="12" md="3">
             <v-text-field
               v-model="search"
               prepend-inner-icon="mdi-magnify"
               label="Search employees..."
               clearable
-              @input="fetchEmployees"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+              @update:model-value="debouncedSearch"
             ></v-text-field>
           </v-col>
-          <v-col cols="12" md="3">
+          <v-col cols="12" md="2">
             <v-select
               v-model="filters.project_id"
               :items="projects"
@@ -43,6 +46,9 @@
               item-value="id"
               label="Project"
               clearable
+              variant="outlined"
+              density="comfortable"
+              hide-details
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
@@ -52,6 +58,9 @@
               :items="contractTypeOptions"
               label="Contract Type"
               clearable
+              variant="outlined"
+              density="comfortable"
+              hide-details
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
@@ -61,26 +70,40 @@
               :items="activityStatusOptions"
               label="Activity Status"
               clearable
+              variant="outlined"
+              density="comfortable"
+              hide-details
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="2">
+          <v-col cols="12" md="1">
             <v-select
-              v-model="filters.employment_type"
-              :items="employmentTypeOptions"
-              label="Type"
+              v-model="filters.work_schedule"
+              :items="workScheduleOptions"
+              label="Schedule"
               clearable
+              variant="outlined"
+              density="comfortable"
+              hide-details
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="2">
-            <v-select
-              v-model="filters.position"
-              :items="positionOptions"
-              label="Position"
-              clearable
-              @update:model-value="fetchEmployees"
-            ></v-select>
+          <v-col cols="12" md="2" class="d-flex gap-2">
+            <v-btn
+              color="primary"
+              variant="tonal"
+              icon="mdi-refresh"
+              @click="refreshEmployees"
+              :loading="employeeStore.loading"
+              title="Refresh"
+            ></v-btn>
+            <v-btn
+              color="error"
+              variant="tonal"
+              icon="mdi-filter-remove"
+              @click="clearFilters"
+              title="Clear Filters"
+            ></v-btn>
           </v-col>
         </v-row>
 
@@ -131,12 +154,14 @@
             {{ item.position || "N/A" }}
           </template>
 
-          <template v-slot:item.employment_type="{ item }">
+          <template v-slot:item.work_schedule="{ item }">
             <v-chip
               size="small"
-              :color="getEmploymentTypeColor(item.employment_type)"
+              :color="getWorkScheduleColor(item.work_schedule)"
             >
-              {{ item.employment_type }}
+              {{
+                item.work_schedule === "full_time" ? "Full Time" : "Part Time"
+              }}
             </v-chip>
           </template>
 
@@ -208,7 +233,12 @@
     </v-card>
 
     <!-- Employee Details/Edit Dialog -->
-    <v-dialog v-model="showEmployeeDialog" max-width="1000px" scrollable>
+    <v-dialog
+      v-model="showEmployeeDialog"
+      max-width="1000px"
+      scrollable
+      persistent
+    >
       <v-card>
         <v-card-title
           class="text-h5 py-4"
@@ -219,12 +249,40 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6" style="max-height: 600px">
+        <v-card-text class="pt-4" style="max-height: 70vh">
           <v-form ref="employeeForm" v-if="selectedEmployee">
+            <!-- Info Alert for Edit Mode -->
+            <v-alert
+              v-if="isEditing"
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+              icon="mdi-information"
+            >
+              Update employee information below. Position changes will
+              automatically update the salary.
+            </v-alert>
+
+            <!-- View Mode Info Alert -->
+            <v-alert
+              v-else
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+              icon="mdi-eye"
+            >
+              Viewing employee details. Click "Edit" to make changes.
+            </v-alert>
+
             <v-row>
-              <!-- Personal Information -->
+              <!-- Section 1: Personal Information -->
               <v-col cols="12">
-                <div class="text-h6 mb-2">Personal Information</div>
+                <div class="text-h6 mb-2 d-flex align-center">
+                  <v-icon start color="primary">mdi-account-circle</v-icon>
+                  Section 1: Personal Information
+                </div>
                 <v-divider class="mb-4"></v-divider>
               </v-col>
 
@@ -232,9 +290,12 @@
                 <v-text-field
                   v-model="selectedEmployee.employee_number"
                   label="Employee Number"
+                  prepend-inner-icon="mdi-identifier"
                   readonly
                   variant="outlined"
                   density="comfortable"
+                  hint="Auto-generated unique ID"
+                  persistent-hint
                 ></v-text-field>
               </v-col>
 
@@ -242,8 +303,10 @@
                 <v-text-field
                   v-model="selectedEmployee.first_name"
                   label="First Name"
+                  prepend-inner-icon="mdi-account"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                 ></v-text-field>
               </v-col>
@@ -253,8 +316,11 @@
                   v-model="selectedEmployee.middle_name"
                   label="Middle Name"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
+                  hint="Optional"
+                  persistent-hint
                 ></v-text-field>
               </v-col>
 
@@ -263,27 +329,8 @@
                   v-model="selectedEmployee.last_name"
                   label="Last Name"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="selectedEmployee.email"
-                  label="Email"
-                  :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="selectedEmployee.mobile_number"
-                  label="Mobile Number"
-                  :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                 ></v-text-field>
               </v-col>
@@ -293,8 +340,10 @@
                   v-model="selectedEmployee.date_of_birth"
                   label="Date of Birth"
                   type="date"
+                  prepend-inner-icon="mdi-calendar"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                 ></v-text-field>
               </v-col>
@@ -308,26 +357,61 @@
                     { title: 'Other', value: 'other' },
                   ]"
                   label="Gender"
+                  prepend-inner-icon="mdi-gender-male-female"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                 ></v-select>
               </v-col>
 
-              <v-col cols="12">
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="selectedEmployee.mobile_number"
+                  label="Mobile Number"
+                  prepend-inner-icon="mdi-cellphone"
+                  :readonly="!isEditing"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
+                  density="comfortable"
+                  hint="Format: 09171234567"
+                  persistent-hint
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="selectedEmployee.email"
+                  label="Email Address"
+                  prepend-inner-icon="mdi-email"
+                  :readonly="!isEditing"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
+                  density="comfortable"
+                  hint="Optional - Used for notifications"
+                  persistent-hint
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="6">
                 <v-textarea
                   v-model="selectedEmployee.worker_address"
-                  label="Address"
-                  rows="2"
+                  label="Complete Address"
+                  prepend-inner-icon="mdi-map-marker"
+                  rows="1"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                 ></v-textarea>
               </v-col>
 
-              <!-- Employment Information -->
-              <v-col cols="12">
-                <div class="text-h6 mb-2 mt-4">Employment Information</div>
+              <!-- Section 2: Employment Information -->
+              <v-col cols="12" class="mt-4">
+                <div class="text-h6 mb-2 d-flex align-center">
+                  <v-icon start color="primary">mdi-briefcase</v-icon>
+                  Section 2: Employment Information
+                </div>
                 <v-divider class="mb-4"></v-divider>
               </v-col>
 
@@ -338,8 +422,10 @@
                   item-title="name"
                   item-value="id"
                   label="Project"
+                  prepend-inner-icon="mdi-office-building"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                 ></v-select>
               </v-col>
@@ -349,17 +435,15 @@
                   v-model="selectedEmployee.position"
                   :items="positionOptions"
                   label="Position"
+                  prepend-inner-icon="mdi-badge-account"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                   clearable
-                  hint="Salary will auto-update based on position"
-                  :persistent-hint="isEditing"
-                >
-                  <template v-slot:prepend-inner v-if="isEditing">
-                    <v-icon size="small">mdi-briefcase</v-icon>
-                  </template>
-                </v-autocomplete>
+                  hint="Daily rate will auto-update based on position"
+                  persistent-hint
+                ></v-autocomplete>
               </v-col>
 
               <v-col cols="12" md="6">
@@ -367,10 +451,37 @@
                   v-model="selectedEmployee.date_hired"
                   label="Date Hired"
                   type="date"
+                  prepend-inner-icon="mdi-calendar-check"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                 ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-text-field
+                  :model-value="formatSalaryDisplay(selectedEmployee)"
+                  label="Daily Rate"
+                  prepend-inner-icon="mdi-cash"
+                  prefix="₱"
+                  suffix="/day"
+                  readonly
+                  variant="outlined"
+                  bg-color="blue-lighten-5"
+                  density="comfortable"
+                  hint="Based on selected position"
+                  persistent-hint
+                ></v-text-field>
+              </v-col>
+
+              <!-- Section 3: Contract & Status -->
+              <v-col cols="12" class="mt-4">
+                <div class="text-h6 mb-2 d-flex align-center">
+                  <v-icon start color="primary">mdi-file-document</v-icon>
+                  Section 3: Contract & Status
+                </div>
+                <v-divider class="mb-4"></v-divider>
               </v-col>
 
               <v-col cols="12" md="6">
@@ -382,9 +493,13 @@
                     { title: 'Contractual', value: 'contractual' },
                   ]"
                   label="Contract Type"
+                  prepend-inner-icon="mdi-file-sign"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
+                  hint="Regular, Probationary, or Contractual"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -399,24 +514,28 @@
                     { title: 'Retired', value: 'retired' },
                   ]"
                   label="Activity Status"
+                  prepend-inner-icon="mdi-account-check"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
+                  hint="Current employment status"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
               <v-col cols="12" md="6">
                 <v-select
-                  v-model="selectedEmployee.employment_type"
-                  :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Contractual', value: 'contractual' },
-                    { title: 'Part Time', value: 'part_time' },
-                  ]"
-                  label="Employment Type"
+                  v-model="selectedEmployee.work_schedule"
+                  :items="workScheduleOptions"
+                  label="Work Schedule"
+                  prepend-inner-icon="mdi-clock-outline"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
+                  hint="Full-time or Part-time"
+                  persistent-hint
                 ></v-select>
               </v-col>
 
@@ -428,30 +547,12 @@
                     { title: 'Monthly', value: 'monthly' },
                   ]"
                   label="Salary Type"
+                  prepend-inner-icon="mdi-cash-multiple"
                   :readonly="!isEditing"
-                  :variant="isEditing ? 'outlined' : 'plain'"
+                  :variant="isEditing ? 'outlined' : 'outlined'"
+                  :bg-color="!isEditing ? 'grey-lighten-4' : undefined"
                   density="comfortable"
                 ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  :model-value="formatSalaryDisplay(selectedEmployee)"
-                  label="Basic Salary (from Position Rate)"
-                  prefix="₱"
-                  readonly
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Salary is automatically set based on job position"
-                  persistent-hint
-                  :bg-color="isEditing ? 'blue-lighten-5' : undefined"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-icon size="small" color="primary"
-                      >mdi-information</v-icon
-                    >
-                  </template>
-                </v-text-field>
               </v-col>
             </v-row>
           </v-form>
@@ -464,23 +565,25 @@
             v-if="!isEditing"
             color="primary"
             variant="elevated"
+            size="large"
             @click="isEditing = true"
+            prepend-icon="mdi-pencil"
           >
-            <v-icon start>mdi-pencil</v-icon>
             Edit
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeDialog">
+          <v-btn variant="text" size="large" @click="closeDialog">
             {{ isEditing ? "Cancel" : "Close" }}
           </v-btn>
           <v-btn
             v-if="isEditing"
             color="primary"
             variant="elevated"
+            size="large"
             @click="saveEmployee"
             :loading="saving"
+            prepend-icon="mdi-content-save"
           >
-            <v-icon start>mdi-check</v-icon>
             Save Changes
           </v-btn>
         </v-card-actions>
@@ -685,7 +788,7 @@ import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
 import {
   CONTRACT_TYPES,
   ACTIVITY_STATUSES,
-  EMPLOYMENT_TYPES,
+  WORK_SCHEDULES,
 } from "@/utils/constants";
 
 const toast = useToast();
@@ -701,7 +804,7 @@ const filters = ref({
   project_id: null,
   contract_type: null,
   activity_status: null,
-  employment_type: null,
+  work_schedule: null,
   position: null,
 });
 
@@ -732,7 +835,7 @@ const employeeForm = ref(null);
 
 const contractTypeOptions = CONTRACT_TYPES;
 const activityStatusOptions = ACTIVITY_STATUSES;
-const employmentTypeOptions = EMPLOYMENT_TYPES;
+const workScheduleOptions = WORK_SCHEDULES;
 
 const headers = [
   { title: "Employee #", key: "employee_number", sortable: true },
@@ -740,7 +843,7 @@ const headers = [
   { title: "Gender", key: "gender", sortable: true },
   { title: "Project", key: "project", sortable: false },
   { title: "Position", key: "position", sortable: true },
-  { title: "Type", key: "employment_type", sortable: true },
+  { title: "Schedule", key: "work_schedule", sortable: true },
   { title: "Status", key: "is_active", sortable: true },
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
@@ -750,6 +853,16 @@ onMounted(async () => {
   await fetchProjects();
   await loadPositionRates();
 });
+
+// Debounce search to avoid too many API calls
+let searchTimeout = null;
+const debouncedSearch = () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    page.value = 1; // Reset to first page on search
+    fetchEmployees();
+  }, 500); // Wait 500ms after user stops typing
+};
 
 // Watch for position changes and auto-update basic_salary (only when editing)
 watch(
@@ -792,6 +905,26 @@ function onItemsPerPageChange(newItemsPerPage) {
 
 async function fetchProjects() {
   projects.value = await employeeStore.fetchProjects();
+}
+
+async function refreshEmployees() {
+  page.value = 1;
+  await fetchEmployees();
+  toast.success("Employee list refreshed");
+}
+
+function clearFilters() {
+  search.value = "";
+  filters.value = {
+    project_id: null,
+    contract_type: null,
+    activity_status: null,
+    work_schedule: null,
+    position: null,
+  };
+  page.value = 1;
+  fetchEmployees();
+  toast.info("Filters cleared");
 }
 
 async function viewEmployee(employee) {
@@ -910,15 +1043,15 @@ function closeDialog() {
   selectedEmployee.value = null;
 }
 
-function getEmploymentTypeColor(type) {
-  return type === "monthly" ? "primary" : "info";
+function getWorkScheduleColor(schedule) {
+  return schedule === "full_time" ? "primary" : "info";
 }
 
 // Add Employee Dialog functions
-async function saveNewEmployee(employeeData) {
+async function saveNewEmployee(payload) {
   savingNew.value = true;
   try {
-    const response = await api.post("/employees", employeeData);
+    const response = await api.post("/employees", payload.data);
 
     temporaryPassword.value = response.data.temporary_password;
     createdEmployee.value = response.data.employee;
@@ -931,10 +1064,13 @@ async function saveNewEmployee(employeeData) {
     await fetchEmployees();
   } catch (error) {
     console.error("Error creating employee:", error);
+    console.error("Validation errors:", error.response?.data?.errors);
+    console.error("Sent data:", payload.data);
     const message =
       error.response?.data?.message || "Failed to create employee";
     toast.error(message);
   } finally {
+    payload.setSaving(false);
     savingNew.value = false;
   }
 }

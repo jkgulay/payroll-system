@@ -53,7 +53,8 @@ class EmployeeImportController extends Controller
             // Optional fields for better import
             'employees.*.position' => 'nullable|string',
             'employees.*.basic_salary' => 'nullable|numeric',
-            'employees.*.employment_type' => 'nullable|string',
+            'employees.*.work_schedule' => 'nullable|string',
+            'employees.*.employment_type' => 'nullable|string', // Legacy support
         ]);
 
         if ($validator->fails()) {
@@ -112,22 +113,22 @@ class EmployeeImportController extends Controller
                     // Set default gender if not provided
                     $gender = !empty($data['gender']) ? strtolower(trim($data['gender'])) : 'male';
 
-                    // Normalize employment_type to match database constraint
-                    $employmentType = $data['employment_type'] ?? 'regular';
-                    $employmentType = str_replace('-', '_', strtolower(trim($employmentType))); // full-time -> full_time
+                    // Normalize work_schedule to match database constraint
+                    // Support both old employment_type and new work_schedule fields
+                    $workSchedule = $data['work_schedule'] ?? $data['employment_type'] ?? 'full_time';
+                    $workSchedule = str_replace('-', '_', strtolower(trim($workSchedule))); // full-time -> full_time
 
                     // Map common variations
-                    $employmentTypeMap = [
-                        'full_time' => 'regular',
-                        'fulltime' => 'regular',
-                        'regular' => 'regular',
+                    $scheduleMap = [
+                        'full_time' => 'full_time',
+                        'fulltime' => 'full_time',
+                        'regular' => 'full_time',
+                        'contractual' => 'full_time',
                         'part_time' => 'part_time',
                         'parttime' => 'part_time',
-                        'contractual' => 'contractual',
-                        'contract' => 'contractual',
                     ];
 
-                    $employmentType = $employmentTypeMap[$employmentType] ?? 'regular';
+                    $workSchedule = $scheduleMap[$workSchedule] ?? 'full_time';
 
                     // Check if employee already exists
                     $existingEmployee = Employee::where('employee_number', $data['staff_code'])->first();
@@ -196,7 +197,7 @@ class EmployeeImportController extends Controller
                         'date_hired' => $data['entry_date'],
                         'contract_type' => $contractType,
                         'activity_status' => 'active', // All imported employees are active
-                        'employment_type' => $employmentType,
+                        'work_schedule' => $workSchedule,
                         'project_id' => 1, // Default to first project
                         'position' => $position,
                         'basic_salary' => $basicSalary,
@@ -223,8 +224,8 @@ class EmployeeImportController extends Controller
 
                     // Get more specific error message
                     $errorMessage = $e->getMessage();
-                    if (strpos($errorMessage, 'employment_type_check') !== false) {
-                        $errorMessage = "Invalid employment type. Must be: regular, contractual, or part_time";
+                    if (strpos($errorMessage, 'work_schedule_check') !== false || strpos($errorMessage, 'employment_type_check') !== false) {
+                        $errorMessage = "Invalid work schedule. Must be: full_time or part_time";
                     } elseif (strpos($errorMessage, 'contract_type') !== false || strpos($errorMessage, 'activity_status') !== false) {
                         $errorMessage = "Invalid contract type or activity status";
                     } elseif (strpos($errorMessage, 'gender') !== false) {
