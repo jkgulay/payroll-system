@@ -436,6 +436,82 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function todayStaffInfo(Request $request)
+    {
+        $today = Carbon::today();
+
+        // Get attendance records for today
+        $attendanceData = Attendance::whereDate('attendance_date', $today)
+            ->select('status', DB::raw('COUNT(*) as count'))
+            ->groupBy('status')
+            ->get();
+
+        $distribution = [];
+
+        // Map attendance status to labels
+        foreach ($attendanceData as $item) {
+            $status = $item->status ?? 'Unknown';
+            $label = '';
+
+            switch (strtolower($status)) {
+                case 'present':
+                    $label = 'Punched';
+                    break;
+                case 'absent':
+                    $label = 'Unpunched';
+                    break;
+                case 'late':
+                    $label = 'Late';
+                    break;
+                case 'on_leave':
+                case 'on leave':
+                    $label = 'Leave';
+                    break;
+                case 'business_trip':
+                    $label = 'Business Trip';
+                    break;
+                case 'vacation':
+                    $label = 'Vacation';
+                    break;
+                case 'normal_ot':
+                    $label = 'Normal OT';
+                    break;
+                case 'weekend_ot':
+                    $label = 'Weekend OT';
+                    break;
+                case 'holiday_ot':
+                    $label = 'Holiday OT';
+                    break;
+                case 'leave_early':
+                    $label = 'Leave Early';
+                    break;
+                default:
+                    $label = ucfirst($status);
+            }
+
+            // Find if label already exists and combine counts
+            $existingIndex = array_search($label, array_column($distribution, 'label'));
+            if ($existingIndex !== false) {
+                $distribution[$existingIndex]['value'] += $item->count;
+            } else {
+                $distribution[] = [
+                    'label' => $label,
+                    'value' => $item->count
+                ];
+            }
+        }
+
+        // If no data for today, return default structure
+        if (empty($distribution)) {
+            $distribution = [
+                ['label' => 'Unpunched', 'value' => 0],
+                ['label' => 'Punched', 'value' => 0]
+            ];
+        }
+
+        return response()->json($distribution);
+    }
+
     // HELPER METHODS
     private function getPeriodDates($period)
     {

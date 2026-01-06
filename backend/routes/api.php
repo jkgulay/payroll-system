@@ -228,4 +228,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/dashboard/attendance-status-distribution', [App\Http\Controllers\Api\DashboardController::class, 'attendanceStatusDistribution']);
     Route::get('/dashboard/overtime-trend', [App\Http\Controllers\Api\DashboardController::class, 'overtimeTrend']);
     Route::get('/dashboard/leave-utilization', [App\Http\Controllers\Api\DashboardController::class, 'leaveUtilization']);
+    Route::get('/dashboard/today-staff-info', [App\Http\Controllers\Api\DashboardController::class, 'todayStaffInfo']);
 });
