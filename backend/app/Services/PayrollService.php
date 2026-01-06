@@ -69,7 +69,9 @@ class PayrollService
     {
         DB::beginTransaction();
         try {
-            $query = Employee::active()->with([
+            $query = Employee::active()
+                ->whereNotIn('activity_status', ['resigned', 'terminated'])
+                ->with([
                 'positionRate', // CRITICAL: Load position rate for getBasicSalary()
                 'governmentInfo',
                 'allowances' => function ($q) use ($payroll) {
@@ -334,7 +336,7 @@ class PayrollService
 
         // Check if rest day (Sunday or designated rest day)
         $dayOfWeek = Carbon::parse($attendance->attendance_date)->dayOfWeek;
-        $restDay = config('payroll.rest_day', Carbon::SUNDAY);
+        $restDay = config('payroll.rest_day', 0); // 0 = Sunday in Carbon
 
         if ($dayOfWeek == $restDay) {
             return 1.69; // Rest day overtime
@@ -396,7 +398,7 @@ class PayrollService
                 // Count working days (exclude Sundays)
                 $workingDays = 0;
                 for ($date = $periodStart->copy(); $date->lte($periodEnd); $date->addDay()) {
-                    if ($date->dayOfWeek !== Carbon::SUNDAY) {
+                    if ($date->dayOfWeek !== 0) { // 0 = Sunday
                         $workingDays++;
                     }
                 }

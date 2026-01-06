@@ -206,6 +206,12 @@
                   <v-list-item-title>View Credentials</v-list-item-title>
                 </v-list-item>
                 <v-divider></v-divider>
+                <v-list-item @click="resignEmployee(item)" v-if="item.activity_status !== 'resigned'">
+                  <template v-slot:prepend>
+                    <v-icon color="warning">mdi-briefcase-remove-outline</v-icon>
+                  </template>
+                  <v-list-item-title>Process Resignation</v-list-item-title>
+                </v-list-item>
                 <v-list-item @click="suspendEmployee(item)">
                   <template v-slot:prepend>
                     <v-icon color="warning">mdi-pause-circle</v-icon>
@@ -231,6 +237,63 @@
         </v-data-table>
       </v-card-text>
     </v-card>
+
+    <!-- Process Resignation Dialog -->
+    <v-dialog v-model="showResignDialog" max-width="600">
+      <v-card>
+        <v-card-title class="pa-6">
+          <v-icon left color="warning">mdi-briefcase-remove-outline</v-icon>
+          Process Employee Resignation
+        </v-card-title>
+
+        <v-divider></v-divider>
+
+        <v-card-text class="pa-6">
+          <v-alert type="info" variant="tonal" class="mb-4">
+            Processing resignation for: <strong>{{ selectedEmployee?.first_name }} {{ selectedEmployee?.last_name }}</strong>
+          </v-alert>
+
+          <v-form ref="resignForm" v-model="resignFormValid">
+            <v-text-field
+              v-model="resignData.last_working_day"
+              label="Last Working Day *"
+              type="date"
+              variant="outlined"
+              :rules="[v => !!v || 'Required', v => new Date(v) > new Date() || 'Must be a future date']"
+              :min="new Date().toISOString().split('T')[0]"
+              class="mb-4"
+            ></v-text-field>
+
+            <v-textarea
+              v-model="resignData.reason"
+              label="Reason for Resignation (Optional)"
+              variant="outlined"
+              rows="3"
+              counter="1000"
+            ></v-textarea>
+
+            <v-alert type="warning" variant="tonal" class="mt-4">
+              This will submit a resignation request on behalf of the employee. The request will need to be approved through the Resignation Management system.
+            </v-alert>
+          </v-form>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="showResignDialog = false">Cancel</v-btn>
+          <v-btn 
+            color="warning" 
+            @click="submitResignation" 
+            :loading="processing"
+            :disabled="!resignFormValid"
+          >
+            Submit Resignation
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Employee Details/Edit Dialog -->
     <v-dialog
@@ -814,6 +877,15 @@ const selectedEmployee = ref(null);
 const isEditing = ref(false);
 const saving = ref(false);
 
+// Resignation Dialog
+const showResignDialog = ref(false);
+const resignFormValid = ref(false);
+const processing = ref(false);
+const resignData = ref({
+  last_working_day: '',
+  reason: ''
+});
+
 // Add Employee Dialog variables
 const showAddEmployeeDialog = ref(false);
 const showPasswordDialog = ref(false);
@@ -971,6 +1043,36 @@ async function suspendEmployee(employee) {
   } catch (error) {
     console.error("Error suspending employee:", error);
     toast.error("Failed to suspend employee");
+  }
+}
+
+function resignEmployee(employee) {
+  selectedEmployee.value = employee;
+  resignData.value = {
+    last_working_day: '',
+    reason: ''
+  };
+  showResignDialog.value = true;
+}
+
+async function submitResignation() {
+  if (!resignFormValid.value) return;
+
+  try {
+    processing.value = true;
+    await api.post('/resignations', {
+      employee_id: selectedEmployee.value.id,
+      ...resignData.value
+    });
+    toast.success('Resignation request submitted successfully!');
+    showResignDialog.value = false;
+    await fetchEmployees();
+  } catch (error) {
+    console.error('Error submitting resignation:', error);
+    const message = error.response?.data?.message || 'Failed to submit resignation';
+    toast.error(message);
+  } finally {
+    processing.value = false;
   }
 }
 
