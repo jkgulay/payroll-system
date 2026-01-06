@@ -88,7 +88,11 @@
           :headers="headers"
           :items="employeeStore.employees"
           :loading="employeeStore.loading"
-          :items-per-page="20"
+          :items-per-page="itemsPerPage"
+          :page="page"
+          :server-items-length="totalEmployees"
+          @update:page="onPageChange"
+          @update:items-per-page="onItemsPerPageChange"
           hover
         >
           <template v-slot:item.employee_number="{ item }">
@@ -681,6 +685,10 @@ const employeeStore = useEmployeeStore();
 const { positionOptions, getRate, loadPositionRates } = usePositionRates();
 
 const search = ref("");
+const page = ref(1);
+const itemsPerPage = ref(25);
+const totalEmployees = ref(0);
+
 const filters = ref({
   project_id: null,
   contract_type: null,
@@ -750,10 +758,28 @@ watch(
 );
 
 async function fetchEmployees() {
-  await employeeStore.fetchEmployees({
+  const response = await employeeStore.fetchEmployees({
     search: search.value,
+    page: page.value,
+    per_page: itemsPerPage.value,
     ...filters.value,
   });
+  
+  // Update pagination data if the API returns it
+  if (response && response.meta) {
+    totalEmployees.value = response.meta.total || response.total || 0;
+  }
+}
+
+function onPageChange(newPage) {
+  page.value = newPage;
+  fetchEmployees();
+}
+
+function onItemsPerPageChange(newItemsPerPage) {
+  itemsPerPage.value = newItemsPerPage;
+  page.value = 1; // Reset to first page
+  fetchEmployees();
 }
 
 async function fetchProjects() {

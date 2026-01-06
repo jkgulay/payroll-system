@@ -79,6 +79,7 @@ export default defineConfig({
       compress: {
         drop_console: true, // Remove console.logs in production
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
       },
     },
     // Optimize chunk size
@@ -109,16 +110,25 @@ export default defineConfig({
           // PDF/Excel libraries
           if (
             id.includes("node_modules/jspdf") ||
-            id.includes("node_modules/exceljs")
+            id.includes("node_modules/exceljs") ||
+            id.includes("node_modules/xlsx")
           ) {
             return "vendor-export";
           }
-          // Utilities
+          // Utilities and date handling
           if (
             id.includes("node_modules/axios") ||
             id.includes("node_modules/date-fns")
           ) {
             return "vendor-utils";
+          }
+          // Virtual scroller
+          if (id.includes("node_modules/vue-virtual-scroller")) {
+            return "vendor-virtual-scroller";
+          }
+          // IndexedDB (Dexie for offline)
+          if (id.includes("node_modules/dexie")) {
+            return "vendor-db";
           }
           // Other node_modules
           if (id.includes("node_modules")) {
@@ -149,6 +159,14 @@ export default defineConfig({
   },
   // Optimize dependencies
   optimizeDeps: {
-    include: ["vue", "vue-router", "pinia", "axios", "date-fns"],
+    include: [
+      "vue",
+      "vue-router",
+      "pinia",
+      "axios",
+      "date-fns",
+      "vue-virtual-scroller",
+    ],
+    exclude: ["vue-demi"],
   },
 });
