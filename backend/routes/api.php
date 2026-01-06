@@ -115,9 +115,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Employee Benefits
     Route::apiResource('allowances', App\Http\Controllers\Api\AllowanceController::class);
-    Route::apiResource('loans', App\Http\Controllers\Api\LoanController::class);
+
+    // Loans - specific routes MUST come before apiResource
+    Route::get('/loans/pending', [App\Http\Controllers\Api\LoanController::class, 'index'])->middleware('role:admin');
+    Route::post('/loans/{loan}/approve', [App\Http\Controllers\Api\LoanController::class, 'approve'])->middleware('role:admin');
+    Route::post('/loans/{loan}/reject', [App\Http\Controllers\Api\LoanController::class, 'reject'])->middleware('role:admin');
     Route::post('/loans/{loan}/payments', [App\Http\Controllers\Api\LoanController::class, 'recordPayment']);
+    Route::apiResource('loans', App\Http\Controllers\Api\LoanController::class);
+
+    // Deductions - specific routes MUST come before apiResource
+    Route::post('/deductions/{deduction}/record-installment', [App\Http\Controllers\Api\DeductionController::class, 'recordInstallment']);
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
+
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);
 
     // 13th Month Pay

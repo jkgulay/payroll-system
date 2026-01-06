@@ -112,18 +112,54 @@ export const HOLIDAY_TYPES = [
 // Loan Types
 export const LOAN_TYPES = [
   { value: "sss", title: "SSS Loan" },
-  { value: "pagibig", title: "Pag-IBIG Loan" },
+  { value: "pag_ibig", title: "Pag-IBIG Loan" },
   { value: "company", title: "Company Loan" },
   { value: "emergency", title: "Emergency Loan" },
+  { value: "salary_advance", title: "Salary Advance" },
   { value: "other", title: "Other Loan" },
+];
+
+// Loan Status
+export const LOAN_STATUSES = [
+  { value: "pending", title: "Pending Approval", color: "warning" },
+  { value: "approved", title: "Approved", color: "info" },
+  { value: "active", title: "Active", color: "success" },
+  { value: "paid", title: "Paid Off", color: "grey" },
+  { value: "rejected", title: "Rejected", color: "error" },
+  { value: "cancelled", title: "Cancelled", color: "error" },
+];
+
+// Payment Frequencies
+export const PAYMENT_FREQUENCIES = [
+  { value: "monthly", title: "Monthly" },
+  { value: "semi_monthly", title: "Semi-Monthly" },
 ];
 
 // Deduction Types
 export const DEDUCTION_TYPES = [
-  { value: "government", title: "Government" },
-  { value: "loan", title: "Loan" },
+  { value: "ppe", title: "PPE (Personal Protective Equipment)" },
+  { value: "tools", title: "Tools" },
+  { value: "uniform", title: "Uniform" },
+  { value: "absence", title: "Absence" },
+  { value: "sss", title: "SSS" },
+  { value: "philhealth", title: "PhilHealth" },
+  { value: "pagibig", title: "Pag-IBIG" },
   { value: "tax", title: "Tax" },
+  { value: "loan", title: "Loan" },
   { value: "other", title: "Other" },
+];
+
+// Deduction Categories
+export const DEDUCTION_CATEGORIES = [
+  { value: "government", title: "Government Deductions" },
+  { value: "company", title: "Company Deductions" },
+];
+
+// Deduction Status
+export const DEDUCTION_STATUSES = [
+  { value: "active", title: "Active", color: "success" },
+  { value: "completed", title: "Completed", color: "grey" },
+  { value: "cancelled", title: "Cancelled", color: "error" },
 ];
 
 // User Roles

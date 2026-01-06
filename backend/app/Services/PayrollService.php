@@ -200,6 +200,9 @@ class PayrollService
             + $loanDeductions['pagibig_loan']
             + $loanDeductions['other_loans']
             + $otherDeductions['ppe_deduction']
+            + $otherDeductions['tools_deduction']
+            + $otherDeductions['uniform_deduction']
+            + $otherDeductions['absence_deduction']
             + $otherDeductions['other_deductions'];
 
         $netPay = $grossPay - $totalDeductions;
@@ -220,7 +223,11 @@ class PayrollService
             'philhealth_contribution' => $philhealthContribution,
             'pagibig_contribution' => $pagibigContribution,
             'withholding_tax' => $withholdingTax,
-            'total_other_deductions' => $otherDeductions['ppe_deduction'] + $otherDeductions['other_deductions'],
+            'total_other_deductions' => $otherDeductions['ppe_deduction']
+                + $otherDeductions['tools_deduction']
+                + $otherDeductions['uniform_deduction']
+                + $otherDeductions['absence_deduction']
+                + $otherDeductions['other_deductions'],
             'total_loan_deductions' => $loanDeductions['sss_loan'] + $loanDeductions['pagibig_loan'] + $loanDeductions['other_loans'],
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
@@ -421,25 +428,48 @@ class PayrollService
     }
 
     /**
-     * Calculate other deductions
+     * Calculate other deductions (company deductions from EmployeeDeduction model)
      */
     protected function calculateOtherDeductions(Employee $employee, Payroll $payroll): array
     {
         $ppeDeduction = 0;
+        $toolsDeduction = 0;
+        $uniformDeduction = 0;
+        $absenceDeduction = 0;
         $otherDeductions = 0;
 
         foreach ($employee->deductions as $deduction) {
             if ($deduction->status !== 'active') continue;
 
-            if ($deduction->deduction_type === 'ppe') {
-                $ppeDeduction += $deduction->amount_per_cutoff;
-            } else {
-                $otherDeductions += $deduction->amount_per_cutoff;
+            $amount = $deduction->amount_per_cutoff;
+
+            switch ($deduction->deduction_type) {
+                case 'ppe':
+                    $ppeDeduction += $amount;
+                    break;
+                case 'tools':
+                    $toolsDeduction += $amount;
+                    break;
+                case 'uniform':
+                    $uniformDeduction += $amount;
+                    break;
+                case 'absence':
+                    $absenceDeduction += $amount;
+                    break;
+                default:
+                    // For loan, other, or any company deductions
+                    if (in_array($deduction->deduction_type, ['loan', 'other'])) {
+                        $otherDeductions += $amount;
+                    }
+                    break;
             }
         }
 
         return [
             'ppe_deduction' => round($ppeDeduction, 2),
+            'tools_deduction' => round($toolsDeduction, 2),
+            'uniform_deduction' => round($uniformDeduction, 2),
+            'absence_deduction' => round($absenceDeduction, 2),
             'other_deductions' => round($otherDeductions, 2),
         ];
     }
@@ -468,6 +498,9 @@ class PayrollService
             ['type' => 'deduction', 'category' => 'loan', 'description' => 'Pag-IBIG Loan', 'amount' => $loanDeductions['pagibig_loan']],
             ['type' => 'deduction', 'category' => 'loan', 'description' => 'Other Loans', 'amount' => $loanDeductions['other_loans']],
             ['type' => 'deduction', 'category' => 'other', 'description' => 'PPE Deduction', 'amount' => $otherDeductions['ppe_deduction']],
+            ['type' => 'deduction', 'category' => 'other', 'description' => 'Tools Deduction', 'amount' => $otherDeductions['tools_deduction']],
+            ['type' => 'deduction', 'category' => 'other', 'description' => 'Uniform Deduction', 'amount' => $otherDeductions['uniform_deduction']],
+            ['type' => 'deduction', 'category' => 'other', 'description' => 'Absence Deduction', 'amount' => $otherDeductions['absence_deduction']],
             ['type' => 'deduction', 'category' => 'other', 'description' => 'Other Deductions', 'amount' => $otherDeductions['other_deductions']],
         ];
 
