@@ -35,7 +35,7 @@ class Employee extends Model
         'project_id',
         'worker_address',
         'position_id',
-        'employment_type',
+        'work_schedule',
         'contract_type',
         'activity_status',
         'date_hired',
@@ -177,9 +177,17 @@ class Employee extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeByWorkSchedule($query, $schedule)
+    {
+        return $query->where('work_schedule', $schedule);
+    }
+
+    // Legacy alias
     public function scopeByEmploymentType($query, $type)
     {
-        return $query->where('employment_type', $type);
+        // Map old values to new
+        $schedule = $type === 'part_time' ? 'part_time' : 'full_time';
+        return $query->where('work_schedule', $schedule);
     }
 
     public function scopeByContractType($query, $type)
@@ -208,43 +216,64 @@ class Employee extends Model
     }
 
     // Helper Methods
+
+    /**
+     * Get the effective basic salary for this employee
+     * Priority: PositionRate daily_rate > manual basic_salary field
+     */
+    public function getBasicSalary(): float
+    {
+        // If employee has position_id, get rate from PositionRate table
+        if ($this->position_id && $this->positionRate) {
+            return (float) $this->positionRate->daily_rate;
+        }
+
+        // Fallback to manual basic_salary field (for backward compatibility)
+        return (float) $this->basic_salary;
+    }
+
     public function getSemiMonthlyRate(): float
     {
+        $basicSalary = $this->getBasicSalary();
+
         if ($this->salary_type === 'daily') {
             // Use configured working days per semi-monthly period
             $workingDaysPerSemiMonth = config('payroll.working_days_per_semi_month', 11);
-            return $this->basic_salary * $workingDaysPerSemiMonth;
+            return $basicSalary * $workingDaysPerSemiMonth;
         }
-        return $this->basic_salary / 2;
+        return $basicSalary / 2;
     }
 
     public function getMonthlyRate(): float
     {
+        $basicSalary = $this->getBasicSalary();
+
         if ($this->salary_type === 'daily') {
             $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
-            return $this->basic_salary * $workingDaysPerMonth;
+            return $basicSalary * $workingDaysPerMonth;
         }
 
         if ($this->salary_type === 'hourly') {
             $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
             $standardHours = config('payroll.standard_hours_per_day', 8);
-            return $this->basic_salary * $standardHours * $workingDaysPerMonth;
+            return $basicSalary * $standardHours * $workingDaysPerMonth;
         }
 
-        return $this->basic_salary;
+        return $basicSalary;
     }
 
     public function getHourlyRate(): float
     {
+        $basicSalary = $this->getBasicSalary();
         $standardHours = config('payroll.standard_hours_per_day', 8);
 
         if ($this->salary_type === 'daily') {
             // For daily workers, divide daily rate by hours per day
-            return $this->basic_salary / $standardHours;
+            return $basicSalary / $standardHours;
         }
 
         // For monthly workers, calculate from monthly rate
-        $monthlyRate = $this->basic_salary;
+        $monthlyRate = $basicSalary;
         $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
         return $monthlyRate / ($workingDaysPerMonth * $standardHours);
     }

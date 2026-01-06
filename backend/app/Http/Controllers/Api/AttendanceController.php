@@ -74,13 +74,15 @@ class AttendanceController extends Controller
         ]);
 
         // Check for duplicate attendance
-        $exists = Attendance::where('employee_id', $validated['employee_id'])
+        $existingAttendance = Attendance::where('employee_id', $validated['employee_id'])
             ->where('attendance_date', $validated['attendance_date'])
-            ->exists();
+            ->first();
 
-        if ($exists) {
+        if ($existingAttendance) {
             return response()->json([
                 'message' => 'Attendance record already exists for this date',
+                'attendance' => $existingAttendance->load('employee'),
+                'action' => 'exists',
             ], 422);
         }
 
@@ -103,9 +105,9 @@ class AttendanceController extends Controller
             // Log manual entry
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'module' => 'attendance',
                 'action' => 'manual_attendance_entry',
-                'auditable_type' => Attendance::class,
-                'auditable_id' => $attendance->id,
+                'description' => 'Manual attendance entry created',
                 'old_values' => null,
                 'new_values' => $attendance->toArray(),
                 'ip_address' => $request->ip(),
@@ -114,7 +116,7 @@ class AttendanceController extends Controller
 
             return response()->json([
                 'message' => 'Manual attendance entry created successfully',
-                'attendance' => $attendance->load('employee'),
+                'attendance' => $attendance->fresh()->load('employee'),
             ], 201);
         } catch (\Exception $e) {
             Log::error('Failed to create manual attendance: ' . $e->getMessage());
@@ -171,9 +173,9 @@ class AttendanceController extends Controller
             // Log the update
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'module' => 'attendance',
                 'action' => 'update_attendance',
-                'auditable_type' => Attendance::class,
-                'auditable_id' => $attendance->id,
+                'description' => 'Attendance record updated',
                 'old_values' => $oldValues,
                 'new_values' => $attendance->fresh()->toArray(),
                 'ip_address' => $request->ip(),
@@ -234,9 +236,9 @@ class AttendanceController extends Controller
             // Log the import
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'module' => 'attendance',
                 'action' => 'biometric_import',
-                'auditable_type' => Attendance::class,
-                'auditable_id' => null,
+                'description' => 'Biometric attendance imported from file',
                 'old_values' => null,
                 'new_values' => [
                     'file' => $file->getClientOriginalName(),
@@ -287,9 +289,9 @@ class AttendanceController extends Controller
         // Log approval
         AuditLog::create([
             'user_id' => $request->user()->id,
+            'module' => 'attendance',
             'action' => 'approve_attendance',
-            'auditable_type' => Attendance::class,
-            'auditable_id' => $attendance->id,
+            'description' => 'Attendance record approved',
             'old_values' => $oldValues,
             'new_values' => $attendance->fresh()->toArray(),
             'ip_address' => $request->ip(),
@@ -326,9 +328,9 @@ class AttendanceController extends Controller
         // Log rejection
         AuditLog::create([
             'user_id' => $request->user()->id,
+            'module' => 'attendance',
             'action' => 'reject_attendance',
-            'auditable_type' => Attendance::class,
-            'auditable_id' => $attendance->id,
+            'description' => 'Attendance record rejected',
             'old_values' => $oldValues,
             'new_values' => $attendance->fresh()->toArray(),
             'ip_address' => $request->ip(),
@@ -474,9 +476,9 @@ class AttendanceController extends Controller
         // Log the action
         AuditLog::create([
             'user_id' => $request->user()->id,
+            'module' => 'attendance',
             'action' => 'mark_absent',
-            'auditable_type' => Attendance::class,
-            'auditable_id' => null,
+            'description' => 'Marked employees as absent',
             'old_values' => null,
             'new_values' => [
                 'date' => $date,
@@ -533,9 +535,9 @@ class AttendanceController extends Controller
 
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'module' => 'attendance',
                 'action' => 'fetch_from_device',
-                'auditable_type' => Attendance::class,
-                'auditable_id' => null,
+                'description' => 'Fetched attendance from biometric device',
                 'old_values' => null,
                 'new_values' => [
                     'records_imported' => $result['imported'],
@@ -572,9 +574,9 @@ class AttendanceController extends Controller
 
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'module' => 'attendance',
                 'action' => 'sync_employees_to_device',
-                'auditable_type' => Employee::class,
-                'auditable_id' => null,
+                'description' => 'Synced employees to biometric device',
                 'old_values' => null,
                 'new_values' => $result,
                 'ip_address' => $request->ip(),
@@ -614,9 +616,9 @@ class AttendanceController extends Controller
 
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'module' => 'attendance',
                 'action' => 'clear_device_logs',
-                'auditable_type' => Attendance::class,
-                'auditable_id' => null,
+                'description' => 'Cleared biometric device logs',
                 'old_values' => null,
                 'new_values' => ['cleared' => $result],
                 'ip_address' => $request->ip(),
@@ -678,9 +680,9 @@ class AttendanceController extends Controller
 
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'module' => 'attendance',
                 'action' => 'fetch_from_yunatt',
-                'auditable_type' => Attendance::class,
-                'auditable_id' => null,
+                'description' => 'Fetched attendance from Yunatt API',
                 'old_values' => null,
                 'new_values' => [
                     'date_from' => $validated['date_from'],

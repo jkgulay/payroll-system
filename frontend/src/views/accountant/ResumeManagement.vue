@@ -307,8 +307,8 @@
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  :model-value="selectedApplication.employment_type"
-                  label="Employment Type"
+                  :model-value="selectedApplication.work_schedule"
+                  label="Work Schedule"
                   readonly
                   variant="plain"
                   density="comfortable"

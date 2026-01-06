@@ -10,6 +10,21 @@ export const useAuthStore = defineStore("auth", () => {
   );
   const loading = ref(false);
   const rememberMe = ref(localStorage.getItem("rememberMe") === "true");
+  const initialized = ref(false);
+
+  // Restore user from localStorage on init
+  const storedUser = localStorage.getItem("user");
+  if (storedUser && token.value) {
+    try {
+      user.value = JSON.parse(storedUser);
+      // Set Authorization header from stored token
+      api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
+      initialized.value = true;
+    } catch (e) {
+      console.error("Failed to parse stored user:", e);
+      localStorage.removeItem("user");
+    }
+  }
 
   // Getters
   const isAuthenticated = computed(() => !!token.value);
@@ -73,6 +88,7 @@ export const useAuthStore = defineStore("auth", () => {
       user.value = null;
       token.value = null;
       rememberMe.value = false;
+      initialized.value = false;
 
       // Clear both localStorage and sessionStorage
       localStorage.removeItem("token");
@@ -90,6 +106,9 @@ export const useAuthStore = defineStore("auth", () => {
   async function checkAuth() {
     if (!token.value) return false;
 
+    // If user is already loaded and initialized, don't make API call
+    if (user.value && initialized.value) return true;
+
     loading.value = true;
     try {
       // Set Authorization header
@@ -101,6 +120,7 @@ export const useAuthStore = defineStore("auth", () => {
 
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(user.value));
+      initialized.value = true;
 
       return true;
     } catch (error) {
@@ -108,6 +128,7 @@ export const useAuthStore = defineStore("auth", () => {
       user.value = null;
       token.value = null;
       rememberMe.value = false;
+      initialized.value = false;
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("rememberMe");

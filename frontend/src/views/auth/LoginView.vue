@@ -199,6 +199,11 @@ async function handleLogin() {
   } catch (error) {
     console.error("Login error:", error);
     console.error("Login error response:", error.response?.data);
+    console.error("Login validation errors:", error.response?.data?.errors);
+    console.error("Login credentials sent:", {
+      email: form.email,
+      role: form.role,
+    });
 
     if (error.response?.status === 401 || error.response?.status === 422) {
       // Show validation errors if available
@@ -232,7 +237,7 @@ async function handleTwoFactorVerified({ userId, code }) {
       authStore.token = response.data.token;
       authStore.user = response.data.user;
       authStore.rememberMe = form.remember;
-      
+
       // Store token based on remember me preference
       if (form.remember) {
         localStorage.setItem("token", response.data.token);
@@ -243,10 +248,12 @@ async function handleTwoFactorVerified({ userId, code }) {
         localStorage.removeItem("token");
         localStorage.removeItem("rememberMe");
       }
-      
+
       // Set default Authorization header for future requests
-      api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
-      
+      api.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${response.data.token}`;
+
       showTwoFactorDialog.value = false;
       toast.success("Login successful");
 
@@ -262,18 +269,20 @@ async function handleTwoFactorVerified({ userId, code }) {
           redirectPath = "/admin-dashboard";
         }
       }
-      
+
       await router.push(redirectPath);
     }
   } catch (error) {
     console.error("2FA verification error:", error);
-    
+
     if (error.response?.status === 401) {
       twoFactorVerifyRef.value.setError(
         error.response?.data?.message || "Invalid verification code"
       );
     } else {
-      twoFactorVerifyRef.value.setError("Verification failed. Please try again.");
+      twoFactorVerifyRef.value.setError(
+        "Verification failed. Please try again."
+      );
     }
   }
 }

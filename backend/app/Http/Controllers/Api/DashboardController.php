@@ -42,10 +42,12 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // Find employee record by email or username
-        $employee = Employee::where('email', $user->email)
-            ->orWhere('username', $user->username)
-            ->first();
+        // Get employee using the employee_id from users table
+        $employee = null;
+
+        if ($user->employee_id) {
+            $employee = Employee::with(['project'])->find($user->employee_id);
+        }
 
         if (!$employee) {
             return response()->json([
@@ -73,6 +75,21 @@ class DashboardController extends Controller
             ->orderBy('attendance_date', 'desc')
             ->get();
 
+        // Calculate total hours from time_in and time_out if regular_hours is 0
+        $totalHours = 0;
+        foreach ($attendance as $record) {
+            if ($record->regular_hours > 0) {
+                $totalHours += $record->regular_hours;
+            } elseif ($record->time_in && $record->time_out) {
+                // Calculate hours from time_in and time_out
+                $date = Carbon::parse($record->attendance_date)->format('Y-m-d');
+                $timeIn = Carbon::parse($date . ' ' . $record->time_in);
+                $timeOut = Carbon::parse($date . ' ' . $record->time_out);
+                $hoursWorked = $timeOut->diffInHours($timeIn, true);
+                $totalHours += $hoursWorked;
+            }
+        }
+
         // Calculate attendance summary
         $attendanceSummary = [
             'total_days' => $attendance->count(),
@@ -80,7 +97,7 @@ class DashboardController extends Controller
             'absent' => $attendance->where('status', 'absent')->count(),
             'late' => $attendance->where('status', 'late')->count(),
             'undertime' => $attendance->where('status', 'undertime')->count(),
-            'total_hours' => $attendance->sum('regular_hours'),
+            'total_hours' => round($totalHours, 2),
             'overtime_hours' => $attendance->sum('overtime_hours'),
         ];
 
@@ -434,6 +451,82 @@ class DashboardController extends Controller
             'total' => $totalEmployees,
             'utilization_rate' => round($utilizationRate, 2)
         ]);
+    }
+
+    public function todayStaffInfo(Request $request)
+    {
+        $today = Carbon::today();
+
+        // Get attendance records for today
+        $attendanceData = Attendance::whereDate('attendance_date', $today)
+            ->select('status', DB::raw('COUNT(*) as count'))
+            ->groupBy('status')
+            ->get();
+
+        $distribution = [];
+
+        // Map attendance status to labels
+        foreach ($attendanceData as $item) {
+            $status = $item->status ?? 'Unknown';
+            $label = '';
+
+            switch (strtolower($status)) {
+                case 'present':
+                    $label = 'Punched';
+                    break;
+                case 'absent':
+                    $label = 'Unpunched';
+                    break;
+                case 'late':
+                    $label = 'Late';
+                    break;
+                case 'on_leave':
+                case 'on leave':
+                    $label = 'Leave';
+                    break;
+                case 'business_trip':
+                    $label = 'Business Trip';
+                    break;
+                case 'vacation':
+                    $label = 'Vacation';
+                    break;
+                case 'normal_ot':
+                    $label = 'Normal OT';
+                    break;
+                case 'weekend_ot':
+                    $label = 'Weekend OT';
+                    break;
+                case 'holiday_ot':
+                    $label = 'Holiday OT';
+                    break;
+                case 'leave_early':
+                    $label = 'Leave Early';
+                    break;
+                default:
+                    $label = ucfirst($status);
+            }
+
+            // Find if label already exists and combine counts
+            $existingIndex = array_search($label, array_column($distribution, 'label'));
+            if ($existingIndex !== false) {
+                $distribution[$existingIndex]['value'] += $item->count;
+            } else {
+                $distribution[] = [
+                    'label' => $label,
+                    'value' => $item->count
+                ];
+            }
+        }
+
+        // If no data for today, return default structure
+        if (empty($distribution)) {
+            $distribution = [
+                ['label' => 'Unpunched', 'value' => 0],
+                ['label' => 'Punched', 'value' => 0]
+            ];
+        }
+
+        return response()->json($distribution);
     }
 
     // HELPER METHODS

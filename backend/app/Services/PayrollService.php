@@ -11,6 +11,7 @@ use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
 use App\Models\LoanPayment;
+use App\Models\Holiday;
 use App\Services\Government\SSSComputationService;
 use App\Services\Government\PhilHealthComputationService;
 use App\Services\Government\PagIbigComputationService;
@@ -64,11 +65,12 @@ class PayrollService
     /**
      * Process payroll for all active employees
      */
-    public function processPayroll(Payroll $payroll, ?array $employeeIds = null): void
+    public function processPayroll(Payroll $payroll, ?array $employeeIds = null, ?array $filters = null): void
     {
         DB::beginTransaction();
         try {
             $query = Employee::active()->with([
+                'positionRate', // CRITICAL: Load position rate for getBasicSalary()
                 'governmentInfo',
                 'allowances' => function ($q) use ($payroll) {
                     $q->active()->where('effective_date', '<=', $payroll->period_end);
@@ -80,6 +82,19 @@ class PayrollService
                     $q->active();
                 }
             ]);
+
+            // Apply filters for targeted payroll generation
+            if ($filters) {
+                if (!empty($filters['project_id'])) {
+                    $query->where('project_id', $filters['project_id']);
+                }
+                if (!empty($filters['contract_type'])) {
+                    $query->where('contract_type', $filters['contract_type']);
+                }
+                if (!empty($filters['position_id'])) {
+                    $query->where('position_id', $filters['position_id']);
+                }
+            }
 
             if ($employeeIds) {
                 $query->whereIn('id', $employeeIds);
@@ -186,6 +201,9 @@ class PayrollService
             + $loanDeductions['pagibig_loan']
             + $loanDeductions['other_loans']
             + $otherDeductions['ppe_deduction']
+            + $otherDeductions['tools_deduction']
+            + $otherDeductions['uniform_deduction']
+            + $otherDeductions['absence_deduction']
             + $otherDeductions['other_deductions'];
 
         $netPay = $grossPay - $totalDeductions;
@@ -206,7 +224,11 @@ class PayrollService
             'philhealth_contribution' => $philhealthContribution,
             'pagibig_contribution' => $pagibigContribution,
             'withholding_tax' => $withholdingTax,
-            'total_other_deductions' => $otherDeductions['ppe_deduction'] + $otherDeductions['other_deductions'],
+            'total_other_deductions' => $otherDeductions['ppe_deduction']
+                + $otherDeductions['tools_deduction']
+                + $otherDeductions['uniform_deduction']
+                + $otherDeductions['absence_deduction']
+                + $otherDeductions['other_deductions'],
             'total_loan_deductions' => $loanDeductions['sss_loan'] + $loanDeductions['pagibig_loan'] + $loanDeductions['other_loans'],
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
@@ -229,14 +251,32 @@ class PayrollService
         $holidayPay = 0;
         $nightDifferential = 0;
 
+        // Use position rate instead of manual basic_salary
+        $basicSalary = $employee->getBasicSalary();
         $hourlyRate = $employee->getHourlyRate();
 
+        // Get holidays in the payroll period for automatic holiday pay calculation
+        $holidays = Holiday::whereBetween('holiday_date', [$payroll->period_start, $payroll->period_end])
+            ->pluck('holiday_type', 'holiday_date')
+            ->toArray();
+
         foreach ($attendance as $record) {
+            // Check if attendance date falls on a holiday
+            $attendanceDate = Carbon::parse($record->attendance_date)->format('Y-m-d');
+            $isHoliday = isset($holidays[$attendanceDate]);
+            $holidayType = $isHoliday ? $holidays[$attendanceDate] : null;
+
+            // Override attendance holiday flags with database holidays
+            if ($isHoliday) {
+                $record->is_holiday = true;
+                $record->holiday_type = $holidayType;
+            }
+
             // Basic pay
             if ($employee->salary_type === 'daily') {
-                $basicPay += $employee->basic_salary * ($record->regular_hours / 8);
+                $basicPay += $basicSalary * ($record->regular_hours / 8);
             } elseif ($employee->salary_type === 'hourly') {
-                $basicPay += $employee->basic_salary * $record->regular_hours;
+                $basicPay += $basicSalary * $record->regular_hours;
             } else {
                 // Monthly salary - calculate based on hourly rate
                 $basicPay += $hourlyRate * $record->regular_hours;
@@ -248,16 +288,28 @@ class PayrollService
                 $overtimePay += $hourlyRate * $record->overtime_hours * $overtimeRate;
             }
 
-            // Holiday pay
+            // Holiday pay - automatically calculated based on holidays table
             if ($record->is_holiday) {
+                // Regular holiday = 200% pay (2x), Special holiday = 130% pay (1.3x)
+                // If worked, employee gets base pay PLUS premium
                 $holidayRate = $record->holiday_type === 'regular' ? 2.0 : 1.3;
+
+                // If overtime on holiday, higher premium applies
                 if ($record->overtime_hours > 0) {
                     $holidayRate = $record->holiday_type === 'regular' ? 2.6 : 1.69;
                 }
+
+                // Holiday premium (subtract 1 because base pay already counted above)
                 $holidayPay += $hourlyRate * $record->regular_hours * ($holidayRate - 1);
             }
 
-            // Night differential (10% of hourly rate)
+            // Rest day premium (if employee worked on their rest day but it's not a holiday)
+            if (!$isHoliday && $record->is_rest_day && $record->regular_hours > 0) {
+                // Rest day work = 130% pay (30% premium)
+                $holidayPay += $hourlyRate * $record->regular_hours * 0.30;
+            }
+
+            // Night differential (10% of hourly rate for work between 10pm-6am)
             if ($record->night_differential_hours > 0) {
                 $nightDifferential += $hourlyRate * $record->night_differential_hours * 0.10;
             }
@@ -405,25 +457,48 @@ class PayrollService
     }
 
     /**
-     * Calculate other deductions
+     * Calculate other deductions (company deductions from EmployeeDeduction model)
      */
     protected function calculateOtherDeductions(Employee $employee, Payroll $payroll): array
     {
         $ppeDeduction = 0;
+        $toolsDeduction = 0;
+        $uniformDeduction = 0;
+        $absenceDeduction = 0;
         $otherDeductions = 0;
 
         foreach ($employee->deductions as $deduction) {
             if ($deduction->status !== 'active') continue;
 
-            if ($deduction->deduction_type === 'ppe') {
-                $ppeDeduction += $deduction->amount_per_cutoff;
-            } else {
-                $otherDeductions += $deduction->amount_per_cutoff;
+            $amount = $deduction->amount_per_cutoff;
+
+            switch ($deduction->deduction_type) {
+                case 'ppe':
+                    $ppeDeduction += $amount;
+                    break;
+                case 'tools':
+                    $toolsDeduction += $amount;
+                    break;
+                case 'uniform':
+                    $uniformDeduction += $amount;
+                    break;
+                case 'absence':
+                    $absenceDeduction += $amount;
+                    break;
+                default:
+                    // For loan, other, or any company deductions
+                    if (in_array($deduction->deduction_type, ['loan', 'other'])) {
+                        $otherDeductions += $amount;
+                    }
+                    break;
             }
         }
 
         return [
             'ppe_deduction' => round($ppeDeduction, 2),
+            'tools_deduction' => round($toolsDeduction, 2),
+            'uniform_deduction' => round($uniformDeduction, 2),
+            'absence_deduction' => round($absenceDeduction, 2),
             'other_deductions' => round($otherDeductions, 2),
         ];
     }
@@ -452,6 +527,9 @@ class PayrollService
             ['type' => 'deduction', 'category' => 'loan', 'description' => 'Pag-IBIG Loan', 'amount' => $loanDeductions['pagibig_loan']],
             ['type' => 'deduction', 'category' => 'loan', 'description' => 'Other Loans', 'amount' => $loanDeductions['other_loans']],
             ['type' => 'deduction', 'category' => 'other', 'description' => 'PPE Deduction', 'amount' => $otherDeductions['ppe_deduction']],
+            ['type' => 'deduction', 'category' => 'other', 'description' => 'Tools Deduction', 'amount' => $otherDeductions['tools_deduction']],
+            ['type' => 'deduction', 'category' => 'other', 'description' => 'Uniform Deduction', 'amount' => $otherDeductions['uniform_deduction']],
+            ['type' => 'deduction', 'category' => 'other', 'description' => 'Absence Deduction', 'amount' => $otherDeductions['absence_deduction']],
             ['type' => 'deduction', 'category' => 'other', 'description' => 'Other Deductions', 'amount' => $otherDeductions['other_deductions']],
         ];
 

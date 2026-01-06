@@ -132,32 +132,17 @@
           </v-card-text>
         </v-card>
 
-        <!-- Statistics Cards -->
-        <v-row class="mb-6">
-          <v-col cols="12" md="6">
-            <v-card class="modern-card" elevation="0">
-              <v-card-title class="pa-5">
-                <div class="text-subtitle-1 font-weight-bold">Employee Distribution</div>
-              </v-card-title>
-              <v-divider></v-divider>
-              <v-card-text class="pa-5" style="height: 300px">
-                <EmployeeDistributionChart />
-              </v-card-text>
-            </v-card>
-          </v-col>
-
-          <v-col cols="12" md="6">
-            <v-card class="modern-card" elevation="0">
-              <v-card-title class="pa-5">
-                <div class="text-subtitle-1 font-weight-bold">Attendance Rate</div>
-              </v-card-title>
-              <v-divider></v-divider>
-              <v-card-text class="pa-5" style="height: 300px">
-                <AttendanceRateChart />
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
+        <!-- Attendance Statistics Card -->
+        <v-card class="modern-card mb-6" elevation="0">
+          <v-card-title class="pa-5">
+            <v-icon color="info" size="small" class="mr-2">mdi-clock-check-outline</v-icon>
+            <div class="text-subtitle-1 font-weight-bold">Attendance Statistics This Month</div>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-5" style="height: 400px">
+            <AttendanceStatusChart period="current-month" />
+          </v-card-text>
+        </v-card>
 
         <!-- Payroll Summary Table -->
         <v-card class="modern-card" elevation="0">
@@ -225,43 +210,15 @@
         <!-- Calendar Widget -->
         <DashboardCalendar class="mb-6" />
 
-        <!-- Quick Stats Card -->
+        <!-- Today Staff Info -->
         <v-card class="modern-card mb-6" elevation="0">
           <v-card-title class="pa-5">
-            <div class="text-subtitle-1 font-weight-bold">Community Growth</div>
+            <v-icon color="primary" size="small" class="mr-2">mdi-account-group</v-icon>
+            <div class="text-subtitle-1 font-weight-bold">Today Staff Info</div>
           </v-card-title>
           <v-divider></v-divider>
-          <v-card-text class="pa-5 text-center">
-            <div class="position-relative d-inline-block mb-4">
-              <svg width="120" height="120" class="circular-progress">
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="50"
-                  fill="none"
-                  stroke="#e0e0e0"
-                  stroke-width="10"
-                />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="50"
-                  fill="none"
-                  stroke="#6366f1"
-                  stroke-width="10"
-                  :stroke-dasharray="circumference"
-                  :stroke-dashoffset="progressOffset"
-                  transform="rotate(-90 60 60)"
-                  class="progress-circle"
-                />
-              </svg>
-              <div class="progress-text">
-                <div class="text-h4 font-weight-bold">{{ employeeGrowthPercentage }}%</div>
-              </div>
-            </div>
-            <div class="d-flex align-center justify-center">
-              <span class="text-body-2 text-medium-emphasis">Employee growth rate</span>
-            </div>
+          <v-card-text class="pa-5" style="height: 350px">
+            <TodayStaffInfoChart />
           </v-card-text>
         </v-card>
 
@@ -651,7 +608,8 @@ import DashboardCalendar from "@/components/DashboardCalendar.vue";
 import PayrollTrendChart from "@/components/charts/PayrollTrendChart.vue";
 import PayrollComparisonChart from "@/components/charts/PayrollComparisonChart.vue";
 import EmployeeDistributionChart from "@/components/charts/EmployeeDistributionChart.vue";
-import AttendanceRateChart from "@/components/charts/AttendanceRateChart.vue";
+import AttendanceStatusChart from "@/components/charts/AttendanceStatusChart.vue";
+import TodayStaffInfoChart from "@/components/charts/TodayStaffInfoChart.vue";
 
 const toast = useToast();
 

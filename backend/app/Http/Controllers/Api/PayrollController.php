@@ -7,6 +7,7 @@ use App\Services\PayrollService;
 use App\Models\Payroll;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -57,6 +58,12 @@ class PayrollController extends Controller
             'period_end_date' => 'required|date|after:period_start_date',
             'payment_date' => 'required|date',
             'pay_period_number' => 'nullable|integer|in:1,2',
+            // Support for targeted payroll generation
+            'project_id' => 'nullable|exists:projects,id',
+            'employee_ids' => 'nullable|array',
+            'employee_ids.*' => 'exists:employees,id',
+            'contract_type' => 'nullable|in:regular,probationary,contractual',
+            'position_id' => 'nullable|exists:position_rates,id',
         ]);
 
         // Check for overlapping payroll periods
@@ -78,8 +85,35 @@ class PayrollController extends Controller
         try {
             $payroll = $this->payrollService->createPayroll($validated);
             return response()->json($payroll, 201);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error('Payroll creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $validated
+            ]);
+
+            // Check for duplicate payroll period
+            if (str_contains($e->getMessage(), 'payroll_year_month_pay_period_number_unique')) {
+                return response()->json([
+                    'error' => 'A payroll period already exists for this month and pay period number. Please check existing payrolls or choose a different period.',
+                    'message' => 'Duplicate payroll period'
+                ], 422);
+            }
+
+            return response()->json([
+                'error' => $e->getMessage(),
+                'message' => 'Failed to create payroll period'
+            ], 500);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            Log::error('Payroll creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $validated
+            ]);
+            return response()->json([
+                'error' => $e->getMessage(),
+                'message' => 'Failed to create payroll period'
+            ], 500);
         }
     }
 
@@ -112,9 +146,10 @@ class PayrollController extends Controller
         }
 
         $employeeIds = $request->input('employee_ids', null);
+        $filters = $request->only(['project_id', 'contract_type', 'position_id']);
 
         try {
-            $this->payrollService->processPayroll($payroll, $employeeIds);
+            $this->payrollService->processPayroll($payroll, $employeeIds, $filters);
             $payroll->refresh();
 
             return response()->json([

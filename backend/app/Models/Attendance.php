@@ -133,8 +133,9 @@ class Attendance extends Model
         }
 
         // Parse time fields - combine with attendance date to get full datetime
-        $timeIn = Carbon::parse($this->attendance_date . ' ' . $this->time_in);
-        $timeOut = Carbon::parse($this->attendance_date . ' ' . $this->time_out);
+        $dateString = $this->attendance_date instanceof Carbon ? $this->attendance_date->format('Y-m-d') : $this->attendance_date;
+        $timeIn = Carbon::parse($dateString . ' ' . $this->time_in);
+        $timeOut = Carbon::parse($dateString . ' ' . $this->time_out);
 
         // Handle overnight shifts (time_out is next day)
         if ($timeOut->lt($timeIn)) {
@@ -144,8 +145,8 @@ class Attendance extends Model
         // Calculate break duration
         $breakMinutes = 0;
         if ($this->break_start && $this->break_end) {
-            $breakStart = Carbon::parse($this->attendance_date . ' ' . $this->break_start);
-            $breakEnd = Carbon::parse($this->attendance_date . ' ' . $this->break_end);
+            $breakStart = Carbon::parse($dateString . ' ' . $this->break_start);
+            $breakEnd = Carbon::parse($dateString . ' ' . $this->break_end);
 
             // Handle overnight break
             if ($breakEnd->lt($breakStart)) {

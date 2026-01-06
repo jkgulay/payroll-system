@@ -115,9 +115,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Employee Benefits
     Route::apiResource('allowances', App\Http\Controllers\Api\AllowanceController::class);
-    Route::apiResource('loans', App\Http\Controllers\Api\LoanController::class);
+
+    // Loans - specific routes MUST come before apiResource
+    Route::get('/loans/pending', [App\Http\Controllers\Api\LoanController::class, 'index'])->middleware('role:admin');
+    Route::post('/loans/{loan}/approve', [App\Http\Controllers\Api\LoanController::class, 'approve'])->middleware('role:admin');
+    Route::post('/loans/{loan}/reject', [App\Http\Controllers\Api\LoanController::class, 'reject'])->middleware('role:admin');
     Route::post('/loans/{loan}/payments', [App\Http\Controllers\Api\LoanController::class, 'recordPayment']);
+    Route::apiResource('loans', App\Http\Controllers\Api\LoanController::class);
+
+    // Deductions - specific routes MUST come before apiResource
+    Route::post('/deductions/{deduction}/record-installment', [App\Http\Controllers\Api\DeductionController::class, 'recordInstallment']);
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
+
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);
 
     // 13th Month Pay
@@ -188,6 +197,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/government/tax-table/{periodType}', [App\Http\Controllers\Api\GovernmentController::class, 'taxTable']);
     Route::post('/government/compute-contributions', [App\Http\Controllers\Api\GovernmentController::class, 'computeContributions']);
 
+    // Employee Documents and Government Information
+    Route::get('/employees/{employeeId}/documents', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'index']);
+    Route::post('/employees/{employeeId}/documents', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'store']);
+    Route::get('/documents/{documentId}/download', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'download']);
+    Route::delete('/documents/{documentId}', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'destroy']);
+    Route::get('/employees/{employeeId}/government-info', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'getGovernmentInfo']);
+    Route::put('/employees/{employeeId}/government-info', [App\Http\Controllers\Api\EmployeeDocumentController::class, 'updateGovernmentInfo']);
+
     // Reports
     Route::get('/reports/payroll-summary', [App\Http\Controllers\Api\ReportController::class, 'payrollSummary']);
     Route::get('/reports/employee-earnings', [App\Http\Controllers\Api\ReportController::class, 'employeeEarnings']);
@@ -228,4 +245,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/dashboard/attendance-status-distribution', [App\Http\Controllers\Api\DashboardController::class, 'attendanceStatusDistribution']);
     Route::get('/dashboard/overtime-trend', [App\Http\Controllers\Api\DashboardController::class, 'overtimeTrend']);
     Route::get('/dashboard/leave-utilization', [App\Http\Controllers\Api\DashboardController::class, 'leaveUtilization']);
+    Route::get('/dashboard/today-staff-info', [App\Http\Controllers\Api\DashboardController::class, 'todayStaffInfo']);
 });

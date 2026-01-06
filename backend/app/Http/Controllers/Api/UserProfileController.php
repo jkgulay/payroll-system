@@ -20,7 +20,7 @@ class UserProfileController extends Controller
     {
         try {
             $user = auth()->user();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $user
@@ -56,25 +56,26 @@ class UserProfileController extends Controller
         try {
             /** @var User $user */
             $user = auth()->user();
-            
+
             if ($request->has('name')) {
                 $user->name = $request->name;
             }
-            
+
             if ($request->has('username')) {
                 $user->username = $request->username;
             }
-            
+
             if ($request->has('email')) {
                 $user->email = $request->email;
             }
-            
+
             $user->save();
 
             // Log the action
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
+                    'module' => 'user_profile',
                     'action' => 'profile_updated',
                     'description' => 'Updated profile information',
                     'ip_address' => $request->ip(),
@@ -135,6 +136,7 @@ class UserProfileController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
+                    'module' => 'user_profile',
                     'action' => 'password_changed',
                     'description' => 'Changed password',
                     'ip_address' => $request->ip(),
@@ -155,7 +157,7 @@ class UserProfileController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Upload user avatar
      */
@@ -191,6 +193,7 @@ class UserProfileController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
+                    'module' => 'user_profile',
                     'action' => 'avatar_uploaded',
                     'description' => 'Uploaded profile picture',
                     'ip_address' => $request->ip(),
@@ -212,7 +215,7 @@ class UserProfileController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Remove user avatar
      */
@@ -234,6 +237,7 @@ class UserProfileController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
+                    'module' => 'user_profile',
                     'action' => 'avatar_removed',
                     'description' => 'Removed profile picture',
                     'ip_address' => $request->ip(),

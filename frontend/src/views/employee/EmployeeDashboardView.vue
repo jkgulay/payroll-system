@@ -17,7 +17,11 @@
       <!-- Quick Action Cards -->
       <v-row class="mb-6">
         <v-col cols="12" sm="6" md="3">
-          <v-card class="modern-card hover-card" elevation="0" @click="scrollToSection('attendance')">
+          <v-card
+            class="modern-card hover-card"
+            elevation="0"
+            @click="scrollToSection('attendance')"
+          >
             <v-card-text class="text-center pa-6">
               <v-icon size="48" color="info" class="mb-3"
                 >mdi-calendar-check</v-icon
@@ -28,7 +32,11 @@
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="modern-card hover-card" elevation="0" @click="scrollToSection('payslip')">
+          <v-card
+            class="modern-card hover-card"
+            elevation="0"
+            @click="scrollToSection('payslip')"
+          >
             <v-card-text class="text-center pa-6">
               <v-icon size="48" color="success" class="mb-3"
                 >mdi-cash-multiple</v-icon
@@ -41,7 +49,11 @@
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="modern-card hover-card" elevation="0" @click="scrollToSection('history')">
+          <v-card
+            class="modern-card hover-card"
+            elevation="0"
+            @click="scrollToSection('history')"
+          >
             <v-card-text class="text-center pa-6">
               <v-icon size="48" color="warning" class="mb-3"
                 >mdi-history</v-icon
@@ -52,7 +64,11 @@
           </v-card>
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-card class="modern-card hover-card" elevation="0" @click="downloadCurrentPayslip">
+          <v-card
+            class="modern-card hover-card"
+            elevation="0"
+            @click="downloadCurrentPayslip"
+          >
             <v-card-text class="text-center pa-6">
               <v-icon size="48" color="primary" class="mb-3"
                 >mdi-download</v-icon
@@ -76,7 +92,9 @@
                   <v-icon size="36">mdi-account</v-icon>
                 </v-avatar>
                 <div>
-                  <h2 class="text-h5 font-weight-bold mb-1">{{ employee.full_name }}</h2>
+                  <h2 class="text-h5 font-weight-bold mb-1">
+                    {{ employee.full_name }}
+                  </h2>
                   <p class="text-body-1 mb-1">
                     {{ employee.position }} - {{ employee.project?.name }}
                   </p>
@@ -94,10 +112,14 @@
       <v-row class="mt-4" id="attendance">
         <v-col cols="12">
           <v-card class="modern-card" elevation="0">
-            <v-card-title class="pa-5 d-flex align-center justify-space-between">
+            <v-card-title
+              class="pa-5 d-flex align-center justify-space-between"
+            >
               <div>
                 <v-icon class="mr-2" size="20">mdi-calendar-check</v-icon>
-                <span class="text-h6 font-weight-bold">Attendance Summary - {{ currentMonth }}</span>
+                <span class="text-h6 font-weight-bold"
+                  >Attendance Summary - {{ currentMonth }}</span
+                >
               </div>
             </v-card-title>
             <v-divider></v-divider>
@@ -108,7 +130,9 @@
                     <div class="text-h3 font-weight-bold text-success">
                       {{ attendanceSummary.present }}
                     </div>
-                    <div class="text-caption text-medium-emphasis mt-1">Present</div>
+                    <div class="text-caption text-medium-emphasis mt-1">
+                      Present
+                    </div>
                   </div>
                 </v-col>
                 <v-col cols="6" sm="3">
@@ -116,7 +140,9 @@
                     <div class="text-h3 font-weight-bold text-error">
                       {{ attendanceSummary.absent }}
                     </div>
-                    <div class="text-caption text-medium-emphasis mt-1">Absent</div>
+                    <div class="text-caption text-medium-emphasis mt-1">
+                      Absent
+                    </div>
                   </div>
                 </v-col>
                 <v-col cols="6" sm="3">
@@ -124,7 +150,9 @@
                     <div class="text-h3 font-weight-bold text-warning">
                       {{ attendanceSummary.late }}
                     </div>
-                    <div class="text-caption text-medium-emphasis mt-1">Late</div>
+                    <div class="text-caption text-medium-emphasis mt-1">
+                      Late
+                    </div>
                   </div>
                 </v-col>
                 <v-col cols="6" sm="3">
@@ -132,7 +160,9 @@
                     <div class="text-h3 font-weight-bold text-primary">
                       {{ attendanceSummary.total_hours?.toFixed(2) || 0 }}
                     </div>
-                    <div class="text-caption text-medium-emphasis mt-1">Total Hours</div>
+                    <div class="text-caption text-medium-emphasis mt-1">
+                      Total Hours
+                    </div>
                   </div>
                 </v-col>
               </v-row>
@@ -145,8 +175,8 @@
                 :items-per-page="10"
                 class="elevation-0"
               >
-                <template v-slot:item.date="{ item }">
-                  {{ formatDate(item.date) }}
+                <template v-slot:item.attendance_date="{ item }">
+                  {{ formatDate(item.attendance_date) }}
                 </template>
                 <template v-slot:item.status="{ item }">
                   <v-chip :color="getStatusColor(item.status)" size="small">
@@ -159,8 +189,8 @@
                 <template v-slot:item.time_out="{ item }">
                   {{ item.time_out || "N/A" }}
                 </template>
-                <template v-slot:item.total_hours_worked="{ item }">
-                  {{ item.total_hours_worked?.toFixed(2) || 0 }}
+                <template v-slot:item.regular_hours="{ item }">
+                  {{ calculateHours(item) }}
                 </template>
               </v-data-table>
             </v-card-text>
@@ -344,11 +374,11 @@ const currentMonth = computed(() => {
 });
 
 const attendanceHeaders = [
-  { title: "Date", key: "date" },
+  { title: "Date", key: "attendance_date" },
   { title: "Status", key: "status" },
   { title: "Time In", key: "time_in" },
   { title: "Time Out", key: "time_out" },
-  { title: "Hours", key: "total_hours_worked" },
+  { title: "Hours", key: "regular_hours" },
 ];
 
 onMounted(() => {
@@ -424,6 +454,22 @@ function getStatusColor(status) {
     holiday: "info",
   };
   return colors[status] || "grey";
+}
+
+function calculateHours(record) {
+  if (record.regular_hours && record.regular_hours > 0) {
+    return record.regular_hours.toFixed(2);
+  }
+
+  if (record.time_in && record.time_out) {
+    // Calculate hours from time_in and time_out
+    const timeIn = new Date(`2000-01-01 ${record.time_in}`);
+    const timeOut = new Date(`2000-01-01 ${record.time_out}`);
+    const hours = (timeOut - timeIn) / (1000 * 60 * 60);
+    return hours.toFixed(2);
+  }
+
+  return "0.00";
 }
 
 function scrollToSection(sectionId) {

@@ -154,7 +154,7 @@ class AttendanceService
         ]);
 
         $attendance->calculateHours();
-        return $attendance;
+        return $attendance->fresh();
     }
 
     /**

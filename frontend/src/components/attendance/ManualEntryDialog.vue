@@ -228,14 +228,53 @@ const save = async () => {
 
     if (props.attendance) {
       await attendanceService.updateAttendance(props.attendance.id, data);
+      toast.success("Attendance updated successfully");
     } else {
       await attendanceService.createAttendance(data);
+      toast.success("Attendance created successfully");
     }
 
     emit("saved");
   } catch (error) {
     console.error("Save error:", error.response?.data);
-    toast.error(error.response?.data?.message || "Failed to save attendance");
+
+    // Handle duplicate record case
+    if (
+      error.response?.status === 422 &&
+      error.response?.data?.action === "exists"
+    ) {
+      const existingRecord = error.response.data.attendance;
+      const confirmed = await new Promise((resolve) => {
+        if (
+          confirm(
+            `An attendance record already exists for this employee on this date.\n\n` +
+              `Existing record: ${existingRecord.status} (${
+                existingRecord.time_in || "No time in"
+              } - ${existingRecord.time_out || "No time out"})\n\n` +
+              `Would you like to update the existing record instead?`
+          )
+        ) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+
+      if (confirmed) {
+        try {
+          await attendanceService.updateAttendance(existingRecord.id, data);
+          toast.success("Attendance updated successfully");
+          emit("saved");
+        } catch (updateError) {
+          console.error("Update error:", updateError.response?.data);
+          toast.error(
+            updateError.response?.data?.message || "Failed to update attendance"
+          );
+        }
+      }
+    } else {
+      toast.error(error.response?.data?.message || "Failed to save attendance");
+    }
   } finally {
     saving.value = false;
   }

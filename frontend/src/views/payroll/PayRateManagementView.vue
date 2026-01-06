@@ -87,7 +87,11 @@
         :headers="headers"
         :items="employees"
         :loading="loading"
-        :search="search"
+        :items-per-page="itemsPerPage"
+        :page="page"
+        :server-items-length="totalItems"
+        @update:page="onPageChange"
+        @update:items-per-page="onItemsPerPageChange"
         density="comfortable"
         class="elevation-1"
       >
@@ -1057,6 +1061,9 @@ const filters = ref({
 const employees = ref([]);
 const projects = ref([]);
 const loading = ref(false);
+const page = ref(1);
+const itemsPerPage = ref(25);
+const totalItems = ref(0);
 
 const showEditDialog = ref(false);
 const showHistoryDialog = ref(false);
@@ -1143,17 +1150,36 @@ async function fetchEmployees() {
     const response = await api.get("/employees", {
       params: {
         search: search.value,
+        page: page.value,
+        per_page: itemsPerPage.value,
         ...filters.value,
-        per_page: 1000,
       },
     });
     employees.value = response.data.data || response.data;
+    
+    // Update pagination data if the API returns it
+    if (response.data.meta) {
+      totalItems.value = response.data.meta.total || response.data.total || 0;
+    } else if (response.data.total) {
+      totalItems.value = response.data.total;
+    }
   } catch (error) {
     console.error("Error fetching employees:", error);
     toast.error("Failed to load employees");
   } finally {
     loading.value = false;
   }
+}
+
+function onPageChange(newPage) {
+  page.value = newPage;
+  fetchEmployees();
+}
+
+function onItemsPerPageChange(newItemsPerPage) {
+  itemsPerPage.value = newItemsPerPage;
+  page.value = 1; // Reset to first page
+  fetchEmployees();
 }
 
 async function fetchProjects() {

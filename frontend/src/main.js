@@ -9,6 +9,9 @@ import "vue-toastification/dist/index.css";
 // Import global styles
 import "./styles/main.scss";
 
+// Import service worker registration
+import { registerServiceWorker, setupOnlineListener } from "./utils/serviceWorkerManager";
+
 const app = createApp(App);
 
 // Use plugins
@@ -31,3 +34,26 @@ app.use(Toast, {
 });
 
 app.mount("#app");
+
+// Register service worker for offline support
+registerServiceWorker();
+
+// Setup online/offline listeners
+setupOnlineListener(
+  () => {
+    // When back online
+    const toast = app.config.globalProperties.$toast;
+    if (toast) {
+      toast.success("You are back online!");
+    }
+  },
+  () => {
+    // When offline
+    const toast = app.config.globalProperties.$toast;
+    if (toast) {
+      toast.warning("You are offline. Some features may be unavailable.", {
+        timeout: 5000,
+      });
+    }
+  }
+);

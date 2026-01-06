@@ -72,7 +72,13 @@
               >
             </div>
             <div>
-              <v-btn color="grey" variant="text" @click="step = 1" class="mr-2" :disabled="importing">
+              <v-btn
+                color="grey"
+                variant="text"
+                @click="step = 1"
+                class="mr-2"
+                :disabled="importing"
+              >
                 Back
               </v-btn>
               <v-btn color="primary" @click="submitImport" :loading="importing">
@@ -97,9 +103,15 @@
             <div class="text-center text-body-2 text-medium-emphasis">
               {{ importStatus }}
             </div>
-            <v-alert v-if="employees.length > 100" type="info" variant="tonal" class="mt-4">
+            <v-alert
+              v-if="employees.length > 100"
+              type="info"
+              variant="tonal"
+              class="mt-4"
+            >
               <v-icon start>mdi-information</v-icon>
-              Importing {{ employees.length }} employees. This may take a few minutes...
+              Importing {{ employees.length }} employees. This may take a few
+              minutes...
             </v-alert>
           </v-card-text>
 
@@ -114,10 +126,7 @@
                 <li>
                   <strong>Basic Salary:</strong> Daily rate (minimum ₱570)
                 </li>
-                <li>
-                  <strong>Employment Type:</strong> Regular, Part-time, or
-                  Contractual
-                </li>
+                <li><strong>Work Schedule:</strong> Full Time or Part Time</li>
               </ul>
             </v-alert>
 
@@ -173,9 +182,12 @@
                   </v-col>
                   <v-col cols="12" md="4">
                     <v-select
-                      v-model="bulkDefaults.employment_type"
-                      label="Employment Type"
-                      :items="['regular', 'part_time', 'contractual']""
+                      v-model="bulkDefaults.work_schedule"
+                      label="Work Schedule"
+                      :items="[
+                        { title: 'Full Time', value: 'full_time' },
+                        { title: 'Part Time', value: 'part_time' },
+                      ]"
                       density="compact"
                       hide-details
                     ></v-select>
@@ -241,13 +253,16 @@
                 ></v-text-field>
               </template>
 
-              <template v-slot:item.employment_type="{ item }">
+              <template v-slot:item.work_schedule="{ item }">
                 <v-select
-                  v-model="item.employment_type"
-                  :items="['full-time', 'part-time', 'contractual']"
+                  v-model="item.work_schedule"
+                  :items="[
+                    { title: 'Full Time', value: 'full_time' },
+                    { title: 'Part Time', value: 'part_time' },
+                  ]"
                   density="compact"
                   hide-details
-                  :class="{ 'error-field': !item.employment_type }"
+                  :class="{ 'error-field': !item.work_schedule }"
                 ></v-select>
               </template>
 
@@ -359,7 +374,7 @@ const missingPositions = ref(new Set()); // Track positions not in pay rates tab
 const bulkDefaults = ref({
   position: "",
   basic_salary: null,
-  employment_type: "regular",
+  work_schedule: "full_time",
 });
 
 // Position options from pay rates table
@@ -385,7 +400,7 @@ const previewHeaders = [
   { title: "Entry Date", key: "entry_date", sortable: true },
   { title: "Position", key: "position", sortable: false },
   { title: "Daily Salary", key: "basic_salary", sortable: false },
-  { title: "Type", key: "employment_type", sortable: false },
+  { title: "Schedule", key: "work_schedule", sortable: false },
   { title: "Status", key: "entry_status", sortable: true },
 ];
 
@@ -487,8 +502,14 @@ const parseEmployeeData = (data) => {
       // Fields auto-filled based on position rates
       position: position,
       basic_salary: basic_salary,
-      employment_type:
-        row["Employment Type"] || row["employment_type"] || "regular",
+      work_schedule:
+        row["Work Schedule"] ||
+        row["work_schedule"] ||
+        // Legacy mapping
+        (row["Employment Type"] === "Part Time" ||
+        row["employment_type"] === "part_time"
+          ? "part_time"
+          : "full_time"),
     };
   });
 
@@ -550,9 +571,9 @@ const applyBulkDefaults = () => {
       emp.basic_salary = 450;
     }
 
-    // Apply employment type
-    if (bulkDefaults.value.employment_type && !emp.employment_type) {
-      emp.employment_type = bulkDefaults.value.employment_type;
+    // Apply work schedule
+    if (bulkDefaults.value.work_schedule && !emp.work_schedule) {
+      emp.work_schedule = bulkDefaults.value.work_schedule;
     }
   });
   toast.success("Bulk defaults applied! Salaries auto-set based on positions.");
@@ -561,12 +582,12 @@ const applyBulkDefaults = () => {
 const submitImport = async () => {
   // Validate required fields
   const invalid = employees.value.filter(
-    (emp) => !emp.position || !emp.basic_salary || !emp.employment_type
+    (emp) => !emp.position || !emp.basic_salary || !emp.work_schedule
   );
 
   if (invalid.length > 0) {
     toast.error(
-      `${invalid.length} employee(s) have missing required fields. Please fill Position, Salary, and Employment Type.`
+      `${invalid.length} employee(s) have missing required fields. Please fill Position, Salary, and Work Schedule.`
     );
     return;
   }
@@ -587,7 +608,7 @@ const submitImport = async () => {
     // Clean up empty strings and convert to null
     importProgress.value = 10;
     importStatus.value = "Preparing employee data...";
-    
+
     const cleanedEmployees = employees.value.map((emp) => {
       const cleaned = {};
       Object.keys(emp).forEach((key) => {
@@ -620,7 +641,9 @@ const submitImport = async () => {
             (progressEvent.loaded * 60) / progressEvent.total
           );
           importProgress.value = 30 + percentCompleted;
-          importStatus.value = `Processing employees... ${Math.round((progressEvent.loaded / progressEvent.total) * 100)}%`;
+          importStatus.value = `Processing employees... ${Math.round(
+            (progressEvent.loaded / progressEvent.total) * 100
+          )}%`;
         },
       }
     );
@@ -629,10 +652,10 @@ const submitImport = async () => {
     importStatus.value = "Finalizing import...";
 
     importResult.value = response.data;
-    
+
     importProgress.value = 100;
     importStatus.value = "Import complete!";
-    
+
     step.value = 3;
 
     if (response.data.failed === 0) {
@@ -744,7 +767,7 @@ const resetImport = () => {
   bulkDefaults.value = {
     position: "",
     basic_salary: null,
-    employment_type: "regular",
+    work_schedule: "full_time",
   };
 };
 

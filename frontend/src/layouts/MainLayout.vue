@@ -61,7 +61,7 @@
               rounded="lg"
             ></v-list-item>
           </v-list-group>
-          
+
           <!-- Regular items without children -->
           <v-list-item
             v-else
@@ -159,7 +159,9 @@
               :disabled="item.disabled"
               class="text-body-2"
             >
-              <v-icon v-if="item.icon" size="small" class="mr-1">{{ item.icon }}</v-icon>
+              <v-icon v-if="item.icon" size="small" class="mr-1">{{
+                item.icon
+              }}</v-icon>
               {{ item.title }}
             </v-breadcrumbs-item>
           </template>
@@ -261,22 +263,22 @@ const breadcrumbs = computed(() => {
       title: "Home",
       icon: "mdi-home",
       to: "/",
-      disabled: false
-    }
+      disabled: false,
+    },
   ];
 
   // Parse route path to create breadcrumbs
-  const paths = route.path.split("/").filter(p => p);
+  const paths = route.path.split("/").filter((p) => p);
   let currentPath = "";
-  
+
   paths.forEach((path, index) => {
     currentPath += `/${path}`;
     const isLast = index === paths.length - 1;
-    
+
     crumbs.push({
-      title: path.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+      title: path.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
       to: currentPath,
-      disabled: isLast
+      disabled: isLast,
     });
   });
 
@@ -388,6 +390,13 @@ const menuItems = computed(() => {
       value: "reports",
       to: "/reports",
       roles: ["admin", "accountant"],
+    },
+    {
+      title: "My Loans",
+      icon: "mdi-hand-coin-outline",
+      value: "my-loans",
+      to: "/loans",
+      roles: ["employee"],
     },
     {
       title: "My Profile",
@@ -531,7 +540,7 @@ async function downloadCurrentPayslip() {
     &::before {
       opacity: 0;
     }
-    
+
     .v-list-item-title {
       color: white !important;
       font-weight: 600;
@@ -644,22 +653,22 @@ async function downloadCurrentPayslip() {
 // Breadcrumbs styling
 .breadcrumbs-construction {
   :deep(.v-breadcrumbs-item) {
-    color: #546E7A;
+    color: #546e7a;
     font-weight: 500;
     transition: all 0.2s ease;
-    
+
     &:hover {
-      color: #D84315;
+      color: #d84315;
     }
   }
-  
+
   :deep(.v-breadcrumbs-item--disabled) {
-    color: #D84315;
+    color: #d84315;
     font-weight: 600;
   }
-  
+
   :deep(.v-breadcrumbs-divider) {
-    color: #B0BEC5;
+    color: #b0bec5;
   }
 }
 
