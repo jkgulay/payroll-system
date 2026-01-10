@@ -10,6 +10,7 @@ use App\Models\PositionRate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class MealAllowanceController extends Controller
@@ -381,7 +382,7 @@ class MealAllowanceController extends Controller
                 'pdf_path' => $path,
             ]);
         } catch (\Exception $e) {
-            \Log::error('PDF Generation Error: ' . $e->getMessage(), [
+            Log::error('PDF Generation Error: ' . $e->getMessage(), [
                 'meal_allowance_id' => $mealAllowance->id,
                 'trace' => $e->getTraceAsString()
             ]);
