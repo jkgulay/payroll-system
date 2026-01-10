@@ -88,6 +88,24 @@ const router = createRouter({
           meta: { title: "Import Employees", roles: ["admin", "accountant"] },
         },
         {
+          path: "resignations",
+          name: "resignations",
+          component: () =>
+            import(
+              /* webpackChunkName: "employees" */ "@/views/employees/ResignationManagementView.vue"
+            ),
+          meta: { title: "Resignation Management", roles: ["admin", "accountant"] },
+        },
+        {
+          path: "my-resignation",
+          name: "my-resignation",
+          component: () =>
+            import(
+              /* webpackChunkName: "employee" */ "@/views/employee/ResignationView.vue"
+            ),
+          meta: { title: "My Resignation", roles: ["employee"] },
+        },
+        {
           path: "projects",
           name: "projects",
           component: () =>

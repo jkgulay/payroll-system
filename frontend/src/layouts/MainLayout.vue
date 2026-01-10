@@ -392,10 +392,24 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
+      title: "Resignations",
+      icon: "mdi-briefcase-remove-outline",
+      value: "resignations",
+      to: "/resignations",
+      roles: ["admin", "accountant"],
+    },
+    {
       title: "My Loans",
       icon: "mdi-hand-coin-outline",
       value: "my-loans",
       to: "/loans",
+      roles: ["employee"],
+    },
+    {
+      title: "My Resignation",
+      icon: "mdi-briefcase-remove-outline",
+      value: "my-resignation",
+      to: "/my-resignation",
       roles: ["employee"],
     },
     {

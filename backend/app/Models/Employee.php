@@ -53,6 +53,7 @@ class Employee extends Model
         'bank_account_number',
         'profile_photo',
         'is_active',
+        'resignation_id',
         'created_by',
         'updated_by',
     ];
@@ -171,6 +172,11 @@ class Employee extends Model
         return $this->hasMany(ThirteenthMonthPay::class);
     }
 
+    public function resignation(): HasOne
+    {
+        return $this->hasOne(Resignation::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
@@ -250,16 +256,16 @@ class Employee extends Model
 
         if ($this->salary_type === 'daily') {
             $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
-            return $basicSalary * $workingDaysPerMonth;
+            return (float) ($basicSalary * $workingDaysPerMonth);
         }
 
         if ($this->salary_type === 'hourly') {
             $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
             $standardHours = config('payroll.standard_hours_per_day', 8);
-            return $basicSalary * $standardHours * $workingDaysPerMonth;
+            return (float) ($basicSalary * $standardHours * $workingDaysPerMonth);
         }
 
-        return $basicSalary;
+        return (float) $basicSalary;
     }
 
     public function getHourlyRate(): float

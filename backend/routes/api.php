@@ -136,6 +136,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/thirteenth-month/{id}/approve', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'approve']);
     Route::post('/thirteenth-month/{id}/mark-paid', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'markPaid']);
 
+    // Resignations
+    Route::apiResource('resignations', App\Http\Controllers\Api\ResignationController::class);
+    Route::get('/resignations/employee/{employeeId}', [App\Http\Controllers\Api\ResignationController::class, 'getEmployeeResignation']);
+    Route::post('/resignations/{id}/approve', [App\Http\Controllers\Api\ResignationController::class, 'approve']);
+    Route::post('/resignations/{id}/reject', [App\Http\Controllers\Api\ResignationController::class, 'reject']);
+    Route::post('/resignations/{id}/process-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'processFinalPay']);
+    Route::post('/resignations/{id}/release-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'releaseFinalPay']);
+
     // Recruitment - Job Postings
     Route::get('/job-postings', [App\Http\Controllers\Api\RecruitmentController::class, 'getJobPostings']);
     Route::post('/job-postings', [App\Http\Controllers\Api\RecruitmentController::class, 'storeJobPosting']);
