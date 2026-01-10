@@ -15,6 +15,30 @@ use Carbon\Carbon;
 
 class LeaveController extends Controller
 {
+    /**
+     * Update employee activity status based on current leaves
+     */
+    private function syncEmployeeLeaveStatus($employeeId)
+    {
+        $employee = Employee::find($employeeId);
+        if (!$employee) return;
+
+        $today = Carbon::today();
+
+        // Check if employee has any active approved leaves today
+        $hasActiveLeave = EmployeeLeave::where('employee_id', $employeeId)
+            ->where('status', 'approved')
+            ->whereDate('leave_date_from', '<=', $today)
+            ->whereDate('leave_date_to', '>=', $today)
+            ->exists();
+
+        // Update status immediately
+        if ($hasActiveLeave && $employee->activity_status !== 'on_leave') {
+            $employee->update(['activity_status' => 'on_leave']);
+        } elseif (!$hasActiveLeave && $employee->activity_status === 'on_leave') {
+            $employee->update(['activity_status' => 'active']);
+        }
+    }
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -103,7 +127,7 @@ class LeaveController extends Controller
             AuditLog::create([
                 'module' => 'leaves',
                 'action' => 'create',
-                'description' => $user->role === 'employee' 
+                'description' => $user->role === 'employee'
                     ? "Employee filed leave request for {$numberOfDays} day(s)"
                     : "Leave request created for employee ID {$employeeId}",
                 'user_id' => $user->id,
@@ -229,6 +253,8 @@ class LeaveController extends Controller
         DB::beginTransaction();
 
         try {
+            $employeeId = $leave->employee_id;
+
             // Create audit log before deletion
             AuditLog::create([
                 'module' => 'leaves',
@@ -242,6 +268,9 @@ class LeaveController extends Controller
             ]);
 
             $leave->delete();
+
+            // Instantly sync employee activity status (may return to active if no other leaves)
+            $this->syncEmployeeLeaveStatus($employeeId);
 
             DB::commit();
 
@@ -286,6 +315,9 @@ class LeaveController extends Controller
                 'approved_at' => now(),
                 'rejection_reason' => $request->remarks,
             ]);
+
+            // Instantly sync employee activity status
+            $this->syncEmployeeLeaveStatus($leave->employee_id);
 
             // Create audit log
             AuditLog::create([
@@ -347,6 +379,9 @@ class LeaveController extends Controller
                 'rejection_reason' => $request->rejection_reason,
             ]);
 
+            // Instantly sync employee activity status (may return to active if no other leaves)
+            $this->syncEmployeeLeaveStatus($leave->employee_id);
+
             // Create audit log
             AuditLog::create([
                 'module' => 'leaves',
@@ -380,7 +415,7 @@ class LeaveController extends Controller
         $employee = Employee::findOrFail($employeeId);
 
         $user = Auth::user();
-        
+
         // Employees can only view their own credits
         if ($user->role === 'employee') {
             $userEmployeeId = $user->employee_id;
@@ -388,7 +423,7 @@ class LeaveController extends Controller
                 $userEmployee = Employee::where('user_id', $user->id)->first();
                 $userEmployeeId = $userEmployee?->id;
             }
-            
+
             if ($employee->id !== $userEmployeeId) {
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
@@ -426,7 +461,7 @@ class LeaveController extends Controller
     public function myLeaves(Request $request)
     {
         $user = Auth::user();
-        
+
         if ($user->role !== 'employee') {
             return response()->json(['message' => 'This endpoint is for employees only'], 403);
         }
@@ -457,7 +492,7 @@ class LeaveController extends Controller
     public function pendingLeaves(Request $request)
     {
         $user = Auth::user();
-        
+
         if (!in_array($user->role, ['admin', 'accountant'])) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -474,7 +509,7 @@ class LeaveController extends Controller
     public function myCredits(Request $request)
     {
         $user = Auth::user();
-        
+
         if ($user->role !== 'employee') {
             return response()->json(['message' => 'This endpoint is for employees only'], 403);
         }

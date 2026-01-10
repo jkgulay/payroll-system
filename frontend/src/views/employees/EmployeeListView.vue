@@ -25,7 +25,7 @@
 
     <v-card>
       <v-card-text>
-        <v-row class="mb-4" align="center">
+        <v-row class="mb-4" align="center" dense>
           <v-col cols="12" md="3">
             <v-text-field
               v-model="search"
@@ -52,7 +52,7 @@
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="2">
+          <v-col cols="6" md="2">
             <v-select
               v-model="filters.contract_type"
               :items="contractTypeOptions"
@@ -64,7 +64,7 @@
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="2">
+          <v-col cols="6" md="2">
             <v-select
               v-model="filters.activity_status"
               :items="activityStatusOptions"
@@ -88,7 +88,7 @@
               @update:model-value="fetchEmployees"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="2" class="d-flex gap-2">
+          <v-col cols="auto" class="d-flex align-center">
             <v-btn
               color="primary"
               variant="tonal"
@@ -97,6 +97,8 @@
               :loading="employeeStore.loading"
               title="Refresh"
             ></v-btn>
+          </v-col>
+          <v-col cols="auto" class="d-flex align-center">
             <v-btn
               color="error"
               variant="tonal"
@@ -165,29 +167,16 @@
             </v-chip>
           </template>
 
-          <template v-slot:item.is_active="{ item }">
-            <v-chip size="small" :color="item.is_active ? 'success' : 'error'">
-              {{ item.is_active ? "Active" : "Inactive" }}
+          <template v-slot:item.activity_status="{ item }">
+            <v-chip
+              size="small"
+              :color="getActivityStatusColor(item.activity_status)"
+            >
+              {{ formatActivityStatus(item.activity_status) }}
             </v-chip>
           </template>
 
           <template v-slot:item.actions="{ item }">
-            <v-btn
-              icon="mdi-eye"
-              size="small"
-              variant="text"
-              color="info"
-              @click="viewEmployee(item)"
-              title="View Details"
-            ></v-btn>
-            <v-btn
-              icon="mdi-pencil"
-              size="small"
-              variant="text"
-              color="primary"
-              @click="editEmployee(item)"
-              title="Edit Employee"
-            ></v-btn>
             <v-menu>
               <template v-slot:activator="{ props }">
                 <v-btn
@@ -195,10 +184,22 @@
                   size="small"
                   variant="text"
                   v-bind="props"
-                  title="More Actions"
+                  title="Actions"
                 ></v-btn>
               </template>
               <v-list>
+                <v-list-item @click="viewEmployee(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="info">mdi-eye</v-icon>
+                  </template>
+                  <v-list-item-title>View Details</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="editEmployee(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="primary">mdi-pencil</v-icon>
+                  </template>
+                  <v-list-item-title>Edit Employee</v-list-item-title>
+                </v-list-item>
                 <v-list-item @click="viewCredentials(item)">
                   <template v-slot:prepend>
                     <v-icon color="info">mdi-account-key</v-icon>
@@ -206,9 +207,14 @@
                   <v-list-item-title>View Credentials</v-list-item-title>
                 </v-list-item>
                 <v-divider></v-divider>
-                <v-list-item @click="resignEmployee(item)" v-if="item.activity_status !== 'resigned'">
+                <v-list-item
+                  @click="resignEmployee(item)"
+                  v-if="item.activity_status !== 'resigned'"
+                >
                   <template v-slot:prepend>
-                    <v-icon color="warning">mdi-briefcase-remove-outline</v-icon>
+                    <v-icon color="warning"
+                      >mdi-briefcase-remove-outline</v-icon
+                    >
                   </template>
                   <v-list-item-title>Process Resignation</v-list-item-title>
                 </v-list-item>
@@ -250,7 +256,11 @@
 
         <v-card-text class="pa-6">
           <v-alert type="info" variant="tonal" class="mb-4">
-            Processing resignation for: <strong>{{ selectedEmployee?.first_name }} {{ selectedEmployee?.last_name }}</strong>
+            Processing resignation for:
+            <strong
+              >{{ selectedEmployee?.first_name }}
+              {{ selectedEmployee?.last_name }}</strong
+            >
           </v-alert>
 
           <v-form ref="resignForm" v-model="resignFormValid">
@@ -259,7 +269,10 @@
               label="Last Working Day *"
               type="date"
               variant="outlined"
-              :rules="[v => !!v || 'Required', v => new Date(v) > new Date() || 'Must be a future date']"
+              :rules="[
+                (v) => !!v || 'Required',
+                (v) => new Date(v) > new Date() || 'Must be a future date',
+              ]"
               :min="new Date().toISOString().split('T')[0]"
               class="mb-4"
             ></v-text-field>
@@ -273,7 +286,9 @@
             ></v-textarea>
 
             <v-alert type="warning" variant="tonal" class="mt-4">
-              This will submit a resignation request on behalf of the employee. The request will need to be approved through the Resignation Management system.
+              This will submit a resignation request on behalf of the employee.
+              The request will need to be approved through the Resignation
+              Management system.
             </v-alert>
           </v-form>
         </v-card-text>
@@ -283,9 +298,9 @@
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="showResignDialog = false">Cancel</v-btn>
-          <v-btn 
-            color="warning" 
-            @click="submitResignation" 
+          <v-btn
+            color="warning"
+            @click="submitResignation"
             :loading="processing"
             :disabled="!resignFormValid"
           >
@@ -882,8 +897,8 @@ const showResignDialog = ref(false);
 const resignFormValid = ref(false);
 const processing = ref(false);
 const resignData = ref({
-  last_working_day: '',
-  reason: ''
+  last_working_day: "",
+  reason: "",
 });
 
 // Add Employee Dialog variables
@@ -916,7 +931,7 @@ const headers = [
   { title: "Project", key: "project", sortable: false },
   { title: "Position", key: "position", sortable: true },
   { title: "Schedule", key: "work_schedule", sortable: true },
-  { title: "Status", key: "is_active", sortable: true },
+  { title: "Activity Status", key: "activity_status", sortable: true },
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
@@ -1049,8 +1064,8 @@ async function suspendEmployee(employee) {
 function resignEmployee(employee) {
   selectedEmployee.value = employee;
   resignData.value = {
-    last_working_day: '',
-    reason: ''
+    last_working_day: "",
+    reason: "",
   };
   showResignDialog.value = true;
 }
@@ -1060,16 +1075,17 @@ async function submitResignation() {
 
   try {
     processing.value = true;
-    await api.post('/resignations', {
+    await api.post("/resignations", {
       employee_id: selectedEmployee.value.id,
-      ...resignData.value
+      ...resignData.value,
     });
-    toast.success('Resignation request submitted successfully!');
+    toast.success("Resignation request submitted successfully!");
     showResignDialog.value = false;
     await fetchEmployees();
   } catch (error) {
-    console.error('Error submitting resignation:', error);
-    const message = error.response?.data?.message || 'Failed to submit resignation';
+    console.error("Error submitting resignation:", error);
+    const message =
+      error.response?.data?.message || "Failed to submit resignation";
     toast.error(message);
   } finally {
     processing.value = false;
@@ -1147,6 +1163,25 @@ function closeDialog() {
 
 function getWorkScheduleColor(schedule) {
   return schedule === "full_time" ? "primary" : "info";
+}
+
+function getActivityStatusColor(status) {
+  const colors = {
+    active: "success",
+    on_leave: "warning",
+    resigned: "grey",
+    terminated: "error",
+    retired: "grey",
+  };
+  return colors[status] || "grey";
+}
+
+function formatActivityStatus(status) {
+  if (!status) return "N/A";
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 // Add Employee Dialog functions

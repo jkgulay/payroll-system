@@ -197,14 +197,19 @@ class EmployeeController extends Controller
             }
 
             // Always create user account
-            User::create([
+            $user = User::create([
                 'username' => $username,
                 'email' => $email,
                 'password' => Hash::make($autoPassword),
                 'role' => $role,
                 'is_active' => true,
                 'must_change_password' => true, // Force password change on first login
+                'employee_id' => $employee->id, // Link user to employee
             ]);
+
+            // Link employee to user (for backwards compatibility with code that uses employee->user_id)
+            $employee->user_id = $user->id;
+            $employee->save();
 
             // Store temporary password for response (in real app, send via email)
             $employee->temporary_password = $autoPassword;

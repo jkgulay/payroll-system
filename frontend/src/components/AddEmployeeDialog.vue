@@ -132,9 +132,12 @@
               ></v-textarea>
             </v-col>
 
-            <!-- Employment Information -->
-            <v-col cols="12">
-              <div class="text-h6 mb-2 mt-4">Employment Information</div>
+            <!-- Section 2: Employment Information -->
+            <v-col cols="12" class="mt-4">
+              <div class="text-h6 mb-2 d-flex align-center">
+                <v-icon start color="primary">mdi-briefcase</v-icon>
+                Section 2: Employment Information
+              </div>
               <v-divider class="mb-4"></v-divider>
             </v-col>
 
@@ -189,56 +192,6 @@
                 variant="outlined"
                 density="comfortable"
               ></v-text-field>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-select
-                v-model="formData.contract_type"
-                :items="CONTRACT_TYPES"
-                label="Contract Type"
-                :rules="[rules.required]"
-                variant="outlined"
-                density="comfortable"
-                hint="Regular, Probationary, or Contractual status"
-                persistent-hint
-              ></v-select>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-select
-                v-model="formData.activity_status"
-                :items="ACTIVITY_STATUSES"
-                label="Activity Status"
-                :rules="[rules.required]"
-                variant="outlined"
-                density="comfortable"
-                hint="Current work status"
-                persistent-hint
-              ></v-select>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-select
-                v-model="formData.work_schedule"
-                :items="WORK_SCHEDULES"
-                label="Work Schedule"
-                :rules="[rules.required]"
-                variant="outlined"
-                density="comfortable"
-                hint="Full-time or Part-time work schedule"
-                persistent-hint
-              ></v-select>
-            </v-col>
-
-            <v-col cols="12" md="6">
-              <v-select
-                v-model="formData.salary_type"
-                :items="SALARY_TYPES"
-                label="Salary Type"
-                :rules="[rules.required]"
-                variant="outlined"
-                density="comfortable"
-              ></v-select>
             </v-col>
 
             <v-col cols="12" md="6">

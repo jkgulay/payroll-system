@@ -1,93 +1,218 @@
 <template>
   <v-app>
     <v-main class="login-main">
+      <!-- Animated Background -->
+      <div class="background-overlay"></div>
+      <div class="background-pattern"></div>
+
       <v-container class="fill-height" fluid>
-        <v-row align="center" justify="center">
-          <v-col cols="12" sm="8" md="5" lg="4">
-            <!-- Construction-themed Login Card -->
-            <v-card elevation="12" rounded="xl" class="login-card">
-              <!-- Header Section with Construction Elements -->
-              <div class="login-header pa-8">
-                <div class="hardhat-icon-container mb-4">
-                  <v-icon
-                    icon="mdi-hard-hat"
-                    size="80"
-                    color="white"
-                    class="hardhat-icon"
-                  ></v-icon>
-                </div>
-                <h1 class="text-h3 font-weight-bold text-white mb-2">
-                  Payroll System
-                </h1>
-                <div class="system-subtitle">
-                  <v-icon size="small" class="mr-1">mdi-domain</v-icon>
-                  Construction Company Management
+        <v-row align="center" justify="center" class="position-relative">
+          <!-- Left Side - Branding (Hidden on mobile) -->
+          <v-col
+            cols="12"
+            md="6"
+            lg="7"
+            class="d-none d-md-flex align-center justify-center"
+          >
+            <div class="branding-section">
+              <div class="brand-icon-wrapper mb-6">
+                <v-icon
+                  icon="mdi-hard-hat"
+                  size="120"
+                  class="brand-icon"
+                ></v-icon>
+              </div>
+              <h1
+                class="display-1 font-weight-bold text-white mb-4 text-shadow"
+              >
+                Payroll Management System
+              </h1>
+              <p class="text-h6 text-white-80 mb-6 text-shadow">
+                A comprehensive Philippine payroll management system designed
+                specifically for construction companies. Built with modern
+                technologies to handle complex payroll computations, employee
+                management, attendance tracking, and government compliance
+                requirements.
+              </p>
+            </div>
+          </v-col>
+
+          <!-- Right Side - Login Form -->
+          <v-col cols="12" sm="8" md="5" lg="4" xl="3">
+            <v-card elevation="0" class="login-card">
+              <!-- Modern Header -->
+              <div class="login-header-modern">
+                <div class="header-content">
+                  <div class="icon-circle">
+                    <v-icon
+                      icon="mdi-hard-hat"
+                      size="40"
+                      color="white"
+                    ></v-icon>
+                  </div>
+                  <h1 class="header-title">Sign In</h1>
+                  <p class="header-subtitle">Access your payroll dashboard</p>
                 </div>
               </div>
 
-              <v-card-text class="pa-8">
+              <v-card-text class="form-section">
                 <v-form @submit.prevent="handleLogin" ref="loginForm">
-                  <v-text-field
-                    v-model="form.email"
-                    label="Username or Email"
-                    prepend-inner-icon="mdi-account-circle"
-                    variant="outlined"
-                    color="primary"
-                    :rules="[rules.required]"
-                    :error-messages="errors.email"
-                    @input="errors.email = ''"
-                    class="mb-2"
-                  ></v-text-field>
+                  <!-- Username Field -->
+                  <div class="field-wrapper">
+                    <div class="field-label">
+                      <v-icon size="18" color="#546e7a"
+                        >mdi-account-outline</v-icon
+                      >
+                      <span>Username or Email</span>
+                    </div>
+                    <v-text-field
+                      v-model="form.email"
+                      placeholder="Enter your username or email"
+                      variant="solo"
+                      flat
+                      color="#ff6f00"
+                      bg-color="#f8f9fa"
+                      :rules="[rules.required]"
+                      :error-messages="errors.email"
+                      @input="errors.email = ''"
+                      density="comfortable"
+                      class="modern-field"
+                      hide-details="auto"
+                    >
+                      <template v-slot:prepend-inner>
+                        <v-icon color="#546e7a" size="20"
+                          >mdi-account-circle</v-icon
+                        >
+                      </template>
+                    </v-text-field>
+                  </div>
 
-                  <v-text-field
-                    v-model="form.password"
-                    label="Password"
-                    :type="showPassword ? 'text' : 'password'"
-                    prepend-inner-icon="mdi-lock"
-                    :append-inner-icon="
-                      showPassword ? 'mdi-eye' : 'mdi-eye-off'
-                    "
-                    @click:append-inner="showPassword = !showPassword"
-                    variant="outlined"
-                    color="primary"
-                    :rules="[rules.required]"
-                    :error-messages="errors.password"
-                    @input="errors.password = ''"
-                    class="mb-2"
-                  ></v-text-field>
+                  <!-- Password Field -->
+                  <div class="field-wrapper">
+                    <div class="field-label">
+                      <v-icon size="18" color="#546e7a"
+                        >mdi-lock-outline</v-icon
+                      >
+                      <span>Password</span>
+                    </div>
+                    <v-text-field
+                      v-model="form.password"
+                      placeholder="Enter your password"
+                      :type="showPassword ? 'text' : 'password'"
+                      variant="solo"
+                      flat
+                      color="#ff6f00"
+                      bg-color="#f8f9fa"
+                      :rules="[rules.required]"
+                      :error-messages="errors.password"
+                      @input="errors.password = ''"
+                      density="comfortable"
+                      class="modern-field"
+                      hide-details="auto"
+                    >
+                      <template v-slot:prepend-inner>
+                        <v-icon color="#546e7a" size="20">mdi-lock</v-icon>
+                      </template>
+                      <template v-slot:append-inner>
+                        <v-icon
+                          @click="showPassword = !showPassword"
+                          color="#546e7a"
+                          size="20"
+                          style="cursor: pointer"
+                        >
+                          {{ showPassword ? "mdi-eye-off" : "mdi-eye" }}
+                        </v-icon>
+                      </template>
+                    </v-text-field>
+                  </div>
 
-                  <v-select
-                    v-model="form.role"
-                    label="Login As"
-                    prepend-inner-icon="mdi-shield-account"
-                    :items="roles"
-                    variant="outlined"
-                    color="primary"
-                    :rules="[rules.required]"
-                    :error-messages="errors.role"
-                    @update:modelValue="errors.role = ''"
-                    class="mb-2"
-                  ></v-select>
+                  <!-- Role Select -->
+                  <div class="field-wrapper">
+                    <div class="field-label">
+                      <v-icon size="18" color="#546e7a"
+                        >mdi-shield-account-outline</v-icon
+                      >
+                      <span>Select Role</span>
+                    </div>
+                    <v-select
+                      v-model="form.role"
+                      placeholder="Choose your role"
+                      :items="roles"
+                      variant="solo"
+                      flat
+                      color="#ff6f00"
+                      bg-color="#f8f9fa"
+                      :rules="[rules.required]"
+                      :error-messages="errors.role"
+                      @update:modelValue="errors.role = ''"
+                      density="comfortable"
+                      class="modern-field"
+                      hide-details="auto"
+                    >
+                      <template v-slot:prepend-inner>
+                        <v-icon color="#546e7a" size="20"
+                          >mdi-shield-account</v-icon
+                        >
+                      </template>
+                      <template v-slot:item="{ props, item }">
+                        <v-list-item v-bind="props" class="role-list-item">
+                          <template v-slot:prepend>
+                            <v-icon
+                              :color="
+                                item.value === 'admin'
+                                  ? '#ff6f00'
+                                  : item.value === 'accountant'
+                                  ? '#ff9800'
+                                  : '#546e7a'
+                              "
+                              size="20"
+                            >
+                              {{
+                                item.value === "admin"
+                                  ? "mdi-shield-crown"
+                                  : item.value === "accountant"
+                                  ? "mdi-calculator"
+                                  : "mdi-account-hard-hat"
+                              }}
+                            </v-icon>
+                          </template>
+                        </v-list-item>
+                      </template>
+                    </v-select>
+                  </div>
 
-                  <v-checkbox
-                    v-model="form.remember"
-                    label="Remember me"
-                    color="primary"
-                    hide-details
-                    class="mb-4"
-                  ></v-checkbox>
+                  <!-- Remember Me -->
+                  <div class="remember-section">
+                    <v-checkbox
+                      v-model="form.remember"
+                      color="#ff6f00"
+                      hide-details
+                      density="compact"
+                    >
+                      <template v-slot:label>
+                        <span class="remember-text">Keep me signed in</span>
+                      </template>
+                    </v-checkbox>
+                  </div>
 
+                  <!-- Sign In Button -->
                   <v-btn
                     type="submit"
-                    color="primary"
+                    color="#ff6f00"
                     size="x-large"
-                    block
                     :loading="authStore.loading"
-                    class="construction-login-btn mb-4"
-                    prepend-icon="mdi-login"
+                    class="signin-btn"
+                    elevation="0"
                   >
                     Sign In
+                    <v-icon end size="small">mdi-arrow-right</v-icon>
                   </v-btn>
+
+                  <!-- Security Info -->
+                  <div class="security-info">
+                    <v-icon size="16" color="#546e7a">mdi-shield-check</v-icon>
+                    <span>Protected by 2FA & SSL Encryption</span>
+                  </div>
 
                   <v-alert
                     v-if="errorMessage"
@@ -95,20 +220,12 @@
                     variant="tonal"
                     density="compact"
                     class="mt-4"
+                    closable
                   >
                     {{ errorMessage }}
                   </v-alert>
                 </v-form>
               </v-card-text>
-
-              <!-- Footer with Construction Pattern -->
-              <div class="login-footer pa-4 text-center">
-                <div class="steel-divider mb-3"></div>
-                <div class="text-caption font-weight-medium">
-                  <v-icon size="small" class="mr-1">mdi-shield-check</v-icon>
-                  Construction Payroll Management System v1.0
-                </div>
-              </div>
             </v-card>
           </v-col>
         </v-row>
@@ -297,25 +414,197 @@ function handleTwoFactorCancel() {
 </script>
 
 <style scoped lang="scss">
-// Construction-themed Login Page
+// Modern Professional Login Page with Construction Background
 
 .login-main {
-  background: #ffffff;
+  background: linear-gradient(rgba(30, 30, 30, 0.7), rgba(30, 30, 30, 0.7)),
+    url("@/images/construction-bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   position: relative;
   overflow: hidden;
+  min-height: 100vh;
 }
 
-.login-card {
-  overflow: hidden;
-  border: 3px solid rgba(216, 67, 21, 0.3);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+// Animated Background
+.background-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(55, 71, 79, 0.4) 0%,
+    rgba(255, 111, 0, 0.25) 50%,
+    rgba(69, 90, 100, 0.4) 100%
+  );
+  animation: pulse-overlay 8s ease-in-out infinite;
 }
 
-// Header with Construction Orange Gradient
-.login-header {
-  background: linear-gradient(135deg, #d84315 0%, #f4511e 50%, #ff6e40 100%);
+@keyframes pulse-overlay {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.background-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(
+      circle at 20% 50%,
+      rgba(255, 152, 0, 0.08) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(84, 110, 122, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 20%,
+      rgba(255, 111, 0, 0.06) 0%,
+      transparent 50%
+    );
+  animation: float 30s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(20px);
+  }
+}
+
+.position-relative {
+  position: relative;
+  z-index: 1;
+}
+
+// Branding Section
+.branding-section {
+  padding: 3rem;
   text-align: center;
+  animation: fadeInLeft 1s ease-out;
+}
+
+.brand-icon-wrapper {
+  display: inline-block;
+  background: rgba(255, 152, 0, 0.15);
+  padding: 2rem;
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(216, 67, 21, 0.3);
+  border: 2px solid rgba(255, 152, 0, 0.3);
+}
+
+.brand-icon {
+  color: #ff9800;
+  filter: drop-shadow(0 4px 12px rgba(216, 67, 21, 0.4));
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.text-shadow {
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8);
+}
+
+.text-white-80 {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: white;
+  font-size: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(216, 67, 21, 0.2);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(216, 67, 21, 0.3);
+    border-color: rgba(255, 152, 0, 0.5);
+    transform: translateX(5px);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Login Card
+.login-card {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-radius: 20px !important;
+  overflow: hidden;
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.4),
+    0 20px 40px -20px rgba(255, 111, 0, 0.15),
+    0 0 0 1px rgba(255, 152, 0, 0.1) inset !important;
+  border: none !important;
+  backdrop-filter: blur(20px);
+  animation: fadeInUp 1s ease-out;
+
+  :deep(.v-card__underlay) {
+    display: none !important;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Modern Header
+.login-header-modern {
+  padding: 2rem 1.5rem 1.5rem;
+  background: linear-gradient(135deg, #37474f 0%, #ff6f00 100%);
   position: relative;
+  text-align: center;
 
   &::after {
     content: "";
@@ -324,86 +613,388 @@ function handleTwoFactorCancel() {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.5) 50%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg, transparent, #ff9800, transparent);
   }
 }
 
-.hardhat-icon-container {
-  display: inline-block;
+.header-content {
   position: relative;
-
-  .hardhat-icon {
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-    animation: float 3s ease-in-out infinite;
-  }
+  z-index: 1;
 }
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.system-subtitle {
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 14px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.icon-circle {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-// Login Button
-.construction-login-btn {
+.header-title {
+  font-size: 1.75rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 12px rgba(216, 67, 21, 0.4);
-  transition: all 0.3s ease;
-
-  &:hover {
-    box-shadow: 0 6px 16px rgba(216, 67, 21, 0.6);
-    transform: translateY(-2px);
-  }
+  color: white;
+  margin-bottom: 0.35rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.5px;
 }
 
-// Footer
-.login-footer {
-  background: linear-gradient(135deg, #fafafa 0%, #eceff1 100%);
+.header-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-weight: 400;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+// Form Section
+.form-section {
+  padding: 2rem 1.5rem 1.75rem;
+}
+
+// Field Wrapper
+.field-wrapper {
+  margin-bottom: 1.25rem;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: #37474f;
-  border-top: 3px solid #d84315;
+  letter-spacing: 0.3px;
 }
 
-// Form fields enhancement
-:deep(.v-text-field),
-:deep(.v-select) {
-  .v-field {
-    border: 2px solid rgba(216, 67, 21, 0.2);
+// Modern Field Styling
+.modern-field {
+  :deep(.v-field) {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
 
     &:hover {
-      border-color: rgba(216, 67, 21, 0.4);
+      border-color: rgba(255, 152, 0, 0.3);
+      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.1);
+      transform: translateY(-1px);
     }
   }
 
-  .v-field--focused {
-    border-color: #d84315;
-    box-shadow: 0 0 0 3px rgba(216, 67, 21, 0.1);
+  :deep(.v-field--focused) {
+    border-color: #ff6f00 !important;
+    box-shadow: 0 4px 16px rgba(255, 111, 0, 0.2) !important;
+  }
+
+  :deep(.v-field__prepend-inner) {
+    padding-right: 8px;
+  }
+
+  :deep(.v-field__input) {
+    padding: 10px 14px;
+    font-size: 0.9rem;
   }
 }
 
+// Role List Item
+.role-list-item {
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 152, 0, 0.08);
+  }
+}
+
+// Remember Section
+.remember-section {
+  margin: 1.25rem 0 1.5rem;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+
+  .remember-text {
+    font-size: 0.875rem;
+    color: #546e7a;
+    font-weight: 500;
+  }
+}
+
+// Sign In Button
+.signin-btn {
+  height: 50px !important;
+  border-radius: 12px !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px;
+  text-transform: none !important;
+  margin-bottom: 1.25rem;
+  width: 150px !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  background: linear-gradient(135deg, #ff6f00 0%, #ff9800 100%) !important;
+  box-shadow: 0 8px 20px rgba(255, 111, 0, 0.3),
+    0 4px 10px rgba(255, 111, 0, 0.2) !important;
+  transition: all 0.3s ease !important;
+
+  &:hover {
+    box-shadow: 0 12px 28px rgba(255, 111, 0, 0.4),
+      0 6px 14px rgba(255, 111, 0, 0.3) !important;
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Security Info
+.security-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(84, 110, 122, 0.06);
+  border-radius: 10px;
+  font-size: 0.75rem;
+  color: #546e7a;
+  font-weight: 500;
+  border: 1px solid rgba(84, 110, 122, 0.1);
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+// Compact Header (old - to be removed)
+.login-header {
+  background: linear-gradient(135deg, #37474f 0%, #ff6f00 50%, #546e7a 100%);
+  position: relative;
+  box-shadow: 0 4px 12px rgba(255, 111, 0, 0.2);
+  border-radius: 24px 24px 0 0;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 5%;
+    right: 5%;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 152, 0, 0.6) 50%,
+      transparent 100%
+    );
+  }
+
+  .v-icon {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+}
+
+.input-group {
+  position: relative;
+}
+
+.input-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #37474f;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modern-input {
+  :deep(.v-field) {
+    border-radius: 14px;
+    background: #ffffff;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid rgba(120, 120, 120, 0.12);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02),
+      0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+
+    &:hover {
+      background: #ffffff;
+      border-color: rgba(255, 152, 0, 0.3);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(255, 255, 255, 1) inset;
+    }
+  }
+
+  :deep(.v-field--focused) {
+    background: #ffffff;
+    box-shadow: 0 6px 20px rgba(255, 111, 0, 0.2),
+      0 3px 8px rgba(255, 111, 0, 0.15), 0 0 0 3px rgba(255, 152, 0, 0.15);
+    transform: translateY(-1px);
+    border-color: rgba(255, 111, 0, 0.5);
+  }
+
+  :deep(.v-field__outline) {
+    display: none;
+  }
+
+  :deep(.v-field__prepend-inner) {
+    .v-icon {
+      color: #546e7a;
+      opacity: 0.6;
+      transition: all 0.3s ease;
+    }
+  }
+
+  :deep(.v-field--focused .v-field__prepend-inner .v-icon) {
+    opacity: 1;
+    transform: scale(1.15);
+    color: #ff6f00;
+  }
+}
+
+// Role Select Item Styling
+.role-item {
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 152, 0, 0.08);
+  }
+}
+
+// Remember Checkbox
+.remember-checkbox {
+  :deep(.v-label) {
+    font-size: 0.875rem;
+    color: #546e7a;
+    font-weight: 500;
+  }
+}
+
+.remember-label {
+  font-size: 0.875rem;
+  color: #546e7a;
+  font-weight: 500;
+}
+
+// Security Badge
+.security-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 152, 0, 0.06),
+    rgba(84, 110, 122, 0.08)
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(255, 152, 0, 0.15);
+  font-size: 0.75rem;
+  color: #546e7a;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(255, 152, 0, 0.06);
+
+  .v-icon {
+    color: #ff9800 !important;
+    filter: drop-shadow(0 1px 2px rgba(255, 152, 0, 0.3));
+  }
+}
+
+// Modern Button with Enhanced Effects
+.modern-btn {
+  border-radius: 14px;
+  height: 56px !important;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  width: 280px !important;
+  display: block !important;
+  margin: 0 auto !important;
+  background: linear-gradient(
+    135deg,
+    #37474f 0%,
+    #ff6f00 50%,
+    #546e7a 100%
+  ) !important;
+  box-shadow: 0 10px 30px rgba(255, 111, 0, 0.3),
+    0 5px 15px rgba(55, 71, 79, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.25),
+      transparent
+    );
+    transition: left 0.6s ease;
+  }
+
+  &:hover {
+    box-shadow: 0 15px 45px rgba(255, 111, 0, 0.4),
+      0 8px 20px rgba(55, 71, 79, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
+    transform: translateY(-2px) translateZ(0);
+
+    &::before {
+      left: 100%;
+    }
+  }
+
+  &:active {
+    transform: translateY(0) translateZ(0);
+  }
+
+  :deep(.v-icon) {
+    transition: transform 0.3s ease;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  }
+
+  &:hover :deep(.v-icon) {
+    transform: scale(1.15);
+  }
+}
+
+// Responsive Utilities
 .fill-height {
   min-height: 100vh;
+}
+
+// Mobile Adjustments
+@media (max-width: 960px) {
+  .login-card {
+    margin: 1rem;
+  }
+
+  .branding-section {
+    display: none;
+  }
+}
+
+// Smooth Transitions
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 </style>
