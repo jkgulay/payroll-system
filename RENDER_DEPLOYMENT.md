@@ -14,6 +14,7 @@ git push
 2. Click **New +** → **Web Service**
 3. Connect your GitHub repo
 4. **Settings:**
+
    - Name: `payroll-backend`
    - Region: Oregon (or closest)
    - Root Directory: `backend`
@@ -22,15 +23,16 @@ git push
    - Start Command: (leave empty - uses Dockerfile CMD)
 
 5. **Environment Variables** (click "Advanced"):
+
    ```
    APP_NAME=Payroll System
    APP_ENV=production
    APP_DEBUG=false
    APP_KEY=<generate with: php artisan key:generate --show>
-   
+
    DB_CONNECTION=pgsql
    DATABASE_URL=<will add after creating database>
-   
+
    SESSION_DRIVER=database
    CACHE_DRIVER=database
    FILESYSTEM_DISK=public
@@ -39,6 +41,7 @@ git push
 6. Click **Create Web Service**
 
 7. **Add PostgreSQL Database:**
+
    - In your service dashboard, click **New +** → **PostgreSQL**
    - Name: `payroll-db`
    - Free plan is fine for testing
@@ -46,10 +49,11 @@ git push
    - Go back to your web service → Environment → Add `DATABASE_URL` with that URL
 
 8. **Run Migrations:**
+
    - In your service → Shell tab
    - Run: `php artisan migrate --force`
 
-9. **Get your backend URL:** 
+9. **Get your backend URL:**
    - Copy it (e.g., `https://payroll-backend.onrender.com`)
 
 ## 3. Frontend (Vue) on Render
@@ -57,15 +61,18 @@ git push
 1. Click **New +** → **Static Site**
 2. Connect your GitHub repo
 3. **Settings:**
+
    - Name: `payroll-frontend`
    - Root Directory: `frontend`
    - Build Command: `npm install && npm run build`
    - Publish Directory: `dist`
 
 4. **Environment Variables:**
+
    ```
    VITE_API_BASE_URL=https://your-backend.onrender.com/api
    ```
+
    (Use the backend URL from step 2.9)
 
 5. Click **Create Static Site**
@@ -73,6 +80,7 @@ git push
 ## 4. Update Backend CORS
 
 After frontend deploys:
+
 1. Go to backend service → Environment
 2. Add:
    ```
@@ -84,6 +92,7 @@ After frontend deploys:
 ## 5. Create Admin User
 
 In backend service Shell:
+
 ```bash
 php artisan tinker
 
