@@ -6,7 +6,7 @@ cmds = ["composer install --no-interaction --ignore-platform-reqs"]
 
 [phases.build]
 cmds = [
-  "composer install --no-dev --optimize-autoloader",
+  "composer install --no-dev --optimize-autoloader --ignore-platform-reqs",
   "php artisan config:clear",
   "php artisan cache:clear"
 ]
