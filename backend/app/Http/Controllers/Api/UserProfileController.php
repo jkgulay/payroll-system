@@ -130,6 +130,10 @@ class UserProfileController extends Controller
 
             // Update password
             $user->password = Hash::make($request->new_password);
+
+            // Clear the must_change_password flag
+            $user->must_change_password = false;
+
             $user->save();
 
             // Log the action
