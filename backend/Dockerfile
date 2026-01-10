@@ -20,10 +20,7 @@ COPY . .
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
-# Cache config
-RUN php artisan config:cache && php artisan route:cache
-
 EXPOSE $PORT
 
-# Start server
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
+# Start server - clear cache first, then migrate and serve
+CMD php artisan config:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
