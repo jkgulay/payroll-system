@@ -109,7 +109,6 @@
               variant="tonal"
               class="mt-4"
             >
-              <v-icon start>mdi-information</v-icon>
               Importing {{ employees.length }} employees. This may take a few
               minutes...
             </v-alert>
