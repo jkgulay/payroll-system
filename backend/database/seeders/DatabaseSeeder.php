@@ -21,11 +21,13 @@ class DatabaseSeeder extends Seeder
             User::create([
                 'username' => 'admin',
                 'email' => 'admin@payroll.com',
-                'password' => Hash::make('admin123'),
+                'password' => Hash::make('Admin123!'),
                 'role' => 'admin',
+                'name' => 'Administrator',
                 'is_active' => true,
             ]);
             $this->command->info('Default admin user created successfully!');
+            $this->command->info('Username: admin | Password: Admin123!');
         }
 
         // Create projects if they don't exist
