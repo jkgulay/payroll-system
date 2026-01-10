@@ -3,6 +3,7 @@
 ## Prerequisites
 
 Install the CLI tools:
+
 ```bash
 npm install -g vercel
 npm install -g @railway/cli

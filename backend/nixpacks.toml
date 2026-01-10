@@ -1,5 +1,15 @@
 [phases.setup]
 nixPkgs = ["php83", "php83Packages.composer"]
 
+[phases.install]
+cmds = ["composer install --no-interaction --ignore-platform-reqs"]
+
+[phases.build]
+cmds = [
+  "composer install --no-dev --optimize-autoloader",
+  "php artisan config:clear",
+  "php artisan cache:clear"
+]
+
 [start]
 cmd = "php artisan serve --host=0.0.0.0 --port=$PORT"
