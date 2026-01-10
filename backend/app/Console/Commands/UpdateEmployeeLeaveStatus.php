@@ -41,7 +41,7 @@ class UpdateEmployeeLeaveStatus extends Command
 
         foreach ($activeLeaves as $leave) {
             $employee = $leave->employee;
-            
+
             if ($employee && $employee->activity_status !== 'on_leave') {
                 $employee->update(['activity_status' => 'on_leave']);
                 $updatedCount++;
@@ -70,7 +70,7 @@ class UpdateEmployeeLeaveStatus extends Command
         }
 
         $this->info("Leave status update completed. {$updatedCount} employees updated.");
-        
+
         return Command::SUCCESS;
     }
 }
