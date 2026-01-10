@@ -33,6 +33,9 @@ export const useAuthStore = defineStore("auth", () => {
   const isAccountant = computed(() =>
     ["admin", "accountant"].includes(userRole.value)
   );
+  const mustChangePassword = computed(
+    () => user.value?.must_change_password || false
+  );
 
   // Actions
   async function login(credentials) {
@@ -156,6 +159,13 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  function updateUserPasswordStatus() {
+    if (user.value) {
+      user.value.must_change_password = false;
+      localStorage.setItem("user", JSON.stringify(user.value));
+    }
+  }
+
   return {
     // State
     user,
@@ -167,10 +177,12 @@ export const useAuthStore = defineStore("auth", () => {
     userRole,
     isAdmin,
     isAccountant,
+    mustChangePassword,
     // Actions
     login,
     logout,
     checkAuth,
     fetchUser,
+    updateUserPasswordStatus,
   };
 });

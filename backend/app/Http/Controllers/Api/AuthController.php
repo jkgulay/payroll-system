@@ -54,13 +54,13 @@ class AuthController extends Controller
     public function login(LoginRequest $request)
     {
         // Validation is handled by LoginRequest
-        
+
         // Check if input is email or username
         $loginField = filter_var($request->email, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
         $user = User::where($loginField, $request->email)
-                    ->where('role', $request->role)
-                    ->first();
+            ->where('role', $request->role)
+            ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -99,6 +99,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'is_active' => $user->is_active,
+                'must_change_password' => $user->must_change_password,
                 'last_login_at' => $user->last_login_at,
                 'avatar' => $user->avatar,
                 'employee_id' => $user->employee_id,

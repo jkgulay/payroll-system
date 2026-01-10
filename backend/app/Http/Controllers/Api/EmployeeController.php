@@ -9,6 +9,8 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Models\AuditLog;
 use App\Helpers\DateHelper;
+use App\Helpers\EmployeeFieldMapper;
+use App\Validators\EmployeeValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -94,71 +96,18 @@ class EmployeeController extends Controller
         $validated = $request->validated();
 
         // Validate role separately (it's for user account, not employee record)
-        $role = $request->validate([
+        $requestedRole = $request->validate([
             'role' => 'nullable|in:admin,accountant,employee',
-        ])['role'] ?? 'employee'; // Default to 'employee' if not provided
+        ])['role'] ?? null;
 
-        // Set defaults for required database fields if not provided
-        $validated['date_of_birth'] = $validated['date_of_birth'] ?? DateHelper::yearsAgo(25);
-        $validated['project_id'] = $validated['project_id'] ?? 1; // Default to first project
-        $validated['contract_type'] = $validated['contract_type'] ?? 'regular';
-        $validated['activity_status'] = $validated['activity_status'] ?? 'active';
+        // Normalize employee data using helper
+        $validated = EmployeeFieldMapper::normalizeEmployeeData($validated);
 
-        // Handle work_schedule (new) or employment_type (legacy)
-        if (isset($validated['work_schedule'])) {
-            // Already set, keep it
-        } elseif (isset($validated['employment_type'])) {
-            // Legacy: map old values to new
-            $validated['work_schedule'] = $validated['employment_type'] === 'part_time' ? 'part_time' : 'full_time';
-            unset($validated['employment_type']);
-        } else {
-            $validated['work_schedule'] = 'full_time'; // Default
-        }
+        // Determine role from position or use requested role
+        $role = $requestedRole ?? EmployeeFieldMapper::determineRoleFromPosition($validated, 'employee');
 
-        $validated['date_hired'] = $validated['date_hired'] ?? DateHelper::today();
-        $validated['basic_salary'] = $validated['basic_salary'] ?? 450; // Minimum wage default
-        $validated['salary_type'] = $validated['salary_type'] ?? 'daily';
-
-        // Normalize gender to lowercase for consistency
-        if (!empty($validated['gender'])) {
-            $validated['gender'] = strtolower($validated['gender']);
-        } else {
-            $validated['gender'] = 'male'; // Default
-        }
-
-        // Map position string to position_id if position is provided but position_id is not
-        if (!empty($validated['position']) && empty($validated['position_id'])) {
-            $positionRate = \App\Models\PositionRate::where('position_name', $validated['position'])->first();
-            if ($positionRate) {
-                $validated['position_id'] = $positionRate->id;
-                // ALWAYS set basic_salary from position rate (this ensures consistency)
-                $validated['basic_salary'] = $positionRate->daily_rate;
-
-                // Auto-assign role: if position is "Accountant", set role to "accountant"
-                if (strtolower($validated['position']) === 'accountant') {
-                    $role = 'accountant';
-                }
-            }
-        }
-
-        // If position_id is provided but basic_salary is not, get rate from PositionRate
-        if (!empty($validated['position_id']) && empty($validated['basic_salary'])) {
-            $positionRate = \App\Models\PositionRate::find($validated['position_id']);
-            if ($positionRate) {
-                $validated['basic_salary'] = $positionRate->daily_rate;
-
-                // Auto-assign role: if position is "Accountant", set role to "accountant"
-                if (strtolower($positionRate->position_name) === 'accountant') {
-                    $role = 'accountant';
-                }
-            }
-        }
-
-        // CRITICAL: Remove position string from validated data BEFORE create
-        // We only save position_id, not position (column doesn't exist in DB)
-        if (isset($validated['position'])) {
-            unset($validated['position']);
-        }
+        // Remove temporary helper data
+        unset($validated['_position_rate']);
 
         DB::beginTransaction();
         try {
@@ -170,31 +119,13 @@ class EmployeeController extends Controller
             // Create employee
             $employee = Employee::create($validated);
 
-            // Generate password: LastName + EmployeeID + 2 random digits
-            $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
-            $autoPassword = $validated['last_name'] . $validated['employee_number'] . '@' . $randomDigits;
-
-            // Generate username: Use email if provided, otherwise firstname.lastname
-            if (!empty($validated['email'])) {
-                $username = $validated['email'];
-                $email = $validated['email'];
-            } else {
-                // Generate username from firstname.lastname
-                $baseUsername = strtolower($validated['first_name'] . '.' . $validated['last_name']);
-                // Remove special characters and spaces
-                $baseUsername = preg_replace('/[^a-z0-9.]/', '', $baseUsername);
-
-                // Ensure username is unique
-                $username = $baseUsername;
-                $counter = 1;
-                while (User::where('username', $username)->exists()) {
-                    $username = $baseUsername . $counter;
-                    $counter++;
-                }
-
-                // Use a placeholder email or null
-                $email = null;
-            }
+            // Generate credentials using helper
+            $username = EmployeeFieldMapper::generateUsername($validated);
+            $autoPassword = EmployeeFieldMapper::generateTemporaryPassword(
+                $validated['last_name'],
+                $validated['employee_number']
+            );
+            $email = $validated['email'] ?? null;
 
             // Always create user account
             $user = User::create([
@@ -238,36 +169,11 @@ class EmployeeController extends Controller
     {
         $validated = $request->validated();
 
-        // Map position string to position_id
-        // This handles both cases: new position provided OR position changed
-        if (!empty($validated['position'])) {
-            $positionRate = \App\Models\PositionRate::where('position_name', $validated['position'])->first();
-            if ($positionRate) {
-                // Update position_id and salary even if position_id was already set
-                $validated['position_id'] = $positionRate->id;
-                // ALWAYS set basic_salary from position rate when position changes
-                $validated['basic_salary'] = $positionRate->daily_rate;
-            }
-        }
+        // Normalize employee data (handles position mapping, gender normalization, etc.)
+        $validated = EmployeeFieldMapper::normalizeEmployeeData($validated);
 
-        // If position_id is provided, always sync basic_salary with position rate
-        if (!empty($validated['position_id'])) {
-            $positionRate = \App\Models\PositionRate::find($validated['position_id']);
-            if ($positionRate) {
-                $validated['basic_salary'] = $positionRate->daily_rate;
-            }
-        }
-
-        // CRITICAL: Remove position string from validated data BEFORE filtering
-        // We only save position_id, not position
-        if (isset($validated['position'])) {
-            unset($validated['position']);
-        }
-
-        // Normalize gender to lowercase for consistency
-        if (isset($validated['gender'])) {
-            $validated['gender'] = strtolower($validated['gender']);
-        }
+        // Remove temporary helper data
+        unset($validated['_position_rate']);
 
         // Track salary changes for audit
         if (isset($validated['basic_salary']) && $validated['basic_salary'] != $employee->basic_salary) {
@@ -382,9 +288,11 @@ class EmployeeController extends Controller
             ]);
         }
 
-        // Generate new temporary password: LastName + EmployeeNumber + @ + 2 random digits
-        $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
-        $newPassword = $employee->last_name . $employee->employee_number . '@' . $randomDigits;
+        // Generate new temporary password using helper
+        $newPassword = EmployeeFieldMapper::generateTemporaryPassword(
+            $employee->last_name,
+            $employee->employee_number
+        );
 
         // Update user password
         $user->password = Hash::make($newPassword);
@@ -420,14 +328,26 @@ class EmployeeController extends Controller
         $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
         $temporaryPassword = $employee->last_name . $employee->employee_number . '@' . $randomDigits;
 
-        // Determine role based on position
-        $role = 'employee'; // Default role
+        // Determine role based on position using helper
+        $data = ['position_id' => $employee->position_id];
         if ($employee->position_id) {
-            $position = \App\Models\PositionRate::find($employee->position_id);
-            if ($position && strtolower($position->position_name) === 'accountant') {
-                $role = 'accountant';
-            }
+            $data['_position_rate'] = \App\Models\PositionRate::find($employee->position_id);
         }
+        $role = EmployeeFieldMapper::determineRoleFromPosition($data, 'employee');
+
+        // Validate employee has required fields
+        EmployeeValidator::validateForUserCreation($employee);
+
+        // Generate credentials using helper
+        $username = EmployeeFieldMapper::generateUsername([
+            'email' => $employee->email,
+            'first_name' => $employee->first_name,
+            'last_name' => $employee->last_name,
+        ]);
+        $temporaryPassword = EmployeeFieldMapper::generateTemporaryPassword(
+            $employee->last_name,
+            $employee->employee_number
+        );
 
         // Create user account
         $user = User::create([
