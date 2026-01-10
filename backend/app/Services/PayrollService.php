@@ -10,6 +10,7 @@ use App\Models\Attendance;
 use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
+use App\Models\EmployeeLeave;
 use App\Models\LoanPayment;
 use App\Models\Holiday;
 use App\Services\Government\SSSComputationService;
@@ -206,6 +207,7 @@ class PayrollService
             + $otherDeductions['tools_deduction']
             + $otherDeductions['uniform_deduction']
             + $otherDeductions['absence_deduction']
+            + $otherDeductions['leave_deduction']
             + $otherDeductions['other_deductions'];
 
         $netPay = $grossPay - $totalDeductions;
@@ -467,6 +469,7 @@ class PayrollService
         $toolsDeduction = 0;
         $uniformDeduction = 0;
         $absenceDeduction = 0;
+        $leaveDeduction = 0;
         $otherDeductions = 0;
 
         foreach ($employee->deductions as $deduction) {
@@ -496,13 +499,76 @@ class PayrollService
             }
         }
 
+        // Calculate leave deductions for approved leaves
+        $leaveDeduction = $this->calculateLeaveDeductions($employee, $payroll);
+
         return [
             'ppe_deduction' => round($ppeDeduction, 2),
             'tools_deduction' => round($toolsDeduction, 2),
             'uniform_deduction' => round($uniformDeduction, 2),
             'absence_deduction' => round($absenceDeduction, 2),
+            'leave_deduction' => round($leaveDeduction, 2),
             'other_deductions' => round($otherDeductions, 2),
         ];
+    }
+
+    /**
+     * Calculate leave deductions for approved leaves
+     * Deducts salary for approved leave days that are unpaid
+     */
+    protected function calculateLeaveDeductions(Employee $employee, Payroll $payroll): float
+    {
+        $totalLeaveDeduction = 0;
+
+        // Get approved leaves that fall within the payroll period
+        $approvedLeaves = $employee->leaves()
+            ->where('status', 'approved')
+            ->where(function ($query) use ($payroll) {
+                $query->whereBetween('leave_date_from', [$payroll->period_start, $payroll->period_end])
+                    ->orWhereBetween('leave_date_to', [$payroll->period_start, $payroll->period_end])
+                    ->orWhere(function ($q) use ($payroll) {
+                        $q->where('leave_date_from', '<=', $payroll->period_start)
+                          ->where('leave_date_to', '>=', $payroll->period_end);
+                    });
+            })
+            ->with('leaveType')
+            ->get();
+
+        if ($approvedLeaves->isEmpty()) {
+            return 0;
+        }
+
+        $dailyRate = $employee->getBasicSalary(); // Gets daily rate for daily employees, or monthly/22 for monthly
+
+        // If employee is on monthly salary, calculate daily rate
+        if ($employee->salary_type === 'monthly') {
+            $workingDaysPerMonth = config('payroll.working_days_per_month', 22);
+            $dailyRate = $employee->getBasicSalary() / $workingDaysPerMonth;
+        }
+
+        foreach ($approvedLeaves as $leave) {
+            // Only deduct if leave type is unpaid
+            if ($leave->leaveType && !$leave->leaveType->is_paid) {
+                // Calculate days within payroll period
+                $leaveStart = max(Carbon::parse($leave->leave_date_from), Carbon::parse($payroll->period_start));
+                $leaveEnd = min(Carbon::parse($leave->leave_date_to), Carbon::parse($payroll->period_end));
+                
+                $daysInPeriod = $leaveStart->diffInDays($leaveEnd) + 1;
+                
+                $totalLeaveDeduction += $dailyRate * $daysInPeriod;
+
+                Log::info("Leave deduction calculated", [
+                    'employee_id' => $employee->id,
+                    'leave_id' => $leave->id,
+                    'leave_type' => $leave->leaveType->name,
+                    'days_in_period' => $daysInPeriod,
+                    'daily_rate' => $dailyRate,
+                    'deduction_amount' => $dailyRate * $daysInPeriod
+                ]);
+            }
+        }
+
+        return $totalLeaveDeduction;
     }
 
     /**
@@ -532,6 +598,7 @@ class PayrollService
             ['type' => 'deduction', 'category' => 'other', 'description' => 'Tools Deduction', 'amount' => $otherDeductions['tools_deduction']],
             ['type' => 'deduction', 'category' => 'other', 'description' => 'Uniform Deduction', 'amount' => $otherDeductions['uniform_deduction']],
             ['type' => 'deduction', 'category' => 'other', 'description' => 'Absence Deduction', 'amount' => $otherDeductions['absence_deduction']],
+            ['type' => 'deduction', 'category' => 'leave', 'description' => 'Leave Without Pay', 'amount' => $otherDeductions['leave_deduction']],
             ['type' => 'deduction', 'category' => 'other', 'description' => 'Other Deductions', 'amount' => $otherDeductions['other_deductions']],
         ];
 

@@ -106,6 +106,11 @@ class Employee extends Model
         return $this->attributes['position'] ?? 'N/A';
     }
 
+    public function getDailyRateAttribute(): float
+    {
+        return $this->getBasicSalary();
+    }
+
     // Relationships
     public function project(): BelongsTo
     {

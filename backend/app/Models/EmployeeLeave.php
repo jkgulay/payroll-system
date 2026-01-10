@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EmployeeLeave extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'employee_id',
         'leave_type_id',
@@ -34,5 +37,10 @@ class EmployeeLeave extends Model
     public function leaveType()
     {
         return $this->belongsTo(LeaveType::class);
+    }
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'approved_by');
     }
 }

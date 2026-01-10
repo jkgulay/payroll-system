@@ -366,9 +366,10 @@ const menuItems = computed(() => {
       children: [
         {
           title: "Allowances",
-          icon: "mdi-cash-plus",
+          icon: "mdi-food",
           value: "allowances",
           to: "/allowances",
+          roles: ["admin", "accountant", "hr"],
         },
         {
           title: "Loans",
@@ -397,6 +398,20 @@ const menuItems = computed(() => {
       value: "resignations",
       to: "/resignations",
       roles: ["admin", "accountant"],
+    },
+    {
+      title: "My Leaves",
+      icon: "mdi-calendar-clock",
+      value: "my-leaves",
+      to: "/my-leaves",
+      roles: ["employee"],
+    },
+    {
+      title: "Leave Approval",
+      icon: "mdi-calendar-check",
+      value: "leave-approval",
+      to: "/leave-approval",
+      roles: ["admin", "hr"],
     },
     {
       title: "My Loans",
