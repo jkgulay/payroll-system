@@ -5,18 +5,19 @@
 Your system is deployment-ready! All configuration files are in place:
 
 - ✅ `frontend/vercel.json` - Vercel configuration
-- ✅ `backend/Procfile` - Railway web process
-- ✅ `backend/railway.json` - Railway deployment config
+- ✅ `nixpacks.toml` - Railway build configuration (root level)
+- ✅ `Procfile` - Railway web process (root level)
 - ✅ `backend/.env.production` - Backend environment template
 - ✅ `frontend/.env.production` - Frontend environment template
 - ✅ `DEPLOYMENT.md` - Complete deployment guide
+- ✅ PHP 8.2+ requirement in `composer.json`
 
 ## 🚀 Quick Deployment Steps
 
 ### 1. Deploy Backend to Railway (Do This First)
 
 1. **Create Railway Account**: https://railway.app/
-2. **Create New Project**: 
+2. **Create New Project**:
    - Click "New Project" → "Deploy from GitHub repo"
    - Select your repository
    - Railway will auto-detect Laravel
@@ -53,6 +54,7 @@ Your system is deployment-ready! All configuration files are in place:
 ### 3. Update CORS in Railway
 
 After getting your Vercel URL:
+
 1. Go to Railway → Your Service → Variables
 2. Update:
    ```
@@ -64,6 +66,7 @@ After getting your Vercel URL:
 ### 4. Create Admin User
 
 Using Railway CLI:
+
 ```bash
 # Install Railway CLI
 npm install -g @railway/cli
@@ -98,10 +101,12 @@ $user->save();
 ## ⚠️ Important Notes
 
 ### Database
+
 - Railway provides PostgreSQL (already configured in your code)
 - Your local database is already PostgreSQL, so no migration needed
 
 ### File Storage
+
 - Railway storage is **ephemeral** (files deleted on redeploy)
 - For production with 1,350 employees, configure AWS S3:
   ```
@@ -113,11 +118,13 @@ $user->save();
   ```
 
 ### Cost Estimate
+
 - **Railway Pro**: $20/month (PostgreSQL included, 8GB RAM)
 - **Vercel Pro**: $20/month (better bandwidth, commercial use)
 - **Total**: ~$40/month
 
 For 1,350 employees, Pro plans are recommended for:
+
 - Better performance
 - Higher bandwidth limits
 - Priority support
@@ -126,18 +133,22 @@ For 1,350 employees, Pro plans are recommended for:
 ## 🆘 Troubleshooting
 
 ### Frontend shows 404 on refresh
+
 - ✅ Fixed by `vercel.json` rewrite rules (already configured)
 
 ### API calls fail (CORS error)
+
 - Check `FRONTEND_URL` in Railway matches Vercel URL exactly
 - Check `SANCTUM_STATEFUL_DOMAINS` includes Vercel domain (no https://)
 
 ### 500 Error on Backend
+
 - Check Railway logs: `railway logs`
 - Verify `APP_KEY` is set
 - Verify database connected: Check `DATABASE_URL` variable exists
 
 ### Migrations not running
+
 - ✅ Auto-configured in `Procfile` (runs on every deploy)
 - Manual run: `railway run php artisan migrate --force`
 
@@ -157,17 +168,21 @@ For detailed instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 ## 🎯 Next Steps After Deployment
 
 1. **Custom Domain** (Optional):
+
    - Railway: Settings → Domains → Add Custom Domain
    - Vercel: Settings → Domains → Add Domain
 
 2. **SSL Certificates**:
+
    - ✅ Automatic on both platforms (included free)
 
 3. **Monitoring**:
+
    - Railway: Built-in metrics in dashboard
    - Vercel: Analytics in dashboard (free tier limited)
 
 4. **Backups**:
+
    - Railway: No auto-backups on Pro plan
    - Manual backup: `railway run pg_dump $DATABASE_URL > backup.sql`
    - Schedule backups with GitHub Actions or cron job
@@ -180,5 +195,6 @@ For detailed instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 ---
 
 **Need help?** Check the full [DEPLOYMENT.md](./DEPLOYMENT.md) or contact support:
+
 - Railway: https://railway.app/help
 - Vercel: https://vercel.com/support
