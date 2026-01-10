@@ -4,7 +4,6 @@ nixPkgs = ["php82", "php82Packages.composer"]
 [phases.install]
 cmds = [
   "cd backend",
-  "rm -f composer.lock",
   "composer install --no-dev --optimize-autoloader --no-interaction"
 ]
 
