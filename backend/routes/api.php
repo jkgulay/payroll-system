@@ -116,6 +116,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Employee Benefits
     Route::apiResource('allowances', App\Http\Controllers\Api\AllowanceController::class);
 
+    // Meal Allowance Management - specific routes MUST come before apiResource
+    Route::get('/meal-allowances/positions', [App\Http\Controllers\Api\MealAllowanceController::class, 'getPositions']);
+    Route::post('/meal-allowances/employees-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'getEmployeesByPosition']);
+    Route::post('/meal-allowances/{mealAllowance}/submit', [App\Http\Controllers\Api\MealAllowanceController::class, 'submit']);
+    Route::post('/meal-allowances/{mealAllowance}/approval', [App\Http\Controllers\Api\MealAllowanceController::class, 'updateApproval']);
+    Route::post('/meal-allowances/{mealAllowance}/generate-pdf', [App\Http\Controllers\Api\MealAllowanceController::class, 'generatePdf']);
+    Route::get('/meal-allowances/{mealAllowance}/download-pdf', [App\Http\Controllers\Api\MealAllowanceController::class, 'downloadPdf']);
+    Route::apiResource('meal-allowances', App\Http\Controllers\Api\MealAllowanceController::class);
+
     // Loans - specific routes MUST come before apiResource
     Route::get('/loans/pending', [App\Http\Controllers\Api\LoanController::class, 'index'])->middleware('role:admin');
     Route::post('/loans/{loan}/approve', [App\Http\Controllers\Api\LoanController::class, 'approve'])->middleware('role:admin');

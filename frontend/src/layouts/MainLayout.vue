@@ -366,9 +366,10 @@ const menuItems = computed(() => {
       children: [
         {
           title: "Allowances",
-          icon: "mdi-cash-plus",
+          icon: "mdi-food",
           value: "allowances",
           to: "/allowances",
+          roles: ["admin", "accountant", "hr"],
         },
         {
           title: "Loans",

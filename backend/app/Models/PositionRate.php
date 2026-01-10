@@ -13,6 +13,7 @@ class PositionRate extends Model
 
     protected $fillable = [
         'position_name',
+        'code',
         'daily_rate',
         'category',
         'description',

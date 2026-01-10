@@ -194,9 +194,9 @@ const router = createRouter({
           name: "allowances",
           component: () =>
             import(
-              /* webpackChunkName: "benefits" */ "@/views/benefits/AllowancesView.vue"
+              /* webpackChunkName: "benefits" */ "@/views/benefits/MealAllowanceView.vue"
             ),
-          meta: { title: "Allowances" },
+          meta: { title: "Allowances", roles: ["admin", "accountant", "hr"] },
         },
         {
           path: "loans",

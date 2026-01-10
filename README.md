@@ -108,7 +108,7 @@ npm run dev
 
 ### Default Credentials
 
-- **Admin**: `admin@payroll.com` / `admin123`
+- **Admin**: `admin` / `Admin123!`
 - **Accountant**: `accountant@payroll.com` / `accountant123`
 - **Employee**: `employee@payroll.com` / `employee123`
 
