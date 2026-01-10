@@ -1,5 +1,0 @@
-[phases.setup]
-nixPkgs = ["php82"]
-
-[phases.build]
-cmds = ["composer install --no-dev --optimize-autoloader --ignore-platform-reqs && php artisan config:clear && php artisan cache:clear"]
