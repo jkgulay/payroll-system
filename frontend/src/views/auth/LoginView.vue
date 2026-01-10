@@ -103,7 +103,7 @@
                       flat
                       color="#ff6f00"
                       bg-color="#f8f9fa"
-                      :rules="[rules.required]"
+                      :rules="[rules.required, rules.minLength(8)]"
                       :error-messages="errors.password"
                       @input="errors.password = ''"
                       density="comfortable"
@@ -292,6 +292,8 @@ const roles = [
 
 const rules = {
   required: (value) => !!value || "This field is required",
+  minLength: (min) => (value) =>
+    (value && value.length >= min) || `Must be at least ${min} characters`,
 };
 
 async function handleLogin() {
