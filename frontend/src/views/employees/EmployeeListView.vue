@@ -165,29 +165,16 @@
             </v-chip>
           </template>
 
-          <template v-slot:item.is_active="{ item }">
-            <v-chip size="small" :color="item.is_active ? 'success' : 'error'">
-              {{ item.is_active ? "Active" : "Inactive" }}
+          <template v-slot:item.activity_status="{ item }">
+            <v-chip
+              size="small"
+              :color="getActivityStatusColor(item.activity_status)"
+            >
+              {{ formatActivityStatus(item.activity_status) }}
             </v-chip>
           </template>
 
           <template v-slot:item.actions="{ item }">
-            <v-btn
-              icon="mdi-eye"
-              size="small"
-              variant="text"
-              color="info"
-              @click="viewEmployee(item)"
-              title="View Details"
-            ></v-btn>
-            <v-btn
-              icon="mdi-pencil"
-              size="small"
-              variant="text"
-              color="primary"
-              @click="editEmployee(item)"
-              title="Edit Employee"
-            ></v-btn>
             <v-menu>
               <template v-slot:activator="{ props }">
                 <v-btn
@@ -195,10 +182,22 @@
                   size="small"
                   variant="text"
                   v-bind="props"
-                  title="More Actions"
+                  title="Actions"
                 ></v-btn>
               </template>
               <v-list>
+                <v-list-item @click="viewEmployee(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="info">mdi-eye</v-icon>
+                  </template>
+                  <v-list-item-title>View Details</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="editEmployee(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="primary">mdi-pencil</v-icon>
+                  </template>
+                  <v-list-item-title>Edit Employee</v-list-item-title>
+                </v-list-item>
                 <v-list-item @click="viewCredentials(item)">
                   <template v-slot:prepend>
                     <v-icon color="info">mdi-account-key</v-icon>
@@ -916,7 +915,7 @@ const headers = [
   { title: "Project", key: "project", sortable: false },
   { title: "Position", key: "position", sortable: true },
   { title: "Schedule", key: "work_schedule", sortable: true },
-  { title: "Status", key: "is_active", sortable: true },
+  { title: "Activity Status", key: "activity_status", sortable: true },
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
@@ -1147,6 +1146,25 @@ function closeDialog() {
 
 function getWorkScheduleColor(schedule) {
   return schedule === "full_time" ? "primary" : "info";
+}
+
+function getActivityStatusColor(status) {
+  const colors = {
+    active: "success",
+    on_leave: "warning",
+    resigned: "grey",
+    terminated: "error",
+    retired: "grey"
+  };
+  return colors[status] || "grey";
+}
+
+function formatActivityStatus(status) {
+  if (!status) return "N/A";
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 // Add Employee Dialog functions

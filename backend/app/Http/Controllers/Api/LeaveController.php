@@ -15,6 +15,30 @@ use Carbon\Carbon;
 
 class LeaveController extends Controller
 {
+    /**
+     * Update employee activity status based on current leaves
+     */
+    private function syncEmployeeLeaveStatus($employeeId)
+    {
+        $employee = Employee::find($employeeId);
+        if (!$employee) return;
+
+        $today = Carbon::today();
+        
+        // Check if employee has any active approved leaves today
+        $hasActiveLeave = EmployeeLeave::where('employee_id', $employeeId)
+            ->where('status', 'approved')
+            ->whereDate('leave_date_from', '<=', $today)
+            ->whereDate('leave_date_to', '>=', $today)
+            ->exists();
+
+        // Update status immediately
+        if ($hasActiveLeave && $employee->activity_status !== 'on_leave') {
+            $employee->update(['activity_status' => 'on_leave']);
+        } elseif (!$hasActiveLeave && $employee->activity_status === 'on_leave') {
+            $employee->update(['activity_status' => 'active']);
+        }
+    }
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -229,6 +253,8 @@ class LeaveController extends Controller
         DB::beginTransaction();
 
         try {
+            $employeeId = $leave->employee_id;
+            
             // Create audit log before deletion
             AuditLog::create([
                 'module' => 'leaves',
@@ -242,6 +268,9 @@ class LeaveController extends Controller
             ]);
 
             $leave->delete();
+
+            // Instantly sync employee activity status (may return to active if no other leaves)
+            $this->syncEmployeeLeaveStatus($employeeId);
 
             DB::commit();
 
@@ -286,6 +315,9 @@ class LeaveController extends Controller
                 'approved_at' => now(),
                 'rejection_reason' => $request->remarks,
             ]);
+
+            // Instantly sync employee activity status
+            $this->syncEmployeeLeaveStatus($leave->employee_id);
 
             // Create audit log
             AuditLog::create([
@@ -346,6 +378,9 @@ class LeaveController extends Controller
                 'approved_at' => now(),
                 'rejection_reason' => $request->rejection_reason,
             ]);
+
+            // Instantly sync employee activity status (may return to active if no other leaves)
+            $this->syncEmployeeLeaveStatus($leave->employee_id);
 
             // Create audit log
             AuditLog::create([

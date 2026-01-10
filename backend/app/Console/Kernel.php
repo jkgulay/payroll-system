@@ -12,7 +12,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Backup cleanup: sync employee leave status (primary updates happen instantly on approval/rejection)
+        $schedule->command('employees:update-leave-status')
+            ->daily()
+            ->at('00:01');
     }
 
     /**
