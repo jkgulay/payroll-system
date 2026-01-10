@@ -12,14 +12,23 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('employees', function (Blueprint $table) {
-            // Drop old foreign key and column
-            $table->dropForeign(['department_id']);
-            $table->dropForeign(['location_id']);
-            $table->dropColumn(['department_id', 'location_id']);
+            // Drop old foreign key and column if they exist
+            if (Schema::hasColumn('employees', 'department_id')) {
+                $table->dropForeign(['department_id']);
+                $table->dropColumn('department_id');
+            }
+            if (Schema::hasColumn('employees', 'location_id')) {
+                $table->dropForeign(['location_id']);
+                $table->dropColumn('location_id');
+            }
 
-            // Add new columns
-            $table->foreignId('project_id')->after('emergency_contact_number')->constrained('projects');
-            $table->text('worker_address')->nullable()->after('project_id');
+            // Add new columns if they don't exist
+            if (!Schema::hasColumn('employees', 'project_id')) {
+                $table->foreignId('project_id')->after('emergency_contact_number')->constrained('projects');
+            }
+            if (!Schema::hasColumn('employees', 'worker_address')) {
+                $table->text('worker_address')->nullable()->after('project_id');
+            }
         });
     }
 

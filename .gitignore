@@ -3,8 +3,7 @@
 /backend/node_modules/
 /backend/.env
 /backend/.env.backup
-# Note: .env.production is a template and should be tracked
-# /backend/.env.production
+/backend/.env.production
 /backend/storage/*.key
 /backend/storage/app/*
 !/backend/storage/app/.gitkeep

@@ -157,6 +157,14 @@ export default defineConfig({
     // Source maps only for errors
     sourcemap: false,
   },
+  // CSS preprocessor options
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler', // Use modern Sass API
+      },
+    },
+  },
   // Optimize dependencies
   optimizeDeps: {
     include: [
