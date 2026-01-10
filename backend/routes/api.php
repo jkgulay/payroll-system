@@ -198,6 +198,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Leave Management
     Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class);
+    Route::get('/leaves/my-leaves', [App\Http\Controllers\Api\LeaveController::class, 'myLeaves']);
+    Route::get('/leaves/my-credits', [App\Http\Controllers\Api\LeaveController::class, 'myCredits']);
+    Route::get('/leaves/pending', [App\Http\Controllers\Api\LeaveController::class, 'pendingLeaves']);
     Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class);
     Route::post('/leaves/{leave}/approve', [App\Http\Controllers\Api\LeaveController::class, 'approve']);
     Route::post('/leaves/{leave}/reject', [App\Http\Controllers\Api\LeaveController::class, 'reject']);

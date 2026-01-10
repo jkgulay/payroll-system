@@ -106,6 +106,24 @@ const router = createRouter({
           meta: { title: "My Resignation", roles: ["employee"] },
         },
         {
+          path: "my-leaves",
+          name: "my-leaves",
+          component: () =>
+            import(
+              /* webpackChunkName: "employee" */ "@/views/employee/LeaveRequestView.vue"
+            ),
+          meta: { title: "My Leaves", roles: ["employee"] },
+        },
+        {
+          path: "leave-approval",
+          name: "leave-approval",
+          component: () =>
+            import(
+              /* webpackChunkName: "hr" */ "@/views/hr/LeaveApprovalView.vue"
+            ),
+          meta: { title: "Leave Approval", roles: ["admin", "accountant"] },
+        },
+        {
           path: "projects",
           name: "projects",
           component: () =>

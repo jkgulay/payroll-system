@@ -400,6 +400,20 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
+      title: "My Leaves",
+      icon: "mdi-calendar-clock",
+      value: "my-leaves",
+      to: "/my-leaves",
+      roles: ["employee"],
+    },
+    {
+      title: "Leave Approval",
+      icon: "mdi-calendar-check",
+      value: "leave-approval",
+      to: "/leave-approval",
+      roles: ["admin", "hr"],
+    },
+    {
       title: "My Loans",
       icon: "mdi-hand-coin-outline",
       value: "my-loans",
