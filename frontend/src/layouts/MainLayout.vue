@@ -176,39 +176,59 @@
     </v-main>
 
     <!-- Logout Confirmation Dialog -->
-    <v-dialog v-model="logoutDialog" max-width="450" persistent>
-      <v-card>
-        <v-card-title class="d-flex align-center bg-error pa-4">
-          <v-icon icon="mdi-logout" size="28" class="mr-3"></v-icon>
-          <span class="text-h6">Confirm Logout</span>
-        </v-card-title>
-
-        <v-card-text class="pa-6">
-          <div class="text-body-1">
-            Are you sure you want to logout from the Construction Payroll
-            System?
+    <v-dialog v-model="logoutDialog" max-width="480" persistent>
+      <v-card class="logout-dialog-card" elevation="24">
+        <!-- Modern Header with Gradient -->
+        <div class="logout-dialog-header">
+          <div class="logout-icon-circle">
+            <v-icon icon="mdi-logout-variant" size="40" color="white"></v-icon>
           </div>
-          <div class="text-body-2 text-medium-emphasis mt-2">
-            Any unsaved changes will be lost.
+          <h2 class="logout-dialog-title">Confirm Logout</h2>
+          <p class="logout-dialog-subtitle">End your current session</p>
+        </div>
+
+        <!-- Content Section -->
+        <v-card-text class="logout-dialog-content pa-8">
+          <!-- Warning Banner -->
+          <div class="logout-warning-banner">
+            <v-icon icon="mdi-alert-circle-outline" size="24" color="#ff6f00"></v-icon>
+            <div class="ml-3">
+              <div class="logout-message-title">
+                Are you sure you want to logout?
+              </div>
+              <div class="logout-message-subtitle">
+                You will be signed out from the Construction Payroll System
+              </div>
+            </div>
+          </div>
+
+          <!-- Info Note -->
+          <div class="logout-info-note">
+            <v-icon icon="mdi-information-outline" size="18"></v-icon>
+            <span>Any unsaved changes will be lost</span>
           </div>
         </v-card-text>
 
-        <v-card-actions class="pa-4">
-          <v-spacer></v-spacer>
+        <!-- Action Buttons -->
+        <v-card-actions class="logout-dialog-actions pa-6 pt-0">
           <v-btn
-            variant="text"
+            variant="outlined"
+            size="large"
             @click="logoutDialog = false"
             :disabled="loggingOut"
+            class="logout-cancel-btn flex-grow-1"
           >
+            <v-icon start>mdi-close</v-icon>
             Cancel
           </v-btn>
           <v-btn
-            color="error"
-            variant="elevated"
+            size="large"
             @click="confirmLogout"
             :loading="loggingOut"
-            prepend-icon="mdi-logout"
+            class="logout-confirm-btn flex-grow-1"
+            elevation="8"
           >
+            <v-icon start>mdi-logout</v-icon>
             Logout
           </v-btn>
         </v-card-actions>
@@ -761,4 +781,173 @@ async function downloadCurrentPayslip() {
   opacity: 0;
   transform: translateY(-10px);
 }
-</style>
+
+// ========================================
+// LOGOUT DIALOG STYLES (matching login theme)
+// ========================================
+
+.logout-dialog-card {
+  border-radius: 20px !important;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.4),
+    0 20px 40px -20px rgba(255, 111, 0, 0.15),
+    0 0 0 1px rgba(255, 152, 0, 0.1) inset !important;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  animation: dialogFadeIn 0.3s ease-out;
+}
+
+@keyframes dialogFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.logout-dialog-header {
+  padding: 2.5rem 2rem 2rem;
+  background: linear-gradient(135deg, #37474f 0%, #ff6f00 100%);
+  position: relative;
+  text-align: center;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #ff9800, transparent);
+  }
+}
+
+.logout-icon-circle {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.25rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  animation: pulseIcon 2s ease-in-out infinite;
+}
+
+@keyframes pulseIcon {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.logout-dialog-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 0.5rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.5px;
+}
+
+.logout-dialog-subtitle {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-weight: 400;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.logout-dialog-content {
+  background: #ffffff;
+}
+
+.logout-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  padding: 1.5rem;
+  background: rgba(255, 111, 0, 0.08);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 111, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(255, 111, 0, 0.08);
+  margin-bottom: 1rem;
+}
+
+.logout-message-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #37474f;
+  margin-bottom: 0.25rem;
+}
+
+.logout-message-subtitle {
+  font-size: 0.875rem;
+  color: #546e7a;
+  line-height: 1.5;
+}
+
+.logout-info-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: rgba(84, 110, 122, 0.06);
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  color: #546e7a;
+  font-weight: 500;
+  border: 1px solid rgba(84, 110, 122, 0.1);
+}
+
+.logout-dialog-actions {
+  display: flex;
+  gap: 1rem;
+  background: #fafafa;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.logout-cancel-btn {
+  height: 48px !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  border: 2px solid rgba(84, 110, 122, 0.3) !important;
+  color: #546e7a !important;
+  transition: all 0.3s ease !important;
+
+  &:hover {
+    border-color: #546e7a !important;
+    background: rgba(84, 110, 122, 0.08) !important;
+    transform: translateY(-2px);
+  }
+}
+
+.logout-confirm-btn {
+  height: 48px !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  background: linear-gradient(135deg, #ff6f00 0%, #ff9800 100%) !important;
+  color: white !important;
+  box-shadow: 0 8px 20px rgba(255, 111, 0, 0.3),
+    0 4px 10px rgba(255, 111, 0, 0.2) !important;
+  transition: all 0.3s ease !important;
+
+  &:hover {
+    box-shadow: 0 12px 28px rgba(255, 111, 0, 0.4),
+      0 6px 14px rgba(255, 111, 0, 0.3) !important;
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}</style>

@@ -1,6 +1,8 @@
 <template>
   <v-app>
     <router-view />
+    <!-- AI ChatBot Component -->
+    <ChatBot v-if="authStore.isAuthenticated" />
   </v-app>
 </template>
 
@@ -8,6 +10,7 @@
 import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
+import ChatBot from "@/components/ChatBot.vue";
 
 const authStore = useAuthStore();
 const syncStore = useSyncStore();

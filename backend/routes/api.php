@@ -29,6 +29,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/employee/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'employeeDashboard']);
     Route::get('/accountant/dashboard/stats', [App\Http\Controllers\Api\AccountantController::class, 'getDashboardStats']);
 
+    // AI Chat Routes
+    Route::post('/chat', [App\Http\Controllers\Api\ChatController::class, 'chat']);
+    Route::get('/chat/suggestions', [App\Http\Controllers\Api\ChatController::class, 'getSuggestedQuestions']);
+    Route::post('/chat/clear', [App\Http\Controllers\Api\ChatController::class, 'clearHistory']);
+
     // User profile
     Route::get('/user', function (Request $request) {
         return $request->user();
