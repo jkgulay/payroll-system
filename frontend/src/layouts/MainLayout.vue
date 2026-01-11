@@ -3,8 +3,9 @@
     <!-- Construction-themed Navigation Drawer -->
     <v-navigation-drawer
       v-model="drawer"
-      :rail="rail"
-      permanent
+      :rail="rail && !isMobile"
+      :temporary="isMobile"
+      :permanent="!isMobile"
       @click="rail = false"
       class="construction-drawer"
       color="steel"
@@ -95,19 +96,27 @@
 
     <!-- Construction-themed App Bar -->
     <v-app-bar elevation="4" class="construction-appbar" color="surface" app>
+      <!-- Hamburger Menu Button (Mobile Only) -->
+      <v-app-bar-nav-icon
+        v-if="isMobile"
+        @click="drawer = !drawer"
+        color="hardhat"
+      ></v-app-bar-nav-icon>
+
       <!-- Construction-themed Title with Icon -->
       <div class="d-flex align-center">
         <v-icon
+          v-if="!isMobile"
           icon="mdi-hard-hat"
           color="hardhat"
           size="32"
           class="mr-3 rotating-hardhat"
         ></v-icon>
         <div>
-          <v-app-bar-title class="construction-header text-h6">
-            {{ pageTitle }}
+          <v-app-bar-title :class="isMobile ? 'text-subtitle-1' : 'construction-header text-h6'">
+            {{ isMobile ? (pageTitle.length > 20 ? pageTitle.substring(0, 20) + '...' : pageTitle) : pageTitle }}
           </v-app-bar-title>
-          <div class="text-caption text-medium-emphasis">
+          <div v-if="!isMobile" class="text-caption text-medium-emphasis">
             Construction Payroll System
           </div>
         </div>
@@ -115,9 +124,9 @@
 
       <v-spacer></v-spacer>
 
-      <!-- Sync status indicator with construction theme -->
+      <!-- Sync status indicator with construction theme (Hidden on mobile) -->
       <v-chip
-        v-if="syncStore.pendingChanges > 0"
+        v-if="syncStore.pendingChanges > 0 && !isMobile"
         color="info"
         size="small"
         class="mr-2 construction-chip"
@@ -134,11 +143,11 @@
         class="construction-chip mr-2"
         :prepend-icon="syncStore.isOnline ? 'mdi-wifi' : 'mdi-wifi-off'"
       >
-        {{ syncStore.isOnline ? "Online" : "Offline" }}
+        <span v-if="!isMobile">{{ syncStore.isOnline ? "Online" : "Offline" }}</span>
       </v-chip>
 
       <!-- Notification Bell -->
-      <v-btn icon="mdi-bell-outline" variant="text" color="steel"></v-btn>
+      <v-btn icon="mdi-bell-outline" variant="text" color="steel" :size="isMobile ? 'small' : 'default'"></v-btn>
     </v-app-bar>
 
     <!-- Main Content Area -->
@@ -238,11 +247,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { useToast } from "vue-toastification";
+import { useDisplay } from "vuetify";
 import api from "@/services/api";
 
 const router = useRouter();
@@ -250,11 +260,21 @@ const route = useRoute();
 const authStore = useAuthStore();
 const syncStore = useSyncStore();
 const toast = useToast();
+const { mobile, mdAndDown } = useDisplay();
 
 const drawer = ref(true);
 const rail = ref(false);
 const logoutDialog = ref(false);
 const loggingOut = ref(false);
+const isMobile = computed(() => mdAndDown.value);
+
+// Handle initial drawer state for mobile
+onMounted(() => {
+  if (isMobile.value) {
+    drawer.value = false;
+    rail.value = false;
+  }
+});
 
 const userName = computed(
   () => authStore.user?.name || authStore.user?.username || "User"

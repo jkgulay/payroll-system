@@ -752,16 +752,147 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .chat-window {
-    width: calc(100vw - 32px);
-    height: calc(100vh - 32px);
-    max-width: 100%;
-    max-height: 100%;
+  .chat-container {
+    bottom: 8px;
+    right: 8px;
+    
+    &.chat-expanded {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      top: 0;
+      left: 0;
+      z-index: 9999;
+    }
   }
+  
+  .chat-toggle-btn {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .chat-window {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    bottom: 0;
+    right: 0;
+    border-radius: 0;
+  }
+  
+  .chat-header {
+    padding: 12px 16px;
+    
+    h3 {
+      font-size: 1.1rem;
+    }
+  }
+  
+  .chat-messages {
+    height: calc(100vh - 200px);
+    padding: 12px;
+    
+    .message {
+      .message-content {
+        max-width: 85%;
+      }
+    }
+  }
+  
+  .suggestions-panel {
+    max-height: 50vh;
+    
+    .suggestions-tabs {
+      button {
+        font-size: 0.75rem;
+        padding: 6px 8px;
+      }
+    }
+  }
+  
+  .chat-input {
+    padding: 12px;
+    
+    textarea {
+      font-size: 16px; // Prevent zoom on iOS
+      padding: 10px 14px;
+    }
+    
+    button[type="submit"] {
+      width: 40px;
+      height: 40px;
+    }
+  }
+  
+  .welcome-message {
+    padding: 16px;
+    
+    .v-icon {
+      font-size: 48px !important;
+    }
+    
+    h4 {
+      font-size: 1.1rem;
+    }
+    
+    p, li {
+      font-size: 0.85rem;
+    }
+  }
+}
 
+// Tablet (600px - 960px)
+@media (min-width: 601px) and (max-width: 960px) {
+  .chat-window {
+    width: 420px;
+    height: 600px;
+  }
+  
   .chat-container {
     bottom: 16px;
     right: 16px;
+  }
+}
+
+// Small mobile (max-width: 360px)
+@media (max-width: 360px) {
+  .chat-toggle-btn {
+    width: 48px;
+    height: 48px;
+    
+    .v-icon {
+      font-size: 24px !important;
+    }
+  }
+  
+  .chat-messages {
+    .message {
+      .message-avatar {
+        width: 28px;
+        height: 28px;
+        
+        .v-icon {
+          font-size: 18px !important;
+        }
+      }
+      
+      .message-content {
+        max-width: 90%;
+        font-size: 0.85rem;
+      }
+    }
+  }
+}
+
+// Landscape mobile
+@media (max-width: 960px) and (orientation: landscape) {
+  .chat-window {
+    height: 100vh;
+  }
+  
+  .chat-messages {
+    height: calc(100vh - 160px);
   }
 }
 </style>

@@ -307,7 +307,11 @@ html {
   }
 }
 
-// Responsive improvements
+// ========================================
+// RESPONSIVE DESIGN - Mobile, Tablet, Desktop
+// ========================================
+
+// Tablet and Small Desktop (max-width: 960px)
 @media (max-width: 960px) {
   // Stack stat cards on mobile
   .stat-card {
@@ -322,6 +326,10 @@ html {
   // Make tables scroll horizontally
   .v-data-table {
     overflow-x: auto;
+    
+    :deep(table) {
+      min-width: 800px;
+    }
   }
   
   // Adjust header sizes
@@ -332,36 +340,264 @@ html {
   .construction-header.text-h4 {
     font-size: 1.5rem !important;
   }
+  
+  // Dashboard header responsive
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+    
+    .d-flex {
+      width: 100%;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+  }
+  
+  // Hide rail mode on tablet
+  .v-navigation-drawer {
+    &.v-navigation-drawer--rail {
+      width: 256px !important;
+    }
+  }
+  
+  // Card adjustments
+  .modern-card {
+    margin-bottom: 16px;
+    
+    .v-card-title {
+      font-size: 0.95rem !important;
+    }
+  }
+  
+  // Form layouts
+  .v-row {
+    .v-col {
+      &[class*="md-"] {
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+  }
 }
 
+// Mobile Phones (max-width: 600px)
 @media (max-width: 600px) {
   // Further reduce padding on small mobile
   .main-container {
-    padding: 12px !important;
+    padding: 8px !important;
+  }
+  
+  // Full width columns on mobile
+  .v-row {
+    .v-col {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 4px !important;
+    }
   }
   
   // Stack buttons vertically
   .v-btn-group {
     flex-direction: column;
+    width: 100%;
     
     .v-btn {
       width: 100%;
       margin-bottom: 8px;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+  }
+  
+  // Card actions stack vertically
+  .v-card-actions {
+    flex-direction: column;
+    
+    .v-btn {
+      width: 100%;
+      margin: 4px 0 !important;
     }
   }
   
   // Reduce card padding
-  .industrial-card .v-card-text {
+  .industrial-card .v-card-text,
+  .modern-card .v-card-text {
     padding: 12px !important;
   }
   
-  // Make dialogs full screen
+  // Make dialogs full screen on mobile
   .v-dialog {
     :deep(.v-overlay__content) {
-      max-width: 100% !important;
-      margin: 0 !important;
-      border-radius: 0 !important;
+      max-width: calc(100% - 16px) !important;
+      margin: 8px !important;
+      max-height: calc(100% - 16px) !important;
+      
+      .v-card {
+        max-height: calc(100vh - 16px) !important;
+        overflow-y: auto;
+      }
     }
+  }
+  
+  // Smaller text sizes
+  h1, .text-h4 {
+    font-size: 1.5rem !important;
+  }
+  
+  h2, .text-h5 {
+    font-size: 1.25rem !important;
+  }
+  
+  h3, .text-h6 {
+    font-size: 1.1rem !important;
+  }
+  
+  // Breadcrumbs hide on mobile
+  .v-breadcrumbs {
+    display: none;
+  }
+  
+  // Chips smaller on mobile
+  .v-chip {
+    font-size: 0.7rem !important;
+    height: 24px !important;
+    padding: 0 8px !important;
+  }
+  
+  // Data tables full scroll
+  .v-data-table {
+    :deep(table) {
+      min-width: 600px;
+    }
+    
+    :deep(th), :deep(td) {
+      padding: 8px 4px !important;
+      font-size: 0.8rem !important;
+    }
+  }
+  
+  // Bottom navigation for mobile (if implemented)
+  .v-bottom-navigation {
+    .v-btn {
+      min-width: 60px !important;
+      font-size: 0.7rem !important;
+    }
+  }
+  
+  // Smaller icons in app bar
+  .v-app-bar {
+    .v-icon {
+      font-size: 20px !important;
+    }
+    
+    .v-app-bar-title {
+      font-size: 0.95rem !important;
+    }
+  }
+  
+  // Form inputs full width
+  .v-text-field,
+  .v-select,
+  .v-textarea,
+  .v-autocomplete {
+    margin-bottom: 12px;
+  }
+  
+  // Stat cards full width
+  .stat-card {
+    .text-h4 {
+      font-size: 1.5rem !important;
+    }
+  }
+  
+  // Logout dialog responsive
+  .logout-dialog-card {
+    .logout-dialog-header {
+      padding: 1.5rem 1rem 1rem;
+    }
+    
+    .logout-icon-circle {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 1rem;
+    }
+    
+    .logout-dialog-title {
+      font-size: 1.25rem;
+    }
+    
+    .logout-dialog-content {
+      padding: 16px !important;
+    }
+    
+    .logout-dialog-actions {
+      flex-direction: column;
+      padding: 16px !important;
+      gap: 8px;
+      
+      .v-btn {
+        width: 100%;
+        margin: 0 !important;
+      }
+    }
+  }
+}
+
+// Extra Small Mobile Phones (max-width: 360px)
+@media (max-width: 360px) {
+  .main-container {
+    padding: 4px !important;
+  }
+  
+  .v-card {
+    border-radius: 8px !important;
+  }
+  
+  .v-btn {
+    font-size: 0.8rem !important;
+    padding: 0 12px !important;
+  }
+  
+  h1, .text-h4 {
+    font-size: 1.25rem !important;
+  }
+}
+
+// Landscape mode for tablets
+@media (min-width: 601px) and (max-width: 960px) and (orientation: landscape) {
+  .main-container {
+    padding: 16px 24px !important;
+  }
+  
+  .v-row {
+    .v-col {
+      &.md-6 {
+        width: 50% !important;
+      }
+    }
+  }
+}
+
+// Touch device optimizations
+@media (hover: none) and (pointer: coarse) {
+  // Larger touch targets
+  .v-btn,
+  .v-list-item,
+  .v-chip {
+    min-height: 44px;
+  }
+  
+  // Remove hover effects on touch devices
+  .v-btn:hover,
+  .v-list-item:hover,
+  .v-card:hover {
+    transform: none !important;
+  }
+  
+  // Better tap highlighting
+  * {
+    -webkit-tap-highlight-color: rgba(255, 111, 0, 0.1);
   }
 }
 
