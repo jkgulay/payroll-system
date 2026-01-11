@@ -6,23 +6,29 @@
       :rail="rail && !isMobile"
       :temporary="isMobile"
       :permanent="!isMobile"
-      @click="rail = false"
       class="construction-drawer"
       color="steel"
       elevation="4"
+      :width="256"
+      :rail-width="72"
       app
     >
       <!-- User Profile Section -->
       <v-list-item nav class="user-profile-item pa-3">
         <template v-slot:prepend>
-          <v-avatar size="40" color="primary">
-            <v-img v-if="userAvatar" :src="userAvatar" cover></v-img>
-            <v-icon v-else color="white">mdi-account</v-icon>
-          </v-avatar>
+          <v-tooltip location="right" :disabled="!rail || isMobile">
+            <template v-slot:activator="{ props }">
+              <v-avatar v-bind="props" size="40" color="primary">
+                <v-img v-if="userAvatar" :src="userAvatar" cover></v-img>
+                <v-icon v-else color="white">mdi-account</v-icon>
+              </v-avatar>
+            </template>
+            <span>{{ userName }} - {{ userRole }}</span>
+          </v-tooltip>
         </template>
-        <v-list-item-title>{{ userName }}</v-list-item-title>
-        <v-list-item-subtitle>{{ userRole }}</v-list-item-subtitle>
-        <template v-slot:append>
+        <v-list-item-title v-if="!rail">{{ userName }}</v-list-item-title>
+        <v-list-item-subtitle v-if="!rail">{{ userRole }}</v-list-item-subtitle>
+        <template v-slot:append v-if="!isMobile">
           <v-btn
             variant="text"
             :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
@@ -38,8 +44,8 @@
       <!-- Navigation Menu -->
       <v-list density="compact" nav class="pa-2">
         <template v-for="item in menuItems" :key="item.value">
-          <!-- Items with children (submenu) -->
-          <v-list-group v-if="item.children" :value="item.value">
+          <!-- Items with children (submenu) - hide in rail mode -->
+          <v-list-group v-if="item.children && !rail" :value="item.value">
             <template v-slot:activator="{ props }">
               <v-list-item
                 v-bind="props"
@@ -64,32 +70,53 @@
           </v-list-group>
 
           <!-- Regular items without children -->
-          <v-list-item
-            v-else
-            :prepend-icon="item.icon"
-            :title="item.title"
-            :value="item.value"
-            :to="item.to"
-            color="hardhat"
-            class="menu-item mb-1"
-            rounded="lg"
-          ></v-list-item>
+          <v-tooltip v-else location="right" :disabled="!rail || isMobile">
+            <template v-slot:activator="{ props: tooltipProps }">
+              <v-list-item
+                v-bind="tooltipProps"
+                :prepend-icon="item.icon"
+                :title="rail ? '' : item.title"
+                :value="item.value"
+                :to="item.to || (item.children?.[0]?.to)"
+                color="hardhat"
+                class="menu-item mb-1"
+                rounded="lg"
+              ></v-list-item>
+            </template>
+            <span>{{ item.title }}</span>
+          </v-tooltip>
         </template>
       </v-list>
 
       <!-- Logout Button -->
       <template v-slot:append>
         <div class="pa-3">
-          <v-btn
-            block
-            prepend-icon="mdi-logout"
-            @click="handleLogout"
-            color="error"
-            variant="tonal"
-            class="font-weight-bold"
-          >
-            Logout
-          </v-btn>
+          <v-tooltip location="right" :disabled="!rail || isMobile">
+            <template v-slot:activator="{ props }">
+              <v-btn
+                v-bind="props"
+                v-if="rail && !isMobile"
+                icon="mdi-logout"
+                @click="handleLogout"
+                color="error"
+                variant="tonal"
+                class="font-weight-bold logout-btn-rail"
+                size="large"
+              ></v-btn>
+              <v-btn
+                v-else
+                block
+                prepend-icon="mdi-logout"
+                @click="handleLogout"
+                color="error"
+                variant="tonal"
+                class="font-weight-bold logout-btn"
+              >
+                Logout
+              </v-btn>
+            </template>
+            <span>Logout</span>
+          </v-tooltip>
         </div>
       </template>
     </v-navigation-drawer>
@@ -638,6 +665,152 @@ async function downloadCurrentPayslip() {
       }
     }
   }
+  
+  // Rail mode specific styling
+  &.v-navigation-drawer--rail {
+    :deep(.v-list-item) {
+      padding: 0 !important;
+      margin: 6px auto !important;
+      justify-content: center !important;
+      align-items: center !important;
+      min-height: 48px !important;
+      height: 48px !important;
+      width: 48px !important;
+      border-radius: 12px !important;
+      display: flex !important;
+      flex-shrink: 0 !important;
+      position: relative !important;
+      
+      .v-list-item__overlay {
+        border-radius: 12px !important;
+      }
+      
+      .v-list-item__prepend {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        opacity: 1 !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        
+        .v-icon {
+          font-size: 22px !important;
+          margin: 0 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          position: relative !important;
+        }
+      }
+      
+      .v-list-item__content {
+        display: none !important;
+        width: 0 !important;
+        flex: none !important;
+      }
+      
+      .v-list-item__append {
+        display: none !important;
+        width: 0 !important;
+      }
+      
+      &:hover {
+        transform: scale(1.05);
+        background: rgba(99, 102, 241, 0.25) !important;
+      }
+      
+      &::before {
+        border-radius: 12px !important;
+      }
+    }
+    
+    :deep(.v-list-item--active) {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+      
+      .v-icon {
+        color: white !important;
+      }
+      
+      &::before {
+        opacity: 0 !important;
+      }
+    }
+    
+    :deep(.v-list-group) {
+      display: none;
+    }
+    
+    .user-profile-item {
+      padding: 0 !important;
+      margin: 8px auto !important;
+      justify-content: center !important;
+      align-items: center !important;
+      height: 56px !important;
+      width: 56px !important;
+      position: relative;
+      border-radius: 50% !important;
+      display: flex !important;
+      
+      :deep(.v-list-item__prepend) {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+      }
+      
+      :deep(.v-list-item__content) {
+        display: none !important;
+      }
+      
+      :deep(.v-list-item__append) {
+        display: flex !important;
+        position: absolute;
+        right: -8px;
+        top: -4px;
+        opacity: 1 !important;
+        z-index: 100 !important;
+        width: auto !important;
+        
+        .v-btn {
+          width: 24px !important;
+          height: 24px !important;
+          min-width: 24px !important;
+          padding: 0 !important;
+          background: rgba(0, 0, 0, 0.3) !important;
+          opacity: 1 !important;
+          
+          &:hover {
+            background: rgba(0, 0, 0, 0.5) !important;
+          }
+        }
+      }
+      
+      :deep(.v-avatar) {
+        margin: 0 !important;
+        position: relative !important;
+      }
+      
+      &:hover {
+        transform: none !important;
+        background: rgba(0, 0, 0, 0.3) !important;
+      }
+    }
+    
+    .steel-divider {
+      margin: 8px 16px !important;
+    }
+  }
 }
 
 .user-profile-item {
@@ -645,6 +818,8 @@ async function downloadCurrentPayslip() {
   margin: 8px;
   border-radius: 12px;
   padding: 12px 8px;
+  transition: all 0.3s ease;
+  min-height: 64px;
 
   :deep(.v-list-item-title) {
     color: white !important;
@@ -706,23 +881,31 @@ async function downloadCurrentPayslip() {
 }
 
 // Logout button styling in drawer
-.construction-drawer {
-  :deep(.v-btn) {
-    &.v-btn--variant-tonal {
-      background-color: rgba(239, 68, 68, 0.15) !important;
-      color: #fca5a5 !important;
-      font-weight: 600;
+.logout-btn,
+.logout-btn-rail {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #fca5a5 !important;
+  font-weight: 600;
 
-      &:hover {
-        background-color: rgba(239, 68, 68, 0.25) !important;
-        color: #fef2f2 !important;
-      }
-
-      .v-icon {
-        color: #fca5a5 !important;
-      }
+  &:hover {
+    background-color: rgba(239, 68, 68, 0.25) !important;
+    color: #fef2f2 !important;
+    
+    .v-icon {
+      color: #fef2f2 !important;
     }
   }
+
+  .v-icon {
+    color: #fca5a5 !important;
+    font-size: 24px !important;
+  }
+}
+
+.logout-btn-rail {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
 }
 
 // Breadcrumbs styling
