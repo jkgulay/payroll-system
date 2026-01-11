@@ -117,7 +117,7 @@
           <textarea
             v-model="inputMessage"
             placeholder="Ask me anything about the payroll system..."
-            rows="1"
+            rows="2"
             @keydown.enter.exact.prevent="sendMessage"
             @keydown.shift.enter="handleShiftEnter"
             :disabled="isTyping"
