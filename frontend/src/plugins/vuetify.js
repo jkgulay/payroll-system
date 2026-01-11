@@ -93,18 +93,18 @@ import { Intersect, Ripple, Touch } from "vuetify/directives";
 const customTheme = {
   dark: false,
   colors: {
-    primary: "#D84315", // Construction Orange - Bold, industrial
+    primary: "#ff6f00", // Construction Orange - Bold, industrial (from login page)
     secondary: "#37474F", // Charcoal Steel - Dark gray for construction machinery
-    accent: "#FFA726", // Safety Orange - High visibility
+    accent: "#ff9800", // Safety Orange - High visibility (from login page)
     error: "#C62828", // Safety Red - Danger/error signage
     info: "#0277BD", // Steel Blue - Professional and technical
     success: "#2E7D32", // Safety Green - Go/approved
     warning: "#F9A825", // Caution Yellow - Warning signs
     background: "#ECEFF1", // Light concrete gray
     surface: "#FFFFFF",
-    steel: "#455A64", // Steel gray for structural elements
+    steel: "#546E7A", // Steel gray for structural elements (from login page)
     concrete: "#90A4AE", // Concrete gray for secondary elements
-    hardhat: "#FF6F00", // Hardhat orange for important highlights
+    hardhat: "#ff9800", // Hardhat orange for important highlights (from login page)
     blueprint: "#1565C0", // Blueprint blue for technical elements
   },
 };
@@ -113,18 +113,18 @@ const customTheme = {
 const constructionDark = {
   dark: true,
   colors: {
-    primary: "#FF6E40", // Bright construction orange
+    primary: "#ff9800", // Bright construction orange (from login page)
     secondary: "#546E7A", // Lighter steel for dark mode
-    accent: "#FFB74D", // Warm safety orange
+    accent: "#ff9800", // Warm safety orange (from login page)
     error: "#EF5350",
     info: "#29B6F6",
     success: "#66BB6A",
     warning: "#FFCA28",
     background: "#263238", // Dark concrete
-    surface: "#37474F", // Dark steel
+    surface: "#37474F", // Dark steel (from login page)
     steel: "#607D8B",
     concrete: "#78909C",
-    hardhat: "#FF9100",
+    hardhat: "#ff9800", // From login page
     blueprint: "#42A5F5",
   },
 };
