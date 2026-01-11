@@ -235,6 +235,15 @@ const router = createRouter({
           meta: { title: "Deductions" },
         },
         {
+          path: "cash-bonds",
+          name: "cash-bonds",
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/CashBondView.vue"
+            ),
+          meta: { title: "Cash Bond Management" },
+        },
+        {
           path: "reports",
           name: "reports",
           component: () =>

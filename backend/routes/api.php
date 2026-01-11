@@ -139,6 +139,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Deductions - specific routes MUST come before apiResource
     Route::post('/deductions/{deduction}/record-installment', [App\Http\Controllers\Api\DeductionController::class, 'recordInstallment']);
+    
+    // Cash Bond specific routes
+    Route::get('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'getCashBonds']);
+    Route::post('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'createCashBond'])->middleware('role:admin,accountant');
+    Route::post('/deductions/{deduction}/refund-cash-bond', [App\Http\Controllers\Api\DeductionController::class, 'refundCashBond'])->middleware('role:admin,accountant');
+    
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);

@@ -403,6 +403,12 @@ const menuItems = computed(() => {
           value: "deductions",
           to: "/deductions",
         },
+        {
+          title: "Cash Bonds",
+          icon: "mdi-cash-lock",
+          value: "cash-bonds",
+          to: "/cash-bonds",
+        },
       ],
     },
     {
