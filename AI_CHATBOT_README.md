@@ -84,8 +84,10 @@ This payroll system now includes an AI-powered chatbot assistant using **Meta Ll
 
 1. **Environment Variables** (`.env`)
    ```env
-   OPENROUTER_API_KEY=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
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
    ```
+   
+   ⚠️ **SECURITY NOTE**: Never commit your actual API key to the repository! Get your key from [OpenRouter](https://openrouter.ai/keys) and add it to your local `.env` file only.
 
 2. **API Routes** (already added to `routes/api.php`)
    ```php
