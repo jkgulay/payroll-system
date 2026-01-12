@@ -74,6 +74,7 @@ return [
         'uniform' => 'Uniform',
         'damage' => 'Damage/Breakage',
         'cash_advance' => 'Cash Advance',
+        'cash_bond' => 'Cash Bond',
         'insurance' => 'Insurance',
         'cooperative' => 'Cooperative',
         'other' => 'Other Deduction',

@@ -139,6 +139,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Deductions - specific routes MUST come before apiResource
     Route::post('/deductions/{deduction}/record-installment', [App\Http\Controllers\Api\DeductionController::class, 'recordInstallment']);
+    
+    // Cash Bond specific routes
+    Route::get('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'getCashBonds']);
+    Route::post('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'createCashBond'])->middleware('role:admin,accountant');
+    Route::post('/deductions/{deduction}/refund-cash-bond', [App\Http\Controllers\Api\DeductionController::class, 'refundCashBond'])->middleware('role:admin,accountant');
+    
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);
@@ -150,13 +156,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/thirteenth-month/{id}/approve', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'approve']);
     Route::post('/thirteenth-month/{id}/mark-paid', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'markPaid']);
 
-    // Resignations
-    Route::apiResource('resignations', App\Http\Controllers\Api\ResignationController::class);
+    // Resignations - Define specific routes BEFORE the resource route to avoid conflicts
     Route::get('/resignations/employee/{employeeId}', [App\Http\Controllers\Api\ResignationController::class, 'getEmployeeResignation']);
     Route::post('/resignations/{id}/approve', [App\Http\Controllers\Api\ResignationController::class, 'approve']);
     Route::post('/resignations/{id}/reject', [App\Http\Controllers\Api\ResignationController::class, 'reject']);
     Route::post('/resignations/{id}/process-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'processFinalPay']);
     Route::post('/resignations/{id}/release-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'releaseFinalPay']);
+    Route::get('/resignations/{id}/attachments/{attachmentIndex}/download', [App\Http\Controllers\Api\ResignationController::class, 'downloadAttachment']);
+    Route::delete('/resignations/{id}/attachments/{attachmentIndex}', [App\Http\Controllers\Api\ResignationController::class, 'deleteAttachment']);
+    Route::apiResource('resignations', App\Http\Controllers\Api\ResignationController::class);
 
     // Recruitment - Job Postings
     Route::get('/job-postings', [App\Http\Controllers\Api\RecruitmentController::class, 'getJobPostings']);

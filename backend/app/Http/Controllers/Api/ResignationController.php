@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class ResignationController extends Controller
@@ -59,6 +60,7 @@ class ResignationController extends Controller
             'employee_id' => 'required|exists:employees,id',
             'last_working_day' => 'required|date|after:today',
             'reason' => 'nullable|string|max:1000',
+            'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10240', // Max 10MB per file
         ]);
 
         if ($validator->fails()) {
@@ -79,12 +81,32 @@ class ResignationController extends Controller
         DB::beginTransaction();
 
         try {
+            // Handle file uploads
+            $attachments = [];
+            if ($request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    $originalName = $file->getClientOriginalName();
+                    $fileName = time() . '_' . uniqid() . '_' . $originalName;
+                    $filePath = $file->storeAs('resignations', $fileName, 'public');
+                    
+                    $attachments[] = [
+                        'original_name' => $originalName,
+                        'file_name' => $fileName,
+                        'file_path' => $filePath,
+                        'file_size' => $file->getSize(),
+                        'mime_type' => $file->getMimeType(),
+                        'uploaded_at' => now()->toDateTimeString(),
+                    ];
+                }
+            }
+
             $resignation = Resignation::create([
                 'employee_id' => $request->employee_id,
                 'resignation_date' => now(),
                 'last_working_day' => $request->last_working_day,
                 'effective_date' => $request->last_working_day, // Default to requested date
                 'reason' => $request->reason,
+                'attachments' => !empty($attachments) ? $attachments : null,
                 'status' => 'pending',
                 'created_by' => Auth::id(),
             ]);
@@ -443,17 +465,106 @@ class ResignationController extends Controller
         DB::beginTransaction();
 
         try {
+            // Delete attachments from storage
+            if ($resignation->attachments) {
+                foreach ($resignation->attachments as $attachment) {
+                    if (isset($attachment['file_path'])) {
+                        Storage::disk('public')->delete($attachment['file_path']);
+                    }
+                }
+            }
+
             $resignation->delete();
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Resignation deleted successfully.',
+                'message' => 'Resignation withdrawn successfully.',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Failed to delete resignation.',
+                'message' => 'Failed to withdraw resignation.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Download resignation attachment
+     */
+    public function downloadAttachment($id, $attachmentIndex)
+    {
+        $resignation = Resignation::findOrFail($id);
+
+        if (!$resignation->attachments || !isset($resignation->attachments[$attachmentIndex])) {
+            return response()->json([
+                'message' => 'Attachment not found.',
+            ], 404);
+        }
+
+        $attachment = $resignation->attachments[$attachmentIndex];
+        $filePath = storage_path('app/public/' . $attachment['file_path']);
+
+        if (!file_exists($filePath)) {
+            return response()->json([
+                'message' => 'File not found on server.',
+            ], 404);
+        }
+
+        return response()->download($filePath, $attachment['original_name']);
+    }
+
+    /**
+     * Delete a specific attachment from resignation
+     */
+    public function deleteAttachment($id, $attachmentIndex)
+    {
+        $resignation = Resignation::findOrFail($id);
+
+        // Only allow deletion if resignation is still pending
+        if ($resignation->status !== 'pending') {
+            return response()->json([
+                'message' => 'Cannot delete attachments from non-pending resignations.',
+            ], 422);
+        }
+
+        if (!$resignation->attachments || !isset($resignation->attachments[$attachmentIndex])) {
+            return response()->json([
+                'message' => 'Attachment not found.',
+            ], 404);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $attachments = $resignation->attachments;
+            $deletedAttachment = $attachments[$attachmentIndex];
+
+            // Delete file from storage
+            if (isset($deletedAttachment['file_path'])) {
+                Storage::disk('public')->delete($deletedAttachment['file_path']);
+            }
+
+            // Remove from array
+            array_splice($attachments, $attachmentIndex, 1);
+
+            // Update resignation
+            $resignation->update([
+                'attachments' => !empty($attachments) ? $attachments : null,
+                'updated_by' => Auth::id(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Attachment deleted successfully.',
+                'resignation' => $resignation->load('employee'),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to delete attachment.',
                 'error' => $e->getMessage(),
             ], 500);
         }

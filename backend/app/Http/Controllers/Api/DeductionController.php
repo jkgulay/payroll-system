@@ -58,7 +58,7 @@ class DeductionController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
-            'deduction_type' => 'required|in:ppe,tools,uniform,absence,sss,philhealth,pagibig,tax,loan,other',
+            'deduction_type' => 'required|in:ppe,tools,uniform,absence,cash_advance,cash_bond,sss,philhealth,pagibig,tax,loan,insurance,cooperative,other',
             'deduction_name' => 'nullable|string|max:100',
             'total_amount' => 'required|numeric|min:1',
             'amount_per_cutoff' => 'required|numeric|min:1',
@@ -161,7 +161,7 @@ class DeductionController extends Controller
         }
 
         $validated = $request->validate([
-            'deduction_type' => 'sometimes|in:ppe,tools,uniform,absence,sss,philhealth,pagibig,tax,loan,other',
+            'deduction_type' => 'sometimes|in:ppe,tools,uniform,absence,cash_advance,cash_bond,sss,philhealth,pagibig,tax,loan,insurance,cooperative,other',
             'deduction_name' => 'nullable|string|max:100',
             'total_amount' => 'sometimes|numeric|min:1',
             'amount_per_cutoff' => 'sometimes|numeric|min:1',
@@ -315,6 +315,173 @@ class DeductionController extends Controller
             DB::rollBack();
             return response()->json([
                 'message' => 'Failed to record installment',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all cash bond deductions
+     */
+    public function getCashBonds(Request $request)
+    {
+        $query = EmployeeDeduction::with(['employee', 'createdBy', 'approvedBy'])
+            ->where('deduction_type', 'cash_bond');
+
+        // Filter by employee
+        if ($request->has('employee_id')) {
+            $query->where('employee_id', $request->employee_id);
+        }
+
+        // Filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        } else {
+            // Default: show only active and completed cash bonds
+            $query->whereIn('status', ['active', 'completed']);
+        }
+
+        // If employee, only show their own cash bonds
+        if (auth()->user()->role === 'employee') {
+            $query->where('employee_id', auth()->user()->employee_id);
+        }
+
+        return response()->json($query->latest()->paginate(15));
+    }
+
+    /**
+     * Create a cash bond deduction
+     */
+    public function createCashBond(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'total_amount' => 'required|numeric|min:1',
+            'amount_per_cutoff' => 'required|numeric|min:1',
+            'installments' => 'nullable|integer|min:1',
+            'start_date' => 'required|date',
+            'description' => 'nullable|string|max:500',
+            'reference_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        // Calculate installments if not provided
+        if (!isset($validated['installments'])) {
+            $validated['installments'] = ceil($validated['total_amount'] / $validated['amount_per_cutoff']);
+        }
+
+        // Calculate end date (semi-monthly)
+        $installmentsInMonths = ceil($validated['installments'] / 2);
+        $endDate = Carbon::parse($validated['start_date'])
+            ->addMonths($installmentsInMonths)
+            ->toDateString();
+
+        $deductionData = array_merge($validated, [
+            'deduction_type' => 'cash_bond',
+            'deduction_name' => 'Cash Bond',
+            'end_date' => $endDate,
+            'balance' => $validated['total_amount'],
+            'installments_paid' => 0,
+            'status' => 'active',
+            'created_by' => auth()->id(),
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $cashBond = EmployeeDeduction::create($deductionData);
+
+            // Load employee relationship for audit log
+            $cashBond->load('employee');
+
+            // Create audit log
+            AuditLog::create([
+                'module' => 'deductions',
+                'action' => 'create',
+                'description' => "Cash Bond created for employee: {$cashBond->employee->full_name} - ₱" . number_format($validated['total_amount'], 2),
+                'user_id' => auth()->id(),
+                'record_id' => $cashBond->id,
+                'old_values' => null,
+                'new_values' => json_encode($deductionData),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Cash Bond created successfully',
+                'data' => $cashBond->load(['employee', 'createdBy', 'approvedBy'])
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to create cash bond',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Refund/return a cash bond (mark as completed and set balance to 0)
+     */
+    public function refundCashBond(Request $request, EmployeeDeduction $deduction)
+    {
+        if ($deduction->deduction_type !== 'cash_bond') {
+            return response()->json([
+                'message' => 'This deduction is not a cash bond'
+            ], 422);
+        }
+
+        if ($deduction->status === 'completed') {
+            return response()->json([
+                'message' => 'This cash bond has already been refunded or completed'
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'refund_amount' => 'required|numeric|min:0',
+            'refund_date' => 'required|date',
+            'refund_reason' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $oldBalance = $deduction->balance;
+
+            $deduction->update([
+                'balance' => max(0, $oldBalance - $validated['refund_amount']),
+                'status' => 'completed',
+                'notes' => ($deduction->notes ? $deduction->notes . "\n\n" : '') . 
+                    "Refunded on " . Carbon::parse($validated['refund_date'])->format('Y-m-d') . 
+                    ": ₱" . number_format($validated['refund_amount'], 2) .
+                    ($validated['refund_reason'] ? " - {$validated['refund_reason']}" : ''),
+            ]);
+
+            // Create audit log
+            AuditLog::create([
+                'module' => 'deductions',
+                'action' => 'refund',
+                'description' => "Cash Bond refunded for {$deduction->employee->full_name}: ₱" . number_format($validated['refund_amount'], 2),
+                'user_id' => auth()->id(),
+                'record_id' => $deduction->id,
+                'old_values' => json_encode(['balance' => $oldBalance, 'status' => 'active']),
+                'new_values' => json_encode(['balance' => 0, 'status' => 'completed']),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Cash Bond refunded successfully',
+                'data' => $deduction->fresh()->load('employee')
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to refund cash bond',
                 'error' => $e->getMessage()
             ], 500);
         }

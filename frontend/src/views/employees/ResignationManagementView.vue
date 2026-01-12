@@ -256,6 +256,29 @@
               </div>
             </v-col>
 
+            <!-- Attachments Display -->
+            <v-col cols="12" v-if="selectedResignation.attachments && selectedResignation.attachments.length > 0">
+              <v-divider class="my-2"></v-divider>
+              <div class="mb-4">
+                <div class="text-caption text-medium-emphasis mb-2">Attachments</div>
+                <div class="d-flex flex-wrap ga-2">
+                  <v-chip
+                    v-for="(attachment, index) in selectedResignation.attachments"
+                    :key="index"
+                    color="primary"
+                    variant="outlined"
+                    :prepend-icon="getFileIcon(attachment.mime_type)"
+                    @click="viewAttachment(selectedResignation.id, index, attachment)"
+                  >
+                    {{ attachment.original_name }}
+                    <template v-slot:append>
+                      <v-icon size="small">mdi-eye</v-icon>
+                    </template>
+                  </v-chip>
+                </div>
+              </div>
+            </v-col>
+
             <v-col cols="12" v-if="selectedResignation.remarks">
               <v-divider class="my-2"></v-divider>
               <div class="mb-4">
@@ -519,6 +542,64 @@
       </v-card>
     </v-dialog>
 
+    <!-- Attachment Preview Dialog -->
+    <v-dialog v-model="showAttachmentDialog" max-width="900">
+      <v-card>
+        <v-card-title class="pa-4 d-flex align-center">
+          <v-icon left>{{ getFileIcon(currentAttachment?.mime_type) }}</v-icon>
+          {{ currentAttachment?.original_name }}
+          <v-spacer></v-spacer>
+          <v-btn
+            icon="mdi-download"
+            variant="text"
+            @click="downloadCurrentAttachment"
+          ></v-btn>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            @click="showAttachmentDialog = false"
+          ></v-btn>
+        </v-card-title>
+
+        <v-divider></v-divider>
+
+        <v-card-text class="pa-0" style="min-height: 500px; max-height: 80vh; overflow: auto;">
+          <!-- Image Preview -->
+          <div v-if="isImage(currentAttachment?.mime_type)" class="pa-4 text-center">
+            <img
+              :src="attachmentUrl"
+              :alt="currentAttachment?.original_name"
+              style="max-width: 100%; height: auto;"
+            />
+          </div>
+
+          <!-- PDF Preview -->
+          <iframe
+            v-else-if="isPDF(currentAttachment?.mime_type)"
+            :src="attachmentUrl"
+            style="width: 100%; height: 70vh; border: none;"
+          ></iframe>
+
+          <!-- Other file types -->
+          <div v-else class="pa-8 text-center">
+            <v-icon size="80" color="grey">mdi-file-document</v-icon>
+            <div class="text-h6 mt-4">{{ currentAttachment?.original_name }}</div>
+            <div class="text-caption text-medium-emphasis mt-2">
+              This file type cannot be previewed. Click the download button to view it.
+            </div>
+            <v-btn
+              color="primary"
+              class="mt-4"
+              prepend-icon="mdi-download"
+              @click="downloadCurrentAttachment"
+            >
+              Download File
+            </v-btn>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
       {{ snackbarText }}
     </v-snackbar>
@@ -541,6 +622,11 @@ const showApproveDialog = ref(false)
 const showRejectDialog = ref(false)
 const showFinalPayDialog = ref(false)
 const showReleaseDialog = ref(false)
+const showAttachmentDialog = ref(false)
+const currentAttachment = ref(null)
+const currentResignationId = ref(null)
+const currentAttachmentIndex = ref(null)
+const attachmentUrl = ref('')
 
 // Form validation
 const approveFormValid = ref(false)
@@ -741,6 +827,64 @@ const formatCurrency = (amount) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
+}
+
+const viewAttachment = async (resignationId, index, attachment) => {
+  try {
+    currentAttachment.value = attachment
+    currentResignationId.value = resignationId
+    currentAttachmentIndex.value = index
+    
+    const response = await api.get(
+      `/resignations/${resignationId}/attachments/${index}/download`,
+      { responseType: 'blob' }
+    )
+    
+    // Create object URL for viewing
+    if (attachmentUrl.value) {
+      window.URL.revokeObjectURL(attachmentUrl.value)
+    }
+    attachmentUrl.value = window.URL.createObjectURL(new Blob([response.data], { type: attachment.mime_type }))
+    showAttachmentDialog.value = true
+  } catch (error) {
+    showSnackbar('Failed to load attachment', 'error')
+  }
+}
+
+const downloadCurrentAttachment = async () => {
+  try {
+    const response = await api.get(
+      `/resignations/${currentResignationId.value}/attachments/${currentAttachmentIndex.value}/download`,
+      { responseType: 'blob' }
+    )
+    
+    // Create a download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', currentAttachment.value.original_name)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    showSnackbar('Failed to download attachment', 'error')
+  }
+}
+
+const isImage = (mimeType) => {
+  return mimeType?.startsWith('image/')
+}
+
+const isPDF = (mimeType) => {
+  return mimeType === 'application/pdf'
+}
+
+const getFileIcon = (mimeType) => {
+  if (isImage(mimeType)) return 'mdi-image'
+  if (isPDF(mimeType)) return 'mdi-file-pdf-box'
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return 'mdi-file-word'
+  return 'mdi-file-document'
 }
 
 const showSnackbar = (text, color = 'success') => {

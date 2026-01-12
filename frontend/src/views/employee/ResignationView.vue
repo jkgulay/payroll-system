@@ -54,6 +54,41 @@
                 class="mb-4"
               ></v-textarea>
 
+              <!-- File Attachments -->
+              <v-card variant="outlined" class="mb-4">
+                <v-card-subtitle class="text-body-2 font-weight-medium">
+                  <v-icon left size="small">mdi-paperclip</v-icon>
+                  Attachments (Optional)
+                </v-card-subtitle>
+                <v-card-text>
+                  <v-file-input
+                    v-model="attachmentFiles"
+                    label="Attach files (JPG, PNG, PDF, DOC, DOCX)"
+                    variant="outlined"
+                    multiple
+                    chips
+                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                    prepend-icon="mdi-paperclip"
+                    :rules="attachmentRules"
+                    hint="Max 10MB per file. You can attach resignation letter, clearance forms, or other documents."
+                    persistent-hint
+                  >
+                    <template v-slot:selection="{ fileNames }">
+                      <template v-for="(fileName, index) in fileNames" :key="fileName">
+                        <v-chip
+                          class="me-2"
+                          color="primary"
+                          size="small"
+                          label
+                        >
+                          {{ fileName }}
+                        </v-chip>
+                      </template>
+                    </template>
+                  </v-file-input>
+                </v-card-text>
+              </v-card>
+
               <v-alert
                 type="warning"
                 variant="tonal"
@@ -143,6 +178,30 @@
                 <div class="mb-4">
                   <div class="text-caption text-medium-emphasis mb-1">Reason</div>
                   <div class="text-body-1">{{ resignation.reason }}</div>
+                </div>
+              </v-col>
+
+              <!-- Attachments Display -->
+              <v-col cols="12" v-if="resignation.attachments && resignation.attachments.length > 0">
+                <div class="mb-4">
+                  <div class="text-caption text-medium-emphasis mb-2">Attachments</div>
+                  <div class="d-flex flex-wrap ga-2">
+                    <v-chip
+                      v-for="(attachment, index) in resignation.attachments"
+                      :key="index"
+                      color="primary"
+                      variant="outlined"
+                      :prepend-icon="getFileIcon(attachment.mime_type)"
+                      @click="viewAttachment(index, attachment)"
+                      :closable="resignation.status === 'pending'"
+                      @click:close="deleteAttachment(index)"
+                    >
+                      {{ attachment.original_name }}
+                      <template v-slot:append>
+                        <v-icon size="small">mdi-eye</v-icon>
+                      </template>
+                    </v-chip>
+                  </div>
                 </div>
               </v-col>
 
@@ -316,6 +375,64 @@
       </v-card>
     </v-dialog>
 
+    <!-- Attachment Preview Dialog -->
+    <v-dialog v-model="showAttachmentDialog" max-width="900">
+      <v-card>
+        <v-card-title class="pa-4 d-flex align-center">
+          <v-icon left>{{ getFileIcon(currentAttachment?.mime_type) }}</v-icon>
+          {{ currentAttachment?.original_name }}
+          <v-spacer></v-spacer>
+          <v-btn
+            icon="mdi-download"
+            variant="text"
+            @click="downloadCurrentAttachment"
+          ></v-btn>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            @click="showAttachmentDialog = false"
+          ></v-btn>
+        </v-card-title>
+
+        <v-divider></v-divider>
+
+        <v-card-text class="pa-0" style="min-height: 500px; max-height: 80vh; overflow: auto;">
+          <!-- Image Preview -->
+          <div v-if="isImage(currentAttachment?.mime_type)" class="pa-4 text-center">
+            <img
+              :src="attachmentUrl"
+              :alt="currentAttachment?.original_name"
+              style="max-width: 100%; height: auto;"
+            />
+          </div>
+
+          <!-- PDF Preview -->
+          <iframe
+            v-else-if="isPDF(currentAttachment?.mime_type)"
+            :src="attachmentUrl"
+            style="width: 100%; height: 70vh; border: none;"
+          ></iframe>
+
+          <!-- Other file types -->
+          <div v-else class="pa-8 text-center">
+            <v-icon size="80" color="grey">mdi-file-document</v-icon>
+            <div class="text-h6 mt-4">{{ currentAttachment?.original_name }}</div>
+            <div class="text-caption text-medium-emphasis mt-2">
+              This file type cannot be previewed. Click the download button to view it.
+            </div>
+            <v-btn
+              color="primary"
+              class="mt-4"
+              prepend-icon="mdi-download"
+              @click="downloadCurrentAttachment"
+            >
+              Download File
+            </v-btn>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
       {{ snackbarText }}
     </v-snackbar>
@@ -338,6 +455,11 @@ const withdrawing = ref(false)
 const formValid = ref(false)
 const resignation = ref(null)
 const showWithdrawDialog = ref(false)
+const showAttachmentDialog = ref(false)
+const currentAttachment = ref(null)
+const currentAttachmentIndex = ref(null)
+const attachmentUrl = ref('')
+const attachmentFiles = ref([])
 
 // Snackbar
 const snackbar = ref(false)
@@ -362,6 +484,19 @@ const rules = {
   },
   maxLength: v => !v || v.length <= 1000 || 'Maximum 1000 characters'
 }
+
+const attachmentRules = [
+  files => {
+    if (!files || files.length === 0) return true
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    for (const file of files) {
+      if (file.size > maxSize) {
+        return `File "${file.name}" exceeds 10MB limit`
+      }
+    }
+    return true
+  }
+]
 
 // Computed
 const minDate = computed(() => {
@@ -393,9 +528,26 @@ const submitResignation = async () => {
   try {
     submitting.value = true
     const employeeId = authStore.user.employee_id
-    const response = await api.post('/resignations', {
-      employee_id: employeeId,
-      ...formData.value
+    
+    // Create FormData for file upload
+    const formDataToSend = new FormData()
+    formDataToSend.append('employee_id', employeeId)
+    formDataToSend.append('last_working_day', formData.value.last_working_day)
+    if (formData.value.reason) {
+      formDataToSend.append('reason', formData.value.reason)
+    }
+    
+    // Append files if any
+    if (attachmentFiles.value && attachmentFiles.value.length > 0) {
+      attachmentFiles.value.forEach((file) => {
+        formDataToSend.append('attachments[]', file)
+      })
+    }
+    
+    const response = await api.post('/resignations', formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     })
     resignation.value = response.data.resignation
     showSnackbar('Resignation submitted successfully', 'success')
@@ -461,10 +613,81 @@ const formatCurrency = (amount) => {
   })
 }
 
+const viewAttachment = async (index, attachment) => {
+  try {
+    currentAttachment.value = attachment
+    currentAttachmentIndex.value = index
+    
+    const response = await api.get(
+      `/resignations/${resignation.value.id}/attachments/${index}/download`,
+      { responseType: 'blob' }
+    )
+    
+    // Create object URL for viewing
+    if (attachmentUrl.value) {
+      window.URL.revokeObjectURL(attachmentUrl.value)
+    }
+    attachmentUrl.value = window.URL.createObjectURL(new Blob([response.data], { type: attachment.mime_type }))
+    showAttachmentDialog.value = true
+  } catch (error) {
+    showSnackbar('Failed to load attachment', 'error')
+  }
+}
+
+const downloadCurrentAttachment = async () => {
+  try {
+    const response = await api.get(
+      `/resignations/${resignation.value.id}/attachments/${currentAttachmentIndex.value}/download`,
+      { responseType: 'blob' }
+    )
+    
+    // Create a download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', currentAttachment.value.original_name)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    showSnackbar('Failed to download attachment', 'error')
+  }
+}
+
+const isImage = (mimeType) => {
+  return mimeType?.startsWith('image/')
+}
+
+const isPDF = (mimeType) => {
+  return mimeType === 'application/pdf'
+}
+
+const getFileIcon = (mimeType) => {
+  if (isImage(mimeType)) return 'mdi-image'
+  if (isPDF(mimeType)) return 'mdi-file-pdf-box'
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return 'mdi-file-word'
+  return 'mdi-file-document'
+}
+
 const showSnackbar = (text, color = 'success') => {
   snackbarText.value = text
   snackbarColor.value = color
   snackbar.value = true
+}
+
+const deleteAttachment = async (index) => {
+  if (!confirm('Are you sure you want to delete this attachment?')) return
+  
+  try {
+    const response = await api.delete(
+      `/resignations/${resignation.value.id}/attachments/${index}`
+    )
+    resignation.value = response.data.resignation
+    showSnackbar('Attachment deleted successfully', 'success')
+  } catch (error) {
+    showSnackbar(error.response?.data?.message || 'Failed to delete attachment', 'error')
+  }
 }
 
 // Lifecycle
