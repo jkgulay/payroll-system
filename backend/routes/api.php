@@ -163,6 +163,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/resignations/{id}/reject', [App\Http\Controllers\Api\ResignationController::class, 'reject']);
     Route::post('/resignations/{id}/process-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'processFinalPay']);
     Route::post('/resignations/{id}/release-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'releaseFinalPay']);
+    Route::get('/resignations/{id}/attachments/{attachmentIndex}/download', [App\Http\Controllers\Api\ResignationController::class, 'downloadAttachment']);
+    Route::delete('/resignations/{id}/attachments/{attachmentIndex}', [App\Http\Controllers\Api\ResignationController::class, 'deleteAttachment']);
 
     // Recruitment - Job Postings
     Route::get('/job-postings', [App\Http\Controllers\Api\RecruitmentController::class, 'getJobPostings']);

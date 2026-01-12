@@ -54,6 +54,41 @@
                 class="mb-4"
               ></v-textarea>
 
+              <!-- File Attachments -->
+              <v-card variant="outlined" class="mb-4">
+                <v-card-subtitle class="text-body-2 font-weight-medium">
+                  <v-icon left size="small">mdi-paperclip</v-icon>
+                  Attachments (Optional)
+                </v-card-subtitle>
+                <v-card-text>
+                  <v-file-input
+                    v-model="attachmentFiles"
+                    label="Attach files (JPG, PNG, PDF, DOC, DOCX)"
+                    variant="outlined"
+                    multiple
+                    chips
+                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                    prepend-icon="mdi-paperclip"
+                    :rules="attachmentRules"
+                    hint="Max 10MB per file. You can attach resignation letter, clearance forms, or other documents."
+                    persistent-hint
+                  >
+                    <template v-slot:selection="{ fileNames }">
+                      <template v-for="(fileName, index) in fileNames" :key="fileName">
+                        <v-chip
+                          class="me-2"
+                          color="primary"
+                          size="small"
+                          label
+                        >
+                          {{ fileName }}
+                        </v-chip>
+                      </template>
+                    </template>
+                  </v-file-input>
+                </v-card-text>
+              </v-card>
+
               <v-alert
                 type="warning"
                 variant="tonal"
@@ -143,6 +178,30 @@
                 <div class="mb-4">
                   <div class="text-caption text-medium-emphasis mb-1">Reason</div>
                   <div class="text-body-1">{{ resignation.reason }}</div>
+                </div>
+              </v-col>
+
+              <!-- Attachments Display -->
+              <v-col cols="12" v-if="resignation.attachments && resignation.attachments.length > 0">
+                <div class="mb-4">
+                  <div class="text-caption text-medium-emphasis mb-2">Attachments</div>
+                  <div class="d-flex flex-wrap ga-2">
+                    <v-chip
+                      v-for="(attachment, index) in resignation.attachments"
+                      :key="index"
+                      color="primary"
+                      variant="outlined"
+                      prepend-icon="mdi-file-document"
+                      @click="downloadAttachment(index)"
+                      :closable="resignation.status === 'pending'"
+                      @click:close="deleteAttachment(index)"
+                    >
+                      {{ attachment.original_name }}
+                      <template v-slot:append>
+                        <v-icon size="small">mdi-download</v-icon>
+                      </template>
+                    </v-chip>
+                  </div>
                 </div>
               </v-col>
 
@@ -338,6 +397,7 @@ const withdrawing = ref(false)
 const formValid = ref(false)
 const resignation = ref(null)
 const showWithdrawDialog = ref(false)
+const attachmentFiles = ref([])
 
 // Snackbar
 const snackbar = ref(false)
@@ -362,6 +422,19 @@ const rules = {
   },
   maxLength: v => !v || v.length <= 1000 || 'Maximum 1000 characters'
 }
+
+const attachmentRules = [
+  files => {
+    if (!files || files.length === 0) return true
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    for (const file of files) {
+      if (file.size > maxSize) {
+        return `File "${file.name}" exceeds 10MB limit`
+      }
+    }
+    return true
+  }
+]
 
 // Computed
 const minDate = computed(() => {
@@ -393,9 +466,26 @@ const submitResignation = async () => {
   try {
     submitting.value = true
     const employeeId = authStore.user.employee_id
-    const response = await api.post('/resignations', {
-      employee_id: employeeId,
-      ...formData.value
+    
+    // Create FormData for file upload
+    const formDataToSend = new FormData()
+    formDataToSend.append('employee_id', employeeId)
+    formDataToSend.append('last_working_day', formData.value.last_working_day)
+    if (formData.value.reason) {
+      formDataToSend.append('reason', formData.value.reason)
+    }
+    
+    // Append files if any
+    if (attachmentFiles.value && attachmentFiles.value.length > 0) {
+      attachmentFiles.value.forEach((file) => {
+        formDataToSend.append('attachments[]', file)
+      })
+    }
+    
+    const response = await api.post('/resignations', formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     })
     resignation.value = response.data.resignation
     showSnackbar('Resignation submitted successfully', 'success')
@@ -465,6 +555,41 @@ const showSnackbar = (text, color = 'success') => {
   snackbarText.value = text
   snackbarColor.value = color
   snackbar.value = true
+}
+
+const downloadAttachment = async (index) => {
+  try {
+    const response = await api.get(
+      `/resignations/${resignation.value.id}/attachments/${index}/download`,
+      { responseType: 'blob' }
+    )
+    
+    // Create a download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', resignation.value.attachments[index].original_name)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    showSnackbar('Failed to download attachment', 'error')
+  }
+}
+
+const deleteAttachment = async (index) => {
+  if (!confirm('Are you sure you want to delete this attachment?')) return
+  
+  try {
+    const response = await api.delete(
+      `/resignations/${resignation.value.id}/attachments/${index}`
+    )
+    resignation.value = response.data.resignation
+    showSnackbar('Attachment deleted successfully', 'success')
+  } catch (error) {
+    showSnackbar(error.response?.data?.message || 'Failed to delete attachment', 'error')
+  }
 }
 
 // Lifecycle

@@ -256,6 +256,29 @@
               </div>
             </v-col>
 
+            <!-- Attachments Display -->
+            <v-col cols="12" v-if="selectedResignation.attachments && selectedResignation.attachments.length > 0">
+              <v-divider class="my-2"></v-divider>
+              <div class="mb-4">
+                <div class="text-caption text-medium-emphasis mb-2">Attachments</div>
+                <div class="d-flex flex-wrap ga-2">
+                  <v-chip
+                    v-for="(attachment, index) in selectedResignation.attachments"
+                    :key="index"
+                    color="primary"
+                    variant="outlined"
+                    prepend-icon="mdi-file-document"
+                    @click="downloadAttachment(selectedResignation.id, index)"
+                  >
+                    {{ attachment.original_name }}
+                    <template v-slot:append>
+                      <v-icon size="small">mdi-download</v-icon>
+                    </template>
+                  </v-chip>
+                </div>
+              </div>
+            </v-col>
+
             <v-col cols="12" v-if="selectedResignation.remarks">
               <v-divider class="my-2"></v-divider>
               <div class="mb-4">
@@ -741,6 +764,31 @@ const formatCurrency = (amount) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
+}
+
+const downloadAttachment = async (resignationId, index) => {
+  try {
+    const response = await api.get(
+      `/resignations/${resignationId}/attachments/${index}/download`,
+      { responseType: 'blob' }
+    )
+    
+    // Get the resignation to access attachment metadata
+    const resignation = resignations.value.find(r => r.id === resignationId) || selectedResignation.value
+    const attachment = resignation.attachments[index]
+    
+    // Create a download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', attachment.original_name)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    showSnackbar('Failed to download attachment', 'error')
+  }
 }
 
 const showSnackbar = (text, color = 'success') => {
