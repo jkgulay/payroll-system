@@ -18,29 +18,50 @@ export const useChatStore = defineStore('chat', {
 
   actions: {
     async sendMessage(message) {
+      // Clean and validate message before sending
+      const cleanedMessage = message.trim();
+      
+      // Check if message is too short or empty
+      if (cleanedMessage.length < 2) {
+        this.messages.push({
+          role: 'assistant',
+          content: 'Please type a valid question or message. Your message seems too short.',
+          timestamp: new Date().toISOString(),
+          isError: false,
+        });
+        return;
+      }
+
       // Add user message
       this.messages.push({
         role: 'user',
-        content: message,
+        content: cleanedMessage,
         timestamp: new Date().toISOString(),
       });
 
       // Show typing indicator
       this.isTyping = true;
+      this.isOnline = true; // Assume online when attempting
 
       try {
         // Get conversation history (last 10 messages)
         const conversationHistory = this.messages
           .slice(-10)
+          .filter(msg => msg.role) // Ensure valid messages only
           .map(msg => ({
             role: msg.role,
             content: msg.content,
           }));
 
-        // Send to API
-        const response = await chatService.sendMessage(message, conversationHistory);
+        // Send to API with timeout handling
+        const response = await Promise.race([
+          chatService.sendMessage(cleanedMessage, conversationHistory),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Request timeout')), 30000)
+          )
+        ]);
 
-        if (response.success) {
+        if (response.success && response.message) {
           // Add assistant response
           this.messages.push({
             role: 'assistant',
@@ -48,27 +69,37 @@ export const useChatStore = defineStore('chat', {
             timestamp: new Date().toISOString(),
             intent: response.intent,
           });
+          this.isOnline = true;
         } else {
-          // Add error message
+          // Add friendly error message
           this.messages.push({
             role: 'assistant',
-            content: 'I apologize, but I encountered an error while processing your request. Please try again.',
+            content: 'I understand your question, but I\'m having a bit of trouble processing it right now. Could you try rephrasing it or asking something else?',
             timestamp: new Date().toISOString(),
-            isError: true,
+            isError: false,
           });
         }
       } catch (error) {
         console.error('Chat error:', error);
         
+        let errorMessage = 'I apologize for the inconvenience. ';
+        
+        if (error.message === 'Request timeout') {
+          errorMessage += 'The request took too long to process. Please try asking a simpler question or try again in a moment.';
+        } else if (error.message?.includes('Network')) {
+          errorMessage += 'I\'m having trouble connecting to the server. Please check your internet connection and try again.';
+          this.isOnline = false;
+        } else {
+          errorMessage += 'I encountered an issue processing your request. Please try rephrasing your question or ask something else.';
+        }
+        
         // Add error message
         this.messages.push({
           role: 'assistant',
-          content: 'I\'m sorry, I\'m having trouble connecting right now. Please check your connection and try again.',
+          content: errorMessage,
           timestamp: new Date().toISOString(),
           isError: true,
         });
-
-        this.isOnline = false;
       } finally {
         this.isTyping = false;
       }
