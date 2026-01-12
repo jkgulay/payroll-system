@@ -8,7 +8,6 @@ use App\Models\Employee;
 use App\Models\AuditLog;
 use App\Services\AttendanceService;
 use App\Services\BiometricService;
-use App\Services\YunattApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -19,13 +18,11 @@ class AttendanceController extends Controller
 {
     protected $attendanceService;
     protected $biometricService;
-    protected $yunattService;
 
-    public function __construct(AttendanceService $attendanceService, BiometricService $biometricService, ?YunattApiService $yunattService = null)
+    public function __construct(AttendanceService $attendanceService, BiometricService $biometricService)
     {
         $this->attendanceService = $attendanceService;
         $this->biometricService = $biometricService;
-        $this->yunattService = $yunattService;
 
         // Manual entry and editing: admin and accountant only
         $this->middleware('role:admin,accountant')->only(['store', 'update', 'destroy', 'markAbsent']);
@@ -34,7 +31,7 @@ class AttendanceController extends Controller
         $this->middleware('role:admin,accountant,manager')->only(['approve', 'reject']);
 
         // Biometric import and device management: admin and accountant only
-        $this->middleware('role:admin,accountant')->only(['importBiometric', 'fetchFromDevice', 'syncEmployees', 'clearDeviceLogs', 'fetchFromYunatt']);
+        $this->middleware('role:admin,accountant')->only(['importBiometric', 'fetchFromDevice', 'syncEmployees', 'clearDeviceLogs']);
     }
     public function index(Request $request)
     {
@@ -634,109 +631,6 @@ class AttendanceController extends Controller
             return response()->json([
                 'message' => 'Failed to clear device logs',
                 'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Fetch attendance from Yunatt Cloud API
-     */
-    public function fetchFromYunatt(Request $request)
-    {
-        if (!config('payroll.yunatt.enabled')) {
-            return response()->json([
-                'message' => 'Yunatt integration is not enabled',
-            ], 400);
-        }
-
-        if (!$this->yunattService) {
-            return response()->json([
-                'message' => 'Yunatt service is not available',
-            ], 500);
-        }
-
-        $validated = $request->validate([
-            'date_from' => 'required|date',
-            'date_to' => 'required|date|after_or_equal:date_from',
-        ]);
-
-        try {
-            // Fetch from Yunatt API
-            $records = $this->yunattService->fetchAttendance(
-                $validated['date_from'],
-                $validated['date_to']
-            );
-
-            if (empty($records)) {
-                return response()->json([
-                    'message' => 'No attendance records found for the specified date range',
-                    'imported' => 0,
-                    'failed' => 0,
-                ]);
-            }
-
-            // Import using existing attendance service
-            $result = $this->attendanceService->importBiometric($records);
-
-            AuditLog::create([
-                'user_id' => $request->user()->id,
-                'module' => 'attendance',
-                'action' => 'fetch_from_yunatt',
-                'description' => 'Fetched attendance from Yunatt API',
-                'old_values' => null,
-                'new_values' => [
-                    'date_from' => $validated['date_from'],
-                    'date_to' => $validated['date_to'],
-                    'records_imported' => $result['imported'],
-                    'records_updated' => $result['updated'] ?? 0,
-                    'records_failed' => $result['errors'],
-                ],
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
-
-            return response()->json([
-                'message' => 'Attendance fetched from Yunatt successfully',
-                'imported' => $result['imported'],
-                'updated' => $result['updated'] ?? 0,
-                'failed' => $result['errors'],
-                'errors' => $result['error_details'] ?? [],
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to fetch from Yunatt: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to fetch from Yunatt API',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Test Yunatt API connection
-     */
-    public function testYunattConnection()
-    {
-        if (!config('payroll.yunatt.enabled')) {
-            return response()->json([
-                'status' => 'disabled',
-                'message' => 'Yunatt integration is not enabled',
-            ]);
-        }
-
-        if (!$this->yunattService) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Yunatt service is not available',
-            ], 500);
-        }
-
-        try {
-            $result = $this->yunattService->testConnection();
-            return response()->json($result);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage(),
             ], 500);
         }
     }
