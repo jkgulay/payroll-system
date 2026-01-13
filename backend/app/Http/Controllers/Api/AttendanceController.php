@@ -132,7 +132,10 @@ class AttendanceController extends Controller
     public function update(Request $request, Attendance $attendance)
     {
         // Prevent editing approved records without proper permission
-        if ($attendance->is_approved && !$request->user()->hasRole(['admin', 'accountant'])) {
+        if (
+            $attendance->is_approved &&
+            !in_array($request->user()->role, ['admin', 'accountant'])
+        ) {
             return response()->json([
                 'message' => 'Cannot edit approved attendance records',
             ], 403);
@@ -184,7 +187,14 @@ class AttendanceController extends Controller
                 'attendance' => $attendance->fresh()->load('employee'),
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to update attendance: ' . $e->getMessage());
+            Log::error('[Attendance Update Error] ' . $e->getMessage(), [
+                'exception' => $e,
+                'attendance_id' => $attendance->id ?? null,
+                'request_data' => $request->all(),
+                'validated' => $validated ?? null,
+                'user_id' => $request->user()->id ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'message' => 'Failed to update attendance',
                 'error' => $e->getMessage(),
