@@ -62,16 +62,66 @@
         </div>
       </template>
 
+      <template v-slot:item.employee.employee_number="{ item }">
+        <v-chip size="small" variant="tonal">
+          {{ item.employee.employee_number }}
+        </v-chip>
+      </template>
+
       <template v-slot:item.attendance_date="{ item }">
         {{ formatDate(item.attendance_date) }}
       </template>
 
       <template v-slot:item.time_in="{ item }">
-        {{ item.time_in || "--:--" }}
+        <v-chip
+          v-if="item.time_in"
+          size="small"
+          color="success"
+          variant="tonal"
+          prepend-icon="mdi-login"
+        >
+          {{ item.time_in }}
+        </v-chip>
+        <span v-else class="text-medium-emphasis">--:--</span>
+      </template>
+
+      <template v-slot:item.break_start="{ item }">
+        <v-chip
+          v-if="item.break_start"
+          size="small"
+          color="warning"
+          variant="tonal"
+          prepend-icon="mdi-coffee"
+        >
+          {{ item.break_start }}
+        </v-chip>
+        <span v-else class="text-medium-emphasis">--:--</span>
+      </template>
+
+      <template v-slot:item.break_end="{ item }">
+        <v-chip
+          v-if="item.break_end"
+          size="small"
+          color="info"
+          variant="tonal"
+          prepend-icon="mdi-coffee-outline"
+        >
+          {{ item.break_end }}
+        </v-chip>
+        <span v-else class="text-medium-emphasis">--:--</span>
       </template>
 
       <template v-slot:item.time_out="{ item }">
-        {{ item.time_out || "--:--" }}
+        <v-chip
+          v-if="item.time_out"
+          size="small"
+          color="error"
+          variant="tonal"
+          prepend-icon="mdi-logout"
+        >
+          {{ item.time_out }}
+        </v-chip>
+        <span v-else class="text-medium-emphasis">--:--</span>
       </template>
 
       <template v-slot:item.hours_worked="{ item }">
@@ -178,8 +228,11 @@ const filters = reactive({
 
 const headers = [
   { title: "Employee", key: "employee", sortable: false },
+  { title: "Staff Code", key: "employee.employee_number", sortable: false },
   { title: "Date", key: "attendance_date" },
   { title: "Time In", key: "time_in" },
+  { title: "Break Out", key: "break_start" },
+  { title: "Break In", key: "break_end" },
   { title: "Time Out", key: "time_out" },
   { title: "Hours", key: "hours_worked", sortable: false },
   { title: "Status", key: "status" },

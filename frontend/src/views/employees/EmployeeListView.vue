@@ -124,8 +124,54 @@
             <strong>{{ item.employee_number }}</strong>
           </template>
 
+          <template v-slot:item.biometric_id="{ item }">
+            <v-chip
+              v-if="item.biometric_id"
+              size="small"
+              color="info"
+              variant="tonal"
+            >
+              {{ item.biometric_id }}
+            </v-chip>
+            <span v-else class="text-medium-emphasis">--</span>
+          </template>
+
           <template v-slot:item.full_name="{ item }">
-            {{ item.first_name }} {{ item.middle_name }} {{ item.last_name }}
+            <div>
+              <div class="font-weight-medium">
+                {{ item.first_name }} {{ item.middle_name }} {{ item.last_name }}
+              </div>
+              <div class="text-caption text-medium-emphasis" v-if="item.username">
+                @{{ item.username }}
+              </div>
+            </div>
+          </template>
+
+          <template v-slot:item.email="{ item }">
+            <span v-if="item.email">{{ item.email }}</span>
+            <span v-else class="text-medium-emphasis">--</span>
+          </template>
+
+          <template v-slot:item.mobile_number="{ item }">
+            <span v-if="item.mobile_number">{{ item.mobile_number }}</span>
+            <span v-else class="text-medium-emphasis">--</span>
+          </template>
+
+          <template v-slot:item.date_hired="{ item }">
+            <span v-if="item.date_hired">
+              {{ new Date(item.date_hired).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+            </span>
+            <span v-else class="text-medium-emphasis">--</span>
+          </template>
+
+          <template v-slot:item.contract_type="{ item }">
+            <v-chip
+              size="small"
+              :color="getContractTypeColor(item.contract_type)"
+              variant="tonal"
+            >
+              {{ formatContractType(item.contract_type) }}
+            </v-chip>
           </template>
 
           <template v-slot:item.gender="{ item }">
@@ -925,13 +971,16 @@ const activityStatusOptions = ACTIVITY_STATUSES;
 const workScheduleOptions = WORK_SCHEDULES;
 
 const headers = [
-  { title: "Employee #", key: "employee_number", sortable: true },
+  { title: "Staff Code", key: "employee_number", sortable: true },
+  { title: "Biometric ID", key: "biometric_id", sortable: false },
   { title: "Name", key: "full_name", sortable: true },
   { title: "Gender", key: "gender", sortable: true },
-  { title: "Project", key: "project", sortable: false },
+  { title: "Email", key: "email", sortable: false },
+  { title: "Mobile", key: "mobile_number", sortable: false },
   { title: "Position", key: "position", sortable: true },
-  { title: "Schedule", key: "work_schedule", sortable: true },
-  { title: "Activity Status", key: "activity_status", sortable: true },
+  { title: "Date Hired", key: "date_hired", sortable: true },
+  { title: "Contract Type", key: "contract_type", sortable: true },
+  { title: "Status", key: "activity_status", sortable: true },
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
@@ -1163,6 +1212,24 @@ function closeDialog() {
 
 function getWorkScheduleColor(schedule) {
   return schedule === "full_time" ? "primary" : "info";
+}
+
+function getContractTypeColor(contractType) {
+  const colors = {
+    regular: "success",
+    probationary: "warning",
+    contractual: "info",
+    project_based: "secondary",
+  };
+  return colors[contractType] || "grey";
+}
+
+function formatContractType(contractType) {
+  if (!contractType) return "N/A";
+  return contractType
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function getActivityStatusColor(status) {

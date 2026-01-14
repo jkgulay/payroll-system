@@ -142,6 +142,15 @@ const router = createRouter({
           meta: { title: "Attendance", roles: ["admin", "accountant"] },
         },
         {
+          path: "biometric-import",
+          name: "biometric-import",
+          component: () =>
+            import(
+              /* webpackChunkName: "attendance" */ "@/views/attendance/BiometricImportView.vue"
+            ),
+          meta: { title: "Biometric Import", roles: ["admin", "accountant"] },
+        },
+        {
           path: "resumes",
           name: "resumes",
           component: () =>

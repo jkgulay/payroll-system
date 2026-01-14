@@ -26,11 +26,14 @@ This system streamlines payroll operations for construction companies by automat
 
 ### Attendance & Time Tracking
 
-- Biometric device integration
+- **Biometric device integration** with dedicated import module
+- **Staff Information Import** - Bulk import employees from biometric exports
+- **Punch Records Import** - Import attendance data with date-based format
 - Manual attendance entry
 - Overtime and night differential tracking
 - Holiday pay calculations
 - Leave management
+- Auto-approval of biometric records
 
 ### Payroll Processing
 
