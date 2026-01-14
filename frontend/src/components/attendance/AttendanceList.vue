@@ -202,11 +202,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from "vue";
+import { ref, reactive, onMounted, computed, onUnmounted } from "vue";
+import { useRoute } from "vue-router";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
 
 const toast = useToast();
+const route = useRoute();
 const emit = defineEmits(["edit", "delete", "approve", "reject"]);
 
 const loading = ref(false);
@@ -292,8 +295,29 @@ const canDelete = (item) => {
   return canEditRole.value && !item.is_approved;
 };
 
+let unsubscribeAttendance = null;
+
 onMounted(() => {
+  // Apply query parameters if present (from dashboard)
+  if (route.query.date_from) {
+    filters.date_from = route.query.date_from;
+  }
+  if (route.query.date_to) {
+    filters.date_to = route.query.date_to;
+  }
+
   loadAttendance();
+
+  // Listen for attendance updates
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    loadAttendance();
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 
 defineExpose({ loadAttendance });

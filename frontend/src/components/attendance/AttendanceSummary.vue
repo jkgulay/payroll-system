@@ -47,6 +47,17 @@
                   Generate Summary
                 </v-btn>
               </v-col>
+              <v-col cols="12" v-if="summary">
+                <v-btn
+                  color="success"
+                  block
+                  @click="exportToExcel"
+                  :loading="exporting"
+                  prepend-icon="mdi-file-excel"
+                >
+                  Export to Excel
+                </v-btn>
+              </v-col>
             </v-row>
           </v-card-text>
         </v-card>
@@ -199,15 +210,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted } from "vue";
 import attendanceService from "@/services/attendanceService";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
 
 const toast = useToast();
 
 const loading = ref(false);
 const loadingEmployees = ref(false);
+const exporting = ref(false);
 const summary = ref(null);
 const employees = ref([]);
 
@@ -286,8 +299,49 @@ const setLastMonth = () => {
   filters.date_from = firstDay.toISOString().split("T")[0];
   filters.date_to = lastDay.toISOString().split("T")[0];
 };
+const exportToExcel = async () => {
+  exporting.value = true;
+  try {
+    const response = await api.get("/attendance/summary/export", {
+      params: filters,
+      responseType: "blob",
+    });
+
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `attendance_summary_${filters.date_from}_to_${filters.date_to}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Attendance summary exported successfully");
+  } catch (error) {
+    console.error("Export error:", error);
+    toast.error("Failed to export attendance summary");
+  } finally {
+    exporting.value = false;
+  }
+};
+
+let unsubscribeAttendance = null;
 
 onMounted(() => {
   loadEmployees();
+
+  // Listen for attendance updates to refresh summary if it's loaded
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    if (summary.value) {
+      loadSummary();
+    }
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 </script>

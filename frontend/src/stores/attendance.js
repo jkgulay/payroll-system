@@ -2,11 +2,22 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "@/services/api";
 
+// Event bus for attendance updates
+const attendanceEventBus = new EventTarget();
+
 export const useAttendanceStore = defineStore("attendance", () => {
   // State
   const attendances = ref([]);
   const currentAttendance = ref(null);
   const loading = ref(false);
+
+  // Helper function to emit events
+  const emitAttendanceUpdate = (type, data = null) => {
+    const event = new CustomEvent("attendance-updated", {
+      detail: { type, data, timestamp: Date.now() },
+    });
+    attendanceEventBus.dispatchEvent(event);
+  };
 
   // Actions
   async function fetchAttendances(params = {}) {
@@ -40,6 +51,7 @@ export const useAttendanceStore = defineStore("attendance", () => {
     try {
       const response = await api.post("/attendance", data);
       attendances.value.unshift(response.data);
+      emitAttendanceUpdate("created", response.data);
       return response.data;
     } catch (error) {
       throw error;
@@ -56,6 +68,7 @@ export const useAttendanceStore = defineStore("attendance", () => {
       if (index !== -1) {
         attendances.value[index] = response.data;
       }
+      emitAttendanceUpdate("updated", response.data);
       return response.data;
     } catch (error) {
       throw error;
@@ -69,6 +82,7 @@ export const useAttendanceStore = defineStore("attendance", () => {
     try {
       await api.delete(`/attendance/${id}`);
       attendances.value = attendances.value.filter((a) => a.id !== id);
+      emitAttendanceUpdate("deleted", { id });
     } catch (error) {
       throw error;
     } finally {
@@ -152,3 +166,12 @@ export const useAttendanceStore = defineStore("attendance", () => {
     fetchEmployeeSummary,
   };
 });
+
+// Export event subscription helper
+export const onAttendanceUpdate = (callback) => {
+  const handler = (event) => callback(event.detail);
+  attendanceEventBus.addEventListener("attendance-updated", handler);
+  // Return unsubscribe function
+  return () =>
+    attendanceEventBus.removeEventListener("attendance-updated", handler);
+};

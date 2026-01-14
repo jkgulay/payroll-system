@@ -8,10 +8,12 @@ use App\Models\Employee;
 use App\Models\AuditLog;
 use App\Services\AttendanceService;
 use App\Services\BiometricService;
+use App\Exports\AttendanceSummaryExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 
 class AttendanceController extends Controller
@@ -126,13 +128,16 @@ class AttendanceController extends Controller
 
     public function show(Attendance $attendance)
     {
-        return response()->json($attendance->load(['employee.department', 'employee.location']));
+        return response()->json($attendance->load(['employee.project', 'employee.positionRate']));
     }
 
     public function update(Request $request, Attendance $attendance)
     {
         // Prevent editing approved records without proper permission
-        if ($attendance->is_approved && !$request->user()->hasRole(['admin', 'accountant'])) {
+        if (
+            $attendance->is_approved &&
+            !in_array($request->user()->role, ['admin', 'accountant'])
+        ) {
             return response()->json([
                 'message' => 'Cannot edit approved attendance records',
             ], 403);
@@ -184,7 +189,14 @@ class AttendanceController extends Controller
                 'attendance' => $attendance->fresh()->load('employee'),
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to update attendance: ' . $e->getMessage());
+            Log::error('[Attendance Update Error] ' . $e->getMessage(), [
+                'exception' => $e,
+                'attendance_id' => $attendance->id ?? null,
+                'request_data' => $request->all(),
+                'validated' => $validated ?? null,
+                'user_id' => $request->user()->id ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'message' => 'Failed to update attendance',
                 'error' => $e->getMessage(),
@@ -271,6 +283,13 @@ class AttendanceController extends Controller
         if ($attendance->is_approved) {
             return response()->json([
                 'message' => 'Attendance is already approved',
+                'attendance' => $attendance->load('employee', 'approvedBy'),
+            ], 422);
+        }
+
+        if ($attendance->is_rejected) {
+            return response()->json([
+                'message' => 'Cannot approve rejected attendance. Please create a new record.',
             ], 422);
         }
 
@@ -278,9 +297,13 @@ class AttendanceController extends Controller
 
         $attendance->update([
             'is_approved' => true,
+            'is_rejected' => false,
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
             'approval_notes' => $request->input('notes'),
+            'rejection_reason' => null,
+            'rejected_by' => null,
+            'rejected_at' => null,
         ]);
 
         // Log approval
@@ -405,6 +428,35 @@ class AttendanceController extends Controller
         }
 
         return response()->json($summary);
+    }
+
+    /**
+     * Export attendance summary to Excel
+     */
+    public function exportSummary(Request $request)
+    {
+        $validated = $request->validate([
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+            'employee_id' => 'nullable|exists:employees,id',
+        ]);
+
+        $query = Attendance::query()
+            ->whereBetween('attendance_date', [$validated['date_from'], $validated['date_to']])
+            ->with(['employee']);
+
+        if ($validated['employee_id'] ?? false) {
+            $query->where('employee_id', $validated['employee_id']);
+        }
+
+        $attendances = $query->orderBy('attendance_date')->orderBy('employee_id')->get();
+
+        $filename = 'attendance_summary_' . $validated['date_from'] . '_to_' . $validated['date_to'] . '.xlsx';
+
+        return Excel::download(
+            new AttendanceSummaryExport($attendances, $validated['date_from'], $validated['date_to']),
+            $filename
+        );
     }
 
     /**

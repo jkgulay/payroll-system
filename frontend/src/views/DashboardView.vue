@@ -36,14 +36,18 @@
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Total Revenue</span>
+              <span class="text-subtitle-2 text-medium-emphasis"
+                >Total Revenue</span
+              >
               <v-icon size="20" color="success">mdi-trending-up</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               ₱{{ formatNumber(stats.periodPayroll) }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Current period total</span>
+              <span class="text-caption text-medium-emphasis"
+                >Current period total</span
+              >
             </div>
           </v-card-text>
         </v-card>
@@ -53,31 +57,44 @@
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Active Employees</span>
+              <span class="text-subtitle-2 text-medium-emphasis"
+                >Active Employees</span
+              >
               <v-icon size="20" color="primary">mdi-account-group</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               {{ stats.activeEmployees }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Currently active</span>
+              <span class="text-caption text-medium-emphasis"
+                >Currently active</span
+              >
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" sm="6" lg="3">
-        <v-card class="modern-card stat-card" elevation="0">
+        <v-card
+          class="modern-card stat-card"
+          elevation="0"
+          style="cursor: pointer"
+          @click="goToAttendanceToday"
+        >
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Attendance Today</span>
+              <span class="text-subtitle-2 text-medium-emphasis"
+                >Attendance Today</span
+              >
               <v-icon size="20" color="info">mdi-clock-check</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               {{ stats.presentToday }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Present today</span>
+              <span class="text-caption text-medium-emphasis"
+                >Present today - Click to view</span
+              >
             </div>
           </v-card-text>
         </v-card>
@@ -87,14 +104,18 @@
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Total Employees</span>
+              <span class="text-subtitle-2 text-medium-emphasis"
+                >Total Employees</span
+              >
               <v-icon size="20" color="warning">mdi-account-hard-hat</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               {{ stats.totalEmployees }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Total in system</span>
+              <span class="text-caption text-medium-emphasis"
+                >Total in system</span
+              >
             </div>
           </v-card-text>
         </v-card>
@@ -127,7 +148,10 @@
           </v-card-title>
           <v-divider></v-divider>
           <v-card-text class="pa-5">
-            <PayrollTrendChart v-if="revenueFilter === 'earnings'" :months="6" />
+            <PayrollTrendChart
+              v-if="revenueFilter === 'earnings'"
+              :months="6"
+            />
             <PayrollComparisonChart v-else />
           </v-card-text>
         </v-card>
@@ -135,8 +159,12 @@
         <!-- Attendance Statistics Card -->
         <v-card class="modern-card mb-6" elevation="0">
           <v-card-title class="pa-5">
-            <v-icon color="info" size="small" class="mr-2">mdi-clock-check-outline</v-icon>
-            <div class="text-subtitle-1 font-weight-bold">Attendance Statistics This Month</div>
+            <v-icon color="info" size="small" class="mr-2"
+              >mdi-clock-check-outline</v-icon
+            >
+            <div class="text-subtitle-1 font-weight-bold">
+              Attendance Statistics This Month
+            </div>
           </v-card-title>
           <v-divider></v-divider>
           <v-card-text class="pa-5" style="height: 400px">
@@ -175,12 +203,15 @@
 
             <template v-slot:item.period="{ item }">
               <div class="text-body-2">
-                {{ formatDateShort(item.period_start_date) }} - {{ formatDateShort(item.period_end_date) }}
+                {{ formatDateShort(item.period_start_date) }} -
+                {{ formatDateShort(item.period_end_date) }}
               </div>
             </template>
 
             <template v-slot:item.amount="{ item }">
-              <span class="font-weight-bold">₱{{ formatNumber(item.total_gross) }}</span>
+              <span class="font-weight-bold"
+                >₱{{ formatNumber(item.total_gross) }}</span
+              >
             </template>
 
             <template v-slot:item.status="{ item }">
@@ -213,7 +244,9 @@
         <!-- Today Staff Info -->
         <v-card class="modern-card mb-6" elevation="0">
           <v-card-title class="pa-5">
-            <v-icon color="primary" size="small" class="mr-2">mdi-account-group</v-icon>
+            <v-icon color="primary" size="small" class="mr-2"
+              >mdi-account-group</v-icon
+            >
             <div class="text-subtitle-1 font-weight-bold">Today Staff Info</div>
           </v-card-title>
           <v-divider></v-divider>
@@ -223,9 +256,15 @@
         </v-card>
 
         <!-- Pending Applications (if any) -->
-        <v-card v-if="pendingApplications.length > 0" class="modern-card" elevation="0">
+        <v-card
+          v-if="pendingApplications.length > 0"
+          class="modern-card"
+          elevation="0"
+        >
           <v-card-title class="pa-5 d-flex justify-space-between align-center">
-            <div class="text-subtitle-1 font-weight-bold">Pending Applications</div>
+            <div class="text-subtitle-1 font-weight-bold">
+              Pending Applications
+            </div>
             <v-chip size="small" color="warning" variant="flat">
               {{ pendingApplications.length }}
             </v-chip>
@@ -248,7 +287,11 @@
               </v-list-item-title>
               <v-list-item-subtitle>{{ app.position }}</v-list-item-subtitle>
               <template v-slot:append>
-                <v-btn icon="mdi-chevron-right" size="small" variant="text"></v-btn>
+                <v-btn
+                  icon="mdi-chevron-right"
+                  size="small"
+                  variant="text"
+                ></v-btn>
               </template>
             </v-list-item>
           </v-list>
@@ -323,7 +366,7 @@
               <div>
                 <div class="text-caption text-grey-darken-2">Role</div>
                 <div class="text-body-1 font-weight-bold text-capitalize">
-                  {{ newEmployeeData?.role || 'employee' }}
+                  {{ newEmployeeData?.role || "employee" }}
                 </div>
               </div>
             </v-sheet>
@@ -600,9 +643,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
 import DashboardCalendar from "@/components/DashboardCalendar.vue";
 import PayrollTrendChart from "@/components/charts/PayrollTrendChart.vue";
@@ -612,6 +657,7 @@ import AttendanceStatusChart from "@/components/charts/AttendanceStatusChart.vue
 import TodayStaffInfoChart from "@/components/charts/TodayStaffInfoChart.vue";
 
 const toast = useToast();
+const router = useRouter();
 
 const stats = ref({
   totalEmployees: 0,
@@ -622,7 +668,7 @@ const stats = ref({
 });
 
 const recentPayrolls = ref([]);
-const revenueFilter = ref('earnings');
+const revenueFilter = ref("earnings");
 const refreshing = ref(false);
 
 // Application management
@@ -649,15 +695,22 @@ const currentDateRange = computed(() => {
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth(), 1);
   const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  return `${start.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })} - ${end.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
 });
 
 const payrollHeaders = [
-  { title: 'Payroll Number', key: 'payroll_number' },
-  { title: 'Period', key: 'period' },
-  { title: 'Amount', key: 'amount' },
-  { title: 'Status', key: 'status' },
-  { title: 'Actions', key: 'actions', sortable: false }
+  { title: "Payroll Number", key: "payroll_number" },
+  { title: "Period", key: "period" },
+  { title: "Amount", key: "amount" },
+  { title: "Status", key: "status" },
+  { title: "Actions", key: "actions", sortable: false },
 ];
 
 // Circular progress for community growth
@@ -665,7 +718,9 @@ const circumference = 2 * Math.PI * 50;
 
 const employeeGrowthPercentage = computed(() => {
   if (stats.value.totalEmployees === 0) return 0;
-  return Math.round((stats.value.activeEmployees / stats.value.totalEmployees) * 100);
+  return Math.round(
+    (stats.value.activeEmployees / stats.value.totalEmployees) * 100
+  );
 });
 
 const progressOffset = computed(() => {
@@ -673,10 +728,25 @@ const progressOffset = computed(() => {
   return circumference - (progress / 100) * circumference;
 });
 
+let unsubscribeAttendance = null;
+
 onMounted(async () => {
   await fetchDashboardData();
   await fetchProjects();
   await fetchPendingApplications();
+
+  // Listen for attendance updates
+  unsubscribeAttendance = onAttendanceUpdate((detail) => {
+    // Refresh dashboard stats when attendance is created/updated/deleted
+    fetchDashboardData();
+  });
+});
+
+onUnmounted(() => {
+  // Cleanup listener
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 
 async function fetchDashboardData() {
@@ -687,6 +757,18 @@ async function fetchDashboardData() {
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
   }
+}
+
+function goToAttendanceToday() {
+  const today = new Date().toISOString().split("T")[0];
+  router.push({
+    path: "/attendance",
+    query: {
+      date_from: today,
+      date_to: today,
+      tab: "list",
+    },
+  });
 }
 
 async function refreshData() {
@@ -902,7 +984,7 @@ Role: Employee
   display: flex;
   justify-content: space-between;
   align-items: center;
-  
+
   @media (max-width: 960px) {
     flex-direction: column;
     align-items: flex-start;
@@ -914,7 +996,7 @@ Role: Employee
   border-radius: 16px !important;
   border: 1px solid rgba(0, 0, 0, 0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   &:hover {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
     transform: translateY(-2px);
@@ -924,9 +1006,9 @@ Role: Employee
 .stat-card {
   position: relative;
   overflow: hidden;
-  
+
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -953,7 +1035,7 @@ Role: Employee
   :deep(thead) {
     background-color: #f8fafc;
   }
-  
+
   :deep(tbody tr:hover) {
     background-color: #f1f5f9 !important;
   }

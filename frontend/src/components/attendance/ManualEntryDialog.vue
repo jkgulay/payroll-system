@@ -50,47 +50,76 @@
               ></v-text-field>
             </v-col>
 
-            <v-col cols="6">
-              <v-text-field
-                v-model="formData.time_in"
-                label="Time In"
-                type="time"
-                variant="outlined"
-                density="comfortable"
-                prepend-inner-icon="mdi-clock-in"
-              ></v-text-field>
+            <v-col cols="12">
+              <v-alert
+                type="info"
+                density="compact"
+                variant="tonal"
+                class="mb-2"
+              >
+                <strong>Standard Schedule:</strong> 8:00 AM - 12:00 PM (Morning)
+                | 1:00 PM - 5:00 PM (Afternoon)
+              </v-alert>
+            </v-col>
+
+            <v-col cols="12" class="pb-0">
+              <div class="text-subtitle-2 font-weight-bold mb-2">
+                Morning Shift
+              </div>
             </v-col>
 
             <v-col cols="6">
               <v-text-field
-                v-model="formData.time_out"
-                label="Time Out"
+                v-model="formData.time_in"
+                label="Time In (AM)"
                 type="time"
                 variant="outlined"
                 density="comfortable"
-                prepend-inner-icon="mdi-clock-out"
+                prepend-inner-icon="mdi-clock-in"
+                hint="e.g., 08:00 AM"
               ></v-text-field>
             </v-col>
 
             <v-col cols="6">
               <v-text-field
                 v-model="formData.break_start"
-                label="Break Start"
+                label="Lunch Break Start"
                 type="time"
                 variant="outlined"
                 density="comfortable"
-                prepend-inner-icon="mdi-coffee"
+                prepend-inner-icon="mdi-food"
+                hint="e.g., 12:00 PM"
               ></v-text-field>
+            </v-col>
+
+            <v-col cols="12" class="pb-0 pt-2">
+              <v-divider></v-divider>
+              <div class="text-subtitle-2 font-weight-bold my-2">
+                Afternoon Shift
+              </div>
             </v-col>
 
             <v-col cols="6">
               <v-text-field
                 v-model="formData.break_end"
-                label="Break End"
+                label="Lunch Break End"
                 type="time"
                 variant="outlined"
                 density="comfortable"
-                prepend-inner-icon="mdi-coffee-off"
+                prepend-inner-icon="mdi-food-off"
+                hint="e.g., 01:00 PM"
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="6">
+              <v-text-field
+                v-model="formData.time_out"
+                label="Time Out (PM)"
+                type="time"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-clock-out"
+                hint="e.g., 05:00 PM"
               ></v-text-field>
             </v-col>
 
@@ -147,7 +176,7 @@
 
 <script setup>
 import { ref, reactive, watch, onMounted } from "vue";
-import attendanceService from "@/services/attendanceService";
+import { useAttendanceStore } from "@/stores/attendance";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 
@@ -159,6 +188,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "saved"]);
 const toast = useToast();
+const attendanceStore = useAttendanceStore();
 
 const form = ref(null);
 const valid = ref(false);
@@ -227,10 +257,10 @@ const save = async () => {
     });
 
     if (props.attendance) {
-      await attendanceService.updateAttendance(props.attendance.id, data);
+      await attendanceStore.updateAttendance(props.attendance.id, data);
       toast.success("Attendance updated successfully");
     } else {
-      await attendanceService.createAttendance(data);
+      await attendanceStore.createAttendance(data);
       toast.success("Attendance created successfully");
     }
 
@@ -262,7 +292,7 @@ const save = async () => {
 
       if (confirmed) {
         try {
-          await attendanceService.updateAttendance(existingRecord.id, data);
+          await attendanceStore.updateAttendance(existingRecord.id, data);
           toast.success("Attendance updated successfully");
           emit("saved");
         } catch (updateError) {

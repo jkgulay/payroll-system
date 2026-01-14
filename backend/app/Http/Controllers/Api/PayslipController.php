@@ -31,8 +31,8 @@ class PayslipController extends Controller
     {
         $payslip = PayrollItem::with([
             'payroll',
-            'employee.department',
-            'employee.location',
+            'employee.project',
+            'employee.positionRate',
             'details'
         ])->findOrFail($payrollItemId);
 
@@ -43,15 +43,15 @@ class PayslipController extends Controller
     {
         $payslip = PayrollItem::with([
             'payroll',
-            'employee.department',
-            'employee.location',
+            'employee.project',
+            'employee.positionRate',
             'details'
         ])->findOrFail($payrollItemId);
 
         $pdf = Pdf::loadView('payslip.pdf', ['payslip' => $payslip]);
-        
+
         $filename = 'payslip_' . $payslip->employee->employee_number . '_' . $payslip->payroll->period_start . '.pdf';
-        
+
         return $pdf->download($filename);
     }
 
@@ -59,20 +59,20 @@ class PayslipController extends Controller
     {
         $payslip = PayrollItem::with([
             'payroll',
-            'employee.department',
-            'employee.location',
+            'employee.project',
+            'employee.positionRate',
             'details'
         ])->findOrFail($payrollItemId);
 
         $filename = 'payslip_' . $payslip->employee->employee_number . '_' . $payslip->payroll->period_start . '.xlsx';
-        
+
         return Excel::download(new PayslipExport($payslip), $filename);
     }
 
     public function myPayslips(Request $request)
     {
         $user = $request->user();
-        
+
         // Find employee by user email or username
         $employee = Employee::where('email', $user->email)
             ->orWhere('username', $user->username)

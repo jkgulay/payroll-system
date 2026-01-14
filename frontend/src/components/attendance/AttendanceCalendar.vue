@@ -40,6 +40,24 @@
             </div>
           </v-card-text>
         </v-card>
+
+        <v-card class="mt-4">
+          <v-card-title class="text-h6">Filter</v-card-title>
+          <v-card-text>
+            <v-autocomplete
+              v-model="selectedEmployeeId"
+              :items="employees"
+              item-title="full_name"
+              item-value="id"
+              label="Filter by Employee"
+              variant="outlined"
+              density="compact"
+              clearable
+              :loading="loadingEmployees"
+              @update:model-value="loadMonthData"
+            ></v-autocomplete>
+          </v-card-text>
+        </v-card>
       </v-col>
 
       <v-col cols="12" md="9">
@@ -93,6 +111,34 @@
                       <div class="text-caption font-weight-bold">
                         {{ day.dayNumber }}
                       </div>
+
+                      <!-- Daily Summary -->
+                      <div
+                        v-if="day.records.length > 0"
+                        class="summary-box mb-1"
+                      >
+                        <div class="summary-line">
+                          <strong
+                            >{{ day.summary.present }}/{{
+                              day.summary.total
+                            }}</strong
+                          >
+                          Present
+                        </div>
+                        <div
+                          v-if="day.summary.absent > 0"
+                          class="summary-line text-error"
+                        >
+                          <strong>{{ day.summary.absent }}</strong> Absent
+                        </div>
+                        <div
+                          v-if="day.summary.late > 0"
+                          class="summary-line text-warning"
+                        >
+                          <strong>{{ day.summary.late }}</strong> Late
+                        </div>
+                      </div>
+
                       <div v-if="day.records.length > 0" class="mt-1">
                         <v-chip
                           v-for="record in day.records.slice(0, 2)"
@@ -104,12 +150,15 @@
                         >
                           {{ record.employee.full_name.split(" ")[0] }}
                         </v-chip>
-                        <div
+                        <v-chip
                           v-if="day.records.length > 2"
-                          class="text-caption text-center"
+                          size="x-small"
+                          color="grey"
+                          class="mb-1"
+                          @click.stop="showDayDetails(day)"
                         >
                           +{{ day.records.length - 2 }} more
-                        </div>
+                        </v-chip>
                       </div>
                     </div>
                   </td>
@@ -120,13 +169,78 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Day Details Dialog -->
+    <v-dialog v-model="dayDetailsDialog" max-width="800">
+      <v-card>
+        <v-card-title>
+          Attendance for {{ formatDate(selectedDayDate) }}
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text>
+          <v-data-table
+            :headers="dayDetailsHeaders"
+            :items="selectedDayRecords"
+            :items-per-page="10"
+            density="compact"
+          >
+            <template v-slot:item.employee="{ item }">
+              <div>
+                <div class="font-weight-medium">
+                  {{ item.employee.full_name }}
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  {{ item.employee.employee_number }}
+                </div>
+              </div>
+            </template>
+
+            <template v-slot:item.time_in="{ item }">
+              {{ item.time_in || "--:--" }}
+            </template>
+
+            <template v-slot:item.time_out="{ item }">
+              {{ item.time_out || "--:--" }}
+            </template>
+
+            <template v-slot:item.hours="{ item }">
+              {{ item.regular_hours || 0 }}h
+              <span v-if="item.overtime_hours > 0" class="text-warning">
+                +{{ item.overtime_hours }}h
+              </span>
+            </template>
+
+            <template v-slot:item.status="{ item }">
+              <v-chip :color="getStatusColor(item.status)" size="small">
+                {{ item.status }}
+              </v-chip>
+            </template>
+
+            <template v-slot:item.actions="{ item }">
+              <v-btn
+                icon="mdi-pencil"
+                size="small"
+                variant="text"
+                @click="$emit('record-click', item)"
+              ></v-btn>
+            </template>
+          </v-data-table>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="dayDetailsDialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-card-text>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import api from "@/services/api";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
 
 const emit = defineEmits(["date-click", "record-click"]);
 const toast = useToast();
@@ -134,6 +248,21 @@ const toast = useToast();
 const loading = ref(false);
 const selectedDate = ref(new Date());
 const attendanceData = ref([]);
+const selectedEmployeeId = ref(null);
+const employees = ref([]);
+const loadingEmployees = ref(false);
+const dayDetailsDialog = ref(false);
+const selectedDayDate = ref(null);
+const selectedDayRecords = ref([]);
+
+const dayDetailsHeaders = [
+  { title: "Employee", key: "employee", sortable: false },
+  { title: "Time In", key: "time_in" },
+  { title: "Time Out", key: "time_out" },
+  { title: "Hours", key: "hours", sortable: false },
+  { title: "Status", key: "status" },
+  { title: "Actions", key: "actions", sortable: false },
+];
 
 const calendarHeaders = [
   { title: "Sun", value: "sun", sortable: false },
@@ -171,6 +300,7 @@ const calendarDays = computed(() => {
       dayNumber: "",
       isCurrentMonth: false,
       records: [],
+      summary: { total: 0, present: 0, absent: 0, late: 0, onLeave: 0 },
     });
   }
 
@@ -180,14 +310,25 @@ const calendarDays = computed(() => {
       day
     ).padStart(2, "0")}`;
 
+    const dayRecords = attendanceData.value.filter(
+      (a) => a.attendance_date === dateStr
+    );
+
+    const summary = {
+      total: dayRecords.length,
+      present: dayRecords.filter((r) => r.status === "present").length,
+      absent: dayRecords.filter((r) => r.status === "absent").length,
+      late: dayRecords.filter((r) => r.status === "late").length,
+      onLeave: dayRecords.filter((r) => r.status === "on_leave").length,
+    };
+
     week.push({
       date: dateStr,
       dayNumber: day,
       isCurrentMonth: true,
       isToday: dateStr === new Date().toISOString().split("T")[0],
-      records: attendanceData.value.filter(
-        (a) => a.attendance_date === dateStr
-      ),
+      records: dayRecords,
+      summary: summary,
     });
 
     if (week.length === 7) {
@@ -204,6 +345,7 @@ const calendarDays = computed(() => {
         dayNumber: "",
         isCurrentMonth: false,
         records: [],
+        summary: { total: 0, present: 0, absent: 0, late: 0, onLeave: 0 },
       });
     }
     days.push(week);
@@ -220,15 +362,33 @@ const loadMonthData = async () => {
     const firstDay = new Date(year, month, 1).toISOString().split("T")[0];
     const lastDay = new Date(year, month + 1, 0).toISOString().split("T")[0];
 
-    const response = await attendanceService.getAttendance({
+    const params = {
       date_from: firstDay,
       date_to: lastDay,
-    });
+    };
+
+    if (selectedEmployeeId.value) {
+      params.employee_id = selectedEmployeeId.value;
+    }
+
+    const response = await attendanceService.getAttendance(params);
     attendanceData.value = response.data || [];
   } catch (error) {
     toast.error("Failed to load calendar data");
   } finally {
     loading.value = false;
+  }
+};
+
+const loadEmployees = async () => {
+  loadingEmployees.value = true;
+  try {
+    const response = await api.get("/employees");
+    employees.value = response.data.data || response.data || [];
+  } catch (error) {
+    toast.error("Failed to load employees");
+  } finally {
+    loadingEmployees.value = false;
   }
 };
 
@@ -275,13 +435,68 @@ const goToToday = () => {
   loadMonthData();
 };
 
+const showDayDetails = (day) => {
+  selectedDayDate.value = day.date;
+  selectedDayRecords.value = day.records;
+  dayDetailsDialog.value = true;
+};
+
+const formatDate = (date) => {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+let unsubscribeAttendance = null;
+
 onMounted(() => {
   loadMonthData();
+  loadEmployees();
+
+  // Listen for attendance updates
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    loadMonthData();
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 </script>
 
 <style scoped>
 .attendance-calendar :deep(td) {
   border: 1px solid #e0e0e0;
+}
+
+.attendance-calendar :deep(td:hover) {
+  background-color: #f5f5f5;
+}
+
+.summary-box {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.summary-line {
+  margin: 1px 0;
+}
+
+.text-error {
+  color: #d32f2f !important;
+  font-weight: 500;
+}
+
+.text-warning {
+  color: #f57c00 !important;
+  font-weight: 500;
 }
 </style>

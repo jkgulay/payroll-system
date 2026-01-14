@@ -92,15 +92,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/attendance/device-info', [App\Http\Controllers\Api\AttendanceController::class, 'deviceInfo']);
     Route::get('/attendance/pending-approvals', [App\Http\Controllers\Api\AttendanceController::class, 'pendingApprovals']);
     Route::get('/attendance/summary', [App\Http\Controllers\Api\AttendanceController::class, 'summary']);
+    Route::get('/attendance/summary/export', [App\Http\Controllers\Api\AttendanceController::class, 'exportSummary']);
     Route::get('/attendance/employee/{employee}/summary', [App\Http\Controllers\Api\AttendanceController::class, 'employeeSummary']);
     Route::post('/attendance/mark-absent', [App\Http\Controllers\Api\AttendanceController::class, 'markAbsent']);
     Route::post('/attendance/{attendance}/approve', [App\Http\Controllers\Api\AttendanceController::class, 'approve']);
     Route::post('/attendance/{attendance}/reject', [App\Http\Controllers\Api\AttendanceController::class, 'reject']);
+
+    // Daily Time Record (DTR) Routes
+    Route::post('/attendance/dtr/generate', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'generate']);
+    Route::post('/attendance/dtr/generate-daily', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'generateDaily']);
+    Route::post('/attendance/dtr/preview', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'preview']);
+
     Route::apiResource('attendance', App\Http\Controllers\Api\AttendanceController::class);
 
     // Payroll
     Route::apiResource('payroll', PayrollController::class);
     Route::middleware(['throttle:10,1'])->post('/payroll/{payroll}/process', [PayrollController::class, 'process']);
+    Route::post('/payroll/{payroll}/reset', [PayrollController::class, 'reset']);
     Route::post('/payroll/{payroll}/check', [PayrollController::class, 'check']);
     Route::post('/payroll/{payroll}/recommend', [PayrollController::class, 'recommend']);
     Route::post('/payroll/{payroll}/approve', [PayrollController::class, 'approve']);
@@ -109,6 +117,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/payroll/{payroll}/items', [App\Http\Controllers\Api\PayrollController::class, 'items']);
     Route::get('/payroll/{payroll}/export-excel', [App\Http\Controllers\Api\PayrollController::class, 'exportExcel']);
     Route::get('/payroll/{payroll}/export-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportPdf']);
+    Route::post('/payroll/{payroll}/export-comprehensive-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportComprehensivePDF']);
 
     // Payslips
     Route::get('/payslips/employee/{employee}', [App\Http\Controllers\Api\PayslipController::class, 'employeePayslips']);
@@ -129,6 +138,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Meal Allowance Management - specific routes MUST come before apiResource
     Route::get('/meal-allowances/positions', [App\Http\Controllers\Api\MealAllowanceController::class, 'getPositions']);
     Route::post('/meal-allowances/employees-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'getEmployeesByPosition']);
+    Route::post('/meal-allowances/bulk-assign-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'bulkAssignByPosition']);
     Route::post('/meal-allowances/{mealAllowance}/submit', [App\Http\Controllers\Api\MealAllowanceController::class, 'submit']);
     Route::post('/meal-allowances/{mealAllowance}/approval', [App\Http\Controllers\Api\MealAllowanceController::class, 'updateApproval']);
     Route::post('/meal-allowances/{mealAllowance}/generate-pdf', [App\Http\Controllers\Api\MealAllowanceController::class, 'generatePdf']);
@@ -144,12 +154,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Deductions - specific routes MUST come before apiResource
     Route::post('/deductions/{deduction}/record-installment', [App\Http\Controllers\Api\DeductionController::class, 'recordInstallment']);
-    
+
     // Cash Bond specific routes
     Route::get('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'getCashBonds']);
     Route::post('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'createCashBond'])->middleware('role:admin,accountant');
     Route::post('/deductions/{deduction}/refund-cash-bond', [App\Http\Controllers\Api\DeductionController::class, 'refundCashBond'])->middleware('role:admin,accountant');
-    
+
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);
@@ -253,6 +263,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Settings
     Route::get('/settings', [App\Http\Controllers\Api\SettingController::class, 'index']);
     Route::put('/settings', [App\Http\Controllers\Api\SettingController::class, 'update']);
+
+    // Government Rates
+    Route::apiResource('government-rates', App\Http\Controllers\Api\GovernmentRateController::class);
+    Route::post('/government-rates/for-salary', [App\Http\Controllers\Api\GovernmentRateController::class, 'getForSalary']);
+    Route::post('/government-rates/bulk-delete', [App\Http\Controllers\Api\GovernmentRateController::class, 'bulkDelete']);
 
     // Audit Logs
     Route::get('/audit-logs', [App\Http\Controllers\Api\AuditLogController::class, 'index']);

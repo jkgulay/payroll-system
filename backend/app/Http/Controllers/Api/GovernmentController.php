@@ -3,35 +3,75 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\SSSContributionTable;
-use App\Models\PhilHealthContributionTable;
-use App\Models\PagibigContributionTable;
-use App\Models\TaxWithholdingTable;
+use App\Models\GovernmentRate;
 use Illuminate\Http\Request;
 
 class GovernmentController extends Controller
 {
     public function sssTable()
     {
-        $table = SSSContributionTable::orderBy('min_salary')->get();
+        $table = GovernmentRate::where('type', 'sss')
+            ->where('is_active', true)
+            ->orderBy('min_salary')
+            ->get()
+            ->map(fn($rate) => [
+                'id' => $rate->id,
+                'min_salary' => $rate->min_salary,
+                'max_salary' => $rate->max_salary,
+                'employee_share' => $rate->employee_fixed ?? 0,
+                'employer_share' => $rate->employer_fixed ?? 0,
+                'total_contribution' => $rate->total_contribution ?? 0,
+            ]);
         return response()->json($table);
     }
 
     public function philhealthTable()
     {
-        $table = PhilHealthContributionTable::orderBy('min_salary')->get();
+        $table = GovernmentRate::where('type', 'philhealth')
+            ->where('is_active', true)
+            ->orderBy('min_salary')
+            ->get()
+            ->map(fn($rate) => [
+                'id' => $rate->id,
+                'min_salary' => $rate->min_salary,
+                'max_salary' => $rate->max_salary,
+                'employee_share' => $rate->employee_rate ?? 0,
+                'employer_share' => $rate->employer_rate ?? 0,
+                'contribution_rate' => ($rate->employee_rate ?? 0) + ($rate->employer_rate ?? 0),
+            ]);
         return response()->json($table);
     }
 
     public function pagibigTable()
     {
-        $table = PagibigContributionTable::orderBy('min_salary')->get();
+        $table = GovernmentRate::where('type', 'pagibig')
+            ->where('is_active', true)
+            ->orderBy('min_salary')
+            ->get()
+            ->map(fn($rate) => [
+                'id' => $rate->id,
+                'min_salary' => $rate->min_salary,
+                'max_salary' => $rate->max_salary,
+                'employee_rate' => $rate->employee_rate ?? 0,
+                'employer_rate' => $rate->employer_rate ?? 0,
+            ]);
         return response()->json($table);
     }
 
     public function taxTable($periodType)
     {
-        $table = TaxWithholdingTable::where('period_type', $periodType)->orderBy('min_income')->get();
+        $table = GovernmentRate::where('type', 'tax')
+            ->where('is_active', true)
+            ->orderBy('min_salary')
+            ->get()
+            ->map(fn($rate) => [
+                'id' => $rate->id,
+                'min_income' => $rate->min_salary,
+                'max_income' => $rate->max_salary,
+                'tax_rate' => $rate->employee_rate ?? 0,
+                'fixed_tax' => $rate->employee_fixed ?? 0,
+                'period_type' => $periodType,
+            ]);
         return response()->json($table);
     }
 
@@ -39,41 +79,35 @@ class GovernmentController extends Controller
     {
         $salary = $request->input('salary', 0);
 
-        // SSS Computation
-        $sss = SSSContributionTable::where('min_salary', '<=', $salary)
-            ->where('max_salary', '>=', $salary)
-            ->first();
+        // SSS Computation using new GovernmentRate model
+        $sss = GovernmentRate::getContributionForSalary('sss', $salary);
 
         // PhilHealth Computation
-        $philhealth = PhilHealthContributionTable::where('min_salary', '<=', $salary)
-            ->where('max_salary', '>=', $salary)
-            ->first();
+        $philhealth = GovernmentRate::getContributionForSalary('philhealth', $salary);
 
         // Pag-IBIG Computation
-        $pagibig = PagibigContributionTable::where('min_salary', '<=', $salary)
-            ->where('max_salary', '>=', $salary)
-            ->first();
+        $pagibig = GovernmentRate::getContributionForSalary('pagibig', $salary);
 
         $contributions = [
             'salary' => $salary,
             'sss' => [
-                'employee_share' => $sss ? $sss->employee_share : 0,
-                'employer_share' => $sss ? $sss->employer_share : 0,
-                'total' => $sss ? $sss->total_contribution : 0,
+                'employee_share' => $sss['employee'] ?? 0,
+                'employer_share' => $sss['employer'] ?? 0,
+                'total' => ($sss['employee'] ?? 0) + ($sss['employer'] ?? 0),
             ],
             'philhealth' => [
-                'employee_share' => $philhealth ? $philhealth->employee_share : 0,
-                'employer_share' => $philhealth ? $philhealth->employer_share : 0,
-                'total' => $philhealth ? $philhealth->total_contribution : 0,
+                'employee_share' => $philhealth['employee'] ?? 0,
+                'employer_share' => $philhealth['employer'] ?? 0,
+                'total' => ($philhealth['employee'] ?? 0) + ($philhealth['employer'] ?? 0),
             ],
             'pagibig' => [
-                'employee_share' => $pagibig ? $pagibig->employee_share : 0,
-                'employer_share' => $pagibig ? $pagibig->employer_share : 0,
-                'total' => $pagibig ? $pagibig->total_contribution : 0,
+                'employee_share' => $pagibig['employee'] ?? 0,
+                'employer_share' => $pagibig['employer'] ?? 0,
+                'total' => ($pagibig['employee'] ?? 0) + ($pagibig['employer'] ?? 0),
             ],
-            'total_employee_deductions' => ($sss ? $sss->employee_share : 0) +
-                ($philhealth ? $philhealth->employee_share : 0) +
-                ($pagibig ? $pagibig->employee_share : 0),
+            'total_employee_deductions' => ($sss['employee'] ?? 0) +
+                ($philhealth['employee'] ?? 0) +
+                ($pagibig['employee'] ?? 0),
         ];
 
         return response()->json($contributions);

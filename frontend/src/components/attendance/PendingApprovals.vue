@@ -91,9 +91,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, onUnmounted } from "vue";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
 
 const emit = defineEmits(["approve", "reject", "update-count"]);
 const toast = useToast();
@@ -144,8 +145,21 @@ const getStatusColor = (status) => {
   return colors[status] || "grey";
 };
 
+let unsubscribeAttendance = null;
+
 onMounted(() => {
   loadPending();
+
+  // Listen for attendance updates
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    loadPending();
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 
 // Watch for external updates

@@ -151,28 +151,6 @@
 
       <v-spacer></v-spacer>
 
-      <!-- Sync status indicator with construction theme (Hidden on mobile) -->
-      <v-chip
-        v-if="syncStore.pendingChanges > 0 && !isMobile"
-        color="info"
-        size="small"
-        class="mr-2 construction-chip"
-        prepend-icon="mdi-sync"
-      >
-        {{ syncStore.pendingChanges }} pending
-      </v-chip>
-
-      <!-- Online/Offline indicator with construction safety colors -->
-      <v-chip
-        :color="syncStore.isOnline ? 'success' : 'error'"
-        size="small"
-        variant="elevated"
-        class="construction-chip mr-2"
-        :prepend-icon="syncStore.isOnline ? 'mdi-wifi' : 'mdi-wifi-off'"
-      >
-        <span v-if="!isMobile">{{ syncStore.isOnline ? "Online" : "Offline" }}</span>
-      </v-chip>
-
       <!-- Notification Bell -->
       <v-btn icon="mdi-bell-outline" variant="text" color="steel" :size="isMobile ? 'small' : 'default'"></v-btn>
     </v-app-bar>
@@ -277,7 +255,6 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { useSyncStore } from "@/stores/sync";
 import { useToast } from "vue-toastification";
 import { useDisplay } from "vuetify";
 import api from "@/services/api";
@@ -285,7 +262,6 @@ import api from "@/services/api";
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
-const syncStore = useSyncStore();
 const toast = useToast();
 const { mobile, mdAndDown } = useDisplay();
 
