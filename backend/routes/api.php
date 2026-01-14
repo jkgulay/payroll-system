@@ -76,6 +76,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('projects/{project}/generate-payroll', [App\Http\Controllers\Api\ProjectController::class, 'generatePayroll']);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
+    // Biometric Import Routes - Staff Information and Punch Records
+    Route::post('/biometric/import-staff', [App\Http\Controllers\Api\BiometricImportController::class, 'importStaffInformation']);
+    Route::post('/biometric/import-punch-records', [App\Http\Controllers\Api\BiometricImportController::class, 'importPunchRecords']);
+    Route::get('/biometric/template-info', [App\Http\Controllers\Api\BiometricImportController::class, 'getTemplateInfo']);
+
     // Attendance - Specific routes MUST come before apiResource
     Route::post('/attendance/import-biometric', [App\Http\Controllers\Api\AttendanceController::class, 'importBiometric']);
     Route::post('/attendance/fetch-from-device', [App\Http\Controllers\Api\AttendanceController::class, 'fetchFromDevice']);

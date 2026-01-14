@@ -374,6 +374,13 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
+      title: "Biometric Import",
+      icon: "mdi-file-upload-outline",
+      value: "biometric-import",
+      to: "/biometric-import",
+      roles: ["admin", "accountant"],
+    },
+    {
       title: "Payroll",
       icon: "mdi-currency-php",
       value: "payroll",
