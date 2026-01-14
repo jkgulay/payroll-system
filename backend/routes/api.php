@@ -113,6 +113,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/payroll/{payroll}/export-excel', [App\Http\Controllers\Api\PayrollController::class, 'exportExcel']);
     Route::get('/payroll/{payroll}/export-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportPdf']);
     Route::post('/payroll/{payroll}/export-comprehensive-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportComprehensivePDF']);
+    Route::get('/payroll/test-pdf-setup', [App\Http\Controllers\Api\PayrollController::class, 'testPdfSetup']);
 
     // Payslips
     Route::get('/payslips/employee/{employee}', [App\Http\Controllers\Api\PayslipController::class, 'employeePayslips']);
