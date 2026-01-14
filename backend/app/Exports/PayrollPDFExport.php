@@ -22,6 +22,9 @@ class PayrollPDFExport
      */
     public function generate(array $signatureData = [])
     {
+        // Increase memory limit for PDF generation
+        ini_set('memory_limit', '256M');
+
         $payrollItems = $this->payroll->payrollItems()
             ->with([
                 'employee:id,employee_number,first_name,middle_name,last_name,position_id,project_id',
@@ -82,6 +85,11 @@ class PayrollPDFExport
 
         $pdf = Pdf::loadView('pdfs.payroll-comprehensive', $data);
         $pdf->setPaper('legal', 'landscape');
+
+        // Optimize for production environment
+        $pdf->setOption('isHtml5ParserEnabled', true);
+        $pdf->setOption('isRemoteEnabled', false);
+        $pdf->setOption('debugKeepTemp', false);
 
         return $pdf;
     }
