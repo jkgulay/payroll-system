@@ -27,7 +27,7 @@ class PayrollReportExport implements FromCollection, WithHeadings, WithMapping, 
 
     public function collection()
     {
-        return $this->payroll->payslips()->with('employee')->get();
+        return $this->payroll->payrollItems()->with('employee')->get();
     }
 
     public function headings(): array

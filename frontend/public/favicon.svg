@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" fill="#ff6f00"/>
+  <path d="M12 8h24v6H12zm0 10h24v6H12zm0 10h16v6H12z" fill="#fff"/>
+  <circle cx="36" cy="32" r="8" fill="#ffd54f"/>
+  <text x="36" y="36" font-size="12" text-anchor="middle" fill="#000" font-weight="bold">₱</text>
+</svg>

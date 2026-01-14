@@ -14,6 +14,14 @@
           Manual Entry
         </v-btn>
         <v-btn
+          color="success"
+          prepend-icon="mdi-file-document"
+          @click="openDTRDialog"
+          class="ml-2"
+        >
+          Generate DTR
+        </v-btn>
+        <v-btn
           color="info"
           prepend-icon="mdi-upload"
           @click="openImportDialog"
@@ -121,6 +129,9 @@
     <!-- Mark Absent Dialog -->
     <MarkAbsentDialog v-model="markAbsentDialog" @marked="handleMarkedAbsent" />
 
+    <!-- DTR Generation Dialog -->
+    <GenerateDTRDialog v-model="dtrDialog" />
+
     <!-- Reject Dialog -->
     <RejectDialog
       v-model="rejectDialog"
@@ -147,6 +158,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useAuthStore } from "@/stores/auth";
 import attendanceService from "@/services/attendanceService";
@@ -158,10 +170,12 @@ import DeviceManagement from "@/components/attendance/DeviceManagement.vue";
 import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
 import ImportBiometricDialog from "@/components/attendance/ImportBiometricDialog.vue";
 import MarkAbsentDialog from "@/components/attendance/MarkAbsentDialog.vue";
+import GenerateDTRDialog from "@/components/attendance/GenerateDTRDialog.vue";
 import RejectDialog from "@/components/attendance/RejectDialog.vue";
 
 const toast = useToast();
 const authStore = useAuthStore();
+const route = useRoute();
 const tab = ref("list");
 const listView = ref(null);
 
@@ -177,6 +191,7 @@ const canApprove = computed(() =>
 const manualEntryDialog = ref(false);
 const importDialog = ref(false);
 const markAbsentDialog = ref(false);
+const dtrDialog = ref(false);
 const rejectDialog = ref(false);
 const deleteDialog = ref(false);
 
@@ -205,6 +220,10 @@ const openImportDialog = () => {
 
 const openMarkAbsentDialog = () => {
   markAbsentDialog.value = true;
+};
+
+const openDTRDialog = () => {
+  dtrDialog.value = true;
 };
 
 const openRejectDialog = (attendance) => {
@@ -246,7 +265,10 @@ const approveAttendance = async (attendance) => {
     toast.success("Attendance approved");
     refreshData();
   } catch (error) {
-    toast.error("Failed to approve attendance");
+    const message =
+      error.response?.data?.message || "Failed to approve attendance";
+    toast.error(message);
+    console.error("Approval error:", error.response?.data);
   }
 };
 
@@ -279,14 +301,30 @@ const updatePendingCount = (count) => {
 };
 
 const refreshData = () => {
-  // Refresh active tab
-  if (tab.value === "list" && listView.value) {
+  // Refresh all tabs to ensure consistency
+  if (listView.value) {
     listView.value.loadAttendance();
   }
+  // Trigger refresh for calendar and other components
+  window.dispatchEvent(new CustomEvent("attendance-data-changed"));
 };
 
 // Load pending count on mount
 onMounted(async () => {
+  // Check for query parameters from dashboard
+  if (route.query.tab) {
+    tab.value = route.query.tab;
+  }
+
+  // If date filters are provided, pass them to the list view
+  if (route.query.date_from && route.query.date_to && listView.value) {
+    setTimeout(() => {
+      if (listView.value) {
+        listView.value.loadAttendance();
+      }
+    }, 100);
+  }
+
   if (canApprove.value) {
     try {
       const response = await attendanceService.getPendingApprovals();

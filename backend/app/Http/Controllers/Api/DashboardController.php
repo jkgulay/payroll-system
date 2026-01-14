@@ -23,16 +23,45 @@ class DashboardController extends Controller
             ->where('activity_status', 'active')
             ->count();
 
+        // Get today's date
+        $today = Carbon::now()->format('Y-m-d');
+
+        // Count employees present today
+        $presentToday = Attendance::whereDate('attendance_date', $today)
+            ->whereIn('status', ['present', 'late'])
+            ->distinct('employee_id')
+            ->count('employee_id');
+
+        // Get current period payroll total
+        $currentMonth = Carbon::now()->format('Y-m');
+        $periodPayroll = Payroll::whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$currentMonth])
+            ->sum('total_gross_pay');
+
+        // Get recent payrolls
+        $recentPayrolls = Payroll::orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($payroll) {
+                return [
+                    'id' => $payroll->id,
+                    'payroll_number' => $payroll->payroll_number,
+                    'period_start_date' => $payroll->period_start,
+                    'period_end_date' => $payroll->period_end,
+                    'total_gross' => $payroll->total_gross_pay,
+                    'status' => $payroll->status,
+                ];
+            });
+
         $data = [
             'stats' => [
                 'totalEmployees' => $totalEmployees,
                 'activeEmployees' => $activeStatus,
-                'periodPayroll' => 0,
-                'presentToday' => 0,
+                'periodPayroll' => $periodPayroll ?? 0,
+                'presentToday' => $presentToday,
                 'pendingApprovals' => 0,
             ],
             'recent_attendance' => [],
-            'recent_payrolls' => [],
+            'recent_payrolls' => $recentPayrolls,
         ];
 
         return response()->json($data);

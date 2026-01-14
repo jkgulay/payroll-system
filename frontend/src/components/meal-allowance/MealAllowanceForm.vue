@@ -8,7 +8,7 @@
     <v-card>
       <v-card-title class="d-flex align-center bg-primary">
         <v-icon left>mdi-food</v-icon>
-        {{ isEdit ? 'Edit Meal Allowance' : 'Create Meal Allowance' }}
+        {{ isEdit ? "Edit Meal Allowance" : "Create Meal Allowance" }}
         <v-spacer></v-spacer>
         <v-btn icon="mdi-close" variant="text" @click="close"></v-btn>
       </v-card-title>
@@ -82,23 +82,86 @@
           <v-row>
             <v-col cols="12" class="d-flex justify-space-between align-center">
               <h3>Employees</h3>
-              <div>
-                <v-chip 
-                  v-if="form.items.length > 0" 
-                  color="info" 
-                  class="mr-2"
-                >
+              <div class="d-flex gap-2 align-center">
+                <v-chip v-if="form.items.length > 0" color="info" class="mr-2">
                   {{ form.items.length }} employee(s)
                 </v-chip>
-                <v-btn
-                  v-if="availableEmployees.length > 0 && form.items.length === 0"
-                  color="primary"
-                  size="small"
-                  @click="addAllEmployees"
-                >
-                  <v-icon left>mdi-account-multiple-plus</v-icon>
-                  Add All Employees from Position
-                </v-btn>
+
+                <!-- Bulk Assignment Dialog -->
+                <v-dialog v-model="showBulkDialog" max-width="500px">
+                  <template v-slot:activator="{ props }">
+                    <v-btn
+                      v-if="form.position_id && availableEmployees.length > 0"
+                      v-bind="props"
+                      color="primary"
+                      size="small"
+                      prepend-icon="mdi-account-multiple-plus"
+                    >
+                      Bulk Add by Position
+                    </v-btn>
+                  </template>
+
+                  <v-card>
+                    <v-card-title class="bg-primary">
+                      <v-icon left>mdi-account-multiple-plus</v-icon>
+                      Bulk Add Employees by Position
+                    </v-card-title>
+
+                    <v-card-text class="pt-4">
+                      <v-alert type="info" variant="tonal" class="mb-4">
+                        This will add all {{ availableEmployees.length }} active
+                        employee(s) with the selected position to the meal
+                        allowance.
+                      </v-alert>
+
+                      <v-text-field
+                        v-model.number="bulkForm.no_of_days"
+                        label="Number of Days *"
+                        type="number"
+                        min="1"
+                        max="31"
+                        :rules="[rules.required]"
+                        outlined
+                        dense
+                        hint="Default days for all employees"
+                      ></v-text-field>
+
+                      <v-text-field
+                        v-model.number="bulkForm.amount_per_day"
+                        label="Amount per Day *"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        :rules="[rules.required]"
+                        outlined
+                        dense
+                        prefix="₱"
+                        hint="Default amount per day for all employees"
+                        class="mt-3"
+                      ></v-text-field>
+
+                      <v-alert type="warning" variant="tonal" class="mt-4">
+                        <strong>Note:</strong> This will replace any existing
+                        employees in the list.
+                      </v-alert>
+                    </v-card-text>
+
+                    <v-card-actions>
+                      <v-spacer></v-spacer>
+                      <v-btn @click="showBulkDialog = false" variant="outlined">
+                        Cancel
+                      </v-btn>
+                      <v-btn
+                        color="primary"
+                        @click="bulkAddEmployees"
+                        :loading="bulkLoading"
+                      >
+                        <v-icon left>mdi-check</v-icon>
+                        Add All Employees
+                      </v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-dialog>
               </div>
             </v-col>
           </v-row>
@@ -113,7 +176,10 @@
               <div class="d-flex align-center">
                 <span v-if="item.employee_name" class="text-body-2">
                   {{ item.employee_name }}
-                  <span v-if="item.employee_number" class="text-caption text-grey ml-1">
+                  <span
+                    v-if="item.employee_number"
+                    class="text-caption text-grey ml-1"
+                  >
                     ({{ item.employee_number }})
                   </span>
                 </span>
@@ -176,11 +242,7 @@
             <template #bottom>
               <v-row class="ma-2">
                 <v-col>
-                  <v-btn
-                    color="primary"
-                    size="small"
-                    @click="addItem"
-                  >
+                  <v-btn color="primary" size="small" @click="addItem">
                     <v-icon left>mdi-plus</v-icon>
                     Add Row
                   </v-btn>
@@ -197,21 +259,17 @@
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn @click="close" variant="outlined">Cancel</v-btn>
-        <v-btn 
-          color="success" 
-          @click="saveAndSubmit" 
+        <v-btn
+          color="success"
+          @click="saveAndSubmit"
           :loading="saving"
           v-if="!isEdit"
         >
           <v-icon left>mdi-send</v-icon>
           Create & Submit for Approval
         </v-btn>
-        <v-btn 
-          color="primary" 
-          @click="save" 
-          :loading="saving"
-        >
-          {{ isEdit ? 'Update' : 'Save as Draft' }}
+        <v-btn color="primary" @click="save" :loading="saving">
+          {{ isEdit ? "Update" : "Save as Draft" }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -219,87 +277,99 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import mealAllowanceService from '@/services/mealAllowanceService'
+import { ref, computed, watch } from "vue";
+import mealAllowanceService from "@/services/mealAllowanceService";
 
 const props = defineProps({
   modelValue: Boolean,
   mealAllowance: Object,
-  positions: Array
-})
+  positions: Array,
+});
 
-const emit = defineEmits(['update:modelValue', 'saved'])
+const emit = defineEmits(["update:modelValue", "saved"]);
 
-const formRef = ref(null)
-const saving = ref(false)
-const loadingEmployees = ref(false)
-const availableEmployees = ref([])
+const formRef = ref(null);
+const saving = ref(false);
+const loadingEmployees = ref(false);
+const bulkLoading = ref(false);
+const showBulkDialog = ref(false);
+const availableEmployees = ref([]);
 
 const form = ref({
-  title: '',
-  location: '',
-  period_start: '',
-  period_end: '',
+  title: "",
+  location: "",
+  period_start: "",
+  period_end: "",
   position_id: null,
-  notes: '',
-  items: []
-})
+  notes: "",
+  items: [],
+});
+
+const bulkForm = ref({
+  no_of_days: 15,
+  amount_per_day: 120.0,
+});
 
 const itemHeaders = [
-  { title: 'Employee', key: 'employee_id', width: '250px' },
-  { title: 'No. of Days', key: 'no_of_days', width: '120px' },
-  { title: 'Amount/Day', key: 'amount_per_day', width: '120px' },
-  { title: 'Total', key: 'total', width: '120px' },
-  { title: 'Actions', key: 'actions', width: '80px', align: 'center' }
-]
+  { title: "Employee", key: "employee_id", width: "250px" },
+  { title: "No. of Days", key: "no_of_days", width: "120px" },
+  { title: "Amount/Day", key: "amount_per_day", width: "120px" },
+  { title: "Total", key: "total", width: "120px" },
+  { title: "Actions", key: "actions", width: "80px", align: "center" },
+];
 
 const rules = {
-  required: v => !!v || 'Required'
-}
+  required: (v) => !!v || "Required",
+};
 
-const isEdit = computed(() => !!props.mealAllowance)
+const isEdit = computed(() => !!props.mealAllowance);
 
 const grandTotal = computed(() => {
   return form.value.items.reduce((sum, item) => {
-    return sum + (item.no_of_days * item.amount_per_day)
-  }, 0)
-})
+    return sum + item.no_of_days * item.amount_per_day;
+  }, 0);
+});
 
-watch(() => props.mealAllowance, (newVal) => {
-  if (newVal) {
-    form.value = {
-      title: newVal.title,
-      location: newVal.location || '',
-      period_start: newVal.period_start,
-      period_end: newVal.period_end,
-      position_id: newVal.position_id,
-      notes: newVal.notes || '',
-      items: newVal.items ? newVal.items.map(item => ({
-        employee_id: item.employee_id,
-        no_of_days: item.no_of_days,
-        amount_per_day: parseFloat(item.amount_per_day)
-      })) : []
+watch(
+  () => props.mealAllowance,
+  (newVal) => {
+    if (newVal) {
+      form.value = {
+        title: newVal.title,
+        location: newVal.location || "",
+        period_start: newVal.period_start,
+        period_end: newVal.period_end,
+        position_id: newVal.position_id,
+        notes: newVal.notes || "",
+        items: newVal.items
+          ? newVal.items.map((item) => ({
+              employee_id: item.employee_id,
+              no_of_days: item.no_of_days,
+              amount_per_day: parseFloat(item.amount_per_day),
+            }))
+          : [],
+      };
+      if (newVal.position_id) {
+        loadEmployees();
+      }
+    } else {
+      resetForm();
     }
-    if (newVal.position_id) {
-      loadEmployees()
-    }
-  } else {
-    resetForm()
-  }
-}, { immediate: true })
+  },
+  { immediate: true }
+);
 
 async function loadEmployees() {
-  if (!form.value.position_id) return
-  
-  loadingEmployees.value = true
+  if (!form.value.position_id) return;
+
+  loadingEmployees.value = true;
   try {
-    availableEmployees.value = await mealAllowanceService.getEmployeesByPosition(
-      form.value.position_id
-    )
+    availableEmployees.value =
+      await mealAllowanceService.getEmployeesByPosition(form.value.position_id);
   } catch (error) {
-    console.error('Error loading employees:', error)
+    console.error("Error loading employees:", error);
   } finally {
-    loadingEmployees.value = false
+    loadingEmployees.value = false;
   }
 }
 
@@ -307,129 +377,183 @@ function addItem() {
   form.value.items.push({
     employee_id: null,
     no_of_days: 15,
-    amount_per_day: 120.00
-  })
+    amount_per_day: 120.0,
+  });
 }
 
 function addAllEmployees() {
   // Clear existing items and add all employees from selected position
-  form.value.items = []
-  
-  availableEmployees.value.forEach(emp => {
+  form.value.items = [];
+
+  availableEmployees.value.forEach((emp) => {
     form.value.items.push({
       employee_id: emp.id,
       employee_name: emp.name,
       employee_number: emp.employee_number,
       position_code: emp.position_code,
       no_of_days: 15,
-      amount_per_day: 120.00,
-      total_amount: 15 * 120.00
-    })
-  })
+      amount_per_day: 120.0,
+      total_amount: 15 * 120.0,
+    });
+  });
+}
+
+async function bulkAddEmployees() {
+  if (!form.value.position_id) {
+    alert("Please select a position first");
+    return;
+  }
+
+  if (!bulkForm.value.no_of_days || !bulkForm.value.amount_per_day) {
+    alert("Please fill in all fields");
+    return;
+  }
+
+  if (
+    !confirm(
+      `Add all ${availableEmployees.value.length} employee(s) to this meal allowance? This will replace existing entries.`
+    )
+  ) {
+    return;
+  }
+
+  bulkLoading.value = true;
+  try {
+    const response = await mealAllowanceService.bulkAssignByPosition({
+      position_id: form.value.position_id,
+      project_id: form.value.project_id || null,
+      no_of_days: bulkForm.value.no_of_days,
+      amount_per_day: bulkForm.value.amount_per_day,
+    });
+
+    // Replace current items with bulk assigned items
+    form.value.items = response.items || response.data.items;
+
+    showBulkDialog.value = false;
+    alert(
+      response.message ||
+        `Successfully added ${form.value.items.length} employees`
+    );
+  } catch (error) {
+    console.error("Error bulk assigning employees:", error);
+    alert(
+      "Failed to bulk add employees: " +
+        (error.response?.data?.message || error.message)
+    );
+  } finally {
+    bulkLoading.value = false;
+  }
 }
 
 function removeItem(index) {
-  form.value.items.splice(index, 1)
+  form.value.items.splice(index, 1);
 }
 
 function calculateTotal(item) {
-  item.total_amount = (item.no_of_days || 0) * (item.amount_per_day || 0)
+  item.total_amount = (item.no_of_days || 0) * (item.amount_per_day || 0);
 }
 
 function onEmployeeSelect(index, employeeId) {
-  const employee = availableEmployees.value.find(e => e.id === employeeId)
+  const employee = availableEmployees.value.find((e) => e.id === employeeId);
   if (employee) {
     // Store employee details
-    form.value.items[index].employee_name = employee.name
-    form.value.items[index].employee_number = employee.employee_number
-    form.value.items[index].position_code = employee.position_code
+    form.value.items[index].employee_name = employee.name;
+    form.value.items[index].employee_number = employee.employee_number;
+    form.value.items[index].position_code = employee.position_code;
     // Set default amount based on employee's daily rate
-    form.value.items[index].amount_per_day = employee.basic_salary || 120.00
-    calculateTotal(form.value.items[index])
+    form.value.items[index].amount_per_day = employee.basic_salary || 120.0;
+    calculateTotal(form.value.items[index]);
   }
 }
 
 async function save() {
-  const { valid } = await formRef.value.validate()
-  if (!valid) return
-  
+  const { valid } = await formRef.value.validate();
+  if (!valid) return;
+
   if (form.value.items.length === 0) {
-    alert('Please add at least one employee')
-    return
+    alert("Please add at least one employee");
+    return;
   }
-  
-  saving.value = true
+
+  saving.value = true;
   try {
     if (isEdit.value) {
-      await mealAllowanceService.update(props.mealAllowance.id, form.value)
-      alert('Meal allowance updated successfully')
+      await mealAllowanceService.update(props.mealAllowance.id, form.value);
+      alert("Meal allowance updated successfully");
     } else {
-      await mealAllowanceService.create(form.value)
-      alert('Meal allowance saved as draft')
+      await mealAllowanceService.create(form.value);
+      alert("Meal allowance saved as draft");
     }
-    emit('saved')
-    close()
+    emit("saved");
+    close();
   } catch (error) {
-    console.error('Error saving meal allowance:', error)
-    alert('Failed to save meal allowance: ' + (error.response?.data?.message || error.message))
+    console.error("Error saving meal allowance:", error);
+    alert(
+      "Failed to save meal allowance: " +
+        (error.response?.data?.message || error.message)
+    );
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 async function saveAndSubmit() {
-  const { valid } = await formRef.value.validate()
-  if (!valid) return
-  
+  const { valid } = await formRef.value.validate();
+  if (!valid) return;
+
   if (form.value.items.length === 0) {
-    alert('Please add at least one employee')
-    return
+    alert("Please add at least one employee");
+    return;
   }
-  
-  if (!confirm('Create and submit this meal allowance for admin approval?')) return
-  
-  saving.value = true
+
+  if (!confirm("Create and submit this meal allowance for admin approval?"))
+    return;
+
+  saving.value = true;
   try {
     // First create the meal allowance
-    const response = await mealAllowanceService.create(form.value)
-    const mealAllowanceId = response.data.id
-    
+    const response = await mealAllowanceService.create(form.value);
+    const mealAllowanceId = response.data.id;
+
     // Then submit it for approval
-    await mealAllowanceService.submit(mealAllowanceId)
-    
-    alert('Meal allowance created and submitted for approval successfully!')
-    emit('saved')
-    close()
+    await mealAllowanceService.submit(mealAllowanceId);
+
+    alert("Meal allowance created and submitted for approval successfully!");
+    emit("saved");
+    close();
   } catch (error) {
-    console.error('Error creating and submitting meal allowance:', error)
-    alert('Failed to create and submit: ' + (error.response?.data?.message || error.message))
+    console.error("Error creating and submitting meal allowance:", error);
+    alert(
+      "Failed to create and submit: " +
+        (error.response?.data?.message || error.message)
+    );
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 function close() {
-  emit('update:modelValue', false)
-  resetForm()
+  emit("update:modelValue", false);
+  resetForm();
 }
 
 function resetForm() {
   form.value = {
-    title: '',
-    location: '',
-    period_start: '',
-    period_end: '',
+    title: "",
+    location: "",
+    period_start: "",
+    period_end: "",
     position_id: null,
-    notes: '',
-    items: []
-  }
-  availableEmployees.value = []
+    notes: "",
+    items: [],
+  };
+  availableEmployees.value = [];
 }
 
 function formatNumber(value) {
-  return new Intl.NumberFormat('en-PH', {
+  return new Intl.NumberFormat("en-PH", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value)
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 </script>

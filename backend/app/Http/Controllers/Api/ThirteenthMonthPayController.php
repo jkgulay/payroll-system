@@ -156,8 +156,8 @@ class ThirteenthMonthPayController extends Controller
     public function show($id)
     {
         $thirteenthMonth = ThirteenthMonthPay::with([
-            'items.employee.department',
-            'items.employee.location',
+            'items.employee.project',
+            'items.employee.positionRate',
             'computedBy',
             'approvedBy'
         ])->findOrFail($id);

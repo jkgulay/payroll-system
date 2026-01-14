@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\PayrollService;
 use App\Models\Payroll;
+use App\Exports\PayrollPDFExport;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -33,6 +34,7 @@ class PayrollController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Payroll::with(['preparedBy', 'checkedBy', 'approvedBy'])
+            ->withCount('payrollItems')
             ->orderBy('period_start', 'desc');
 
         if ($request->has('status')) {
@@ -66,6 +68,28 @@ class PayrollController extends Controller
             'position_id' => 'nullable|exists:position_rates,id',
         ]);
 
+        // Calculate year, month, and period number for duplicate check
+        $periodStart = \Carbon\Carbon::parse($validated['period_start_date']);
+        $year = $periodStart->year;
+        $month = $periodStart->month;
+
+        // Determine pay period number (same logic as service)
+        $payPeriodNumber = $validated['pay_period_number'] ??
+            ($periodStart->day <= 15 ? 1 : 2);
+
+        // Check for duplicate year/month/period combination
+        $duplicate = Payroll::where('year', $year)
+            ->where('month', $month)
+            ->where('pay_period_number', $payPeriodNumber)
+            ->exists();
+
+        if ($duplicate) {
+            return response()->json([
+                'message' => "A payroll period already exists for " . $periodStart->format('F Y') . " - Period $payPeriodNumber. Please check existing payroll records.",
+                'error' => 'Duplicate payroll period'
+            ], 422);
+        }
+
         // Check for overlapping payroll periods
         $overlapping = Payroll::where(function ($query) use ($validated) {
             $query->whereBetween('period_start', [$validated['period_start_date'], $validated['period_end_date']])
@@ -74,11 +98,23 @@ class PayrollController extends Controller
                     $q->where('period_start', '<=', $validated['period_start_date'])
                         ->where('period_end', '>=', $validated['period_end_date']);
                 });
-        })->exists();
+        });
 
-        if ($overlapping) {
+        // Apply same filters for overlap check if targeted payroll
+        if (!empty($validated['project_id'])) {
+            $overlapping->where('project_id', $validated['project_id']);
+        }
+        if (!empty($validated['contract_type'])) {
+            $overlapping->where('contract_type', $validated['contract_type']);
+        }
+        if (!empty($validated['position_id'])) {
+            $overlapping->where('position_id', $validated['position_id']);
+        }
+
+        if ($overlapping->exists()) {
             return response()->json([
-                'error' => 'A payroll period already exists for this date range. Please check existing payroll periods.'
+                'message' => 'A payroll period already exists for this date range. Please check existing payroll periods.',
+                'error' => 'Overlapping payroll period'
             ], 422);
         }
 
@@ -95,14 +131,15 @@ class PayrollController extends Controller
             // Check for duplicate payroll period
             if (str_contains($e->getMessage(), 'payroll_year_month_pay_period_number_unique')) {
                 return response()->json([
-                    'error' => 'A payroll period already exists for this month and pay period number. Please check existing payrolls or choose a different period.',
-                    'message' => 'Duplicate payroll period'
+                    'message' => 'A payroll period already exists for this month and pay period number. Please check existing payrolls or choose a different period.',
+                    'error' => 'Duplicate payroll period'
                 ], 422);
             }
 
             return response()->json([
-                'error' => $e->getMessage(),
-                'message' => 'Failed to create payroll period'
+                'message' => $e->getMessage(),
+                'error' => 'Database error',
+                'details' => config('app.debug') ? $e->getTraceAsString() : null
             ], 500);
         } catch (\Exception $e) {
             Log::error('Payroll creation failed', [
@@ -111,8 +148,9 @@ class PayrollController extends Controller
                 'data' => $validated
             ]);
             return response()->json([
-                'error' => $e->getMessage(),
-                'message' => 'Failed to create payroll period'
+                'message' => $e->getMessage() ?: 'Failed to create payroll period',
+                'error' => 'Creation failed',
+                'details' => config('app.debug') ? $e->getTraceAsString() : null
             ], 500);
         }
     }
@@ -123,8 +161,8 @@ class PayrollController extends Controller
     public function show(Payroll $payroll): JsonResponse
     {
         $payroll->load([
-            'payrollItems.employee.department',
-            'payrollItems.employee.location',
+            'payrollItems.employee.project',
+            'payrollItems.employee.positionRate',
             'payrollItems.details',
             'preparedBy',
             'checkedBy',
@@ -147,8 +185,22 @@ class PayrollController extends Controller
 
         $employeeIds = $request->input('employee_ids', null);
         $filters = $request->only(['project_id', 'contract_type', 'position_id']);
+        $regenerate = $request->input('regenerate', false);
 
         try {
+            // If regenerating, delete existing payroll items first
+            if ($regenerate || $payroll->payrollItems()->count() > 0) {
+                // Delete existing payroll item details first
+                foreach ($payroll->payrollItems as $item) {
+                    $item->details()->delete();
+                }
+                // Then delete payroll items
+                $payroll->payrollItems()->delete();
+
+                // Reset status to draft
+                $payroll->update(['status' => 'draft']);
+            }
+
             $this->payrollService->processPayroll($payroll, $employeeIds, $filters);
             $payroll->refresh();
 
@@ -270,18 +322,64 @@ class PayrollController extends Controller
     }
 
     /**
+     * Reset payroll to draft status (delete all items but keep the period)
+     */
+    public function reset(Payroll $payroll): JsonResponse
+    {
+        try {
+            // Delete existing payroll item details first
+            foreach ($payroll->payrollItems as $item) {
+                $item->details()->delete();
+            }
+            // Then delete payroll items
+            $payroll->payrollItems()->delete();
+
+            // Reset all totals and status
+            $payroll->update([
+                'status' => 'draft',
+                'total_gross_pay' => 0,
+                'total_deductions' => 0,
+                'total_net_pay' => 0,
+                'checked_by' => null,
+                'checked_at' => null,
+                'recommended_by' => null,
+                'recommended_at' => null,
+                'approved_by' => null,
+                'approved_at' => null,
+                'paid_by' => null,
+                'paid_at' => null,
+            ]);
+
+            return response()->json([
+                'message' => 'Payroll reset to draft successfully. You can now reprocess it.',
+                'payroll' => $payroll->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to reset payroll: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Delete/cancel payroll
      */
     public function destroy(Payroll $payroll): JsonResponse
     {
-        if (!$payroll->canEdit()) {
-            return response()->json(['error' => 'Payroll cannot be deleted in current status'], 422);
+        try {
+            // Delete payroll item details first
+            foreach ($payroll->payrollItems as $item) {
+                $item->details()->delete();
+            }
+
+            // Delete all related payroll items
+            $payroll->payrollItems()->forceDelete();
+
+            // Permanently delete the payroll
+            $payroll->forceDelete();
+
+            return response()->json(['message' => 'Payroll deleted permanently']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to delete payroll: ' . $e->getMessage()], 500);
         }
-
-        $payroll->update(['status' => 'cancelled']);
-        $payroll->delete();
-
-        return response()->json(['message' => 'Payroll cancelled successfully']);
     }
 
     /**
@@ -291,11 +389,11 @@ class PayrollController extends Controller
     {
         $includeSignatures = $request->input('include_signatures', true);
 
-        $payroll->load(['payslips.employee.department']);
+        $payroll->load(['payrollItems.employee.project']);
 
         $pdf = Pdf::loadView('payroll.report', [
             'payroll' => $payroll,
-            'payslips' => $payroll->payslips,
+            'payslips' => $payroll->payrollItems,
             'includeSignatures' => $includeSignatures,
         ]);
 
@@ -313,5 +411,60 @@ class PayrollController extends Controller
             new \App\Exports\PayrollReportExport($payroll, $includeSignatures),
             'payroll_report_' . $payroll->id . '.xlsx'
         );
+    }
+
+    /**
+     * Export comprehensive payroll PDF with filtering and signatures
+     */
+    public function exportComprehensivePDF(Request $request, Payroll $payroll)
+    {
+        $validated = $request->validate([
+            'type' => 'required|in:all,employee,project',
+            'filter_id' => 'nullable|integer',
+            'signatures' => 'required|array',
+            'signatures.prepared_by' => 'nullable|array',
+            'signatures.checked_by' => 'nullable|array',
+            'signatures.recommended_by' => 'nullable|array',
+            'signatures.approved_by' => 'nullable|array',
+        ]);
+
+        $exporter = new PayrollPDFExport($payroll);
+
+        $signatureData = $validated['signatures'] ?? [];
+
+        $pdf = match ($validated['type']) {
+            'employee' => $exporter->generateByEmployee($validated['filter_id'], $signatureData),
+            'project' => $exporter->generateByProject($validated['filter_id'], $signatureData),
+            default => $exporter->generate($signatureData),
+        };
+
+        $filename = $this->generateFilename($payroll, $validated['type'], $validated);
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Generate appropriate filename based on export type
+     */
+    private function generateFilename(Payroll $payroll, string $type, array $validated): string
+    {
+        $base = 'payroll_' . $payroll->id;
+
+        switch ($type) {
+            case 'employee':
+                if (isset($validated['filter_id'])) {
+                    $employee = \App\Models\Employee::find($validated['filter_id']);
+                    $base .= '_' . ($employee ? $employee->employee_number : 'employee');
+                }
+                break;
+            case 'project':
+                if (isset($validated['filter_id'])) {
+                    $project = \App\Models\Project::find($validated['filter_id']);
+                    $base .= '_' . ($project ? str_replace(' ', '_', $project->name) : 'project');
+                }
+                break;
+        }
+
+        return $base . '.pdf';
     }
 }

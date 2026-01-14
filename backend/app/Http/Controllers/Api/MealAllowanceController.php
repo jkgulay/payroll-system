@@ -50,7 +50,7 @@ class MealAllowanceController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('reference_number', 'like', "%{$search}%")
-                  ->orWhere('title', 'like', "%{$search}%");
+                    ->orWhere('title', 'like', "%{$search}%");
             });
         }
 
@@ -127,7 +127,7 @@ class MealAllowanceController extends Controller
             // Create meal allowance items
             foreach ($validated['items'] as $index => $item) {
                 $employee = Employee::with('positionRate')->find($item['employee_id']);
-                
+
                 MealAllowanceItem::create([
                     'meal_allowance_id' => $mealAllowance->id,
                     'employee_id' => $item['employee_id'],
@@ -167,10 +167,12 @@ class MealAllowanceController extends Controller
      */
     public function update(Request $request, MealAllowance $mealAllowance)
     {
-        // Only allow updates for draft status
-        if ($mealAllowance->status !== 'draft') {
+        $user = auth()->user();
+
+        // Allow draft updates for HR/Accountant, but only admin can update approved/pending
+        if ($mealAllowance->status !== 'draft' && $user->role !== 'admin') {
             return response()->json([
-                'message' => 'Cannot update meal allowance that is not in draft status',
+                'message' => 'Only admin can update meal allowances that are not in draft status',
             ], 403);
         }
 
@@ -210,7 +212,7 @@ class MealAllowanceController extends Controller
                 // Create new items
                 foreach ($validated['items'] as $index => $item) {
                     $employee = Employee::with('positionRate')->find($item['employee_id']);
-                    
+
                     MealAllowanceItem::create([
                         'meal_allowance_id' => $mealAllowance->id,
                         'employee_id' => $item['employee_id'],
@@ -386,7 +388,7 @@ class MealAllowanceController extends Controller
                 'meal_allowance_id' => $mealAllowance->id,
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'message' => 'Failed to generate PDF',
                 'error' => $e->getMessage(),
@@ -408,17 +410,29 @@ class MealAllowanceController extends Controller
     }
 
     /**
-     * Delete meal allowance (Draft only)
+     * Delete meal allowance
      */
     public function destroy(MealAllowance $mealAllowance)
     {
-        if ($mealAllowance->status !== 'draft') {
-            return response()->json(['message' => 'Only draft meal allowances can be deleted'], 403);
+        $user = auth()->user();
+
+        // Only admin can delete non-draft meal allowances
+        if ($mealAllowance->status !== 'draft' && $user->role !== 'admin') {
+            return response()->json(['message' => 'Only admin can delete approved or pending meal allowances'], 403);
         }
 
-        $mealAllowance->delete();
+        try {
+            // Delete associated PDF file if exists
+            if ($mealAllowance->pdf_path && Storage::disk('public')->exists($mealAllowance->pdf_path)) {
+                Storage::disk('public')->delete($mealAllowance->pdf_path);
+            }
 
-        return response()->json(['message' => 'Meal allowance deleted successfully']);
+            $mealAllowance->delete();
+
+            return response()->json(['message' => 'Meal allowance deleted successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to delete meal allowance: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -431,5 +445,45 @@ class MealAllowanceController extends Controller
             ->get();
 
         return response()->json($positions);
+    }
+
+    /**
+     * Bulk assign meal allowance to all employees with specific position
+     */
+    public function bulkAssignByPosition(Request $request)
+    {
+        $validated = $request->validate([
+            'position_id' => 'required|exists:position_rates,id',
+            'project_id' => 'nullable|exists:projects,id',
+            'no_of_days' => 'required|integer|min:1|max:31',
+            'amount_per_day' => 'required|numeric|min:0',
+        ]);
+
+        $query = Employee::with('positionRate')
+            ->where('position_id', $validated['position_id'])
+            ->where('activity_status', 'active');
+
+        if (isset($validated['project_id'])) {
+            $query->where('project_id', $validated['project_id']);
+        }
+
+        $employees = $query->get();
+
+        $items = $employees->map(function ($employee) use ($validated) {
+            return [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->full_name,
+                'employee_number' => $employee->employee_number,
+                'position_code' => $employee->positionRate->code ?? '',
+                'no_of_days' => $validated['no_of_days'],
+                'amount_per_day' => $validated['amount_per_day'],
+                'total_amount' => $validated['no_of_days'] * $validated['amount_per_day'],
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Successfully loaded ' . $items->count() . ' employees',
+            'items' => $items,
+        ]);
     }
 }

@@ -57,8 +57,7 @@ class EmployeeDeduction extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('status', 'active')
-            ->where('balance', '>', 0);
+        return $query->where('status', 'active');
     }
 
     public function scopeByType($query, $type)
