@@ -11,14 +11,14 @@ return [
     |
     */
     'show_warnings' => false,   // Throw an Exception on warnings from dompdf
-    
+
     'public_path' => null,  // Override the public path if needed
-    
+
     /*
      * Dejavu Sans font is missing glyphs for converted entities, turn it off if you need to show € and £.
      */
     'convert_entities' => true,
-    
+
     'options' => [
         /**
          * The location of the DOMPDF font directory
@@ -45,7 +45,7 @@ return [
          * Symbol, ZapfDingbats.
          */
         "font_dir" => storage_path('fonts'),
-        
+
         /**
          * The location of the DOMPDF font cache directory
          *
@@ -55,7 +55,7 @@ return [
          * Note: This directory must exist and be writable by the webserver process.
          */
         "font_cache" => storage_path('fonts'),
-        
+
         /**
          * Temporary directory
          *
@@ -64,7 +64,7 @@ return [
          * Note: This directory must exist and be writable by the webserver process.
          */
         "temp_dir" => storage_path('framework/cache'),
-        
+
         /**
          * DOMPDF's working directory
          *
@@ -73,7 +73,7 @@ return [
          * @var string
          */
         "chroot" => realpath(base_path()),
-        
+
         /**
          * Protocol whitelist
          *
@@ -89,12 +89,12 @@ return [
             "http://" => ["rules" => []],
             "https://" => ["rules" => []],
         ],
-        
+
         /**
          * @var string
          */
         "log_output_file" => null,
-        
+
         /**
          * Enable inline PHP
          *
@@ -108,7 +108,7 @@ return [
          * @var bool
          */
         "enable_php" => false,
-        
+
         /**
          * Enable inline Javascript
          *
@@ -118,7 +118,7 @@ return [
          * @var bool
          */
         "enable_javascript" => true,
-        
+
         /**
          * Enable remote file access
          *
@@ -137,12 +137,12 @@ return [
          * @var bool
          */
         "enable_remote" => true,
-        
+
         /**
          * A ratio applied to the fonts height to be more like browsers' line height
          */
         "font_height_ratio" => 1.1,
-        
+
         /**
          * Use the HTML5 Lib parser
          *

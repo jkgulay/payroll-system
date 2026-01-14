@@ -454,7 +454,7 @@ class PayrollController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'message' => 'Failed to generate PDF',
                 'error' => config('app.debug') ? $e->getMessage() : 'An error occurred while generating the PDF. Please contact support.'
