@@ -75,7 +75,12 @@
       </v-col>
 
       <v-col cols="12" sm="6" lg="3">
-        <v-card class="modern-card stat-card" elevation="0">
+        <v-card
+          class="modern-card stat-card"
+          elevation="0"
+          style="cursor: pointer"
+          @click="goToAttendanceToday"
+        >
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
               <span class="text-subtitle-2 text-medium-emphasis"
@@ -88,7 +93,7 @@
             </div>
             <div class="d-flex align-center">
               <span class="text-caption text-medium-emphasis"
-                >Present today</span
+                >Present today - Click to view</span
               >
             </div>
           </v-card-text>
@@ -639,6 +644,7 @@
 
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
@@ -651,6 +657,7 @@ import AttendanceStatusChart from "@/components/charts/AttendanceStatusChart.vue
 import TodayStaffInfoChart from "@/components/charts/TodayStaffInfoChart.vue";
 
 const toast = useToast();
+const router = useRouter();
 
 const stats = ref({
   totalEmployees: 0,
@@ -750,6 +757,18 @@ async function fetchDashboardData() {
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
   }
+}
+
+function goToAttendanceToday() {
+  const today = new Date().toISOString().split("T")[0];
+  router.push({
+    path: "/attendance",
+    query: {
+      date_from: today,
+      date_to: today,
+      tab: "list",
+    },
+  });
 }
 
 async function refreshData() {
