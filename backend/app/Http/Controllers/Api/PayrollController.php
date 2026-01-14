@@ -438,14 +438,14 @@ class PayrollController extends Controller
             // Ensure storage directories exist and are writable
             $fontsPath = storage_path('fonts');
             $cachePath = storage_path('framework/cache');
-            
+
             if (!file_exists($fontsPath)) {
                 mkdir($fontsPath, 0755, true);
             }
             if (!file_exists($cachePath)) {
                 mkdir($cachePath, 0755, true);
             }
-            
+
             // Check if directories are writable
             if (!is_writable($fontsPath)) {
                 Log::error('Fonts directory not writable: ' . $fontsPath);
@@ -467,7 +467,7 @@ class PayrollController extends Controller
             };
 
             $filename = $this->generateFilename($payroll, $validated['type'], $validated);
-            
+
             Log::info('PDF generated successfully', ['filename' => $filename]);
 
             return $pdf->download($filename);
@@ -494,7 +494,7 @@ class PayrollController extends Controller
     public function testPdfSetup(Request $request)
     {
         $checks = [];
-        
+
         // Check PHP extensions
         $checks['php_version'] = PHP_VERSION;
         $checks['extensions'] = [
@@ -503,7 +503,7 @@ class PayrollController extends Controller
             'dom' => extension_loaded('dom'),
             'xml' => extension_loaded('xml'),
         ];
-        
+
         // Check directories
         $checks['directories'] = [
             'fonts' => [
@@ -522,14 +522,14 @@ class PayrollController extends Controller
                 'writable' => is_writable(storage_path('logs')),
             ],
         ];
-        
+
         // Check dompdf config
         $checks['dompdf_config'] = [
             'font_dir' => config('dompdf.options.font_dir'),
             'font_cache' => config('dompdf.options.font_cache'),
             'temp_dir' => config('dompdf.options.temp_dir'),
         ];
-        
+
         // Try to create a simple PDF
         try {
             $pdf = Pdf::loadHTML('<h1>Test PDF</h1>');
@@ -537,7 +537,7 @@ class PayrollController extends Controller
         } catch (\Exception $e) {
             $checks['simple_pdf_test'] = 'FAILED: ' . $e->getMessage();
         }
-        
+
         return response()->json($checks);
     }
 

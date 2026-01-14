@@ -26,7 +26,7 @@ class PayrollPDFExport
         try {
             // Increase memory limit for PDF generation
             ini_set('memory_limit', '256M');
-            
+
             Log::info('Starting PDF generation', [
                 'payroll_id' => $this->payroll->id,
                 'filters' => $this->filters
