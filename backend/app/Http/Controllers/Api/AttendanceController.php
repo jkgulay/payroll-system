@@ -128,7 +128,7 @@ class AttendanceController extends Controller
 
     public function show(Attendance $attendance)
     {
-        return response()->json($attendance->load(['employee.department', 'employee.location']));
+        return response()->json($attendance->load(['employee.project', 'employee.positionRate']));
     }
 
     public function update(Request $request, Attendance $attendance)

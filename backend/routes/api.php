@@ -103,6 +103,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Payroll
     Route::apiResource('payroll', PayrollController::class);
     Route::middleware(['throttle:10,1'])->post('/payroll/{payroll}/process', [PayrollController::class, 'process']);
+    Route::post('/payroll/{payroll}/reset', [PayrollController::class, 'reset']);
     Route::post('/payroll/{payroll}/check', [PayrollController::class, 'check']);
     Route::post('/payroll/{payroll}/recommend', [PayrollController::class, 'recommend']);
     Route::post('/payroll/{payroll}/approve', [PayrollController::class, 'approve']);
@@ -111,6 +112,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/payroll/{payroll}/items', [App\Http\Controllers\Api\PayrollController::class, 'items']);
     Route::get('/payroll/{payroll}/export-excel', [App\Http\Controllers\Api\PayrollController::class, 'exportExcel']);
     Route::get('/payroll/{payroll}/export-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportPdf']);
+    Route::post('/payroll/{payroll}/export-comprehensive-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportComprehensivePDF']);
 
     // Payslips
     Route::get('/payslips/employee/{employee}', [App\Http\Controllers\Api\PayslipController::class, 'employeePayslips']);
@@ -131,6 +133,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Meal Allowance Management - specific routes MUST come before apiResource
     Route::get('/meal-allowances/positions', [App\Http\Controllers\Api\MealAllowanceController::class, 'getPositions']);
     Route::post('/meal-allowances/employees-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'getEmployeesByPosition']);
+    Route::post('/meal-allowances/bulk-assign-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'bulkAssignByPosition']);
     Route::post('/meal-allowances/{mealAllowance}/submit', [App\Http\Controllers\Api\MealAllowanceController::class, 'submit']);
     Route::post('/meal-allowances/{mealAllowance}/approval', [App\Http\Controllers\Api\MealAllowanceController::class, 'updateApproval']);
     Route::post('/meal-allowances/{mealAllowance}/generate-pdf', [App\Http\Controllers\Api\MealAllowanceController::class, 'generatePdf']);
@@ -255,6 +258,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Settings
     Route::get('/settings', [App\Http\Controllers\Api\SettingController::class, 'index']);
     Route::put('/settings', [App\Http\Controllers\Api\SettingController::class, 'update']);
+
+    // Government Rates
+    Route::apiResource('government-rates', App\Http\Controllers\Api\GovernmentRateController::class);
+    Route::post('/government-rates/for-salary', [App\Http\Controllers\Api\GovernmentRateController::class, 'getForSalary']);
+    Route::post('/government-rates/bulk-delete', [App\Http\Controllers\Api\GovernmentRateController::class, 'bulkDelete']);
 
     // Audit Logs
     Route::get('/audit-logs', [App\Http\Controllers\Api\AuditLogController::class, 'index']);

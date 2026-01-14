@@ -8,14 +8,12 @@ use App\Models\PayrollItemDetail;
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeAllowance;
+use App\Models\GovernmentRate;
 use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
 use App\Models\EmployeeLeave;
 use App\Models\LoanPayment;
 use App\Models\Holiday;
-use App\Services\Government\SSSComputationService;
-use App\Services\Government\PhilHealthComputationService;
-use App\Services\Government\PagIbigComputationService;
 use App\Services\Government\TaxComputationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -23,20 +21,11 @@ use Illuminate\Support\Facades\Log;
 
 class PayrollService
 {
-    protected $sssService;
-    protected $philHealthService;
-    protected $pagIbigService;
     protected $taxService;
 
     public function __construct(
-        SSSComputationService $sssService,
-        PhilHealthComputationService $philHealthService,
-        PagIbigComputationService $pagIbigService,
         TaxComputationService $taxService
     ) {
-        $this->sssService = $sssService;
-        $this->philHealthService = $philHealthService;
-        $this->pagIbigService = $pagIbigService;
         $this->taxService = $taxService;
     }
 
@@ -73,18 +62,19 @@ class PayrollService
             $query = Employee::active()
                 ->whereNotIn('activity_status', ['resigned', 'terminated'])
                 ->with([
-                'positionRate', // CRITICAL: Load position rate for getBasicSalary()
-                'governmentInfo',
-                'allowances' => function ($q) use ($payroll) {
-                    $q->active()->where('effective_date', '<=', $payroll->period_end);
-                },
-                'loans' => function ($q) {
-                    $q->active();
-                },
-                'deductions' => function ($q) {
-                    $q->active();
-                }
-            ]);
+                    'positionRate', // CRITICAL: Load position rate for getBasicSalary()
+                    'governmentInfo',
+                    'allowances' => function ($q) use ($payroll) {
+                        $q->active()->where('effective_date', '<=', $payroll->period_end);
+                    },
+                    'loans' => function ($q) {
+                        // Include both active and approved loans
+                        $q->whereIn('status', ['active', 'approved'])->where('balance', '>', 0);
+                    },
+                    'deductions' => function ($q) {
+                        $q->active();
+                    }
+                ]);
 
             // Apply filters for targeted payroll generation
             if ($filters) {
@@ -105,8 +95,31 @@ class PayrollService
 
             $employees = $query->get();
 
+            if ($employees->isEmpty()) {
+                Log::warning('No employees found for payroll processing', [
+                    'payroll_id' => $payroll->id,
+                    'filters' => $filters,
+                    'employee_ids' => $employeeIds
+                ]);
+                throw new \Exception('No active employees found matching the criteria. Please check employee status and filters.');
+            }
+
+            Log::info('Processing payroll for employees', [
+                'payroll_id' => $payroll->id,
+                'employee_count' => $employees->count()
+            ]);
+
             foreach ($employees as $employee) {
-                $this->processEmployeePayroll($payroll, $employee);
+                try {
+                    $this->processEmployeePayroll($payroll, $employee);
+                } catch (\Exception $e) {
+                    Log::error('Failed to process payroll for employee', [
+                        'employee_id' => $employee->id,
+                        'employee_name' => $employee->full_name,
+                        'error' => $e->getMessage()
+                    ]);
+                    // Continue processing other employees
+                }
             }
 
             $payroll->update(['status' => 'processing']);
@@ -163,26 +176,25 @@ class PayrollService
         // Use the employee's actual monthly rate, not period estimates
         $monthlySalary = $employee->getMonthlyRate();
 
-        $contributions = [
-            'sss' => $this->sssService->computeContribution($monthlySalary),
-            'philhealth' => $this->philHealthService->computeContribution($monthlySalary),
-            'pagibig' => $this->pagIbigService->computeContribution($monthlySalary),
-        ];
+        // Use GovernmentRate model to get current rates
+        $sssContribution = GovernmentRate::getContributionForSalary('sss', $monthlySalary, $payroll->period_start);
+        $philhealthContribution = GovernmentRate::getContributionForSalary('philhealth', $monthlySalary, $payroll->period_start);
+        $pagibigContribution = GovernmentRate::getContributionForSalary('pagibig', $monthlySalary, $payroll->period_start);
 
         // For semi-monthly payroll: divide monthly contributions by 2
         // This ensures consistent contributions regardless of actual days worked
         $divisor = $payroll->period_type === 'semi_monthly' ? 2 : 1;
-        $sssContribution = $contributions['sss']['employee_share'] / $divisor;
-        $philhealthContribution = $contributions['philhealth']['employee_share'] / $divisor;
-        $pagibigContribution = $contributions['pagibig']['employee_share'] / $divisor;
+        $sssAmount = $sssContribution['employee'] / $divisor;
+        $philhealthAmount = $philhealthContribution['employee'] / $divisor;
+        $pagibigAmount = $pagibigContribution['employee'] / $divisor;
 
         // Calculate taxable income for semi-monthly period
         // Remove non-taxable allowances (they're already in gross_pay)
         $taxableIncome = $grossPay
             - $allowances['non_taxable_allowances']
-            - $sssContribution
-            - $philhealthContribution
-            - $pagibigContribution;
+            - $sssAmount
+            - $philhealthAmount
+            - $pagibigAmount;
 
         // Ensure taxable income is not negative
         $taxableIncome = max(0, $taxableIncome);
@@ -196,9 +208,9 @@ class PayrollService
         $otherDeductions = $this->calculateOtherDeductions($employee, $payroll);
 
         // Calculate totals
-        $totalDeductions = $sssContribution
-            + $philhealthContribution
-            + $pagibigContribution
+        $totalDeductions = $sssAmount
+            + $philhealthAmount
+            + $pagibigAmount
             + $withholdingTax
             + $loanDeductions['sss_loan']
             + $loanDeductions['pagibig_loan']
@@ -212,21 +224,36 @@ class PayrollService
 
         $netPay = $grossPay - $totalDeductions;
 
+        // Calculate total allowances
+        $totalAllowances = $allowances['water_allowance']
+            + $allowances['cola']
+            + $allowances['other_allowances'];
+
+        // Get employee's basic rate for display
+        $basicRate = $employee->getBasicSalary();
+
+        // Calculate total overtime hours from attendance
+        $overtimeHours = $attendance->sum('overtime_hours');
+
         // Create payroll item
         $payrollItem = PayrollItem::create([
             'payroll_id' => $payroll->id,
             'employee_id' => $employee->id,
+            'basic_rate' => $basicRate,
+            'days_worked' => $attendance->where('status', 'present')->count(),
             'basic_pay' => $earnings['basic_pay'],
+            'overtime_hours' => $overtimeHours,
             'overtime_pay' => $earnings['overtime_pay'],
             'holiday_pay' => $earnings['holiday_pay'],
             'night_differential' => $earnings['night_differential'],
             'water_allowance' => $allowances['water_allowance'],
             'cola' => $allowances['cola'],
             'other_allowances' => $allowances['other_allowances'],
+            'total_allowances' => $totalAllowances,
             'gross_pay' => $grossPay,
-            'sss_contribution' => $sssContribution,
-            'philhealth_contribution' => $philhealthContribution,
-            'pagibig_contribution' => $pagibigContribution,
+            'sss_contribution' => $sssAmount,
+            'philhealth_contribution' => $philhealthAmount,
+            'pagibig_contribution' => $pagibigAmount,
             'withholding_tax' => $withholdingTax,
             'total_other_deductions' => $otherDeductions['ppe_deduction']
                 + $otherDeductions['tools_deduction']
@@ -236,11 +263,10 @@ class PayrollService
             'total_loan_deductions' => $loanDeductions['sss_loan'] + $loanDeductions['pagibig_loan'] + $loanDeductions['other_loans'],
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
-            'days_worked' => $attendance->where('status', 'present')->count(),
         ]);
 
         // Create detailed breakdown
-        $this->createPayrollDetails($payrollItem, $earnings, $allowances, $contributions, $loanDeductions, $otherDeductions);
+        $this->createPayrollDetails($payrollItem, $earnings, $allowances, $sssAmount, $philhealthAmount, $pagibigAmount, $loanDeductions, $otherDeductions);
 
         return $payrollItem;
     }
@@ -378,12 +404,80 @@ class PayrollService
             }
         }
 
+        // Add meal allowances from approved MealAllowance records
+        $mealAllowanceAmount = $this->calculateMealAllowances($employee, $payroll);
+        if ($mealAllowanceAmount > 0) {
+            $otherAllowances += $mealAllowanceAmount;
+            // Meal allowances are typically taxable
+        }
+
         return [
             'water_allowance' => round($waterAllowance, 2),
             'cola' => round($cola, 2),
             'other_allowances' => round($otherAllowances, 2),
             'non_taxable_allowances' => round($nonTaxableAllowances, 2),
         ];
+    }
+
+    /**
+     * Calculate meal allowances for employee during payroll period
+     */
+    protected function calculateMealAllowances(Employee $employee, Payroll $payroll): float
+    {
+        $mealAllowanceTotal = 0;
+
+        // Get approved meal allowances that overlap with payroll period
+        $mealAllowances = \App\Models\MealAllowance::where('status', 'approved')
+            ->where(function ($query) use ($payroll) {
+                $query->whereBetween('period_start', [$payroll->period_start, $payroll->period_end])
+                    ->orWhereBetween('period_end', [$payroll->period_start, $payroll->period_end])
+                    ->orWhere(function ($q) use ($payroll) {
+                        $q->where('period_start', '<=', $payroll->period_start)
+                            ->where('period_end', '>=', $payroll->period_end);
+                    });
+            })
+            ->with(['items' => function ($query) use ($employee) {
+                $query->where('employee_id', $employee->id);
+            }])
+            ->get();
+
+        foreach ($mealAllowances as $mealAllowance) {
+            foreach ($mealAllowance->items as $item) {
+                $mealStart = Carbon::parse($mealAllowance->period_start);
+                $mealEnd = Carbon::parse($mealAllowance->period_end);
+                $payrollStart = Carbon::parse($payroll->period_start);
+                $payrollEnd = Carbon::parse($payroll->period_end);
+
+                // Get the overlap period between meal allowance and payroll
+                $overlapStart = $mealStart->max($payrollStart);
+                $overlapEnd = $mealEnd->min($payrollEnd);
+
+                if ($overlapStart->lte($overlapEnd)) {
+                    // Calculate the full meal allowance amount
+                    $fullAmount = $item->no_of_days * $item->amount_per_day;
+
+                    // Calculate total days in the meal allowance period
+                    $totalMealDays = $mealStart->diffInDays($mealEnd) + 1;
+
+                    // Calculate days in the overlap (payroll period)
+                    $overlapDays = $overlapStart->diffInDays($overlapEnd) + 1;
+
+                    // Pro-rate: If meal allowance period equals payroll period, use full amount
+                    // Otherwise, calculate proportionally
+                    if ($totalMealDays <= $overlapDays || $totalMealDays <= 16) {
+                        // Meal allowance period is same as or smaller than payroll period
+                        // Or it's a short-term meal allowance (≤16 days = semi-monthly)
+                        $mealAllowanceTotal += $fullAmount;
+                    } else {
+                        // Pro-rate based on the overlap percentage
+                        $proRatedAmount = ($fullAmount / $totalMealDays) * $overlapDays;
+                        $mealAllowanceTotal += round($proRatedAmount, 2);
+                    }
+                }
+            }
+        }
+
+        return $mealAllowanceTotal;
     }
 
     /**
@@ -433,7 +527,13 @@ class PayrollService
         $otherLoans = 0;
 
         foreach ($employee->loans as $loan) {
-            if ($loan->status !== 'active' || $loan->balance <= 0) continue;
+            // Include both 'active' and 'approved' loans for deduction
+            if (!in_array($loan->status, ['active', 'approved']) || $loan->balance <= 0) continue;
+
+            // Check if first payment date has been reached
+            if ($loan->first_payment_date && Carbon::parse($loan->first_payment_date)->gt($payroll->period_end)) {
+                continue; // Skip if first payment date hasn't been reached
+            }
 
             $deduction = min($loan->monthly_amortization / 2, $loan->balance);
 
@@ -528,7 +628,7 @@ class PayrollService
                     ->orWhereBetween('leave_date_to', [$payroll->period_start, $payroll->period_end])
                     ->orWhere(function ($q) use ($payroll) {
                         $q->where('leave_date_from', '<=', $payroll->period_start)
-                          ->where('leave_date_to', '>=', $payroll->period_end);
+                            ->where('leave_date_to', '>=', $payroll->period_end);
                     });
             })
             ->with('leaveType')
@@ -552,9 +652,9 @@ class PayrollService
                 // Calculate days within payroll period
                 $leaveStart = max(Carbon::parse($leave->leave_date_from), Carbon::parse($payroll->period_start));
                 $leaveEnd = min(Carbon::parse($leave->leave_date_to), Carbon::parse($payroll->period_end));
-                
+
                 $daysInPeriod = $leaveStart->diffInDays($leaveEnd) + 1;
-                
+
                 $totalLeaveDeduction += $dailyRate * $daysInPeriod;
 
                 Log::info("Leave deduction calculated", [
@@ -574,7 +674,7 @@ class PayrollService
     /**
      * Create detailed payroll breakdown
      */
-    protected function createPayrollDetails(PayrollItem $payrollItem, array $earnings, array $allowances, array $contributions, array $loanDeductions, array $otherDeductions): void
+    protected function createPayrollDetails(PayrollItem $payrollItem, array $earnings, array $allowances, float $sssAmount, float $philhealthAmount, float $pagibigAmount, array $loanDeductions, array $otherDeductions): void
     {
         // Earnings
         $details = [
@@ -587,9 +687,9 @@ class PayrollService
             ['type' => 'earning', 'category' => 'allowance', 'description' => 'Other Allowances', 'amount' => $allowances['other_allowances']],
 
             // Deductions
-            ['type' => 'deduction', 'category' => 'government', 'description' => 'SSS Contribution', 'amount' => $contributions['sss']['employee_share']],
-            ['type' => 'deduction', 'category' => 'government', 'description' => 'PhilHealth Contribution', 'amount' => $contributions['philhealth']['employee_share']],
-            ['type' => 'deduction', 'category' => 'government', 'description' => 'Pag-IBIG Contribution', 'amount' => $contributions['pagibig']['employee_share']],
+            ['type' => 'deduction', 'category' => 'government', 'description' => 'SSS Contribution', 'amount' => $sssAmount],
+            ['type' => 'deduction', 'category' => 'government', 'description' => 'PhilHealth Contribution', 'amount' => $philhealthAmount],
+            ['type' => 'deduction', 'category' => 'government', 'description' => 'Pag-IBIG Contribution', 'amount' => $pagibigAmount],
             ['type' => 'deduction', 'category' => 'tax', 'description' => 'Withholding Tax', 'amount' => $payrollItem->withholding_tax],
             ['type' => 'deduction', 'category' => 'loan', 'description' => 'SSS Loan', 'amount' => $loanDeductions['sss_loan']],
             ['type' => 'deduction', 'category' => 'loan', 'description' => 'Pag-IBIG Loan', 'amount' => $loanDeductions['pagibig_loan']],

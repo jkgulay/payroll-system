@@ -5,11 +5,7 @@
         <v-icon left color="primary">mdi-food</v-icon>
         <span>Meal Allowance Management</span>
         <v-spacer></v-spacer>
-        <v-btn 
-          v-if="canCreate"
-          color="primary" 
-          @click="openCreateDialog"
-        >
+        <v-btn v-if="canCreate" color="primary" @click="openCreateDialog">
           <v-icon left>mdi-plus</v-icon>
           Create New Meal Allowance
         </v-btn>
@@ -74,12 +70,13 @@
 
         <template #[`item.period`]="{ item }">
           <div class="text-body-2">
-            {{ formatDate(item.period_start) }} - {{ formatDate(item.period_end) }}
+            {{ formatDate(item.period_start) }} -
+            {{ formatDate(item.period_end) }}
           </div>
         </template>
 
         <template #[`item.position`]="{ item }">
-          {{ item.position?.position_name || 'All Positions' }}
+          {{ item.position?.position_name || "All Positions" }}
         </template>
 
         <template #[`item.employee_count`]="{ item }">
@@ -94,100 +91,105 @@
 
         <template #[`item.status`]="{ item }">
           <v-chip :color="getStatusColor(item.status)" size="small">
-            {{ item.status.replace('_', ' ').toUpperCase() }}
+            {{ item.status.replace("_", " ").toUpperCase() }}
           </v-chip>
         </template>
 
         <template #[`item.actions`]="{ item }">
           <v-tooltip text="View Details" location="top">
             <template v-slot:activator="{ props }">
-              <v-btn 
+              <v-btn
                 v-bind="props"
-                icon="mdi-eye" 
-                size="small" 
+                icon="mdi-eye"
+                size="small"
                 variant="text"
                 @click="viewDetails(item)"
               ></v-btn>
             </template>
           </v-tooltip>
-          
+
           <v-tooltip text="Edit" location="top">
             <template v-slot:activator="{ props }">
-              <v-btn 
-                v-if="item.status === 'draft' && canEdit"
+              <v-btn
+                v-if="
+                  (item.status === 'draft' && canEdit) ||
+                  (item.status !== 'draft' && isAdmin)
+                "
                 v-bind="props"
-                icon="mdi-pencil" 
-                size="small" 
+                icon="mdi-pencil"
+                size="small"
                 variant="text"
                 color="primary"
                 @click="editMealAllowance(item)"
               ></v-btn>
             </template>
           </v-tooltip>
-          
+
           <v-tooltip text="Submit for Approval" location="top">
             <template v-slot:activator="{ props }">
-              <v-btn 
+              <v-btn
                 v-if="item.status === 'draft' && canSubmit && !item._submitted"
                 v-bind="props"
-                icon="mdi-send" 
-                size="small" 
+                icon="mdi-send"
+                size="small"
                 variant="text"
                 color="success"
                 @click="submitForApproval(item)"
               ></v-btn>
             </template>
           </v-tooltip>
-          
+
           <v-tooltip text="Approve/Reject" location="top">
             <template v-slot:activator="{ props }">
-              <v-btn 
+              <v-btn
                 v-if="item.status === 'pending_approval' && canApprove"
                 v-bind="props"
-                icon="mdi-check-circle" 
-                size="small" 
+                icon="mdi-check-circle"
+                size="small"
                 variant="text"
                 color="success"
                 @click="openApprovalDialog(item)"
               ></v-btn>
             </template>
           </v-tooltip>
-          
+
           <v-tooltip text="Generate PDF" location="top">
             <template v-slot:activator="{ props }">
-              <v-btn 
-                v-if="item.status === 'approved' && canApprove && !item.pdf_path"
+              <v-btn
+                v-if="
+                  item.status === 'approved' && canApprove && !item.pdf_path
+                "
                 v-bind="props"
-                icon="mdi-file-pdf-box" 
-                size="small" 
+                icon="mdi-file-pdf-box"
+                size="small"
                 variant="text"
                 color="orange"
                 @click="generatePdf(item)"
               ></v-btn>
             </template>
           </v-tooltip>
-          
+
           <v-tooltip text="Download PDF" location="top">
             <template v-slot:activator="{ props }">
-              <v-btn 
+              <v-btn
                 v-if="item.status === 'approved' && item.pdf_path"
                 v-bind="props"
-                icon="mdi-download" 
-                size="small" 
+                icon="mdi-download"
+                size="small"
                 variant="text"
                 color="error"
                 @click="downloadPdf(item)"
               ></v-btn>
             </template>
           </v-tooltip>
-          
+
           <v-tooltip text="Delete" location="top">
             <template v-slot:activator="{ props }">
-              <v-btn 
-                v-if="item.status === 'draft' && canDelete"
+              <v-btn
+                v-if="(item.status === 'draft' && canDelete) || isAdmin"
                 v-bind="props"
-                icon="mdi-delete" 
-                size="small" 
+                icon="mdi-delete"
+                size="small"
                 variant="text"
                 color="error"
                 @click="deleteMealAllowance(item)"
@@ -222,199 +224,221 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import mealAllowanceService from '@/services/mealAllowanceService'
-import MealAllowanceForm from '@/components/meal-allowance/MealAllowanceForm.vue'
-import MealAllowanceDetails from '@/components/meal-allowance/MealAllowanceDetails.vue'
-import MealAllowanceApproval from '@/components/meal-allowance/MealAllowanceApproval.vue'
+import { ref, computed, onMounted } from "vue";
+import { useAuthStore } from "@/stores/auth";
+import mealAllowanceService from "@/services/mealAllowanceService";
+import MealAllowanceForm from "@/components/meal-allowance/MealAllowanceForm.vue";
+import MealAllowanceDetails from "@/components/meal-allowance/MealAllowanceDetails.vue";
+import MealAllowanceApproval from "@/components/meal-allowance/MealAllowanceApproval.vue";
 
-const authStore = useAuthStore()
-const loading = ref(false)
-const mealAllowances = ref([])
-const positions = ref([])
-const selectedMealAllowance = ref(null)
-const showFormDialog = ref(false)
-const showDetailsDialog = ref(false)
-const showApprovalDialog = ref(false)
+const authStore = useAuthStore();
+const loading = ref(false);
+const mealAllowances = ref([]);
+const positions = ref([]);
+const selectedMealAllowance = ref(null);
+const showFormDialog = ref(false);
+const showDetailsDialog = ref(false);
+const showApprovalDialog = ref(false);
 
 const filters = ref({
   status: null,
   position_id: null,
-  search: ''
-})
+  search: "",
+});
 
 const statusOptions = [
-  { title: 'Draft', value: 'draft' },
-  { title: 'Pending Approval', value: 'pending_approval' },
-  { title: 'Approved', value: 'approved' },
-  { title: 'Rejected', value: 'rejected' }
-]
+  { title: "Draft", value: "draft" },
+  { title: "Pending Approval", value: "pending_approval" },
+  { title: "Approved", value: "approved" },
+  { title: "Rejected", value: "rejected" },
+];
 
 const headers = [
-  { title: 'Reference No.', key: 'reference_number', sortable: true },
-  { title: 'Title', key: 'title', sortable: true },
-  { title: 'Period', key: 'period', sortable: true },
-  { title: 'Position', key: 'position', sortable: true },
-  { title: 'No. of Employees', key: 'employee_count', sortable: true, align: 'center' },
-  { title: 'Total Amount', key: 'total_amount', sortable: true },
-  { title: 'Status', key: 'status', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center' }
-]
+  { title: "Reference No.", key: "reference_number", sortable: true },
+  { title: "Title", key: "title", sortable: true },
+  { title: "Period", key: "period", sortable: true },
+  { title: "Position", key: "position", sortable: true },
+  {
+    title: "No. of Employees",
+    key: "employee_count",
+    sortable: true,
+    align: "center",
+  },
+  { title: "Total Amount", key: "total_amount", sortable: true },
+  { title: "Status", key: "status", sortable: true },
+  { title: "Actions", key: "actions", sortable: false, align: "center" },
+];
 
-const canCreate = computed(() => ['admin', 'accountant', 'hr'].includes(authStore.user?.role))
-const canEdit = computed(() => ['admin', 'accountant', 'hr'].includes(authStore.user?.role))
-const canSubmit = computed(() => ['admin', 'accountant', 'hr'].includes(authStore.user?.role))
-const canApprove = computed(() => authStore.user?.role === 'admin')
-const canDelete = computed(() => ['admin', 'accountant', 'hr'].includes(authStore.user?.role))
+const canCreate = computed(() =>
+  ["admin", "accountant", "hr"].includes(authStore.user?.role)
+);
+const canEdit = computed(() =>
+  ["admin", "accountant", "hr"].includes(authStore.user?.role)
+);
+const canSubmit = computed(() =>
+  ["admin", "accountant", "hr"].includes(authStore.user?.role)
+);
+const canApprove = computed(() => authStore.user?.role === "admin");
+const canDelete = computed(() =>
+  ["admin", "accountant", "hr"].includes(authStore.user?.role)
+);
+const isAdmin = computed(() => authStore.user?.role === "admin");
 
 onMounted(async () => {
-  await fetchPositions()
-  await fetchMealAllowances()
-})
+  await fetchPositions();
+  await fetchMealAllowances();
+});
 
 async function fetchMealAllowances() {
-  loading.value = true
+  loading.value = true;
   try {
-    const response = await mealAllowanceService.getAll(filters.value)
-    mealAllowances.value = response.data || response
+    const response = await mealAllowanceService.getAll(filters.value);
+    mealAllowances.value = response.data || response;
   } catch (error) {
-    console.error('Error fetching meal allowances:', error)
-    mealAllowances.value = []
+    console.error("Error fetching meal allowances:", error);
+    mealAllowances.value = [];
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function fetchPositions() {
   try {
-    positions.value = await mealAllowanceService.getPositions()
+    positions.value = await mealAllowanceService.getPositions();
   } catch (error) {
-    console.error('Error fetching positions:', error)
+    console.error("Error fetching positions:", error);
   }
 }
 
 function openCreateDialog() {
-  selectedMealAllowance.value = null
-  showFormDialog.value = true
+  selectedMealAllowance.value = null;
+  showFormDialog.value = true;
 }
 
 function editMealAllowance(item) {
-  selectedMealAllowance.value = item
-  showFormDialog.value = true
+  selectedMealAllowance.value = item;
+  showFormDialog.value = true;
 }
 
 function viewDetails(item) {
-  selectedMealAllowance.value = item
-  showDetailsDialog.value = true
+  selectedMealAllowance.value = item;
+  showDetailsDialog.value = true;
 }
 
 function openApprovalDialog(item) {
-  selectedMealAllowance.value = item
-  showApprovalDialog.value = true
+  selectedMealAllowance.value = item;
+  showApprovalDialog.value = true;
 }
 
 async function submitForApproval(item) {
-  if (!confirm('Submit this meal allowance for approval?')) return
-  
+  if (!confirm("Submit this meal allowance for approval?")) return;
+
   try {
-    await mealAllowanceService.submit(item.id)
-    alert('Meal allowance submitted for approval')
-    await fetchMealAllowances()
+    await mealAllowanceService.submit(item.id);
+    alert("Meal allowance submitted for approval");
+    await fetchMealAllowances();
   } catch (error) {
-    console.error('Error submitting meal allowance:', error)
-    alert('Failed to submit meal allowance')
+    console.error("Error submitting meal allowance:", error);
+    alert("Failed to submit meal allowance");
   }
 }
 
 async function generatePdf(item) {
-  if (!confirm(`Generate PDF for ${item.reference_number}?`)) return
-  
-  loading.value = true
+  if (!confirm(`Generate PDF for ${item.reference_number}?`)) return;
+
+  loading.value = true;
   try {
-    const response = await mealAllowanceService.generatePdf(item.id)
-    alert('PDF generated successfully')
-    await fetchMealAllowances()
+    const response = await mealAllowanceService.generatePdf(item.id);
+    alert("PDF generated successfully");
+    await fetchMealAllowances();
   } catch (error) {
-    console.error('Error generating PDF:', error)
-    alert(error.response?.data?.message || 'Failed to generate PDF')
+    console.error("Error generating PDF:", error);
+    alert(error.response?.data?.message || "Failed to generate PDF");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function downloadPdf(item) {
   try {
-    loading.value = true
-    const blob = await mealAllowanceService.downloadPdf(item.id)
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${item.reference_number}.pdf`
-    link.click()
-    window.URL.revokeObjectURL(url)
+    loading.value = true;
+    const blob = await mealAllowanceService.downloadPdf(item.id);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${item.reference_number}.pdf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error('Error downloading PDF:', error)
-    alert('Failed to download PDF. Please generate it first.')
+    console.error("Error downloading PDF:", error);
+    alert("Failed to download PDF. Please generate it first.");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function deleteMealAllowance(item) {
-  if (!confirm(`Delete meal allowance ${item.reference_number}?`)) return
-  
+  const isApproved = item.status === "approved";
+  const message = isApproved
+    ? `⚠️ WARNING: This meal allowance (${item.reference_number}) has been APPROVED and may have been used in payroll calculations. Are you absolutely sure you want to delete it?`
+    : `Delete meal allowance ${item.reference_number}?`;
+
+  if (!confirm(message)) return;
+
   try {
-    await mealAllowanceService.delete(item.id)
-    alert('Meal allowance deleted successfully')
-    await fetchMealAllowances()
+    await mealAllowanceService.delete(item.id);
+    alert("Meal allowance deleted successfully");
+    await fetchMealAllowances();
   } catch (error) {
-    console.error('Error deleting meal allowance:', error)
-    alert('Failed to delete meal allowance')
+    console.error("Error deleting meal allowance:", error);
+    alert(error.response?.data?.message || "Failed to delete meal allowance");
   }
 }
 
 function onSaved() {
-  showFormDialog.value = false
-  fetchMealAllowances()
+  showFormDialog.value = false;
+  fetchMealAllowances();
 }
 
 function onApproved() {
-  showApprovalDialog.value = false
-  fetchMealAllowances()
+  showApprovalDialog.value = false;
+  fetchMealAllowances();
 }
 
 function formatDate(date) {
-  return new Date(date).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  })
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function formatNumber(value) {
-  return new Intl.NumberFormat('en-PH', {
+  return new Intl.NumberFormat("en-PH", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value)
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function calculateTotal(mealAllowance) {
   if (!mealAllowance.items || !Array.isArray(mealAllowance.items)) {
-    return 0
+    return 0;
   }
   return mealAllowance.items.reduce((total, item) => {
-    return total + (parseFloat(item.no_of_days || 0) * parseFloat(item.amount_per_day || 0))
-  }, 0)
+    return (
+      total +
+      parseFloat(item.no_of_days || 0) * parseFloat(item.amount_per_day || 0)
+    );
+  }, 0);
 }
 
 function getStatusColor(status) {
   const colors = {
-    draft: 'grey',
-    pending_approval: 'orange',
-    approved: 'success',
-    rejected: 'error'
-  }
-  return colors[status] || 'grey'
+    draft: "grey",
+    pending_approval: "orange",
+    approved: "success",
+    rejected: "error",
+  };
+  return colors[status] || "grey";
 }
 </script>

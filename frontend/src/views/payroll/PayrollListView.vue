@@ -180,19 +180,23 @@
                 <v-list-item-title>Export Excel</v-list-item-title>
               </v-list-item>
 
-              <v-list-item @click="exportPayroll(item, 'pdf')">
+              <v-list-item @click="openExportDialog(item)">
                 <template v-slot:prepend>
-                  <v-icon color="error">mdi-file-pdf</v-icon>
+                  <v-icon color="error">mdi-file-pdf-box</v-icon>
                 </template>
                 <v-list-item-title>Export PDF</v-list-item-title>
               </v-list-item>
 
-              <v-divider v-if="item.status === 'draft'"></v-divider>
+              <v-divider></v-divider>
 
-              <v-list-item
-                v-if="item.status === 'draft'"
-                @click="confirmDeletePayroll(item)"
-              >
+              <v-list-item @click="confirmResetPayroll(item)">
+                <template v-slot:prepend>
+                  <v-icon color="warning">mdi-restart</v-icon>
+                </template>
+                <v-list-item-title>Reset to Draft</v-list-item-title>
+              </v-list-item>
+
+              <v-list-item @click="confirmDeletePayroll(item)">
                 <template v-slot:prepend>
                   <v-icon color="error">mdi-delete</v-icon>
                 </template>
@@ -396,6 +400,14 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Export Payroll Dialog -->
+    <ExportPayrollDialog
+      v-if="selectedPayroll"
+      v-model="showExportDialog"
+      :payroll-id="selectedPayroll.id"
+      @exported="handleExportCompleted"
+    />
   </div>
 </template>
 <script setup>
@@ -403,6 +415,7 @@ import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import ExportPayrollDialog from "@/components/payroll/ExportPayrollDialog.vue";
 
 const router = useRouter();
 const toast = useToast();
@@ -413,7 +426,10 @@ const saving = ref(false);
 const processing = ref(false);
 const showCreateDialog = ref(false);
 const showConfirmDialog = ref(false);
+const showExportDialog = ref(false);
+const selectedPayroll = ref(null);
 const createForm = ref(null);
+const replacingExisting = ref(false);
 
 const filters = ref({
   status: null,
@@ -503,6 +519,30 @@ async function fetchPayrolls() {
   }
 }
 
+async function checkDuplicatePayroll() {
+  const periodStart = new Date(newPayroll.value.period_start_date);
+  const year = periodStart.getFullYear();
+  const month = periodStart.getMonth() + 1;
+  const periodNumber =
+    newPayroll.value.pay_period_number || (periodStart.getDate() <= 15 ? 1 : 2);
+
+  try {
+    const response = await api.get("/payroll", {
+      params: { year, month, pay_period_number: periodNumber },
+    });
+
+    const existing = response.data.data || response.data;
+    return existing.find(
+      (p) =>
+        p.year === year &&
+        p.month === month &&
+        p.pay_period_number === periodNumber
+    );
+  } catch (error) {
+    return null;
+  }
+}
+
 async function createPayroll() {
   const { valid } = await createForm.value.validate();
   if (!valid) {
@@ -510,15 +550,45 @@ async function createPayroll() {
     return;
   }
 
-  saving.value = true;
-  try {
-    // Clean up payload - remove empty/null optional fields
-    const payload = {
-      period_start_date: newPayroll.value.period_start_date,
-      period_end_date: newPayroll.value.period_end_date,
-      payment_date: newPayroll.value.payment_date,
-    };
+  // Check for duplicate payroll
+  const existingPayroll = await checkDuplicatePayroll();
+  if (existingPayroll) {
+    const periodStart = new Date(newPayroll.value.period_start_date);
+    const monthName = periodStart.toLocaleString("default", { month: "long" });
+    const periodNumber =
+      newPayroll.value.pay_period_number ||
+      (periodStart.getDate() <= 15 ? 1 : 2);
 
+    const confirmed = confirm(
+      `A payroll already exists for ${monthName} ${periodStart.getFullYear()} - Period ${periodNumber}.\n\n` +
+        `Do you want to replace it?\n\n` +
+        `Warning: This will permanently delete the existing payroll and all its data.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Delete existing payroll first
+    try {
+      await api.delete(`/payroll/${existingPayroll.id}`);
+      toast.info("Existing payroll deleted. Creating new one...");
+    } catch (error) {
+      toast.error("Failed to delete existing payroll");
+      return;
+    }
+  }
+
+  saving.value = true;
+
+  // Clean up payload - remove empty/null optional fields
+  const payload = {
+    period_start_date: newPayroll.value.period_start_date,
+    period_end_date: newPayroll.value.period_end_date,
+    payment_date: newPayroll.value.payment_date,
+  };
+
+  try {
     // Add optional fields only if they have values
     if (newPayroll.value.pay_period_number) {
       payload.pay_period_number = newPayroll.value.pay_period_number;
@@ -544,15 +614,43 @@ async function createPayroll() {
     closeCreateDialog();
     await fetchPayrolls();
 
-    // Navigate to the created payroll details
-    router.push(`/payroll/${response.data.id}`);
+    // Stay on payroll list page to see the new payroll
+    // (Detail view is not yet implemented)
   } catch (error) {
     console.error("Error creating payroll:", error);
-    toast.error(
+    console.error("Error response:", error.response?.data);
+    console.error("Validation errors:", error.response?.data?.errors);
+    console.error("Payload sent:", payload);
+
+    // Handle validation errors
+    if (error.response?.status === 422 && error.response?.data?.errors) {
+      const errors = error.response.data.errors;
+      const errorList = Object.values(errors).flat();
+      toast.error(errorList.join(". "));
+      return;
+    }
+
+    // Handle specific error messages
+    const errorMessage =
       error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Failed to create payroll"
-    );
+      error.response?.data?.error ||
+      "Failed to create payroll period";
+
+    // Check for duplicate payroll period
+    if (
+      errorMessage.toLowerCase().includes("duplicate") ||
+      errorMessage.toLowerCase().includes("already exists")
+    ) {
+      toast.error(
+        "A payroll period already exists for this date range or period number. Please check existing payrolls."
+      );
+    } else if (error.response?.status === 500) {
+      toast.error(
+        "Server error occurred. Please check the backend logs or contact support."
+      );
+    } else {
+      toast.error(errorMessage);
+    }
   } finally {
     saving.value = false;
   }
@@ -700,6 +798,12 @@ async function exportPayroll(payroll, format) {
   }
 }
 
+// Open comprehensive export dialog
+function openExportDialog(payroll) {
+  selectedPayroll.value = payroll;
+  showExportDialog.value = true;
+}
+
 function getStatusColor(status) {
   const colors = {
     draft: "grey",
@@ -754,16 +858,42 @@ function formatCurrency(amount) {
 }
 
 function confirmDeletePayroll(payroll) {
+  const isPaid = payroll.status === "paid";
   confirmAction.value = {
     type: "warning",
-    title: "Delete Payroll Period",
-    message: `Are you sure you want to delete payroll ${payroll.payroll_number}? This will permanently remove the payroll period and all associated data.`,
+    title: isPaid ? "⚠️ Delete PAID Payroll" : "Delete Payroll Period",
+    message: isPaid
+      ? `WARNING: This payroll (${payroll.payroll_number}) has been marked as PAID. Deleting it will permanently remove all payment records. Are you absolutely sure you want to continue?`
+      : `Are you sure you want to delete payroll ${payroll.payroll_number}? This will permanently remove the payroll period and all associated data.`,
     buttonText: "Delete",
     icon: "mdi-delete-alert",
     color: "error",
     action: async () => {
       await api.delete(`/payroll/${payroll.id}`);
       toast.success("Payroll deleted successfully!");
+      showConfirmDialog.value = false;
+      await fetchPayrolls();
+    },
+  };
+  showConfirmDialog.value = true;
+}
+
+function confirmResetPayroll(payroll) {
+  const isPaid = payroll.status === "paid";
+  confirmAction.value = {
+    type: "warning",
+    title: isPaid ? "⚠️ Reset PAID Payroll" : "Reset Payroll to Draft",
+    message: isPaid
+      ? `WARNING: This payroll (${payroll.payroll_number}) has been marked as PAID. Resetting it will delete all payment records but keep the period. Are you absolutely sure you want to continue?`
+      : `Are you sure you want to reset payroll ${payroll.payroll_number} to draft? This will delete all calculated payroll items but keep the period. You can then reprocess it with the updated calculations.`,
+    buttonText: "Reset",
+    icon: "mdi-restart",
+    color: "warning",
+    action: async () => {
+      await api.post(`/payroll/${payroll.id}/reset`);
+      toast.success(
+        "Payroll reset to draft successfully! You can now reprocess it."
+      );
       showConfirmDialog.value = false;
       await fetchPayrolls();
     },

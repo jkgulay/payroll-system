@@ -47,7 +47,11 @@
             <p class="text-body-2 text-medium-emphasis">
               Update SSS, PhilHealth, Pag-IBIG, and tax tables
             </p>
-            <v-btn color="primary" variant="tonal" class="mt-4"
+            <v-btn
+              color="primary"
+              variant="tonal"
+              class="mt-4"
+              @click="openRatesDialog"
               >Manage Rates</v-btn
             >
           </v-card-text>
@@ -71,5 +75,19 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Government Rates Dialog -->
+    <GovernmentRatesDialog v-model="showRatesDialog" />
   </div>
 </template>
+
+<script setup>
+import { ref } from "vue";
+import GovernmentRatesDialog from "@/components/settings/GovernmentRatesDialog.vue";
+
+const showRatesDialog = ref(false);
+
+const openRatesDialog = () => {
+  showRatesDialog.value = true;
+};
+</script>
