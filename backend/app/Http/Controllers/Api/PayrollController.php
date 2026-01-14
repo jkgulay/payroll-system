@@ -489,59 +489,6 @@ class PayrollController extends Controller
     }
 
     /**
-     * Test PDF setup and environment
-     */
-    public function testPdfSetup(Request $request)
-    {
-        $checks = [];
-
-        // Check PHP extensions
-        $checks['php_version'] = PHP_VERSION;
-        $checks['extensions'] = [
-            'gd' => extension_loaded('gd'),
-            'mbstring' => extension_loaded('mbstring'),
-            'dom' => extension_loaded('dom'),
-            'xml' => extension_loaded('xml'),
-        ];
-
-        // Check directories
-        $checks['directories'] = [
-            'fonts' => [
-                'path' => storage_path('fonts'),
-                'exists' => file_exists(storage_path('fonts')),
-                'writable' => is_writable(storage_path('fonts')),
-            ],
-            'cache' => [
-                'path' => storage_path('framework/cache'),
-                'exists' => file_exists(storage_path('framework/cache')),
-                'writable' => is_writable(storage_path('framework/cache')),
-            ],
-            'logs' => [
-                'path' => storage_path('logs'),
-                'exists' => file_exists(storage_path('logs')),
-                'writable' => is_writable(storage_path('logs')),
-            ],
-        ];
-
-        // Check dompdf config
-        $checks['dompdf_config'] = [
-            'font_dir' => config('dompdf.options.font_dir'),
-            'font_cache' => config('dompdf.options.font_cache'),
-            'temp_dir' => config('dompdf.options.temp_dir'),
-        ];
-
-        // Try to create a simple PDF
-        try {
-            $pdf = Pdf::loadHTML('<h1>Test PDF</h1>');
-            $checks['simple_pdf_test'] = 'SUCCESS';
-        } catch (\Exception $e) {
-            $checks['simple_pdf_test'] = 'FAILED: ' . $e->getMessage();
-        }
-
-        return response()->json($checks);
-    }
-
-    /**
      * Generate appropriate filename based on export type
      */
     private function generateFilename(Payroll $payroll, string $type, array $validated): string
