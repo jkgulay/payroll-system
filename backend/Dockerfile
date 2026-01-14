@@ -5,16 +5,17 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     zip \
     unzip \
-    libfreetype6 \
+    libfreetype6-dev \
     libfontconfig1 \
     fontconfig \
     fonts-dejavu-core \
     libpng-dev \
-    libjpeg-dev \
-    libwebp-dev
+    libjpeg62-turbo-dev \
+    libwebp-dev \
+    pkg-config
 
 # Install PHP extensions including GD for image processing in PDFs
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql gd
 
 # Install Composer
