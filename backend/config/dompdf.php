@@ -63,7 +63,7 @@ return [
          *
          * Note: This directory must exist and be writable by the webserver process.
          */
-        "temp_dir" => sys_get_temp_dir(),
+        "temp_dir" => storage_path('framework/cache'),
         
         /**
          * DOMPDF's working directory

@@ -418,29 +418,48 @@ class PayrollController extends Controller
      */
     public function exportComprehensivePDF(Request $request, Payroll $payroll)
     {
-        $validated = $request->validate([
-            'type' => 'required|in:all,employee,project',
-            'filter_id' => 'nullable|integer',
-            'signatures' => 'required|array',
-            'signatures.prepared_by' => 'nullable|array',
-            'signatures.checked_by' => 'nullable|array',
-            'signatures.recommended_by' => 'nullable|array',
-            'signatures.approved_by' => 'nullable|array',
-        ]);
+        try {
+            $validated = $request->validate([
+                'type' => 'required|in:all,employee,project',
+                'filter_id' => 'nullable|integer',
+                'signatures' => 'required|array',
+                'signatures.prepared_by' => 'nullable|array',
+                'signatures.checked_by' => 'nullable|array',
+                'signatures.recommended_by' => 'nullable|array',
+                'signatures.approved_by' => 'nullable|array',
+            ]);
 
-        $exporter = new PayrollPDFExport($payroll);
+            // Ensure storage directories exist
+            $fontsPath = storage_path('fonts');
+            if (!file_exists($fontsPath)) {
+                mkdir($fontsPath, 0755, true);
+            }
 
-        $signatureData = $validated['signatures'] ?? [];
+            $exporter = new PayrollPDFExport($payroll);
 
-        $pdf = match ($validated['type']) {
-            'employee' => $exporter->generateByEmployee($validated['filter_id'], $signatureData),
-            'project' => $exporter->generateByProject($validated['filter_id'], $signatureData),
-            default => $exporter->generate($signatureData),
-        };
+            $signatureData = $validated['signatures'] ?? [];
 
-        $filename = $this->generateFilename($payroll, $validated['type'], $validated);
+            $pdf = match ($validated['type']) {
+                'employee' => $exporter->generateByEmployee($validated['filter_id'], $signatureData),
+                'project' => $exporter->generateByProject($validated['filter_id'], $signatureData),
+                default => $exporter->generate($signatureData),
+            };
 
-        return $pdf->download($filename);
+            $filename = $this->generateFilename($payroll, $validated['type'], $validated);
+
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            Log::error('PDF Export Error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to generate PDF',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred while generating the PDF. Please contact support.'
+            ], 500);
+        }
     }
 
     /**
