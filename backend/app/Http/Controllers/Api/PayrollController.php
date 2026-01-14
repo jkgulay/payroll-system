@@ -419,6 +419,12 @@ class PayrollController extends Controller
     public function exportComprehensivePDF(Request $request, Payroll $payroll)
     {
         try {
+            // Log the request
+            Log::info('PDF Export Request', [
+                'payroll_id' => $payroll->id,
+                'request_data' => $request->all()
+            ]);
+
             $validated = $request->validate([
                 'type' => 'required|in:all,employee,project',
                 'filter_id' => 'nullable|integer',
@@ -429,16 +435,31 @@ class PayrollController extends Controller
                 'signatures.approved_by' => 'nullable|array',
             ]);
 
-            // Ensure storage directories exist
+            // Ensure storage directories exist and are writable
             $fontsPath = storage_path('fonts');
+            $cachePath = storage_path('framework/cache');
+            
             if (!file_exists($fontsPath)) {
                 mkdir($fontsPath, 0755, true);
             }
+            if (!file_exists($cachePath)) {
+                mkdir($cachePath, 0755, true);
+            }
+            
+            // Check if directories are writable
+            if (!is_writable($fontsPath)) {
+                Log::error('Fonts directory not writable: ' . $fontsPath);
+            }
+            if (!is_writable($cachePath)) {
+                Log::error('Cache directory not writable: ' . $cachePath);
+            }
 
+            Log::info('Creating PDF exporter');
             $exporter = new PayrollPDFExport($payroll);
 
             $signatureData = $validated['signatures'] ?? [];
 
+            Log::info('Generating PDF', ['type' => $validated['type']]);
             $pdf = match ($validated['type']) {
                 'employee' => $exporter->generateByEmployee($validated['filter_id'], $signatureData),
                 'project' => $exporter->generateByProject($validated['filter_id'], $signatureData),
@@ -446,20 +467,78 @@ class PayrollController extends Controller
             };
 
             $filename = $this->generateFilename($payroll, $validated['type'], $validated);
+            
+            Log::info('PDF generated successfully', ['filename' => $filename]);
 
             return $pdf->download($filename);
         } catch (\Exception $e) {
             Log::error('PDF Export Error: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'payroll_id' => $payroll->id ?? null
             ]);
 
             return response()->json([
                 'message' => 'Failed to generate PDF',
-                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred while generating the PDF. Please contact support.'
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ], 500);
         }
+    }
+
+    /**
+     * Test PDF setup and environment
+     */
+    public function testPdfSetup(Request $request)
+    {
+        $checks = [];
+        
+        // Check PHP extensions
+        $checks['php_version'] = PHP_VERSION;
+        $checks['extensions'] = [
+            'gd' => extension_loaded('gd'),
+            'mbstring' => extension_loaded('mbstring'),
+            'dom' => extension_loaded('dom'),
+            'xml' => extension_loaded('xml'),
+        ];
+        
+        // Check directories
+        $checks['directories'] = [
+            'fonts' => [
+                'path' => storage_path('fonts'),
+                'exists' => file_exists(storage_path('fonts')),
+                'writable' => is_writable(storage_path('fonts')),
+            ],
+            'cache' => [
+                'path' => storage_path('framework/cache'),
+                'exists' => file_exists(storage_path('framework/cache')),
+                'writable' => is_writable(storage_path('framework/cache')),
+            ],
+            'logs' => [
+                'path' => storage_path('logs'),
+                'exists' => file_exists(storage_path('logs')),
+                'writable' => is_writable(storage_path('logs')),
+            ],
+        ];
+        
+        // Check dompdf config
+        $checks['dompdf_config'] = [
+            'font_dir' => config('dompdf.options.font_dir'),
+            'font_cache' => config('dompdf.options.font_cache'),
+            'temp_dir' => config('dompdf.options.temp_dir'),
+        ];
+        
+        // Try to create a simple PDF
+        try {
+            $pdf = Pdf::loadHTML('<h1>Test PDF</h1>');
+            $checks['simple_pdf_test'] = 'SUCCESS';
+        } catch (\Exception $e) {
+            $checks['simple_pdf_test'] = 'FAILED: ' . $e->getMessage();
+        }
+        
+        return response()->json($checks);
     }
 
     /**
