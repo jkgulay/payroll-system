@@ -152,9 +152,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from "vue";
+import { ref, reactive, onMounted, computed, onUnmounted } from "vue";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
 
 const toast = useToast();
 const emit = defineEmits(["edit", "delete", "approve", "reject"]);
@@ -239,8 +240,21 @@ const canDelete = (item) => {
   return canEditRole.value && !item.is_approved;
 };
 
+let unsubscribeAttendance = null;
+
 onMounted(() => {
   loadAttendance();
+
+  // Listen for attendance updates
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    loadAttendance();
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 
 defineExpose({ loadAttendance });

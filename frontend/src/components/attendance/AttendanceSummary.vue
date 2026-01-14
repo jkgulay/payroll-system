@@ -199,10 +199,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted } from "vue";
 import attendanceService from "@/services/attendanceService";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
 
 const toast = useToast();
 
@@ -287,7 +288,22 @@ const setLastMonth = () => {
   filters.date_to = lastDay.toISOString().split("T")[0];
 };
 
+let unsubscribeAttendance = null;
+
 onMounted(() => {
   loadEmployees();
+
+  // Listen for attendance updates to refresh summary if it's loaded
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    if (summary.value) {
+      loadSummary();
+    }
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 </script>

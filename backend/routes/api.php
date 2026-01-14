@@ -91,6 +91,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/attendance/mark-absent', [App\Http\Controllers\Api\AttendanceController::class, 'markAbsent']);
     Route::post('/attendance/{attendance}/approve', [App\Http\Controllers\Api\AttendanceController::class, 'approve']);
     Route::post('/attendance/{attendance}/reject', [App\Http\Controllers\Api\AttendanceController::class, 'reject']);
+
+    // Daily Time Record (DTR) Routes
+    Route::post('/attendance/dtr/generate', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'generate']);
+    Route::post('/attendance/dtr/generate-daily', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'generateDaily']);
+    Route::post('/attendance/dtr/preview', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'preview']);
+
     Route::apiResource('attendance', App\Http\Controllers\Api\AttendanceController::class);
 
     // Payroll
@@ -139,12 +145,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Deductions - specific routes MUST come before apiResource
     Route::post('/deductions/{deduction}/record-installment', [App\Http\Controllers\Api\DeductionController::class, 'recordInstallment']);
-    
+
     // Cash Bond specific routes
     Route::get('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'getCashBonds']);
     Route::post('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'createCashBond'])->middleware('role:admin,accountant');
     Route::post('/deductions/{deduction}/refund-cash-bond', [App\Http\Controllers\Api\DeductionController::class, 'refundCashBond'])->middleware('role:admin,accountant');
-    
+
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);

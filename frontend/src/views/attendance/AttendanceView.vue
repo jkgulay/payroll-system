@@ -14,6 +14,14 @@
           Manual Entry
         </v-btn>
         <v-btn
+          color="success"
+          prepend-icon="mdi-file-document"
+          @click="openDTRDialog"
+          class="ml-2"
+        >
+          Generate DTR
+        </v-btn>
+        <v-btn
           color="info"
           prepend-icon="mdi-upload"
           @click="openImportDialog"
@@ -121,6 +129,9 @@
     <!-- Mark Absent Dialog -->
     <MarkAbsentDialog v-model="markAbsentDialog" @marked="handleMarkedAbsent" />
 
+    <!-- DTR Generation Dialog -->
+    <GenerateDTRDialog v-model="dtrDialog" />
+
     <!-- Reject Dialog -->
     <RejectDialog
       v-model="rejectDialog"
@@ -158,6 +169,7 @@ import DeviceManagement from "@/components/attendance/DeviceManagement.vue";
 import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
 import ImportBiometricDialog from "@/components/attendance/ImportBiometricDialog.vue";
 import MarkAbsentDialog from "@/components/attendance/MarkAbsentDialog.vue";
+import GenerateDTRDialog from "@/components/attendance/GenerateDTRDialog.vue";
 import RejectDialog from "@/components/attendance/RejectDialog.vue";
 
 const toast = useToast();
@@ -177,6 +189,7 @@ const canApprove = computed(() =>
 const manualEntryDialog = ref(false);
 const importDialog = ref(false);
 const markAbsentDialog = ref(false);
+const dtrDialog = ref(false);
 const rejectDialog = ref(false);
 const deleteDialog = ref(false);
 
@@ -205,6 +218,10 @@ const openImportDialog = () => {
 
 const openMarkAbsentDialog = () => {
   markAbsentDialog.value = true;
+};
+
+const openDTRDialog = () => {
+  dtrDialog.value = true;
 };
 
 const openRejectDialog = (attendance) => {
@@ -279,10 +296,12 @@ const updatePendingCount = (count) => {
 };
 
 const refreshData = () => {
-  // Refresh active tab
-  if (tab.value === "list" && listView.value) {
+  // Refresh all tabs to ensure consistency
+  if (listView.value) {
     listView.value.loadAttendance();
   }
+  // Trigger refresh for calendar and other components
+  window.dispatchEvent(new CustomEvent("attendance-data-changed"));
 };
 
 // Load pending count on mount

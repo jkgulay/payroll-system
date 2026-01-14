@@ -124,9 +124,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
 
 const emit = defineEmits(["date-click", "record-click"]);
 const toast = useToast();
@@ -275,8 +276,21 @@ const goToToday = () => {
   loadMonthData();
 };
 
+let unsubscribeAttendance = null;
+
 onMounted(() => {
   loadMonthData();
+
+  // Listen for attendance updates
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    loadMonthData();
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 </script>
 
