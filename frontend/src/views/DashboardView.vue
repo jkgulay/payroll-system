@@ -234,19 +234,11 @@
           </v-card-text>
         </v-card>
 
-        <!-- Attendance Statistics Card -->
-        <v-card class="modern-card" elevation="0">
-          <v-card-title class="pa-5">
-            <v-icon color="info" size="small" class="mr-2">mdi-clock-check-outline</v-icon>
-            <div class="text-subtitle-1 font-weight-bold">
-              Attendance Statistics This Month
-            </div>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-5" style="height: 400px">
-            <AttendanceStatusChart period="current-month" />
-          </v-card-text>
-        </v-card>
+        <!-- Recent Activity Feed -->
+        <RecentActivityFeed class="mb-6" />
+
+        <!-- Upcoming Events -->
+        <UpcomingEvents />
       </v-col>
 
       <!-- Right Column - Quick Actions & Widgets -->
@@ -288,16 +280,6 @@
               @click="$router.push('/biometric-import')"
             >
               Import Attendance
-            </v-btn>
-            <v-btn
-              block
-              variant="tonal"
-              color="warning"
-              prepend-icon="mdi-chart-line"
-              class="justify-start"
-              @click="$router.push('/analytics')"
-            >
-              View Analytics
             </v-btn>
           </v-card-text>
         </v-card>
@@ -699,6 +681,8 @@ import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
 import DashboardCalendar from "@/components/DashboardCalendar.vue";
+import RecentActivityFeed from "@/components/RecentActivityFeed.vue";
+import UpcomingEvents from "@/components/UpcomingEvents.vue";
 import EmployeeDistributionChart from "@/components/charts/EmployeeDistributionChart.vue";
 import AttendanceStatusChart from "@/components/charts/AttendanceStatusChart.vue";
 import TodayStaffInfoChart from "@/components/charts/TodayStaffInfoChart.vue";

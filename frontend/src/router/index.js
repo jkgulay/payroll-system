@@ -232,18 +232,6 @@ const router = createRouter({
           meta: { title: "Payroll Details", roles: ["admin", "accountant"] },
         },
         {
-          path: "analytics",
-          name: "analytics",
-          component: () =>
-            import(
-              /* webpackChunkName: "analytics" */ "@/views/AnalyticsDashboard.vue"
-            ),
-          meta: {
-            title: "Analytics Dashboard",
-            roles: ["admin", "accountant"],
-          },
-        },
-        {
           path: "settings",
           name: "settings",
           component: () =>

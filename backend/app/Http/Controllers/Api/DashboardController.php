@@ -17,6 +17,11 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function stats(Request $request)
+    {
+        return $this->index($request);
+    }
+
     public function index(Request $request)
     {
         // Count all active employees (is_active = true)
@@ -605,6 +610,160 @@ class DashboardController extends Controller
         }
 
         return response()->json($distribution);
+    }
+
+    /**
+     * Get recent system activities
+     */
+    public function recentActivities(Request $request)
+    {
+        $limit = $request->input('limit', 15);
+        
+        $activities = AuditLog::with('user')
+            ->whereIn('action', [
+                'employee_created',
+                'employee_updated', 
+                'payroll_approved',
+                'payroll_finalized',
+                'leave_approved',
+                'leave_rejected',
+                'attendance_corrected',
+                'biometric_import',
+                'application_approved',
+                'application_rejected'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'module' => $log->module,
+                    'user' => $log->user ? [
+                        'name' => $log->user->name,
+                        'email' => $log->user->email,
+                    ] : null,
+                    'created_at' => $log->created_at,
+                ];
+            });
+
+        return response()->json($activities);
+    }
+
+    /**
+     * Get upcoming events and deadlines
+     */
+    public function upcomingEvents(Request $request)
+    {
+        $events = [];
+        $now = Carbon::now();
+        $nextWeek = Carbon::now()->addWeek();
+        $nextMonth = Carbon::now()->addMonth();
+
+        // Upcoming approved leaves
+        $upcomingLeaves = EmployeeLeave::with(['employee', 'leaveType'])
+            ->where('status', 'approved')
+            ->where('leave_date_from', '>=', $now)
+            ->where('leave_date_from', '<=', $nextMonth)
+            ->orderBy('leave_date_from')
+            ->limit(5)
+            ->get()
+            ->map(function ($leave) {
+                $leaveTypeName = $leave->leaveType ? $leave->leaveType->name : 'Leave';
+                return [
+                    'type' => 'leave',
+                    'title' => $leave->employee->full_name . ' - ' . $leaveTypeName,
+                    'date' => $leave->leave_date_from,
+                    'description' => $leave->leave_date_from->format('M d') . ' - ' . $leave->leave_date_to->format('M d, Y'),
+                    'icon' => 'mdi-calendar-remove',
+                    'color' => 'info',
+                ];
+            });
+
+        // Upcoming employee anniversaries (work anniversaries)
+        $upcomingAnniversaries = Employee::where('is_active', true)
+            ->whereNotNull('date_hired')
+            ->get()
+            ->filter(function ($employee) use ($now, $nextMonth) {
+                $dateHired = Carbon::parse($employee->date_hired);
+                $thisYearAnniversary = Carbon::create($now->year, $dateHired->month, $dateHired->day);
+                return $thisYearAnniversary->between($now, $nextMonth);
+            })
+            ->sortBy(function ($employee) use ($now) {
+                $dateHired = Carbon::parse($employee->date_hired);
+                return Carbon::create($now->year, $dateHired->month, $dateHired->day);
+            })
+            ->take(5)
+            ->map(function ($employee) use ($now) {
+                $dateHired = Carbon::parse($employee->date_hired);
+                $thisYearAnniversary = Carbon::create($now->year, $dateHired->month, $dateHired->day);
+                $years = $now->year - $dateHired->year;
+                return [
+                    'type' => 'anniversary',
+                    'title' => $employee->full_name . ' - ' . $years . ' year(s)',
+                    'date' => $thisYearAnniversary,
+                    'description' => 'Work anniversary on ' . $thisYearAnniversary->format('M d, Y'),
+                    'icon' => 'mdi-cake-variant',
+                    'color' => 'success',
+                ];
+            });
+
+        // Upcoming payroll cutoffs (15th and end of month)
+        $payrollCutoffs = [];
+        $currentMonth = $now->month;
+        $currentYear = $now->year;
+        
+        // Check 15th of current month
+        $cutoff15 = Carbon::create($currentYear, $currentMonth, 15);
+        if ($cutoff15->isFuture() && $cutoff15->lte($nextWeek)) {
+            $payrollCutoffs[] = [
+                'type' => 'payroll_cutoff',
+                'title' => 'Payroll Cutoff - Mid-Month',
+                'date' => $cutoff15,
+                'description' => 'Attendance cutoff for 1st-15th',
+                'icon' => 'mdi-calendar-clock',
+                'color' => 'warning',
+            ];
+        }
+
+        // Check end of current month
+        $cutoffEOM = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth();
+        if ($cutoffEOM->isFuture() && $cutoffEOM->lte($nextWeek)) {
+            $payrollCutoffs[] = [
+                'type' => 'payroll_cutoff',
+                'title' => 'Payroll Cutoff - End of Month',
+                'date' => $cutoffEOM,
+                'description' => 'Attendance cutoff for 16th-' . $cutoffEOM->day,
+                'icon' => 'mdi-calendar-clock',
+                'color' => 'warning',
+            ];
+        }
+
+        // Check 15th of next month
+        $nextMonthDate = $now->copy()->addMonth();
+        $cutoff15Next = Carbon::create($nextMonthDate->year, $nextMonthDate->month, 15);
+        if ($cutoff15Next->lte($nextWeek)) {
+            $payrollCutoffs[] = [
+                'type' => 'payroll_cutoff',
+                'title' => 'Payroll Cutoff - Mid-Month',
+                'date' => $cutoff15Next,
+                'description' => 'Attendance cutoff for 1st-15th',
+                'icon' => 'mdi-calendar-clock',
+                'color' => 'warning',
+            ];
+        }
+
+        // Merge all events
+        $events = collect($upcomingLeaves)
+            ->concat($upcomingAnniversaries)
+            ->concat($payrollCutoffs)
+            ->sortBy('date')
+            ->values()
+            ->take(10);
+
+        return response()->json($events);
     }
 
     // HELPER METHODS

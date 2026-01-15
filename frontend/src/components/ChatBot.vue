@@ -71,7 +71,7 @@
           <h4>Welcome to AI Assistant!</h4>
           <p>I can help you with:</p>
           <ul>
-            <li><v-icon icon="mdi-account-group" size="16" color="#ff9800"></v-icon> Employee information and analytics</li>
+            <li><v-icon icon="mdi-account-group" size="16" color="#ff9800"></v-icon> Employee information</li>
             <li><v-icon icon="mdi-cash-multiple" size="16" color="#ff9800"></v-icon> Payroll calculations and reports</li>
             <li><v-icon icon="mdi-calendar-check" size="16" color="#ff9800"></v-icon> Attendance and leave management</li>
             <li><v-icon icon="mdi-file-document-check" size="16" color="#ff9800"></v-icon> Compliance and tax information</li>

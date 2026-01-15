@@ -259,25 +259,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/notifications/{notification}/read', [App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
 
-    // Dashboard / Analytics
+    // Dashboard Stats
     Route::get('/dashboard/stats', [App\Http\Controllers\Api\DashboardController::class, 'stats']);
-
-    // Payroll Analytics
-    Route::get('/dashboard/payroll-trends', [App\Http\Controllers\Api\DashboardController::class, 'payrollTrends']);
-    Route::get('/dashboard/payroll-breakdown', [App\Http\Controllers\Api\DashboardController::class, 'payrollBreakdown']);
-    Route::get('/dashboard/payroll-comparison', [App\Http\Controllers\Api\DashboardController::class, 'payrollComparison']);
-    Route::get('/dashboard/government-contribution-trends', [App\Http\Controllers\Api\DashboardController::class, 'governmentContributionTrends']);
-
-    // Employee Analytics
-    Route::get('/dashboard/employee-distribution', [App\Http\Controllers\Api\DashboardController::class, 'employeeDistribution']);
-    Route::get('/dashboard/employment-status-distribution', [App\Http\Controllers\Api\DashboardController::class, 'employmentStatusDistribution']);
-    Route::get('/dashboard/employee-by-location', [App\Http\Controllers\Api\DashboardController::class, 'employeeByLocation']);
-    Route::get('/dashboard/employee-growth-trend', [App\Http\Controllers\Api\DashboardController::class, 'employeeGrowthTrend']);
-
-    // Attendance Analytics
-    Route::get('/dashboard/attendance-rate', [App\Http\Controllers\Api\DashboardController::class, 'attendanceRate']);
-    Route::get('/dashboard/attendance-status-distribution', [App\Http\Controllers\Api\DashboardController::class, 'attendanceStatusDistribution']);
-    Route::get('/dashboard/overtime-trend', [App\Http\Controllers\Api\DashboardController::class, 'overtimeTrend']);
-    Route::get('/dashboard/leave-utilization', [App\Http\Controllers\Api\DashboardController::class, 'leaveUtilization']);
     Route::get('/dashboard/today-staff-info', [App\Http\Controllers\Api\DashboardController::class, 'todayStaffInfo']);
+    Route::get('/dashboard/recent-activities', [App\Http\Controllers\Api\DashboardController::class, 'recentActivities']);
+    Route::get('/dashboard/upcoming-events', [App\Http\Controllers\Api\DashboardController::class, 'upcomingEvents']);
 });
