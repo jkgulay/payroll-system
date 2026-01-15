@@ -38,11 +38,15 @@ class PayrollController extends Controller
             'payment_date' => 'required|date',
             'notes' => 'nullable|string',
             // Employee filtering options
-            'filter_type' => 'nullable|in:all,position,project',
+            'filter_type' => 'nullable|in:all,position,project,department,staff_type',
             'position_ids' => 'nullable|array',
             'position_ids.*' => 'exists:position_rates,id',
             'project_ids' => 'nullable|array',
             'project_ids.*' => 'exists:projects,id',
+            'departments' => 'nullable|array',
+            'departments.*' => 'string',
+            'staff_types' => 'nullable|array',
+            'staff_types.*' => 'string',
             // Employee limit
             'employee_limit' => 'nullable|integer|min:1|max:1000',
             // Only employees with attendance
@@ -66,6 +70,8 @@ class PayrollController extends Controller
                 'type' => $validated['filter_type'] ?? 'all',
                 'position_ids' => $validated['position_ids'] ?? [],
                 'project_ids' => $validated['project_ids'] ?? [],
+                'departments' => $validated['departments'] ?? [],
+                'staff_types' => $validated['staff_types'] ?? [],
                 'limit' => $validated['employee_limit'] ?? null,
                 'has_attendance' => $validated['has_attendance'] ?? false,
             ];
@@ -212,6 +218,10 @@ class PayrollController extends Controller
                 $query->whereIn('position_id', $filters['position_ids']);
             } elseif ($filters['type'] === 'project' && !empty($filters['project_ids'])) {
                 $query->whereIn('project_id', $filters['project_ids']);
+            } elseif ($filters['type'] === 'department' && !empty($filters['departments'])) {
+                $query->whereIn('department', $filters['departments']);
+            } elseif ($filters['type'] === 'staff_type' && !empty($filters['staff_types'])) {
+                $query->whereIn('staff_type', $filters['staff_types']);
             }
         }
 

@@ -224,6 +224,8 @@
               <v-radio label="All Employees" value="all"></v-radio>
               <v-radio label="By Position/Role" value="position"></v-radio>
               <v-radio label="By Project" value="project"></v-radio>
+              <v-radio label="By Department" value="department"></v-radio>
+              <v-radio label="By Staff Type" value="staff_type"></v-radio>
             </v-radio-group>
 
             <!-- Employee Limit -->
@@ -329,6 +331,36 @@
               </template>
             </v-autocomplete>
 
+            <!-- Department Filter -->
+            <v-autocomplete
+              v-if="formData.filter_type === 'department'"
+              v-model="formData.departments"
+              :items="departmentOptions"
+              label="Select Departments"
+              prepend-icon="mdi-office-building"
+              multiple
+              chips
+              closable-chips
+              :rules="[v => formData.filter_type !== 'department' || (v && v.length > 0) || 'Select at least one department']"
+              hint="Select one or more departments to include in payroll"
+              persistent-hint
+            ></v-autocomplete>
+
+            <!-- Staff Type Filter -->
+            <v-autocomplete
+              v-if="formData.filter_type === 'staff_type'"
+              v-model="formData.staff_types"
+              :items="staffTypeOptions"
+              label="Select Staff Types"
+              prepend-icon="mdi-account-group"
+              multiple
+              chips
+              closable-chips
+              :rules="[v => formData.filter_type !== 'staff_type' || (v && v.length > 0) || 'Select at least one staff type']"
+              hint="Select one or more staff types to include in payroll"
+              persistent-hint
+            ></v-autocomplete>
+
             <v-divider class="my-4"></v-divider>
 
             <!-- Additional Filters -->
@@ -359,6 +391,12 @@
                 </span>
                 <span v-else-if="formData.filter_type === 'project'">
                   Only employees assigned to the selected project(s) will be included in this payroll.
+                </span>
+                <span v-else-if="formData.filter_type === 'department'">
+                  Only employees from the selected department(s) will be included in this payroll.
+                </span>
+                <span v-else-if="formData.filter_type === 'staff_type'">
+                  Only employees with the selected staff type(s) will be included in this payroll.
                 </span>
               </div>
             </v-alert>
@@ -429,6 +467,8 @@ const payrolls = ref([]);
 const selectedPayroll = ref(null);
 const positions = ref([]);
 const projects = ref([]);
+const departmentOptions = ref([]);
+const staffTypeOptions = ref([]);
 
 const formData = ref({
   period_name: '',
@@ -439,6 +479,8 @@ const formData = ref({
   filter_type: 'all',
   position_ids: [],
   project_ids: [],
+  departments: [],
+  staff_types: [],
   employee_limit: null,
 });
 
@@ -465,6 +507,7 @@ onMounted(() => {
   fetchPayrolls();
   fetchPositions();
   fetchProjects();
+  fetchDepartmentsAndStaffTypes();
 });
 
 async function fetchPayrolls() {
@@ -504,6 +547,32 @@ async function fetchProjects() {
   }
 }
 
+async function fetchDepartmentsAndStaffTypes() {
+  try {
+    // Fetch all employees to get unique departments and staff types
+    const response = await api.get('/employees', {
+      params: { per_page: 10000 } // Get all employees
+    });
+    const employees = response.data.data || response.data;
+    
+    // Extract unique departments (filter out null/empty values)
+    const depts = [...new Set(employees
+      .map(e => e.department)
+      .filter(d => d && d.trim() !== '')
+    )].sort();
+    departmentOptions.value = depts;
+    
+    // Extract unique staff types (filter out null/empty values)
+    const types = [...new Set(employees
+      .map(e => e.staff_type)
+      .filter(t => t && t.trim() !== '')
+    )].sort();
+    staffTypeOptions.value = types;
+  } catch (error) {
+    console.error('Error fetching departments and staff types:', error);
+  }
+}
+
 function openCreateDialog() {
   editMode.value = false;
   formData.value = {
@@ -515,6 +584,9 @@ function openCreateDialog() {
     filter_type: 'all',
     position_ids: [],
     project_ids: [],
+    departments: [],
+    staff_types: [],
+    employee_limit: null,
     has_attendance: false,
   };
   dialog.value = true;
@@ -557,6 +629,18 @@ async function savePayroll() {
     payload.position_ids = formData.value.position_ids;
   } else if (formData.value.filter_type === 'project') {
     payload.project_ids = formData.value.project_ids;
+  } else if (formData.value.filter_type === 'department') {
+    payload.departments = formData.value.departments;
+  } else if (formData.value.filter_type === 'staff_type') {
+    payload.staff_types = formData.value.staff_types;
+  }
+
+  // Add optional filters
+  if (formData.value.employee_limit) {
+    payload.employee_limit = formData.value.employee_limit;
+  }
+  if (formData.value.has_attendance) {
+    payload.has_attendance = formData.value.has_attendance;
   }
 
   // Add employee limit if specified
