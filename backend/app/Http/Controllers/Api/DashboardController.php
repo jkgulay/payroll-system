@@ -7,6 +7,10 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
+use App\Models\EmployeeApplication;
+use App\Models\EmployeeLeave;
+use App\Models\AttendanceCorrection;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -37,6 +41,44 @@ class DashboardController extends Controller
         $periodPayroll = Payroll::whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$currentMonth])
             ->sum('total_gross');
 
+        // Pending Applications
+        $pendingApplications = EmployeeApplication::where('application_status', 'pending')->count();
+
+        // Pending Leaves
+        $pendingLeaves = EmployeeLeave::where('status', 'pending')->count();
+
+        // Pending Attendance Corrections
+        $pendingAttendanceCorrections = AttendanceCorrection::where('status', 'pending')->count();
+
+        // Draft Payrolls
+        $draftPayrolls = Payroll::where('status', 'draft')->count();
+
+        // Employees with complete data (has government info)
+        $employeesCompleteData = Employee::where('is_active', true)
+            ->whereHas('governmentInfo')
+            ->count();
+
+        // Monthly Attendance Rate
+        $workingDaysThisMonth = Carbon::now()->diffInDaysFiltered(function(Carbon $date) {
+            return !$date->isWeekend();
+        }, Carbon::now()->startOfMonth());
+        
+        $expectedAttendance = $totalEmployees * $workingDaysThisMonth;
+        $actualAttendance = Attendance::whereRaw("TO_CHAR(attendance_date, 'YYYY-MM') = ?", [$currentMonth])
+            ->whereIn('status', ['present', 'late'])
+            ->count();
+        
+        $monthlyAttendanceRate = $expectedAttendance > 0 
+            ? round(($actualAttendance / $expectedAttendance) * 100, 1) 
+            : 0;
+
+        // Last Biometric Import (from audit logs)
+        $lastBiometricImport = AuditLog::where('action', 'biometric_import')
+            ->orWhere('description', 'like', '%biometric%')
+            ->orWhere('description', 'like', '%import%attendance%')
+            ->latest()
+            ->first();
+
         // Get recent payrolls
         $recentPayrolls = Payroll::orderBy('created_at', 'desc')
             ->limit(5)
@@ -58,7 +100,14 @@ class DashboardController extends Controller
                 'activeEmployees' => $activeStatus,
                 'periodPayroll' => $periodPayroll ?? 0,
                 'presentToday' => $presentToday,
-                'pendingApprovals' => 0,
+                'pendingApprovals' => 0, // Legacy field, kept for compatibility
+                'pendingApplications' => $pendingApplications,
+                'pendingLeaves' => $pendingLeaves,
+                'pendingAttendanceCorrections' => $pendingAttendanceCorrections,
+                'draftPayrolls' => $draftPayrolls,
+                'employeesCompleteData' => $employeesCompleteData,
+                'monthlyAttendanceRate' => $monthlyAttendanceRate,
+                'lastBiometricImportDate' => $lastBiometricImport ? $lastBiometricImport->created_at : null,
             ],
             'recent_attendance' => [],
             'recent_payrolls' => $recentPayrolls,
