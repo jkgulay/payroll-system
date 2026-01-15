@@ -23,6 +23,19 @@
     <v-card class="mb-4">
       <v-card-text>
         <v-row>
+          <v-col cols="12" md="3">
+            <v-text-field
+              v-model="filters.search"
+              prepend-inner-icon="mdi-magnify"
+              label="Search deductions..."
+              variant="outlined"
+              density="compact"
+              clearable
+              hint="Search by name, employee, or reference number"
+              persistent-hint
+              @update:model-value="debouncedSearch"
+            ></v-text-field>
+          </v-col>
           <v-col cols="12" md="3" v-if="userRole !== 'employee'">
             <v-autocomplete
               v-model="filters.employee_id"
@@ -36,7 +49,7 @@
               @update:model-value="fetchDeductions"
             ></v-autocomplete>
           </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 4 : 3">
+          <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
             <v-select
               v-model="filters.deduction_type"
               :items="deductionTypes"
@@ -47,7 +60,7 @@
               @update:model-value="fetchDeductions"
             ></v-select>
           </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 4 : 3">
+          <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
             <v-select
               v-model="filters.status"
               :items="statusOptions"
@@ -58,7 +71,7 @@
               @update:model-value="fetchDeductions"
             ></v-select>
           </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 4 : 3">
+          <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
             <v-btn
               color="secondary"
               variant="outlined"
@@ -209,20 +222,46 @@
                   :items="employees"
                   item-title="full_name"
                   item-value="id"
-                  label="Employee *"
+                  label="Search and Select Employee *"
                   variant="outlined"
                   :rules="[rules.required]"
                   :disabled="editMode"
+                  clearable
+                  prepend-inner-icon="mdi-account-search"
+                  hint="Search by name, employee number, or position"
+                  persistent-hint
+                  no-data-text="No employees found matching your search"
+                  :custom-filter="customEmployeeFilter"
                 >
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
+                      <template v-slot:prepend>
+                        <v-avatar color="primary" size="40">
+                          <span class="text-white text-subtitle-2">
+                            {{ getInitials(item.raw.full_name) }}
+                          </span>
+                        </v-avatar>
+                      </template>
                       <template v-slot:title>
-                        {{ item.raw.full_name }}
+                        <span class="font-weight-medium">{{ item.raw.full_name }}</span>
                       </template>
                       <template v-slot:subtitle>
-                        {{ item.raw.employee_number }} - {{ item.raw.position }}
+                        <v-chip size="x-small" class="mr-1" color="primary" variant="outlined">
+                          {{ item.raw.employee_number }}
+                        </v-chip>
+                        <span class="text-caption">{{ item.raw.position || 'N/A' }}</span>
                       </template>
                     </v-list-item>
+                  </template>
+                  <template v-slot:selection="{ item }">
+                    <v-chip size="small" color="primary" variant="flat">
+                      <v-avatar start>
+                        <span class="text-white text-caption">
+                          {{ getInitials(item.raw.full_name) }}
+                        </span>
+                      </v-avatar>
+                      {{ item.raw.full_name }} - {{ item.raw.employee_number }}
+                    </v-chip>
                   </template>
                 </v-autocomplete>
               </v-col>
@@ -552,6 +591,7 @@ const activeTab = ref("all");
 
 // Filters
 const filters = ref({
+  search: "",
   employee_id: null,
   deduction_type: null,
   status: null,
@@ -594,6 +634,20 @@ const filteredDeductions = computed(() => {
 
   return deductions.value;
 });
+
+// Custom filter for employee autocomplete
+const customEmployeeFilter = (itemTitle, queryText, item) => {
+  if (!queryText) return true;
+  
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.full_name?.toLowerCase() || '';
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || '';
+  const position = item.raw.position?.toLowerCase() || '';
+  
+  return fullName.includes(search) || 
+         employeeNumber.includes(search) || 
+         position.includes(search);
+};
 
 // Headers
 const headers = computed(() => {
@@ -660,6 +714,7 @@ const fetchDeductions = async () => {
   loading.value = true;
   try {
     const params = {};
+    if (filters.value.search) params.search = filters.value.search;
     if (filters.value.employee_id)
       params.employee_id = filters.value.employee_id;
     if (filters.value.deduction_type)
@@ -679,13 +734,38 @@ const fetchDeductions = async () => {
   }
 };
 
+// Debounce search to avoid too many API calls
+let searchTimeout = null;
+const debouncedSearch = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    fetchDeductions();
+  }, 500);
+};
+
 // Fetch employees
 const fetchEmployees = async () => {
   try {
-    const response = await api.get("/employees?per_page=1000");
-    employees.value = response.data.data || response.data;
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 10000, // Large number to get all employees
+        paginate: false
+      }
+    });
+    
+    // Handle both paginated and non-paginated responses
+    if (response.data.data) {
+      employees.value = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      employees.value = response.data;
+    } else {
+      employees.value = [];
+    }
+    
+    console.log('Loaded employees:', employees.value.length);
   } catch (error) {
     console.error("Failed to load employees:", error);
+    toast.error("Failed to load employees");
   }
 };
 
@@ -781,6 +861,7 @@ const viewDetails = (deduction) => {
 // Clear filters
 const clearFilters = () => {
   filters.value = {
+    search: "",
     employee_id: null,
     deduction_type: null,
     status: null,
@@ -825,6 +906,13 @@ const formatDate = (date) => {
     month: "short",
     day: "numeric",
   });
+};
+
+const getInitials = (name) => {
+  if (!name) return "??";
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
 const getDeductionTypeColor = (type) => {

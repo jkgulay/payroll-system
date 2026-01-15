@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class DeductionController extends Controller
@@ -21,6 +22,21 @@ class DeductionController extends Controller
     public function index(Request $request)
     {
         $query = EmployeeDeduction::with(['employee', 'createdBy', 'approvedBy']);
+
+        // Search functionality
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('deduction_name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('reference_number', 'like', "%{$search}%")
+                  ->orWhereHas('employee', function($empQuery) use ($search) {
+                      $empQuery->where('first_name', 'like', "%{$search}%")
+                               ->orWhere('last_name', 'like', "%{$search}%")
+                               ->orWhere('employee_number', 'like', "%{$search}%");
+                  });
+            });
+        }
 
         // Filter by employee
         if ($request->has('employee_id')) {
@@ -60,11 +76,11 @@ class DeductionController extends Controller
             'employee_id' => 'required|exists:employees,id',
             'deduction_type' => 'required|in:ppe,tools,uniform,absence,cash_advance,cash_bond,sss,philhealth,pagibig,tax,loan,insurance,cooperative,other',
             'deduction_name' => 'nullable|string|max:100',
-            'total_amount' => 'required|numeric|min:1',
-            'amount_per_cutoff' => 'required|numeric|min:1',
+            'total_amount' => 'required|numeric|min:0.01',
+            'amount_per_cutoff' => 'required|numeric|min:0.01',
             'installments' => 'nullable|integer|min:1',
             'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after:start_date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string|max:500',
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
@@ -109,11 +125,16 @@ class DeductionController extends Controller
             // Load employee relationship for audit log
             $deduction->load('employee');
 
+            // Get employee name safely
+            $employeeName = $deduction->employee 
+                ? ($deduction->employee->full_name ?? ($deduction->employee->first_name . ' ' . $deduction->employee->last_name))
+                : 'Unknown Employee';
+
             // Create audit log
             AuditLog::create([
                 'module' => 'deductions',
                 'action' => 'create',
-                'description' => "Deduction created for employee: {$deduction->employee->full_name} - {$deduction->deduction_name}",
+                'description' => "Deduction created for employee: {$employeeName} - {$deduction->deduction_name}",
                 'user_id' => auth()->id(),
                 'record_id' => $deduction->id,
                 'old_values' => null,
@@ -130,6 +151,9 @@ class DeductionController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Failed to create deduction: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'message' => 'Failed to create deduction',
                 'error' => $e->getMessage()
@@ -163,11 +187,11 @@ class DeductionController extends Controller
         $validated = $request->validate([
             'deduction_type' => 'sometimes|in:ppe,tools,uniform,absence,cash_advance,cash_bond,sss,philhealth,pagibig,tax,loan,insurance,cooperative,other',
             'deduction_name' => 'nullable|string|max:100',
-            'total_amount' => 'sometimes|numeric|min:1',
-            'amount_per_cutoff' => 'sometimes|numeric|min:1',
+            'total_amount' => 'sometimes|numeric|min:0.01',
+            'amount_per_cutoff' => 'sometimes|numeric|min:0.01',
             'installments' => 'nullable|integer|min:1',
             'start_date' => 'sometimes|date',
-            'end_date' => 'nullable|date|after:start_date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string|max:500',
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
@@ -206,6 +230,9 @@ class DeductionController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Failed to update deduction: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'message' => 'Failed to update deduction',
                 'error' => $e->getMessage()

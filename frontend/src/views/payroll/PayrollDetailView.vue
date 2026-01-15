@@ -176,10 +176,15 @@
           <!-- Deductions -->
           <template v-slot:item.deductions="{ item }">
             <div class="text-caption">
-              <div>SSS: ₱{{ formatCurrency(item.sss) }}</div>
-              <div>PhilHealth: ₱{{ formatCurrency(item.philhealth) }}</div>
-              <div>Pag-IBIG: ₱{{ formatCurrency(item.pagibig) }}</div>
-              <div v-if="item.loans > 0">Loans: ₱{{ formatCurrency(item.loans) }}</div>
+              <div>SSS: ₱{{ formatCurrency(item.sss_contribution) }}</div>
+              <div>PhilHealth: ₱{{ formatCurrency(item.philhealth_contribution) }}</div>
+              <div>Pag-IBIG: ₱{{ formatCurrency(item.pagibig_contribution) }}</div>
+              <div v-if="item.total_loan_deductions > 0">
+                Loans: ₱{{ formatCurrency(item.total_loan_deductions) }}
+              </div>
+              <div v-if="item.employee_deductions > 0" class="text-warning">
+                Other Deductions: ₱{{ formatCurrency(item.employee_deductions) }}
+              </div>
             </div>
           </template>
 

@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
+use App\Models\EmployeeDeduction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -245,6 +246,9 @@ class PayrollController extends Controller
             
             $payrollItem = PayrollItem::create($item);
             
+            // Record deduction installments for this employee
+            $this->recordDeductionInstallments($payroll, $employee);
+            
             $totalGross += $item['gross_pay'];
             $totalDeductions += $item['total_deductions'];
             $totalNet += $item['net_pay'];
@@ -305,18 +309,31 @@ class PayrollController extends Controller
             ->where('status', 'active')
             ->sum('monthly_amortization') ?? 0;
         
+        // Get active employee deductions for this period
+        $employeeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
+            ->where('status', 'active')
+            ->where('start_date', '<=', $payroll->period_end)
+            ->where(function ($query) use ($payroll) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', $payroll->period_start);
+            })
+            ->get();
+        
+        // Sum up all active deductions
+        $totalEmployeeDeductions = $employeeDeductions->sum('amount_per_cutoff');
+        
         // Employee savings
         $employeeSavings = 0; // Can be configured
         
         // Cash advance
         $cashAdvance = 0; // Can be configured
         
-        // Other deductions
+        // Other deductions (legacy, now using employee_deductions table)
         $otherDeductions = 0;
         
         // Total deductions
         $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction + 
-                          $employeeSavings + $cashAdvance + $otherDeductions;
+                          $employeeSavings + $cashAdvance + $otherDeductions + $totalEmployeeDeductions;
         
         // Net pay
         $netPay = $grossPay - $totalDeductions;
@@ -343,11 +360,51 @@ class PayrollController extends Controller
             'philhealth_contribution' => $philhealth,
             'pagibig_contribution' => $pagibig,
             'withholding_tax' => 0,
-            'total_other_deductions' => $employeeSavings + $cashAdvance + $otherDeductions,
+            'total_other_deductions' => $employeeSavings + $cashAdvance + $otherDeductions + $totalEmployeeDeductions,
             'total_loan_deductions' => $loanDeduction,
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
+            'employee_deductions' => $totalEmployeeDeductions,
         ];
+    }
+
+    /**
+     * Record deduction installment payments when payroll is generated
+     */
+    private function recordDeductionInstallments(Payroll $payroll, Employee $employee)
+    {
+        // Get active deductions for this employee in this payroll period
+        $activeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
+            ->where('status', 'active')
+            ->where('start_date', '<=', $payroll->period_end)
+            ->where(function ($query) use ($payroll) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', $payroll->period_start);
+            })
+            ->get();
+
+        foreach ($activeDeductions as $deduction) {
+            // Calculate payment amount (use amount_per_cutoff, but not more than balance)
+            $paymentAmount = min($deduction->amount_per_cutoff, $deduction->balance);
+            
+            if ($paymentAmount > 0) {
+                $newBalance = $deduction->balance - $paymentAmount;
+                $newInstallmentsPaid = $deduction->installments_paid + 1;
+
+                $updateData = [
+                    'installments_paid' => $newInstallmentsPaid,
+                    'balance' => $newBalance,
+                ];
+
+                // Mark as completed if balance is zero or all installments paid
+                if ($newBalance <= 0 || $newInstallmentsPaid >= $deduction->installments) {
+                    $updateData['status'] = 'completed';
+                    $updateData['balance'] = 0; // Ensure balance is exactly zero
+                }
+
+                $deduction->update($updateData);
+            }
+        }
     }
 
     private function calculateSSS($grossPay)
