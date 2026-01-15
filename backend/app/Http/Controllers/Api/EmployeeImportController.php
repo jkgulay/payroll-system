@@ -198,7 +198,7 @@ class EmployeeImportController extends Controller
                         'contract_type' => $contractType,
                         'activity_status' => 'active', // All imported employees are active
                         'work_schedule' => $workSchedule,
-                        'project_id' => 1, // Default to first project
+                        'project_id' => null, // Project assignment is optional
                         'position' => $position,
                         'basic_salary' => $basicSalary,
                         'salary_type' => 'daily', // Default for construction
