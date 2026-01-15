@@ -157,6 +157,16 @@
             <span v-else class="text-medium-emphasis">--</span>
           </template>
 
+          <template v-slot:item.department="{ item }">
+            <span v-if="item.department">{{ item.department }}</span>
+            <span v-else class="text-medium-emphasis">N/A</span>
+          </template>
+
+          <template v-slot:item.staff_type="{ item }">
+            <span v-if="item.staff_type">{{ item.staff_type }}</span>
+            <span v-else class="text-medium-emphasis">N/A</span>
+          </template>
+
           <template v-slot:item.date_hired="{ item }">
             <span v-if="item.date_hired">
               {{ new Date(item.date_hired).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
@@ -977,6 +987,8 @@ const headers = [
   { title: "Gender", key: "gender", sortable: true },
   { title: "Email", key: "email", sortable: false },
   { title: "Mobile", key: "mobile_number", sortable: false },
+  { title: "Department", key: "department", sortable: true },
+  { title: "Staff Type", key: "staff_type", sortable: true },
   { title: "Position", key: "position", sortable: true },
   { title: "Date Hired", key: "date_hired", sortable: true },
   { title: "Contract Type", key: "contract_type", sortable: true },

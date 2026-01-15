@@ -121,7 +121,9 @@ class StaffImportService
             'contract_type' => $contractType,
             'activity_status' => 'active',
             'work_schedule' => 'full_time',
-            'project_id' => 1, // Default project
+            'project_id' => null, // Project assignment is optional
+            'department' => !empty($data['Department']) ? trim($data['Department']) : null,
+            'staff_type' => !empty($data['Staff Type']) ? trim($data['Staff Type']) : null,
             'position' => !empty($data['Position']) ? trim($data['Position']) : 'General Worker',
             'basic_salary' => 570, // Default daily rate
             'salary_type' => 'daily',

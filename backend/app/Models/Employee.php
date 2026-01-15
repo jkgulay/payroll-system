@@ -33,6 +33,8 @@ class Employee extends Model
         'emergency_contact_relationship',
         'emergency_contact_number',
         'project_id',
+        'department',
+        'staff_type',
         'worker_address',
         'position_id',
         'work_schedule',
