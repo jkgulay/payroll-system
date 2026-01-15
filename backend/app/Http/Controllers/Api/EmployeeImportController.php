@@ -30,7 +30,7 @@ class EmployeeImportController extends Controller
     {
         // Increase execution time for large imports
         set_time_limit(300); // 5 minutes
-        ini_set('memory_limit', '512M'); // Increase memory limit
+        ini_set('memory_limit', '1024M'); // Increase memory limit
 
         // Load position rates for salary lookup
         $positionRates = PositionRate::where('is_active', true)

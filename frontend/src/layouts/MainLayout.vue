@@ -382,16 +382,9 @@ const menuItems = computed(() => {
     },
     {
       title: "Payroll",
-      icon: "mdi-currency-php",
+      icon: "mdi-cash-multiple",
       value: "payroll",
       to: "/payroll",
-      roles: ["admin", "accountant"],
-    },
-    {
-      title: "Pay Rates",
-      icon: "mdi-cash-multiple",
-      value: "pay-rates",
-      to: "/payroll/pay-rates",
       roles: ["admin", "accountant"],
     },
     {

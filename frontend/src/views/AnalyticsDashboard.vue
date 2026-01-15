@@ -29,74 +29,6 @@
       </v-col>
     </v-row>
 
-    <!-- SECTION A: PAYROLL ANALYTICS -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <div class="section-header">
-          <v-icon color="success" size="small" class="mr-2">mdi-currency-php</v-icon>
-          <span class="text-h5 font-weight-bold">Payroll Analytics</span>
-        </div>
-      </v-col>
-    </v-row>
-
-    <v-row>
-      <!-- Monthly Payroll Trend -->
-      <v-col cols="12" lg="8">
-        <v-card class="industrial-card chart-card" elevation="2">
-          <v-card-title class="pa-4 bg-gradient">
-            <v-icon start size="20">mdi-chart-line</v-icon>
-            Monthly Payroll Trend (Last 12 Months)
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-4" style="height: 350px">
-            <PayrollTrendChart ref="payrollTrendChart" :months="12" />
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <!-- Payroll Breakdown -->
-      <v-col cols="12" lg="4">
-        <v-card class="industrial-card chart-card" elevation="2">
-          <v-card-title class="pa-4 bg-gradient">
-            <v-icon start size="20">mdi-chart-donut</v-icon>
-            Payroll Breakdown
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-4" style="height: 350px">
-            <PayrollBreakdownChart ref="payrollBreakdownChart" period="current-month" />
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <!-- Payroll Cost Comparison -->
-      <v-col cols="12" md="6">
-        <v-card class="industrial-card chart-card" elevation="2">
-          <v-card-title class="pa-4 bg-gradient">
-            <v-icon start size="20">mdi-chart-bar</v-icon>
-            Payroll Cost Comparison
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-4" style="height: 300px">
-            <PayrollComparisonChart ref="payrollComparisonChart" />
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <!-- Government Contribution Trends -->
-      <v-col cols="12" md="6">
-        <v-card class="industrial-card chart-card" elevation="2">
-          <v-card-title class="pa-4 bg-gradient">
-            <v-icon start size="20">mdi-bank</v-icon>
-            Government Contribution Trends
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-4" style="height: 300px">
-            <GovernmentContributionChart ref="govContributionChart" :months="12" />
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
     <!-- SECTION B: EMPLOYEE ANALYTICS -->
     <v-row class="mb-4 mt-8">
       <v-col cols="12">
@@ -239,12 +171,6 @@
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 
-// Payroll Analytics Components
-import PayrollTrendChart from '@/components/charts/PayrollTrendChart.vue';
-import PayrollBreakdownChart from '@/components/charts/PayrollBreakdownChart.vue';
-import PayrollComparisonChart from '@/components/charts/PayrollComparisonChart.vue';
-import GovernmentContributionChart from '@/components/charts/GovernmentContributionChart.vue';
-
 // Employee Analytics Components
 import EmployeeDistributionChart from '@/components/charts/EmployeeDistributionChart.vue';
 import EmploymentStatusChart from '@/components/charts/EmploymentStatusChart.vue';
@@ -261,10 +187,6 @@ const toast = useToast();
 const refreshing = ref(false);
 
 // Chart refs
-const payrollTrendChart = ref(null);
-const payrollBreakdownChart = ref(null);
-const payrollComparisonChart = ref(null);
-const govContributionChart = ref(null);
 const employeeDistChart = ref(null);
 const employmentStatusChart = ref(null);
 const employeeLocationChart = ref(null);
@@ -279,10 +201,6 @@ const refreshAllCharts = async () => {
   
   try {
     const charts = [
-      payrollTrendChart,
-      payrollBreakdownChart,
-      payrollComparisonChart,
-      govContributionChart,
       employeeDistChart,
       employmentStatusChart,
       employeeLocationChart,

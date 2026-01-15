@@ -135,16 +135,6 @@
                   <v-list-item-title>Reactivate</v-list-item-title>
                 </v-list-item>
 
-                <v-list-item
-                  v-if="project.employees_count > 0"
-                  @click="openPayrollDialog(project)"
-                >
-                  <template v-slot:prepend>
-                    <v-icon size="small">mdi-currency-usd</v-icon>
-                  </template>
-                  <v-list-item-title>Generate Payroll</v-list-item-title>
-                </v-list-item>
-
                 <v-divider></v-divider>
 
                 <v-list-item
@@ -336,72 +326,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Generate Payroll Dialog -->
-    <v-dialog v-model="payrollDialog" max-width="500px" persistent>
-      <v-card>
-        <v-card-title>
-          <span class="text-h5">Generate Payroll</span>
-        </v-card-title>
-
-        <v-card-text>
-          <div class="mb-4">
-            <strong>Project:</strong> {{ payrollProject?.name }}
-          </div>
-          <div class="mb-4">
-            <strong>Employees:</strong>
-            {{ payrollProject?.employees_count }} active employee(s)
-          </div>
-
-          <v-form ref="payrollFormRef">
-            <v-text-field
-              v-model="payrollForm.period_start_date"
-              label="Period Start Date *"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              :rules="[(v) => !!v || 'Required']"
-              required
-              class="mb-2"
-            ></v-text-field>
-
-            <v-text-field
-              v-model="payrollForm.period_end_date"
-              label="Period End Date *"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              :rules="[(v) => !!v || 'Required']"
-              required
-              class="mb-2"
-            ></v-text-field>
-
-            <v-text-field
-              v-model="payrollForm.payment_date"
-              label="Payment Date *"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              :rules="[(v) => !!v || 'Required']"
-              required
-            ></v-text-field>
-          </v-form>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closePayrollDialog">Cancel</v-btn>
-          <v-btn
-            color="primary"
-            variant="flat"
-            @click="generatePayroll"
-            :loading="generatingPayroll"
-          >
-            Generate
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
     <!-- Snackbar -->
     <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
       {{ snackbarText }}
@@ -418,10 +342,8 @@ const loading = ref(false);
 const loadingEmployees = ref(false);
 const loadingDetails = ref(false);
 const saving = ref(false);
-const generatingPayroll = ref(false);
 const dialog = ref(false);
 const detailsDialog = ref(false);
-const payrollDialog = ref(false);
 const editMode = ref(false);
 const filterTab = ref("all");
 const search = ref("");
@@ -429,7 +351,6 @@ const projects = ref([]);
 const employees = ref([]);
 const selectedProject = ref(null);
 const projectEmployees = ref([]);
-const payrollProject = ref(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
 const snackbarColor = ref("success");
@@ -443,14 +364,7 @@ const formData = ref({
   is_active: true,
 });
 
-const payrollForm = ref({
-  period_start_date: "",
-  period_end_date: "",
-  payment_date: "",
-});
-
 const formRef = ref(null);
-const payrollFormRef = ref(null);
 
 // Table headers
 const employeeHeaders = [
@@ -638,50 +552,6 @@ const deleteProject = async (project) => {
     const message = error.response?.data?.message || "Failed to delete project";
     showSnackbar(message, "error");
     console.error("Error deleting project:", error);
-  }
-};
-
-const openPayrollDialog = (project) => {
-  payrollProject.value = project;
-  payrollForm.value = {
-    period_start_date: "",
-    period_end_date: "",
-    payment_date: "",
-  };
-  payrollDialog.value = true;
-};
-
-const closePayrollDialog = () => {
-  payrollDialog.value = false;
-  payrollProject.value = null;
-  payrollForm.value = {
-    period_start_date: "",
-    period_end_date: "",
-    payment_date: "",
-  };
-};
-
-const generatePayroll = async () => {
-  if (!payrollFormRef.value) return;
-
-  const valid = await payrollFormRef.value.validate();
-  if (!valid.valid) return;
-
-  generatingPayroll.value = true;
-  try {
-    const response = await api.post(
-      `/projects/${payrollProject.value.id}/generate-payroll`,
-      payrollForm.value
-    );
-    showSnackbar(response.data.message, "success");
-    closePayrollDialog();
-  } catch (error) {
-    const message =
-      error.response?.data?.message || "Failed to generate payroll";
-    showSnackbar(message, "error");
-    console.error("Error generating payroll:", error);
-  } finally {
-    generatingPayroll.value = false;
   }
 };
 

@@ -86,6 +86,20 @@ lerna-debug.log*
 /backend/.phpunit.result.cache
 /frontend/coverage/
 
+# Test and Debug Files
+test_*.php
+*_test.php
+debug_*.php
+*_debug.php
+check_*.php
+*_check.php
+fix_*.php
+*_fix.php
+sample_*.php
+*_sample.php
+dummy_*.php
+*_dummy.php
+
 # Build artifacts
 *.sql
 *.sqlite

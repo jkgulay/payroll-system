@@ -119,12 +119,12 @@ class DatabaseContextService
             $month = Carbon::parse($matches[1])->month;
             $year = $matches[2];
             
-            $payrollData = DB::table('payroll')
-                ->join('payroll_items', 'payroll.id', '=', 'payroll_items.payroll_id')
-                ->whereYear('payroll.period_start', $year)
-                ->whereMonth('payroll.period_start', $month)
-                ->whereNull('payroll.deleted_at')
-                ->selectRaw('SUM(payroll.total_gross_pay) as total_gross, SUM(payroll.total_net_pay) as total_net, COUNT(DISTINCT payroll_items.employee_id) as employee_count')
+            $payrollData = DB::table('payrolls')
+                ->join('payroll_items', 'payrolls.id', '=', 'payroll_items.payroll_id')
+                ->whereYear('payrolls.period_start', $year)
+                ->whereMonth('payrolls.period_start', $month)
+                ->whereNull('payrolls.deleted_at')
+                ->selectRaw('SUM(payrolls.total_gross) as total_gross, SUM(payrolls.total_net) as total_net, COUNT(DISTINCT payroll_items.employee_id) as employee_count')
                 ->first();
                 
             $context['period_payroll'] = [
@@ -140,13 +140,13 @@ class DatabaseContextService
             $q3Data = Payroll::whereYear('period_start', $currentYear)
                 ->whereMonth('period_start', '>=', 7)
                 ->whereMonth('period_start', '<=', 9)
-                ->selectRaw('SUM(total_gross_pay) as total_gross, SUM(total_net_pay) as total_net')
+                ->selectRaw('SUM(total_gross) as total_gross, SUM(total_net) as total_net')
                 ->first();
                 
             $q4Data = Payroll::whereYear('period_start', $currentYear)
                 ->whereMonth('period_start', '>=', 10)
                 ->whereMonth('period_start', '<=', 12)
-                ->selectRaw('SUM(total_gross_pay) as total_gross, SUM(total_net_pay) as total_net')
+                ->selectRaw('SUM(total_gross) as total_gross, SUM(total_net) as total_net')
                 ->first();
                 
             $context['quarterly_comparison'] = [

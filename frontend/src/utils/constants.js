@@ -41,17 +41,6 @@ export const GENDERS = [
   { value: "other", title: "Other" },
 ];
 
-// Payroll Status
-export const PAYROLL_STATUSES = [
-  { value: "draft", title: "Draft", color: "grey" },
-  { value: "processing", title: "Processing", color: "info" },
-  { value: "checked", title: "Checked", color: "primary" },
-  { value: "recommended", title: "Recommended", color: "warning" },
-  { value: "approved", title: "Approved", color: "success" },
-  { value: "paid", title: "Paid", color: "success" },
-  { value: "cancelled", title: "Cancelled", color: "error" },
-];
-
 // Period Types
 export const PERIOD_TYPES = [
   { value: "semi_monthly", title: "Semi-Monthly" },
@@ -203,7 +192,6 @@ export default {
   SALARY_TYPES,
   EMPLOYMENT_TYPES,
   GENDERS,
-  PAYROLL_STATUSES,
   PERIOD_TYPES,
   ALLOWANCE_TYPES,
   ALLOWANCE_FREQUENCIES,

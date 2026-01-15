@@ -126,36 +126,6 @@
     <v-row>
       <!-- Left Column - Charts and Payroll -->
       <v-col cols="12" lg="8">
-        <!-- Revenue Chart -->
-        <v-card class="modern-card mb-6" elevation="0">
-          <v-card-title class="pa-5 d-flex justify-space-between align-center">
-            <div>
-              <div class="text-h6 font-weight-bold">Total Revenue</div>
-              <div class="text-caption text-medium-emphasis mt-1">
-                Monthly payroll overview
-              </div>
-            </div>
-            <v-btn-toggle
-              v-model="revenueFilter"
-              mandatory
-              density="compact"
-              variant="outlined"
-              divided
-            >
-              <v-btn value="earnings" size="small">Earnings</v-btn>
-              <v-btn value="spendings" size="small">Spendings</v-btn>
-            </v-btn-toggle>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-5">
-            <PayrollTrendChart
-              v-if="revenueFilter === 'earnings'"
-              :months="6"
-            />
-            <PayrollComparisonChart v-else />
-          </v-card-text>
-        </v-card>
-
         <!-- Attendance Statistics Card -->
         <v-card class="modern-card mb-6" elevation="0">
           <v-card-title class="pa-5">
@@ -172,68 +142,6 @@
           </v-card-text>
         </v-card>
 
-        <!-- Payroll Summary Table -->
-        <v-card class="modern-card" elevation="0">
-          <v-card-title class="pa-5 d-flex justify-space-between align-center">
-            <div>
-              <div class="text-h6 font-weight-bold">Employees Payroll</div>
-              <div class="text-caption text-medium-emphasis mt-1">
-                Recent payroll transactions
-              </div>
-            </div>
-            <v-btn
-              variant="text"
-              color="primary"
-              append-icon="mdi-arrow-right"
-              to="/payroll"
-            >
-              View All
-            </v-btn>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-data-table
-            :headers="payrollHeaders"
-            :items="recentPayrolls"
-            :items-per-page="5"
-            class="modern-table"
-          >
-            <template v-slot:item.payroll_number="{ item }">
-              <span class="font-weight-medium">#{{ item.payroll_number }}</span>
-            </template>
-
-            <template v-slot:item.period="{ item }">
-              <div class="text-body-2">
-                {{ formatDateShort(item.period_start_date) }} -
-                {{ formatDateShort(item.period_end_date) }}
-              </div>
-            </template>
-
-            <template v-slot:item.amount="{ item }">
-              <span class="font-weight-bold"
-                >₱{{ formatNumber(item.total_gross) }}</span
-              >
-            </template>
-
-            <template v-slot:item.status="{ item }">
-              <v-chip
-                :color="getPayrollColor(item.status)"
-                size="small"
-                variant="flat"
-              >
-                {{ item.status }}
-              </v-chip>
-            </template>
-
-            <template v-slot:item.actions="{ item }">
-              <v-btn
-                icon="mdi-eye"
-                size="small"
-                variant="text"
-                :to="`/payroll/${item.id}`"
-              ></v-btn>
-            </template>
-          </v-data-table>
-        </v-card>
       </v-col>
 
       <!-- Right Column - Calendar & Info -->
@@ -650,8 +558,6 @@ import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
 import DashboardCalendar from "@/components/DashboardCalendar.vue";
-import PayrollTrendChart from "@/components/charts/PayrollTrendChart.vue";
-import PayrollComparisonChart from "@/components/charts/PayrollComparisonChart.vue";
 import EmployeeDistributionChart from "@/components/charts/EmployeeDistributionChart.vue";
 import AttendanceStatusChart from "@/components/charts/AttendanceStatusChart.vue";
 import TodayStaffInfoChart from "@/components/charts/TodayStaffInfoChart.vue";
@@ -667,8 +573,6 @@ const stats = ref({
   pendingApprovals: 0,
 });
 
-const recentPayrolls = ref([]);
-const revenueFilter = ref("earnings");
 const refreshing = ref(false);
 
 // Application management
@@ -704,14 +608,6 @@ const currentDateRange = computed(() => {
     year: "numeric",
   })}`;
 });
-
-const payrollHeaders = [
-  { title: "Payroll Number", key: "payroll_number" },
-  { title: "Period", key: "period" },
-  { title: "Amount", key: "amount" },
-  { title: "Status", key: "status" },
-  { title: "Actions", key: "actions", sortable: false },
-];
 
 // Circular progress for community growth
 const circumference = 2 * Math.PI * 50;
@@ -753,7 +649,6 @@ async function fetchDashboardData() {
   try {
     const response = await api.get("/dashboard");
     stats.value = response.data.stats;
-    recentPayrolls.value = response.data.recent_payrolls || [];
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
   }
@@ -858,18 +753,6 @@ function formatDateShort(dateString) {
   if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function getPayrollColor(status) {
-  const colors = {
-    draft: "grey",
-    processing: "info",
-    checked: "warning",
-    recommended: "accent",
-    approved: "success",
-    paid: "primary",
-  };
-  return colors[status] || "grey";
 }
 
 // Application Management Functions

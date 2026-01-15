@@ -29,13 +29,6 @@ const toast = useToast();
 
 const reports = [
   {
-    id: "payroll-summary",
-    title: "Payroll Summary",
-    description: "Total payroll breakdown by period",
-    icon: "mdi-cash-multiple",
-    color: "success",
-  },
-  {
     id: "government-contributions",
     title: "Government Contributions",
     description: "SSS, PhilHealth, Pag-IBIG summary",

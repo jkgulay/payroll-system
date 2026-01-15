@@ -621,9 +621,6 @@ const submitImport = async () => {
       return cleaned;
     });
 
-    console.log(`Sending ${cleanedEmployees.length} employees to import`);
-    console.log("First employee sample:", cleanedEmployees[0]);
-
     importProgress.value = 30;
     importStatus.value = `Uploading ${cleanedEmployees.length} employees...`;
 

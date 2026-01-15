@@ -30,7 +30,7 @@ class BiometricImportController extends Controller
     {
         // Increase execution time for large imports
         set_time_limit(300);
-        ini_set('memory_limit', '512M');
+        ini_set('memory_limit', '1024M');
 
         $validated = $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv',
@@ -99,7 +99,7 @@ class BiometricImportController extends Controller
     {
         // Increase execution time for large imports
         set_time_limit(300);
-        ini_set('memory_limit', '512M');
+        ini_set('memory_limit', '1024M');
 
         $validated = $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv',

@@ -35,7 +35,7 @@ class DashboardController extends Controller
         // Get current period payroll total
         $currentMonth = Carbon::now()->format('Y-m');
         $periodPayroll = Payroll::whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$currentMonth])
-            ->sum('total_gross_pay');
+            ->sum('total_gross');
 
         // Get recent payrolls
         $recentPayrolls = Payroll::orderBy('created_at', 'desc')
@@ -47,7 +47,7 @@ class DashboardController extends Controller
                     'payroll_number' => $payroll->payroll_number,
                     'period_start_date' => $payroll->period_start,
                     'period_end_date' => $payroll->period_end,
-                    'total_gross' => $payroll->total_gross_pay,
+                    'total_gross' => $payroll->total_gross,
                     'status' => $payroll->status,
                 ];
             });

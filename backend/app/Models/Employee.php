@@ -122,6 +122,12 @@ class Employee extends Model
         return $this->belongsTo(PositionRate::class, 'position_id');
     }
 
+    // Alias for backward compatibility
+    public function position(): BelongsTo
+    {
+        return $this->belongsTo(PositionRate::class, 'position_id');
+    }
+
     public function attendance(): HasMany
     {
         return $this->hasMany(Attendance::class);

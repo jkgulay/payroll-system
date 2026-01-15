@@ -1,909 +1,648 @@
 <template>
-  <div>
+  <v-container fluid class="pa-6">
+    <!-- Header -->
     <v-row class="mb-4">
-      <v-col cols="12" md="6">
-        <h1 class="text-h4 font-weight-bold">Payroll Management</h1>
-        <p class="text-subtitle-2 text-medium-emphasis">
-          Process and manage payroll periods
-        </p>
-      </v-col>
-      <v-col cols="12" md="6" class="text-right">
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-plus"
-          @click="showCreateDialog = true"
-          size="large"
-        >
-          New Payroll Period
-        </v-btn>
+      <v-col cols="12">
+        <div class="d-flex justify-space-between align-center">
+          <div>
+            <h1 class="text-h4 font-weight-bold mb-2">
+              <v-icon icon="mdi-cash-multiple" size="large" class="mr-2"></v-icon>
+              Payroll Management
+            </h1>
+            <p class="text-subtitle-1 text-medium-emphasis">
+              Create, manage and process payroll for all employees
+            </p>
+          </div>
+          <v-btn
+            color="primary"
+            size="large"
+            prepend-icon="mdi-plus"
+            @click="openCreateDialog"
+          >
+            Create Payroll
+          </v-btn>
+        </div>
       </v-col>
     </v-row>
 
-    <!-- Filters -->
-    <v-card class="mb-4">
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="3">
-            <v-select
-              v-model="filters.status"
-              :items="statusOptions"
-              label="Status"
-              clearable
-              prepend-inner-icon="mdi-filter"
-              @update:model-value="fetchPayrolls"
-            ></v-select>
-          </v-col>
-          <v-col cols="12" md="3">
-            <v-select
-              v-model="filters.year"
-              :items="yearOptions"
-              label="Year"
-              clearable
-              prepend-inner-icon="mdi-calendar"
-              @update:model-value="fetchPayrolls"
-            ></v-select>
-          </v-col>
-          <v-col cols="12" md="6" class="text-right">
-            <v-btn-group variant="outlined" divided>
-              <v-btn
-                prepend-icon="mdi-refresh"
-                @click="fetchPayrolls"
-                :loading="loading"
-              >
-                Refresh
-              </v-btn>
-            </v-btn-group>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
+    <!-- Stats Cards -->
+    <v-row class="mb-4">
+      <v-col cols="12" md="3">
+        <v-card>
+          <v-card-text>
+            <div class="text-overline mb-1">Total Payrolls</div>
+            <div class="text-h5 font-weight-bold">{{ stats.total }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="3">
+        <v-card>
+          <v-card-text>
+            <div class="text-overline mb-1">Draft</div>
+            <div class="text-h5 font-weight-bold text-warning">{{ stats.draft }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="3">
+        <v-card>
+          <v-card-text>
+            <div class="text-overline mb-1">Finalized</div>
+            <div class="text-h5 font-weight-bold text-info">{{ stats.finalized }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="3">
+        <v-card>
+          <v-card-text>
+            <div class="text-overline mb-1">Paid</div>
+            <div class="text-h5 font-weight-bold text-success">{{ stats.paid }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
 
-    <!-- Payroll Table -->
+    <!-- Payroll List -->
     <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon icon="mdi-format-list-bulleted" class="mr-2"></v-icon>
+        Payroll Records
+        <v-spacer></v-spacer>
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          label="Search payroll..."
+          single-line
+          hide-details
+          density="compact"
+          class="mr-4"
+          style="max-width: 300px"
+        ></v-text-field>
+      </v-card-title>
+
       <v-data-table
         :headers="headers"
         :items="payrolls"
+        :search="search"
         :loading="loading"
-        :items-per-page="20"
-        hover
+        :items-per-page="15"
+        class="elevation-1"
       >
-        <template v-slot:item.payroll_number="{ item }">
-          <strong class="text-primary">{{ item.payroll_number }}</strong>
+        <!-- Status -->
+        <template v-slot:item.status="{ item }">
+          <v-chip
+            :color="getStatusColor(item.status)"
+            size="small"
+            variant="flat"
+          >
+            {{ item.status.toUpperCase() }}
+          </v-chip>
         </template>
 
+        <!-- Period -->
         <template v-slot:item.period="{ item }">
           <div>
-            <div class="font-weight-medium">{{ item.period_label }}</div>
+            <div class="font-weight-medium">{{ item.period_name }}</div>
             <div class="text-caption text-medium-emphasis">
-              Pay Period {{ item.pay_period_number || "N/A" }}
+              {{ formatDate(item.period_start) }} - {{ formatDate(item.period_end) }}
             </div>
           </div>
         </template>
 
+        <!-- Payment Date -->
         <template v-slot:item.payment_date="{ item }">
           {{ formatDate(item.payment_date) }}
         </template>
 
-        <template v-slot:item.employee_count="{ item }">
-          <v-chip size="small" color="info">
-            {{ item.payroll_items_count || 0 }} employees
+        <!-- Employees Count -->
+        <template v-slot:item.items_count="{ item }">
+          <v-chip size="small" variant="outlined">
+            {{ item.items_count }} employees
           </v-chip>
         </template>
 
-        <template v-slot:item.total_net_pay="{ item }">
-          <strong>₱{{ formatCurrency(item.total_net_pay) }}</strong>
-        </template>
-
-        <template v-slot:item.status="{ item }">
-          <v-chip :color="getStatusColor(item.status)" size="small">
-            <v-icon start size="x-small">{{
-              getStatusIcon(item.status)
-            }}</v-icon>
-            {{ getStatusLabel(item.status) }}
-          </v-chip>
-        </template>
-
-        <template v-slot:item.actions="{ item }">
-          <v-menu>
-            <template v-slot:activator="{ props }">
-              <v-btn
-                icon="mdi-dots-vertical"
-                size="small"
-                variant="text"
-                v-bind="props"
-              ></v-btn>
-            </template>
-            <v-list>
-              <v-list-item @click="viewPayroll(item)">
-                <template v-slot:prepend>
-                  <v-icon color="info">mdi-eye</v-icon>
-                </template>
-                <v-list-item-title>View Details</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item
-                v-if="item.status === 'draft'"
-                @click="processPayroll(item)"
-              >
-                <template v-slot:prepend>
-                  <v-icon color="primary">mdi-play-circle</v-icon>
-                </template>
-                <v-list-item-title>Process Payroll</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item
-                v-if="item.status === 'processing'"
-                @click="checkPayroll(item)"
-              >
-                <template v-slot:prepend>
-                  <v-icon color="warning">mdi-check-circle</v-icon>
-                </template>
-                <v-list-item-title>Check Payroll</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item
-                v-if="item.status === 'checked'"
-                @click="recommendPayroll(item)"
-              >
-                <template v-slot:prepend>
-                  <v-icon color="accent">mdi-thumb-up</v-icon>
-                </template>
-                <v-list-item-title>Recommend</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item
-                v-if="item.status === 'recommended'"
-                @click="approvePayroll(item)"
-              >
-                <template v-slot:prepend>
-                  <v-icon color="success">mdi-check-decagram</v-icon>
-                </template>
-                <v-list-item-title>Approve</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item
-                v-if="item.status === 'approved'"
-                @click="markAsPaid(item)"
-              >
-                <template v-slot:prepend>
-                  <v-icon color="primary">mdi-cash-check</v-icon>
-                </template>
-                <v-list-item-title>Mark as Paid</v-list-item-title>
-              </v-list-item>
-
-              <v-divider></v-divider>
-
-              <v-list-item @click="exportPayroll(item, 'excel')">
-                <template v-slot:prepend>
-                  <v-icon color="success">mdi-file-excel</v-icon>
-                </template>
-                <v-list-item-title>Export Excel</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item @click="openExportDialog(item)">
-                <template v-slot:prepend>
-                  <v-icon color="error">mdi-file-pdf-box</v-icon>
-                </template>
-                <v-list-item-title>Export PDF</v-list-item-title>
-              </v-list-item>
-
-              <v-divider></v-divider>
-
-              <v-list-item @click="confirmResetPayroll(item)">
-                <template v-slot:prepend>
-                  <v-icon color="warning">mdi-restart</v-icon>
-                </template>
-                <v-list-item-title>Reset to Draft</v-list-item-title>
-              </v-list-item>
-
-              <v-list-item @click="confirmDeletePayroll(item)">
-                <template v-slot:prepend>
-                  <v-icon color="error">mdi-delete</v-icon>
-                </template>
-                <v-list-item-title>Delete Payroll</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-        </template>
-
-        <template v-slot:no-data>
-          <div class="text-center py-12">
-            <v-icon size="64" color="grey-lighten-1">mdi-cash-multiple</v-icon>
-            <p class="text-h6 mt-4 text-medium-emphasis">No Payroll Records</p>
-            <p class="text-body-2 text-medium-emphasis mb-4">
-              Create your first payroll period to get started
-            </p>
-            <v-btn
-              color="primary"
-              prepend-icon="mdi-plus"
-              @click="showCreateDialog = true"
-            >
-              Create Payroll
-            </v-btn>
+        <!-- Total Net -->
+        <template v-slot:item.total_net="{ item }">
+          <div class="text-right font-weight-bold">
+            ₱{{ formatCurrency(item.total_net) }}
           </div>
+        </template>
+
+        <!-- Actions -->
+        <template v-slot:item.actions="{ item }">
+          <v-btn
+            icon="mdi-eye"
+            size="small"
+            variant="text"
+            color="primary"
+            @click="viewPayroll(item)"
+          >
+          </v-btn>
+          <v-btn
+            v-if="item.status === 'draft'"
+            icon="mdi-pencil"
+            size="small"
+            variant="text"
+            color="warning"
+            @click="editPayroll(item)"
+          >
+          </v-btn>
+          <v-btn
+            v-if="item.status === 'draft'"
+            icon="mdi-delete"
+            size="small"
+            variant="text"
+            color="error"
+            @click="confirmDelete(item)"
+          >
+          </v-btn>
         </template>
       </v-data-table>
     </v-card>
 
-    <!-- Create Payroll Dialog -->
-    <v-dialog v-model="showCreateDialog" max-width="600px" persistent>
+    <!-- Create/Edit Dialog -->
+    <v-dialog v-model="dialog" max-width="700" persistent>
       <v-card>
-        <v-card-title class="text-h5 py-4 bg-primary">
-          <v-icon start>mdi-cash-plus</v-icon>
-          Create New Payroll Period
+        <v-card-title>
+          <span class="text-h5">{{ editMode ? 'Edit' : 'Create' }} Payroll</span>
         </v-card-title>
-        <v-divider></v-divider>
+        <v-card-text>
+          <v-form ref="form" v-model="valid">
+            <v-text-field
+              v-model="formData.period_name"
+              label="Period Name"
+              :rules="[v => !!v || 'Period name is required']"
+              required
+              prepend-icon="mdi-label"
+            ></v-text-field>
 
-        <v-card-text class="pt-6">
-          <v-form ref="createForm">
             <v-row>
-              <v-col cols="12">
-                <v-alert type="info" variant="tonal" density="compact">
-                  Create a new payroll period to calculate employee salaries
-                  based on attendance records.
-                </v-alert>
-              </v-col>
-
-              <v-col cols="12" md="6">
+              <v-col cols="6">
                 <v-text-field
-                  v-model="newPayroll.period_start_date"
-                  label="Period Start Date"
+                  v-model="formData.period_start"
+                  label="Period Start"
                   type="date"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-calendar-start"
+                  :rules="[v => !!v || 'Start date is required']"
+                  required
+                  prepend-icon="mdi-calendar-start"
                 ></v-text-field>
               </v-col>
-
-              <v-col cols="12" md="6">
+              <v-col cols="6">
                 <v-text-field
-                  v-model="newPayroll.period_end_date"
-                  label="Period End Date"
+                  v-model="formData.period_end"
+                  label="Period End"
                   type="date"
-                  :rules="[rules.required, rules.endDateAfterStart]"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-calendar-end"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="newPayroll.payment_date"
-                  label="Payment Date"
-                  type="date"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-cash-clock"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="newPayroll.pay_period_number"
-                  :items="[
-                    { title: 'Period 1 (1st-15th)', value: 1 },
-                    { title: 'Period 2 (16th-End)', value: 2 },
-                  ]"
-                  label="Pay Period"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-numeric"
-                  clearable
-                ></v-select>
-              </v-col>
-
-              <!-- Optional Filters Section -->
-              <v-col cols="12">
-                <v-divider class="my-2"></v-divider>
-                <v-alert
-                  type="info"
-                  variant="tonal"
-                  density="compact"
-                  class="mb-4"
-                >
-                  <strong>Optional Filters:</strong> Generate payroll for
-                  specific groups of employees
-                </v-alert>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="newPayroll.contract_type"
-                  :items="[
-                    { title: 'Regular', value: 'regular' },
-                    { title: 'Probationary', value: 'probationary' },
-                    { title: 'Contractual', value: 'contractual' },
-                  ]"
-                  label="Contract Type (Optional)"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-file-document-outline"
-                  clearable
-                  hint="Leave empty to include all contract types"
-                  persistent-hint
-                ></v-select>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="newPayroll.project_id"
-                  label="Project ID (Optional)"
-                  type="number"
-                  variant="outlined"
-                  prepend-inner-icon="mdi-folder-outline"
-                  clearable
-                  hint="Leave empty to include all projects"
-                  persistent-hint
+                  :rules="[v => !!v || 'End date is required']"
+                  required
+                  prepend-icon="mdi-calendar-end"
                 ></v-text-field>
               </v-col>
             </v-row>
+
+            <v-text-field
+              v-model="formData.payment_date"
+              label="Payment Date"
+              type="date"
+              :rules="[v => !!v || 'Payment date is required']"
+              required
+              prepend-icon="mdi-calendar-check"
+            ></v-text-field>
+
+            <v-divider class="my-4"></v-divider>
+
+            <!-- Employee Filter Section -->
+            <h3 class="text-subtitle-1 mb-3">
+              <v-icon icon="mdi-filter" size="small" class="mr-2"></v-icon>
+              Employee Filter
+            </h3>
+
+            <v-radio-group
+              v-model="formData.filter_type"
+              inline
+              hide-details
+              class="mb-4"
+            >
+              <v-radio label="All Employees" value="all"></v-radio>
+              <v-radio label="By Position/Role" value="position"></v-radio>
+              <v-radio label="By Project" value="project"></v-radio>
+            </v-radio-group>
+
+            <!-- Employee Limit -->
+            <v-text-field
+              v-model.number="formData.employee_limit"
+              label="Limit Number of Employees (Optional)"
+              type="number"
+              min="1"
+              max="1000"
+              prepend-icon="mdi-account-multiple-check"
+              hint="Leave empty to include all matching employees, or specify a number to limit"
+              persistent-hint
+              clearable
+              class="mb-4"
+            >
+              <template v-slot:append-inner>
+                <v-tooltip location="top">
+                  <template v-slot:activator="{ props }">
+                    <v-icon
+                      v-bind="props"
+                      icon="mdi-information"
+                      size="small"
+                      color="primary"
+                    ></v-icon>
+                  </template>
+                  <div style="max-width: 300px;">
+                    Useful for creating partial payrolls or testing.<br>
+                    Employees are selected in order by employee number.
+                  </div>
+                </v-tooltip>
+              </template>
+            </v-text-field>
+
+            <!-- Position Filter -->
+            <v-autocomplete
+              v-if="formData.filter_type === 'position'"
+              v-model="formData.position_ids"
+              :items="positions"
+              :loading="loadingPositions"
+              item-title="position_name"
+              item-value="id"
+              label="Select Positions/Roles"
+              prepend-icon="mdi-account-hard-hat"
+              multiple
+              chips
+              closable-chips
+              :rules="[v => formData.filter_type !== 'position' || (v && v.length > 0) || 'Select at least one position']"
+              hint="Select one or more positions to include in payroll"
+              persistent-hint
+            >
+              <template v-slot:chip="{ props, item }">
+                <v-chip
+                  v-bind="props"
+                  :text="item.raw.position_name"
+                  size="small"
+                ></v-chip>
+              </template>
+              <template v-slot:item="{ props, item }">
+                <v-list-item v-bind="props">
+                  <template v-slot:title>
+                    {{ item.raw.position_name }}
+                  </template>
+                  <template v-slot:subtitle>
+                    {{ item.raw.code }} - ₱{{ item.raw.daily_rate }}/day
+                  </template>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
+
+            <!-- Project Filter -->
+            <v-autocomplete
+              v-if="formData.filter_type === 'project'"
+              v-model="formData.project_ids"
+              :items="projects"
+              :loading="loadingProjects"
+              item-title="name"
+              item-value="id"
+              label="Select Projects"
+              prepend-icon="mdi-briefcase"
+              multiple
+              chips
+              closable-chips
+              :rules="[v => formData.filter_type !== 'project' || (v && v.length > 0) || 'Select at least one project']"
+              hint="Select one or more projects to include in payroll"
+              persistent-hint
+            >
+              <template v-slot:chip="{ props, item }">
+                <v-chip
+                  v-bind="props"
+                  :text="item.raw.name"
+                  size="small"
+                ></v-chip>
+              </template>
+              <template v-slot:item="{ props, item }">
+                <v-list-item v-bind="props">
+                  <template v-slot:title>
+                    {{ item.raw.name }}
+                  </template>
+                  <template v-slot:subtitle>
+                    {{ item.raw.code }} - {{ item.raw.employees_count || 0 }} employees
+                  </template>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
+
+            <v-divider class="my-4"></v-divider>
+
+            <!-- Additional Filters -->
+            <v-checkbox
+              v-model="formData.has_attendance"
+              label="Only include employees with attendance"
+              prepend-icon="mdi-calendar-check"
+              hint="Exclude employees who have no attendance records in this payroll period"
+              persistent-hint
+              color="primary"
+            ></v-checkbox>
+
+            <!-- Info Alert -->
+            <v-alert
+              v-if="formData.filter_type !== 'all'"
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+            >
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                <strong>Note:</strong>
+                <span v-if="formData.filter_type === 'position'">
+                  Only employees with the selected position(s) will be included in this payroll.
+                </span>
+                <span v-else-if="formData.filter_type === 'project'">
+                  Only employees assigned to the selected project(s) will be included in this payroll.
+                </span>
+              </div>
+            </v-alert>
+
+            <v-textarea
+              v-model="formData.notes"
+              label="Notes (Optional)"
+              rows="3"
+              prepend-icon="mdi-note-text"
+            ></v-textarea>
           </v-form>
         </v-card-text>
-
-        <v-divider></v-divider>
-
-        <v-card-actions class="pa-4">
+        <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeCreateDialog" :disabled="saving">
-            Cancel
-          </v-btn>
+          <v-btn text @click="closeDialog">Cancel</v-btn>
           <v-btn
             color="primary"
-            variant="elevated"
-            @click="createPayroll"
             :loading="saving"
+            @click="savePayroll"
           >
-            <v-icon start>mdi-check</v-icon>
-            Create Payroll
+            {{ editMode ? 'Update' : 'Create' }}
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Confirm Action Dialog -->
-    <v-dialog v-model="showConfirmDialog" max-width="500px" persistent>
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
-        <v-card-title class="text-h5 py-4">
-          <v-icon start :color="confirmAction.color">{{
-            confirmAction.icon
-          }}</v-icon>
-          {{ confirmAction.title }}
-        </v-card-title>
-        <v-divider></v-divider>
-
-        <v-card-text class="pt-6">
-          <p>{{ confirmAction.message }}</p>
-          <v-alert
-            v-if="confirmAction.type === 'warning'"
-            type="warning"
-            variant="tonal"
-            class="mt-4"
-          >
-            This action cannot be undone. Please confirm to proceed.
-          </v-alert>
+        <v-card-title class="text-h5">Confirm Delete</v-card-title>
+        <v-card-text>
+          Are you sure you want to delete this payroll? This action cannot be undone.
         </v-card-text>
-
-        <v-divider></v-divider>
-
-        <v-card-actions class="pa-4">
+        <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="showConfirmDialog = false">
-            Cancel
-          </v-btn>
-          <v-btn
-            :color="confirmAction.color"
-            variant="elevated"
-            @click="confirmActionExecute"
-            :loading="processing"
-          >
-            <v-icon start>{{ confirmAction.icon }}</v-icon>
-            {{ confirmAction.buttonText }}
+          <v-btn text @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" :loading="deleting" @click="deletePayroll">
+            Delete
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <!-- Export Payroll Dialog -->
-    <ExportPayrollDialog
-      v-if="selectedPayroll"
-      v-model="showExportDialog"
-      :payroll-id="selectedPayroll.id"
-      @exported="handleExportCompleted"
-    />
-  </div>
+  </v-container>
 </template>
+
 <script setup>
-import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
-import api from "@/services/api";
-import { useToast } from "vue-toastification";
-import ExportPayrollDialog from "@/components/payroll/ExportPayrollDialog.vue";
+import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useToast } from 'vue-toastification';
+import api from '@/services/api';
 
 const router = useRouter();
 const toast = useToast();
 
-const payrolls = ref([]);
 const loading = ref(false);
 const saving = ref(false);
-const processing = ref(false);
-const showCreateDialog = ref(false);
-const showConfirmDialog = ref(false);
-const showExportDialog = ref(false);
+const deleting = ref(false);
+const loadingPositions = ref(false);
+const loadingProjects = ref(false);
+const search = ref('');
+const dialog = ref(false);
+const deleteDialog = ref(false);
+const editMode = ref(false);
+const valid = ref(false);
+const form = ref(null);
+
+const payrolls = ref([]);
 const selectedPayroll = ref(null);
-const createForm = ref(null);
-const replacingExisting = ref(false);
+const positions = ref([]);
+const projects = ref([]);
 
-const filters = ref({
-  status: null,
-  year: null,
-});
-
-const newPayroll = ref({
-  period_start_date: "",
-  period_end_date: "",
-  payment_date: "",
-  pay_period_number: null,
-  // Optional filters for targeted payroll generation
-  project_id: null,
-  contract_type: null,
-  position_id: null,
-  employee_ids: [],
-});
-
-const confirmAction = ref({
-  type: "",
-  title: "",
-  message: "",
-  buttonText: "",
-  icon: "",
-  color: "",
-  payroll: null,
-  action: null,
+const formData = ref({
+  period_name: '',
+  period_start: '',
+  period_end: '',
+  payment_date: '',
+  notes: '',
+  filter_type: 'all',
+  position_ids: [],
+  project_ids: [],
+  employee_limit: null,
 });
 
 const headers = [
-  { title: "Payroll #", key: "payroll_number", sortable: true },
-  { title: "Period", key: "period", sortable: false },
-  { title: "Payment Date", key: "payment_date", sortable: true },
-  { title: "Employees", key: "employee_count", sortable: false },
-  { title: "Net Pay", key: "total_net_pay", sortable: true },
-  { title: "Status", key: "status", sortable: true },
-  { title: "Actions", key: "actions", sortable: false, align: "center" },
+  { title: 'Payroll #', key: 'payroll_number', sortable: true },
+  { title: 'Period', key: 'period', sortable: false },
+  { title: 'Payment Date', key: 'payment_date', sortable: true },
+  { title: 'Employees', key: 'items_count', sortable: true },
+  { title: 'Total Net Pay', key: 'total_net', sortable: true, align: 'end' },
+  { title: 'Status', key: 'status', sortable: true },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' },
 ];
 
-const statusOptions = [
-  { title: "Draft", value: "draft" },
-  { title: "Processing", value: "processing" },
-  { title: "Checked", value: "checked" },
-  { title: "Recommended", value: "recommended" },
-  { title: "Approved", value: "approved" },
-  { title: "Paid", value: "paid" },
-];
-
-const yearOptions = computed(() => {
-  const currentYear = new Date().getFullYear();
-  const years = [];
-  for (let i = currentYear; i >= currentYear - 5; i--) {
-    years.push({ title: i.toString(), value: i });
-  }
-  return years;
+const stats = computed(() => {
+  return {
+    total: payrolls.value.length,
+    draft: payrolls.value.filter(p => p.status === 'draft').length,
+    finalized: payrolls.value.filter(p => p.status === 'finalized').length,
+    paid: payrolls.value.filter(p => p.status === 'paid').length,
+  };
 });
-
-const rules = {
-  required: (v) => !!v || "This field is required",
-  endDateAfterStart: (v) => {
-    if (!newPayroll.value.period_start_date || !v) return true;
-    return (
-      new Date(v) >= new Date(newPayroll.value.period_start_date) ||
-      "End date must be after start date"
-    );
-  },
-};
 
 onMounted(() => {
   fetchPayrolls();
+  fetchPositions();
+  fetchProjects();
 });
 
 async function fetchPayrolls() {
   loading.value = true;
   try {
-    const params = {};
-    if (filters.value.status) params.status = filters.value.status;
-    if (filters.value.year) params.year = filters.value.year;
-
-    const response = await api.get("/payroll", { params });
+    const response = await api.get('/payrolls');
     payrolls.value = response.data.data || response.data;
   } catch (error) {
-    console.error("Error fetching payrolls:", error);
-    toast.error("Failed to load payroll records");
+    console.error('Error fetching payrolls:', error);
+    toast.error('Failed to load payrolls');
   } finally {
     loading.value = false;
   }
 }
 
-async function checkDuplicatePayroll() {
-  const periodStart = new Date(newPayroll.value.period_start_date);
-  const year = periodStart.getFullYear();
-  const month = periodStart.getMonth() + 1;
-  const periodNumber =
-    newPayroll.value.pay_period_number || (periodStart.getDate() <= 15 ? 1 : 2);
-
+async function fetchPositions() {
+  loadingPositions.value = true;
   try {
-    const response = await api.get("/payroll", {
-      params: { year, month, pay_period_number: periodNumber },
-    });
-
-    const existing = response.data.data || response.data;
-    return existing.find(
-      (p) =>
-        p.year === year &&
-        p.month === month &&
-        p.pay_period_number === periodNumber
-    );
+    const response = await api.get('/position-rates');
+    positions.value = (response.data.data || response.data).filter(p => p.is_active);
   } catch (error) {
-    return null;
+    console.error('Error fetching positions:', error);
+  } finally {
+    loadingPositions.value = false;
   }
 }
 
-async function createPayroll() {
-  const { valid } = await createForm.value.validate();
-  if (!valid) {
-    toast.warning("Please fill in all required fields");
-    return;
+async function fetchProjects() {
+  loadingProjects.value = true;
+  try {
+    const response = await api.get('/projects');
+    projects.value = (response.data.data || response.data).filter(p => p.is_active);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+  } finally {
+    loadingProjects.value = false;
+  }
+}
+
+function openCreateDialog() {
+  editMode.value = false;
+  formData.value = {
+    period_name: '',
+    period_start: '',
+    period_end: '',
+    payment_date: '',
+    notes: '',
+    filter_type: 'all',
+    position_ids: [],
+    project_ids: [],
+    has_attendance: false,
+  };
+  dialog.value = true;
+}
+
+function editPayroll(item) {
+  editMode.value = true;
+  selectedPayroll.value = item;
+  formData.value = {
+    period_name: item.period_name,
+    period_start: item.period_start,
+    period_end: item.period_end,
+    payment_date: item.payment_date,
+    notes: item.notes || '',
+  };
+  dialog.value = true;
+}
+
+function closeDialog() {
+  dialog.value = false;
+  selectedPayroll.value = null;
+}
+
+async function savePayroll() {
+  const { valid } = await form.value.validate();
+  if (!valid) return;
+
+  // Prepare payload
+  const payload = {
+    period_name: formData.value.period_name,
+    period_start: formData.value.period_start,
+    period_end: formData.value.period_end,
+    payment_date: formData.value.payment_date,
+    notes: formData.value.notes,
+    filter_type: formData.value.filter_type,
+  };
+
+  // Add filter-specific data
+  if (formData.value.filter_type === 'position') {
+    payload.position_ids = formData.value.position_ids;
+  } else if (formData.value.filter_type === 'project') {
+    payload.project_ids = formData.value.project_ids;
   }
 
-  // Check for duplicate payroll
-  const existingPayroll = await checkDuplicatePayroll();
-  if (existingPayroll) {
-    const periodStart = new Date(newPayroll.value.period_start_date);
-    const monthName = periodStart.toLocaleString("default", { month: "long" });
-    const periodNumber =
-      newPayroll.value.pay_period_number ||
-      (periodStart.getDate() <= 15 ? 1 : 2);
+  // Add employee limit if specified
+  if (formData.value.employee_limit && formData.value.employee_limit > 0) {
+    payload.employee_limit = formData.value.employee_limit;
+  }
 
-    const confirmed = confirm(
-      `A payroll already exists for ${monthName} ${periodStart.getFullYear()} - Period ${periodNumber}.\n\n` +
-        `Do you want to replace it?\n\n` +
-        `Warning: This will permanently delete the existing payroll and all its data.`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    // Delete existing payroll first
-    try {
-      await api.delete(`/payroll/${existingPayroll.id}`);
-      toast.info("Existing payroll deleted. Creating new one...");
-    } catch (error) {
-      toast.error("Failed to delete existing payroll");
-      return;
-    }
+  // Add attendance filter if enabled
+  if (formData.value.has_attendance) {
+    payload.has_attendance = formData.value.has_attendance;
   }
 
   saving.value = true;
-
-  // Clean up payload - remove empty/null optional fields
-  const payload = {
-    period_start_date: newPayroll.value.period_start_date,
-    period_end_date: newPayroll.value.period_end_date,
-    payment_date: newPayroll.value.payment_date,
-  };
-
   try {
-    // Add optional fields only if they have values
-    if (newPayroll.value.pay_period_number) {
-      payload.pay_period_number = newPayroll.value.pay_period_number;
-    }
-    if (newPayroll.value.project_id) {
-      payload.project_id = parseInt(newPayroll.value.project_id);
-    }
-    if (newPayroll.value.contract_type) {
-      payload.contract_type = newPayroll.value.contract_type;
-    }
-    if (newPayroll.value.position_id) {
-      payload.position_id = parseInt(newPayroll.value.position_id);
-    }
-    if (
-      newPayroll.value.employee_ids &&
-      newPayroll.value.employee_ids.length > 0
-    ) {
-      payload.employee_ids = newPayroll.value.employee_ids;
-    }
-
-    const response = await api.post("/payroll", payload);
-    toast.success("Payroll period created successfully!");
-    closeCreateDialog();
-    await fetchPayrolls();
-
-    // Stay on payroll list page to see the new payroll
-    // (Detail view is not yet implemented)
-  } catch (error) {
-    console.error("Error creating payroll:", error);
-    console.error("Error response:", error.response?.data);
-    console.error("Validation errors:", error.response?.data?.errors);
-    console.error("Payload sent:", payload);
-
-    // Handle validation errors
-    if (error.response?.status === 422 && error.response?.data?.errors) {
-      const errors = error.response.data.errors;
-      const errorList = Object.values(errors).flat();
-      toast.error(errorList.join(". "));
-      return;
-    }
-
-    // Handle specific error messages
-    const errorMessage =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      "Failed to create payroll period";
-
-    // Check for duplicate payroll period
-    if (
-      errorMessage.toLowerCase().includes("duplicate") ||
-      errorMessage.toLowerCase().includes("already exists")
-    ) {
-      toast.error(
-        "A payroll period already exists for this date range or period number. Please check existing payrolls."
-      );
-    } else if (error.response?.status === 500) {
-      toast.error(
-        "Server error occurred. Please check the backend logs or contact support."
-      );
+    if (editMode.value) {
+      await api.put(`/payrolls/${selectedPayroll.value.id}`, payload);
+      toast.success('Payroll updated successfully');
     } else {
-      toast.error(errorMessage);
+      const response = await api.post('/payrolls', payload);
+      const employeeCount = response.data.items_count || response.data.payroll?.items_count || 0;
+      const limitText = formData.value.employee_limit ? ` (limited to ${formData.value.employee_limit})` : '';
+      toast.success(`Payroll created successfully for ${employeeCount} employee(s)${limitText}`);
     }
+    await fetchPayrolls();
+    closeDialog();
+  } catch (error) {
+    console.error('Error saving payroll:', error);
+    toast.error(error.response?.data?.message || 'Failed to save payroll');
   } finally {
     saving.value = false;
   }
 }
 
-function closeCreateDialog() {
-  showCreateDialog.value = false;
-  createForm.value?.reset();
-  newPayroll.value = {
-    period_start_date: "",
-    period_end_date: "",
-    payment_date: "",
-    pay_period_number: null,
-    project_id: null,
-    contract_type: null,
-    position_id: null,
-    employee_ids: [],
-  };
+function viewPayroll(item) {
+  router.push(`/payroll/${item.id}`);
 }
 
-function viewPayroll(payroll) {
-  router.push(`/payroll/${payroll.id}`);
+function confirmDelete(item) {
+  selectedPayroll.value = item;
+  deleteDialog.value = true;
 }
 
-function processPayroll(payroll) {
-  confirmAction.value = {
-    type: "info",
-    title: "Process Payroll",
-    message: `Process payroll for ${payroll.period_label}? This will calculate salaries for all employees based on their attendance records.`,
-    buttonText: "Process",
-    icon: "mdi-play-circle",
-    color: "primary",
-    payroll: payroll,
-    action: "process",
-  };
-  showConfirmDialog.value = true;
-}
-
-function checkPayroll(payroll) {
-  confirmAction.value = {
-    type: "warning",
-    title: "Check Payroll",
-    message: `Mark this payroll as checked? This is the first approval step in the workflow.`,
-    buttonText: "Check",
-    icon: "mdi-check-circle",
-    color: "warning",
-    payroll: payroll,
-    action: "check",
-  };
-  showConfirmDialog.value = true;
-}
-
-function recommendPayroll(payroll) {
-  confirmAction.value = {
-    type: "warning",
-    title: "Recommend Payroll",
-    message: `Recommend this payroll for approval? This is the second approval step.`,
-    buttonText: "Recommend",
-    icon: "mdi-thumb-up",
-    color: "accent",
-    payroll: payroll,
-    action: "recommend",
-  };
-  showConfirmDialog.value = true;
-}
-
-function approvePayroll(payroll) {
-  confirmAction.value = {
-    type: "warning",
-    title: "Approve Payroll",
-    message: `Give final approval for this payroll? After approval, payments can be processed.`,
-    buttonText: "Approve",
-    icon: "mdi-check-decagram",
-    color: "success",
-    payroll: payroll,
-    action: "approve",
-  };
-  showConfirmDialog.value = true;
-}
-
-function markAsPaid(payroll) {
-  confirmAction.value = {
-    type: "warning",
-    title: "Mark as Paid",
-    message: `Mark this payroll as paid? This indicates that all employees have been paid.`,
-    buttonText: "Mark Paid",
-    icon: "mdi-cash-check",
-    color: "primary",
-    payroll: payroll,
-    action: "mark-paid",
-  };
-  showConfirmDialog.value = true;
-}
-
-async function confirmActionExecute() {
-  processing.value = true;
-  const payroll = confirmAction.value.payroll;
-  const action = confirmAction.value.action;
-
+async function deletePayroll() {
+  deleting.value = true;
   try {
-    // If action is a function, execute it directly
-    if (typeof action === "function") {
-      await action();
-    } else {
-      // Otherwise, treat it as a string endpoint
-      let endpoint = `/payroll/${payroll.id}/${action}`;
-      const response = await api.post(endpoint);
-
-      toast.success(response.data.message || "Action completed successfully");
-      showConfirmDialog.value = false;
-      await fetchPayrolls();
-    }
+    await api.delete(`/payrolls/${selectedPayroll.value.id}`);
+    toast.success('Payroll deleted successfully');
+    await fetchPayrolls();
+    deleteDialog.value = false;
   } catch (error) {
-    console.error(`Error executing ${action}:`, error);
-    toast.error(error.response?.data?.error || `Failed to execute action`);
+    console.error('Error deleting payroll:', error);
+    toast.error('Failed to delete payroll');
   } finally {
-    processing.value = false;
+    deleting.value = false;
   }
-}
-
-async function exportPayroll(payroll, format) {
-  try {
-    toast.info(`Exporting payroll as ${format.toUpperCase()}...`);
-
-    const response = await api.get(`/payroll/${payroll.id}/export-${format}`, {
-      responseType: "blob",
-    });
-
-    // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute(
-      "download",
-      `payroll-${payroll.payroll_number}.${format === "excel" ? "xlsx" : "pdf"}`
-    );
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    toast.success(`Payroll exported successfully!`);
-  } catch (error) {
-    console.error("Error exporting payroll:", error);
-    toast.error("Failed to export payroll");
-  }
-}
-
-// Open comprehensive export dialog
-function openExportDialog(payroll) {
-  selectedPayroll.value = payroll;
-  showExportDialog.value = true;
 }
 
 function getStatusColor(status) {
   const colors = {
-    draft: "grey",
-    processing: "info",
-    checked: "warning",
-    recommended: "accent",
-    approved: "success",
-    paid: "primary",
+    draft: 'warning',
+    finalized: 'info',
+    paid: 'success',
   };
-  return colors[status] || "grey";
-}
-
-function getStatusIcon(status) {
-  const icons = {
-    draft: "mdi-file-outline",
-    processing: "mdi-cog",
-    checked: "mdi-check-circle",
-    recommended: "mdi-thumb-up",
-    approved: "mdi-check-decagram",
-    paid: "mdi-cash-check",
-  };
-  return icons[status] || "mdi-help-circle";
-}
-
-function getStatusLabel(status) {
-  const labels = {
-    draft: "Draft",
-    processing: "Processing",
-    checked: "Checked",
-    recommended: "Recommended",
-    approved: "Approved",
-    paid: "Paid",
-  };
-  return labels[status] || status;
+  return colors[status] || 'grey';
 }
 
 function formatDate(date) {
-  if (!date) return "N/A";
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+  if (!date) return '';
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
 }
 
 function formatCurrency(amount) {
-  if (!amount) return "0.00";
-  return new Intl.NumberFormat("en-PH", {
+  if (!amount) return '0.00';
+  return parseFloat(amount).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-function confirmDeletePayroll(payroll) {
-  const isPaid = payroll.status === "paid";
-  confirmAction.value = {
-    type: "warning",
-    title: isPaid ? "⚠️ Delete PAID Payroll" : "Delete Payroll Period",
-    message: isPaid
-      ? `WARNING: This payroll (${payroll.payroll_number}) has been marked as PAID. Deleting it will permanently remove all payment records. Are you absolutely sure you want to continue?`
-      : `Are you sure you want to delete payroll ${payroll.payroll_number}? This will permanently remove the payroll period and all associated data.`,
-    buttonText: "Delete",
-    icon: "mdi-delete-alert",
-    color: "error",
-    action: async () => {
-      await api.delete(`/payroll/${payroll.id}`);
-      toast.success("Payroll deleted successfully!");
-      showConfirmDialog.value = false;
-      await fetchPayrolls();
-    },
-  };
-  showConfirmDialog.value = true;
-}
-
-function confirmResetPayroll(payroll) {
-  const isPaid = payroll.status === "paid";
-  confirmAction.value = {
-    type: "warning",
-    title: isPaid ? "⚠️ Reset PAID Payroll" : "Reset Payroll to Draft",
-    message: isPaid
-      ? `WARNING: This payroll (${payroll.payroll_number}) has been marked as PAID. Resetting it will delete all payment records but keep the period. Are you absolutely sure you want to continue?`
-      : `Are you sure you want to reset payroll ${payroll.payroll_number} to draft? This will delete all calculated payroll items but keep the period. You can then reprocess it with the updated calculations.`,
-    buttonText: "Reset",
-    icon: "mdi-restart",
-    color: "warning",
-    action: async () => {
-      await api.post(`/payroll/${payroll.id}/reset`);
-      toast.success(
-        "Payroll reset to draft successfully! You can now reprocess it."
-      );
-      showConfirmDialog.value = false;
-      await fetchPayrolls();
-    },
-  };
-  showConfirmDialog.value = true;
+  });
 }
 </script>
 
 <style scoped>
-.v-data-table :deep(tbody tr:hover) {
-  background-color: rgba(0, 0, 0, 0.02);
+.v-card {
+  border-radius: 12px;
 }
 </style>

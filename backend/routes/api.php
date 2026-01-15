@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\PayrollController;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,7 +72,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('projects/{project}/employees', [App\Http\Controllers\Api\ProjectController::class, 'employees']);
     Route::post('projects/{project}/mark-complete', [App\Http\Controllers\Api\ProjectController::class, 'markComplete']);
     Route::post('projects/{project}/reactivate', [App\Http\Controllers\Api\ProjectController::class, 'reactivate']);
-    Route::post('projects/{project}/generate-payroll', [App\Http\Controllers\Api\ProjectController::class, 'generatePayroll']);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
     // Biometric Import Routes - Staff Information and Punch Records
@@ -84,9 +82,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Attendance - Specific routes MUST come before apiResource
     Route::post('/attendance/import-biometric', [App\Http\Controllers\Api\AttendanceController::class, 'importBiometric']);
     Route::post('/attendance/fetch-from-device', [App\Http\Controllers\Api\AttendanceController::class, 'fetchFromDevice']);
-    // Yunatt Integration - Coming Soon (Disabled)
-    // Route::post('/attendance/fetch-from-yunatt', [App\Http\Controllers\Api\AttendanceController::class, 'fetchFromYunatt']);
-    // Route::get('/attendance/test-yunatt-connection', [App\Http\Controllers\Api\AttendanceController::class, 'testYunattConnection']);
     Route::post('/attendance/sync-employees', [App\Http\Controllers\Api\AttendanceController::class, 'syncEmployees']);
     Route::post('/attendance/clear-device-logs', [App\Http\Controllers\Api\AttendanceController::class, 'clearDeviceLogs']);
     Route::get('/attendance/device-info', [App\Http\Controllers\Api\AttendanceController::class, 'deviceInfo']);
@@ -104,27 +99,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/attendance/dtr/preview', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'preview']);
 
     Route::apiResource('attendance', App\Http\Controllers\Api\AttendanceController::class);
-
-    // Payroll
-    Route::apiResource('payroll', PayrollController::class);
-    Route::middleware(['throttle:10,1'])->post('/payroll/{payroll}/process', [PayrollController::class, 'process']);
-    Route::post('/payroll/{payroll}/reset', [PayrollController::class, 'reset']);
-    Route::post('/payroll/{payroll}/check', [PayrollController::class, 'check']);
-    Route::post('/payroll/{payroll}/recommend', [PayrollController::class, 'recommend']);
-    Route::post('/payroll/{payroll}/approve', [PayrollController::class, 'approve']);
-    Route::post('/payroll/{payroll}/mark-paid', [PayrollController::class, 'markPaid']);
-    Route::get('/payroll/{payroll}/summary', [PayrollController::class, 'summary']);
-    Route::get('/payroll/{payroll}/items', [App\Http\Controllers\Api\PayrollController::class, 'items']);
-    Route::get('/payroll/{payroll}/export-excel', [App\Http\Controllers\Api\PayrollController::class, 'exportExcel']);
-    Route::get('/payroll/{payroll}/export-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportPdf']);
-    Route::post('/payroll/{payroll}/export-comprehensive-pdf', [App\Http\Controllers\Api\PayrollController::class, 'exportComprehensivePDF']);
-
-    // Payslips
-    Route::get('/payslips/employee/{employee}', [App\Http\Controllers\Api\PayslipController::class, 'employeePayslips']);
-    Route::get('/payslips/my-payslips', [App\Http\Controllers\Api\PayslipController::class, 'myPayslips']);
-    Route::get('/payslips/{payrollItem}/pdf', [App\Http\Controllers\Api\PayslipController::class, 'downloadPdf']);
-    Route::get('/payslips/{payrollItem}/excel', [App\Http\Controllers\Api\PayslipController::class, 'downloadExcel']);
-    Route::get('/payslips/{payrollItem}/view', [App\Http\Controllers\Api\PayslipController::class, 'view']);
 
     // Position Rates
     Route::apiResource('position-rates', App\Http\Controllers\Api\PositionRateController::class);
@@ -151,6 +125,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/loans/{loan}/reject', [App\Http\Controllers\Api\LoanController::class, 'reject'])->middleware('role:admin');
     Route::post('/loans/{loan}/payments', [App\Http\Controllers\Api\LoanController::class, 'recordPayment']);
     Route::apiResource('loans', App\Http\Controllers\Api\LoanController::class);
+
+    // Payroll - specific routes MUST come before apiResource
+    Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize']);
+    Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister']);
+    Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip']);
+    Route::apiResource('payrolls', App\Http\Controllers\PayrollController::class);
+
 
     // Deductions - specific routes MUST come before apiResource
     Route::post('/deductions/{deduction}/record-installment', [App\Http\Controllers\Api\DeductionController::class, 'recordInstallment']);
