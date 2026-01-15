@@ -19,10 +19,49 @@
 
         <v-form ref="form" v-model="valid">
           <v-row>
+            <v-col cols="6">
+              <v-text-field
+                v-model="searchQuery"
+                label="Search Employees"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-magnify"
+                clearable
+                placeholder="Search by name, number..."
+                @input="filterEmployees"
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="3">
+              <v-autocomplete
+                v-model="filterDepartment"
+                :items="departments"
+                label="Department"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-domain"
+                clearable
+                @update:model-value="filterEmployees"
+              ></v-autocomplete>
+            </v-col>
+
+            <v-col cols="3">
+              <v-autocomplete
+                v-model="filterStaffType"
+                :items="staffTypes"
+                label="Staff Type"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-account-group"
+                clearable
+                @update:model-value="filterEmployees"
+              ></v-autocomplete>
+            </v-col>
+
             <v-col cols="12">
               <v-autocomplete
                 v-model="formData.employee_id"
-                :items="employees"
+                :items="filteredEmployees"
                 item-title="full_name"
                 item-value="id"
                 label="Select Employee *"
@@ -35,7 +74,8 @@
                 <template v-slot:item="{ props, item }">
                   <v-list-item v-bind="props">
                     <template v-slot:subtitle>
-                      {{ item.raw.employee_number }} - {{ item.raw.position }}
+                      {{ item.raw.employee_number }} - {{ item.raw.position || 'N/A' }}
+                      <span v-if="item.raw.department"> | {{ item.raw.department }}</span>
                     </template>
                   </v-list-item>
                 </template>
@@ -165,8 +205,14 @@ const generating = ref(false);
 const previewing = ref(false);
 const loadingEmployees = ref(false);
 const employees = ref([]);
+const filteredEmployees = ref([]);
 const reportType = ref("range");
 const preview = ref(null);
+const searchQuery = ref("");
+const filterDepartment = ref(null);
+const filterStaffType = ref(null);
+const departments = ref([]);
+const staffTypes = ref([]);
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -186,13 +232,66 @@ const rules = {
 const loadEmployees = async () => {
   loadingEmployees.value = true;
   try {
-    const response = await api.get("/employees");
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 10000, // Get all employees
+      },
+    });
     employees.value = response.data.data || response.data || [];
+    filteredEmployees.value = employees.value;
+
+    // Extract unique departments and staff types
+    const uniqueDepartments = [
+      ...new Set(
+        employees.value
+          .map((e) => e.department)
+          .filter((d) => d && d !== "N/A")
+      ),
+    ].sort();
+    departments.value = uniqueDepartments;
+
+    const uniqueStaffTypes = [
+      ...new Set(
+        employees.value
+          .map((e) => e.staff_type)
+          .filter((s) => s && s !== "N/A")
+      ),
+    ].sort();
+    staffTypes.value = uniqueStaffTypes;
   } catch (error) {
     toast.error("Failed to load employees");
   } finally {
     loadingEmployees.value = false;
   }
+};
+
+const filterEmployees = () => {
+  let result = [...employees.value];
+
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(
+      (emp) =>
+        emp.full_name?.toLowerCase().includes(query) ||
+        emp.employee_number?.toLowerCase().includes(query) ||
+        emp.first_name?.toLowerCase().includes(query) ||
+        emp.last_name?.toLowerCase().includes(query) ||
+        emp.position?.toLowerCase().includes(query)
+    );
+  }
+
+  // Filter by department
+  if (filterDepartment.value) {
+    result = result.filter((emp) => emp.department === filterDepartment.value);
+  }
+
+  // Filter by staff type
+  if (filterStaffType.value) {
+    result = result.filter((emp) => emp.staff_type === filterStaffType.value);
+  }
+
+  filteredEmployees.value = result;
 };
 
 const setThisMonth = () => {
@@ -296,6 +395,10 @@ watch(
       formData.date_to = today;
       reportType.value = "range";
       preview.value = null;
+      searchQuery.value = "";
+      filterDepartment.value = null;
+      filterStaffType.value = null;
+      filteredEmployees.value = employees.value;
     }
   }
 );
