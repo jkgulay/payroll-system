@@ -206,108 +206,175 @@
       </v-data-table>
     </v-card>
 
-    <!-- Add/Edit Dialog -->
-    <v-dialog v-model="dialog" max-width="700px" persistent>
-      <v-card>
-        <v-card-title class="text-h5">
-          {{ editMode ? "Edit Deduction" : "Add Deduction" }}
+    <!-- Add/Edit Dialog - Modern UI -->
+    <v-dialog v-model="dialog" max-width="800px" persistent>
+      <v-card class="modern-dialog-card" elevation="24">
+        <!-- Enhanced Header -->
+        <v-card-title class="modern-dialog-header modern-dialog-header-error">
+          <div class="d-flex align-center w-100">
+            <v-avatar color="white" size="48" class="mr-4">
+              <v-icon color="error" size="32">{{ editMode ? 'mdi-pencil' : 'mdi-cash-minus' }}</v-icon>
+            </v-avatar>
+            <div>
+              <div class="text-h5 font-weight-bold">
+                {{ editMode ? "Edit Deduction" : "Add Deduction" }}
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ editMode ? 'Update deduction details' : 'Create new deduction for employee' }}
+              </div>
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn icon variant="text" color="white" @click="closeDialog" size="small">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text class="pa-6">
           <v-form ref="form" v-model="formValid">
             <v-row>
+              <!-- Employee Selection -->
               <v-col cols="12">
-                <v-autocomplete
-                  v-model="formData.employee_id"
-                  :items="employees"
-                  item-title="full_name"
-                  item-value="id"
-                  label="Search and Select Employee *"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                  :disabled="editMode"
-                  clearable
-                  prepend-inner-icon="mdi-account-search"
-                  hint="Search by name, employee number, or position"
-                  persistent-hint
-                  no-data-text="No employees found matching your search"
-                  :custom-filter="customEmployeeFilter"
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template v-slot:prepend>
-                        <v-avatar color="primary" size="40">
-                          <span class="text-white text-subtitle-2">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-account-search</v-icon>
+                    Search and Select Employee <span class="text-error">*</span>
+                  </label>
+                  <v-autocomplete
+                    v-model="formData.employee_id"
+                    :items="employees"
+                    item-title="full_name"
+                    item-value="id"
+                    placeholder="Search by name, employee number, or position"
+                    variant="outlined"
+                    density="comfortable"
+                    :rules="[rules.required]"
+                    :disabled="editMode"
+                    clearable
+                    prepend-inner-icon="mdi-account-search"
+                    color="primary"
+                    hint="Search by name, employee number, or position"
+                    persistent-hint
+                    no-data-text="No employees found matching your search"
+                    :custom-filter="customEmployeeFilter"
+                  >
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template v-slot:prepend>
+                          <v-avatar color="primary" size="40">
+                            <span class="text-white text-subtitle-2">
+                              {{ getInitials(item.raw.full_name) }}
+                            </span>
+                          </v-avatar>
+                        </template>
+                        <template v-slot:title>
+                          <span class="font-weight-medium">{{ item.raw.full_name }}</span>
+                        </template>
+                        <template v-slot:subtitle>
+                          <v-chip size="x-small" class="mr-1" color="primary" variant="outlined">
+                            {{ item.raw.employee_number }}
+                          </v-chip>
+                          <span class="text-caption">{{ item.raw.position || 'N/A' }}</span>
+                        </template>
+                      </v-list-item>
+                    </template>
+                    <template v-slot:selection="{ item }">
+                      <v-chip size="small" color="primary" variant="flat">
+                        <v-avatar start>
+                          <span class="text-white text-caption">
                             {{ getInitials(item.raw.full_name) }}
                           </span>
                         </v-avatar>
-                      </template>
-                      <template v-slot:title>
-                        <span class="font-weight-medium">{{ item.raw.full_name }}</span>
-                      </template>
-                      <template v-slot:subtitle>
-                        <v-chip size="x-small" class="mr-1" color="primary" variant="outlined">
-                          {{ item.raw.employee_number }}
-                        </v-chip>
-                        <span class="text-caption">{{ item.raw.position || 'N/A' }}</span>
-                      </template>
-                    </v-list-item>
-                  </template>
-                  <template v-slot:selection="{ item }">
-                    <v-chip size="small" color="primary" variant="flat">
-                      <v-avatar start>
-                        <span class="text-white text-caption">
-                          {{ getInitials(item.raw.full_name) }}
-                        </span>
-                      </v-avatar>
-                      {{ item.raw.full_name }} - {{ item.raw.employee_number }}
-                    </v-chip>
-                  </template>
-                </v-autocomplete>
+                        {{ item.raw.full_name }} - {{ item.raw.employee_number }}
+                      </v-chip>
+                    </template>
+                  </v-autocomplete>
+                </div>
               </v-col>
 
+              <!-- Deduction Type -->
               <v-col cols="12" md="6">
-                <v-select
-                  v-model="formData.deduction_type"
-                  :items="deductionTypes"
-                  label="Deduction Type *"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                ></v-select>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-tag</v-icon>
+                    Deduction Type <span class="text-error">*</span>
+                  </label>
+                  <v-select
+                    v-model="formData.deduction_type"
+                    :items="deductionTypes"
+                    placeholder="Select deduction type"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-tag"
+                    color="primary"
+                    :rules="[rules.required]"
+                  ></v-select>
+                </div>
               </v-col>
 
+              <!-- Deduction Name -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="formData.deduction_name"
-                  label="Deduction Name"
-                  variant="outlined"
-                  hint="Auto-generated from type if left blank"
-                  persistent-hint
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-text</v-icon>
+                    Deduction Name
+                    <v-chip size="x-small" color="info" class="ml-2">Auto-generated</v-chip>
+                  </label>
+                  <v-text-field
+                    v-model="formData.deduction_name"
+                    placeholder="Auto-generated from type if left blank"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-text"
+                    color="primary"
+                    hint="Auto-generated from type if left blank"
+                    persistent-hint
+                  ></v-text-field>
+                </div>
               </v-col>
 
+              <!-- Total Amount -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="formData.total_amount"
-                  label="Total Amount *"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  :rules="[rules.required, rules.positive]"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-currency-php</v-icon>
+                    Total Amount <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model.number="formData.total_amount"
+                    type="number"
+                    prefix="₱"
+                    placeholder="0.00"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-currency-php"
+                    color="primary"
+                    :rules="[rules.required, rules.positive]"
+                  ></v-text-field>
+                </div>
               </v-col>
 
+              <!-- Amount per Cutoff -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="formData.amount_per_cutoff"
-                  label="Amount per Cutoff *"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  :rules="[rules.required, rules.positive]"
-                  hint="Semi-monthly deduction amount"
-                  persistent-hint
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-cash</v-icon>
+                    Amount per Cutoff <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model.number="formData.amount_per_cutoff"
+                    type="number"
+                    prefix="₱"
+                    placeholder="0.00"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-cash"
+                    color="primary"
+                    :rules="[rules.required, rules.positive]"
+                    hint="Semi-monthly deduction amount"
+                    persistent-hint
+                  ></v-text-field>
+                </div>
               </v-col>
 
               <v-col cols="12" md="6">

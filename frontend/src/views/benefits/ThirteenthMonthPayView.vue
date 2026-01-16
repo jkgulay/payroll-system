@@ -157,69 +157,216 @@
       </v-data-table>
     </v-card>
 
-    <!-- Calculate Dialog -->
-    <v-dialog v-model="calculateDialog" max-width="600px" persistent>
-      <v-card>
-        <v-card-title class="text-h5">
-          Calculate 13th Month Pay
+    <!-- Calculate Dialog - Modern UI -->
+    <v-dialog v-model="calculateDialog" max-width="750px" persistent>
+      <v-card class="calculate-dialog-card" elevation="24">
+        <!-- Enhanced Header with Gradient -->
+        <v-card-title class="calculate-dialog-header">
+          <div class="d-flex align-center w-100">
+            <v-avatar color="white" size="48" class="mr-4">
+              <v-icon color="primary" size="32">mdi-calculator-variant</v-icon>
+            </v-avatar>
+            <div>
+              <div class="text-h5 font-weight-bold">Calculate 13th Month Pay</div>
+              <div class="text-subtitle-2 text-white-70">Generate 13th month pay for your employees</div>
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn
+              icon
+              variant="text"
+              color="white"
+              @click="calculateDialog = false"
+              size="small"
+            >
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
-        <v-card-text>
+
+        <v-card-text class="pa-6">
           <v-form ref="calculateForm" v-model="formValid">
-            <v-select
-              v-model="calculateForm.year"
-              :items="yearOptions"
-              label="Year *"
-              :rules="[v => !!v || 'Year is required']"
-              outlined
-              dense
-              class="mb-3"
-            ></v-select>
+            <!-- Step Indicator -->
+            <div class="text-center mb-6">
+              <v-chip-group class="justify-center">
+                <v-chip :color="currentStep >= 1 ? 'primary' : 'grey-lighten-2'" size="small">
+                  <v-icon start size="small">mdi-calendar</v-icon>
+                  Period
+                </v-chip>
+                <v-icon>mdi-chevron-right</v-icon>
+                <v-chip :color="currentStep >= 2 ? 'primary' : 'grey-lighten-2'" size="small">
+                  <v-icon start size="small">mdi-office-building</v-icon>
+                  Department
+                </v-chip>
+                <v-icon>mdi-chevron-right</v-icon>
+                <v-chip :color="currentStep >= 3 ? 'primary' : 'grey-lighten-2'" size="small">
+                  <v-icon start size="small">mdi-cash-check</v-icon>
+                  Payment
+                </v-chip>
+              </v-chip-group>
+            </div>
 
-            <v-select
-              v-model="calculateForm.period"
-              :items="periodOptions"
-              label="Period *"
-              :rules="[v => !!v || 'Period is required']"
-              outlined
-              dense
-              class="mb-3"
-            ></v-select>
+            <!-- Form Fields with Modern Styling -->
+            <v-row>
+              <!-- Year Selection -->
+              <v-col cols="12" md="6">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-clock</v-icon>
+                    Year <span class="text-error">*</span>
+                  </label>
+                  <v-select
+                    v-model="calculateForm.year"
+                    :items="yearOptions"
+                    placeholder="Select year"
+                    :rules="[v => !!v || 'Year is required']"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar"
+                    color="primary"
+                    @update:model-value="currentStep = Math.max(currentStep, 1)"
+                  >
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props" :title="item.value">
+                        <template v-slot:prepend>
+                          <v-icon v-if="item.value === new Date().getFullYear()" color="success">
+                            mdi-star
+                          </v-icon>
+                        </template>
+                      </v-list-item>
+                    </template>
+                  </v-select>
+                </div>
+              </v-col>
 
-            <v-select
-              v-model="calculateForm.department"
-              :items="departments"
-              label="Department (Optional)"
-              clearable
-              outlined
-              dense
-              class="mb-3"
-              hint="Leave empty to calculate for all departments"
-              persistent-hint
-            ></v-select>
+              <!-- Period Selection -->
+              <v-col cols="12" md="6">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-range</v-icon>
+                    Period <span class="text-error">*</span>
+                  </label>
+                  <v-select
+                    v-model="calculateForm.period"
+                    :items="periodOptions"
+                    placeholder="Select period"
+                    :rules="[v => !!v || 'Period is required']"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-month"
+                    color="primary"
+                    @update:model-value="currentStep = Math.max(currentStep, 1)"
+                  >
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template v-slot:prepend>
+                          <v-icon>{{ getPeriodIcon(item.value) }}</v-icon>
+                        </template>
+                      </v-list-item>
+                    </template>
+                  </v-select>
+                </div>
+              </v-col>
 
-            <v-text-field
-              v-model="calculateForm.payment_date"
-              label="Payment Date *"
-              type="date"
-              :rules="[v => !!v || 'Payment date is required']"
-              outlined
-              dense
-              class="mb-3"
-            ></v-text-field>
+              <!-- Department Selection -->
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-office-building</v-icon>
+                    Department
+                    <v-chip size="x-small" color="info" class="ml-2">Optional</v-chip>
+                  </label>
+                  <v-select
+                    v-model="calculateForm.department"
+                    :items="departments"
+                    placeholder="All Departments"
+                    clearable
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-account-group"
+                    color="primary"
+                    hint="Leave empty to calculate for all departments"
+                    persistent-hint
+                    @update:model-value="currentStep = Math.max(currentStep, 2)"
+                  >
+                    <template v-slot:prepend-item>
+                      <v-list-item
+                        title="All Departments"
+                        @click="calculateForm.department = null"
+                      >
+                        <template v-slot:prepend>
+                          <v-icon color="primary">mdi-office-building-outline</v-icon>
+                        </template>
+                      </v-list-item>
+                      <v-divider class="my-2"></v-divider>
+                    </template>
+                  </v-select>
+                </div>
+              </v-col>
+
+              <!-- Payment Date -->
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-check</v-icon>
+                    Payment Date <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="calculateForm.payment_date"
+                    type="date"
+                    placeholder="Select payment date"
+                    :rules="[v => !!v || 'Payment date is required']"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-cash-multiple"
+                    color="primary"
+                    hint="Date when the 13th month pay will be released"
+                    persistent-hint
+                    @update:model-value="currentStep = Math.max(currentStep, 3)"
+                  ></v-text-field>
+                </div>
+              </v-col>
+            </v-row>
+
+            <!-- Info Banner -->
+            <v-alert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mt-4"
+              icon="mdi-information"
+            >
+              <div class="text-caption">
+                The 13th month pay will be calculated based on the basic salary earned during the selected period.
+              </div>
+            </v-alert>
           </v-form>
         </v-card-text>
-        <v-card-actions>
+
+        <v-divider></v-divider>
+
+        <!-- Enhanced Actions -->
+        <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn color="grey" variant="text" @click="calculateDialog = false">
+          <v-btn
+            variant="text"
+            color="grey-darken-1"
+            size="large"
+            @click="calculateDialog = false"
+            prepend-icon="mdi-close"
+          >
             Cancel
           </v-btn>
           <v-btn
             color="primary"
+            size="large"
             :loading="calculating"
             :disabled="!formValid"
             @click="calculate"
+            prepend-icon="mdi-calculator"
+            class="px-6"
+            elevation="2"
           >
-            Calculate
+            <span class="font-weight-bold">Calculate Now</span>
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -333,6 +480,7 @@ const calculating = ref(false)
 const calculateDialog = ref(false)
 const detailsDialog = ref(false)
 const formValid = ref(false)
+const currentStep = ref(0)
 const thirteenthMonthList = ref([])
 const selectedItem = ref(null)
 const departments = ref([])
@@ -415,6 +563,15 @@ const formatPeriod = (period) => {
   return periods[period] || period
 }
 
+const getPeriodIcon = (period) => {
+  const icons = {
+    full_year: 'mdi-calendar',
+    first_half: 'mdi-calendar-start',
+    second_half: 'mdi-calendar-end'
+  }
+  return icons[period] || 'mdi-calendar'
+}
+
 const fetchThirteenthMonth = async () => {
   loading.value = true
   try {
@@ -448,6 +605,7 @@ const openCalculateDialog = () => {
     department: null,
     payment_date: null
   }
+  currentStep.value = 0
   calculateDialog.value = true
 }
 
@@ -569,5 +727,92 @@ onMounted(() => {
 .v-card-title {
   background: linear-gradient(90deg, #1976d2 0%, #1565c0 100%);
   color: white;
+}
+
+/* Modern Calculate Dialog Styles */
+.calculate-dialog-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.calculate-dialog-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 24px;
+  color: white;
+}
+
+.text-white-70 {
+  opacity: 0.9;
+}
+
+.form-field-wrapper {
+  position: relative;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #424242;
+  margin-bottom: 8px;
+}
+
+.v-select :deep(.v-field) {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.v-select:hover :deep(.v-field) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.v-text-field :deep(.v-field) {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.v-text-field:hover :deep(.v-field) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.v-chip-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Animation for form fields */
+.form-field-wrapper {
+  animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhance button styling */
+.v-btn.v-btn--elevated {
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3) !important;
+  transition: all 0.3s ease;
+}
+
+.v-btn.v-btn--elevated:hover {
+  box-shadow: 0 6px 20px rgba(25, 118, 210, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+/* Alert styling */
+.v-alert {
+  border-radius: 12px;
 }
 </style>

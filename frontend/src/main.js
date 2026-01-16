@@ -8,6 +8,7 @@ import "vue-toastification/dist/index.css";
 
 // Import global styles
 import "./styles/main.scss";
+import "./styles/modern-forms.css";
 
 // Import service worker registration
 import { registerServiceWorker, setupOnlineListener } from "./utils/serviceWorkerManager";

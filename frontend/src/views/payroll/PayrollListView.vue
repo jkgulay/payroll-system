@@ -159,53 +159,112 @@
       </v-data-table>
     </v-card>
 
-    <!-- Create/Edit Dialog -->
-    <v-dialog v-model="dialog" max-width="700" persistent>
-      <v-card>
-        <v-card-title>
-          <span class="text-h5">{{ editMode ? 'Edit' : 'Create' }} Payroll</span>
+    <!-- Create/Edit Dialog - Modern UI -->
+    <v-dialog v-model="dialog" max-width="800" persistent>
+      <v-card class="modern-dialog-card" elevation="24">
+        <!-- Enhanced Header -->
+        <v-card-title class="modern-dialog-header modern-dialog-header-success">
+          <div class="d-flex align-center w-100">
+            <v-avatar color="white" size="48" class="mr-4">
+              <v-icon color="success" size="32">{{ editMode ? 'mdi-pencil' : 'mdi-cash-multiple' }}</v-icon>
+            </v-avatar>
+            <div>
+              <div class="text-h5 font-weight-bold">
+                {{ editMode ? 'Edit' : 'Create' }} Payroll
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ editMode ? 'Update payroll period details' : 'Generate new payroll period' }}
+              </div>
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn icon variant="text" color="white" @click="closeDialog" size="small">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
-        <v-card-text>
+
+        <v-card-text class="pa-6">
           <v-form ref="form" v-model="valid">
-            <v-text-field
-              v-model="formData.period_name"
-              label="Period Name"
-              :rules="[v => !!v || 'Period name is required']"
-              required
-              prepend-icon="mdi-label"
-            ></v-text-field>
+            <!-- Period Name -->
+            <div class="form-field-wrapper">
+              <label class="form-label">
+                <v-icon size="small" color="primary">mdi-label</v-icon>
+                Period Name <span class="text-error">*</span>
+              </label>
+              <v-text-field
+                v-model="formData.period_name"
+                placeholder="Enter period name"
+                :rules="[v => !!v || 'Period name is required']"
+                required
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-label"
+                color="primary"
+              ></v-text-field>
+            </div>
 
             <v-row>
+              <!-- Period Start -->
               <v-col cols="6">
-                <v-text-field
-                  v-model="formData.period_start"
-                  label="Period Start"
-                  type="date"
-                  :rules="[v => !!v || 'Start date is required']"
-                  required
-                  prepend-icon="mdi-calendar-start"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-start</v-icon>
+                    Period Start <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="formData.period_start"
+                    type="date"
+                    placeholder="Select start date"
+                    :rules="[v => !!v || 'Start date is required']"
+                    required
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-start"
+                    color="primary"
+                  ></v-text-field>
+                </div>
               </v-col>
+
+              <!-- Period End -->
               <v-col cols="6">
-                <v-text-field
-                  v-model="formData.period_end"
-                  label="Period End"
-                  type="date"
-                  :rules="[v => !!v || 'End date is required']"
-                  required
-                  prepend-icon="mdi-calendar-end"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-end</v-icon>
+                    Period End <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="formData.period_end"
+                    type="date"
+                    placeholder="Select end date"
+                    :rules="[v => !!v || 'End date is required']"
+                    required
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-end"
+                    color="primary"
+                  ></v-text-field>
+                </div>
               </v-col>
             </v-row>
 
-            <v-text-field
-              v-model="formData.payment_date"
-              label="Payment Date"
-              type="date"
-              :rules="[v => !!v || 'Payment date is required']"
-              required
-              prepend-icon="mdi-calendar-check"
-            ></v-text-field>
+            <!-- Payment Date -->
+            <div class="form-field-wrapper">
+              <label class="form-label">
+                <v-icon size="small" color="primary">mdi-calendar-check</v-icon>
+                Payment Date <span class="text-error">*</span>
+              </label>
+              <v-text-field
+                v-model="formData.payment_date"
+                type="date"
+                placeholder="Select payment date"
+                :rules="[v => !!v || 'Payment date is required']"
+                required
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-calendar-check"
+                color="primary"
+              ></v-text-field>
+            </div>
 
             <v-divider class="my-4"></v-divider>
 

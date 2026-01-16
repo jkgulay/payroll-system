@@ -141,50 +141,94 @@
       </v-col>
     </v-row>
 
-    <!-- New/Edit Leave Dialog -->
-    <v-dialog v-model="showLeaveDialog" max-width="600px" persistent>
-      <v-card>
-        <v-card-title class="bg-primary">
-          <v-icon icon="mdi-calendar-plus" start></v-icon>
-          {{ editMode ? 'Edit Leave Request' : 'File New Leave Request' }}
+    <!-- New/Edit Leave Dialog - Modern UI -->
+    <v-dialog v-model="showLeaveDialog" max-width="700px" persistent>
+      <v-card class="modern-dialog-card" elevation="24">
+        <!-- Enhanced Header -->
+        <v-card-title class="modern-dialog-header modern-dialog-header-primary">
+          <div class="d-flex align-center w-100">
+            <v-avatar color="white" size="48" class="mr-4">
+              <v-icon color="primary" size="32">mdi-calendar-plus</v-icon>
+            </v-avatar>
+            <div>
+              <div class="text-h5 font-weight-bold">
+                {{ editMode ? 'Edit Leave Request' : 'File New Leave Request' }}
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ editMode ? 'Update your leave request details' : 'Submit your leave request for approval' }}
+              </div>
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn icon variant="text" color="white" @click="closeLeaveDialog" size="small">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
-        <v-divider></v-divider>
 
-        <v-card-text class="pt-4">
+        <v-card-text class="pa-6">
           <v-form ref="leaveFormRef" v-model="formValid">
             <v-row>
+              <!-- Leave Type -->
               <v-col cols="12">
-                <v-select
-                  v-model="formData.leave_type_id"
-                  :items="leaveTypes"
-                  item-title="name"
-                  item-value="id"
-                  label="Leave Type *"
-                  :rules="[rules.required]"
-                  prepend-inner-icon="mdi-calendar-text"
-                ></v-select>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-text</v-icon>
+                    Leave Type <span class="text-error">*</span>
+                  </label>
+                  <v-select
+                    v-model="formData.leave_type_id"
+                    :items="leaveTypes"
+                    item-title="name"
+                    item-value="id"
+                    placeholder="Select leave type"
+                    :rules="[rules.required]"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-text"
+                    color="primary"
+                  ></v-select>
+                </div>
+              </v-col>
+
+              <!-- Date Range -->
+              <v-col cols="12" md="6">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-start</v-icon>
+                    From Date <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="formData.leave_date_from"
+                    type="date"
+                    placeholder="Select start date"
+                    :rules="[rules.required]"
+                    :min="minDate"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-start"
+                    color="primary"
+                  ></v-text-field>
+                </div>
               </v-col>
 
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="formData.leave_date_from"
-                  type="date"
-                  label="From Date *"
-                  :rules="[rules.required]"
-                  :min="minDate"
-                  prepend-inner-icon="mdi-calendar-start"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="formData.leave_date_to"
-                  type="date"
-                  label="To Date *"
-                  :rules="[rules.required, rules.endDateAfterStart]"
-                  :min="formData.leave_date_from || minDate"
-                  prepend-inner-icon="mdi-calendar-end"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-end</v-icon>
+                    To Date <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="formData.leave_date_to"
+                    type="date"
+                    placeholder="Select end date"
+                    :rules="[rules.required, rules.endDateAfterStart]"
+                    :min="formData.leave_date_from || minDate"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-end"
+                    color="primary"
+                  ></v-text-field>
+                </div>
               </v-col>
 
               <v-col cols="12">
@@ -198,14 +242,24 @@
                 </v-alert>
               </v-col>
 
+              <!-- Reason -->
               <v-col cols="12">
-                <v-textarea
-                  v-model="formData.reason"
-                  label="Reason *"
-                  :rules="[rules.required]"
-                  rows="3"
-                  prepend-inner-icon="mdi-text"
-                ></v-textarea>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-text-box</v-icon>
+                    Reason <span class="text-error">*</span>
+                  </label>
+                  <v-textarea
+                    v-model="formData.reason"
+                    placeholder="Please provide a reason for your leave request"
+                    :rules="[rules.required]"
+                    rows="3"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-text"
+                    color="primary"
+                  ></v-textarea>
+                </div>
               </v-col>
             </v-row>
           </v-form>
@@ -213,15 +267,28 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions>
+        <!-- Enhanced Actions -->
+        <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn @click="closeLeaveDialog">Cancel</v-btn>
+          <v-btn
+            variant="text"
+            color="grey-darken-1"
+            size="large"
+            @click="closeLeaveDialog"
+            prepend-icon="mdi-close"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="primary"
+            size="large"
             :loading="saving"
             @click="saveLeave"
+            prepend-icon="mdi-check"
+            class="px-6"
+            elevation="2"
           >
-            {{ editMode ? 'Update' : 'Submit' }}
+            <span class="font-weight-bold">{{ editMode ? 'Update' : 'Submit' }}</span>
           </v-btn>
         </v-card-actions>
       </v-card>

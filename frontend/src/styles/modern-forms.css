@@ -1,0 +1,322 @@
+/* Modern Form Dialog Styles - Global */
+
+/* Dialog Card Styling */
+.modern-dialog-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+/* Modern Dialog Headers */
+.modern-dialog-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 24px;
+  color: white;
+}
+
+.modern-dialog-header-primary {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+}
+
+.modern-dialog-header-success {
+  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+}
+
+.modern-dialog-header-warning {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+}
+
+.modern-dialog-header-error {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+}
+
+.modern-dialog-header-info {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+}
+
+/* Text opacity for headers */
+.text-white-70 {
+  opacity: 0.9;
+}
+
+.text-white-50 {
+  opacity: 0.7;
+}
+
+/* Form Field Wrapper */
+.form-field-wrapper {
+  position: relative;
+  animation: fadeInUp 0.4s ease;
+}
+
+/* Form Labels */
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #424242;
+  margin-bottom: 8px;
+}
+
+/* Form Fields Styling */
+.v-select :deep(.v-field),
+.v-text-field :deep(.v-field),
+.v-textarea :deep(.v-field),
+.v-autocomplete :deep(.v-field),
+.v-combobox :deep(.v-field),
+.v-file-input :deep(.v-field) {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.v-select:hover :deep(.v-field),
+.v-text-field:hover :deep(.v-field),
+.v-textarea:hover :deep(.v-field),
+.v-autocomplete:hover :deep(.v-field),
+.v-combobox:hover :deep(.v-field),
+.v-file-input:hover :deep(.v-field) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.v-select:focus-within :deep(.v-field),
+.v-text-field:focus-within :deep(.v-field),
+.v-textarea:focus-within :deep(.v-field),
+.v-autocomplete:focus-within :deep(.v-field),
+.v-combobox:focus-within :deep(.v-field),
+.v-file-input:focus-within :deep(.v-field) {
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.2);
+}
+
+/* Step Indicators */
+.v-chip-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Button Enhancements */
+.v-btn.v-btn--elevated {
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3) !important;
+  transition: all 0.3s ease;
+}
+
+.v-btn.v-btn--elevated:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(25, 118, 210, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+.v-btn.v-btn--elevated.success {
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+}
+
+.v-btn.v-btn--elevated.success:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4) !important;
+}
+
+.v-btn.v-btn--elevated.error {
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3) !important;
+}
+
+.v-btn.v-btn--elevated.error:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4) !important;
+}
+
+/* Alert Styling */
+.v-alert {
+  border-radius: 12px;
+}
+
+/* Card Styling */
+.modern-card {
+  border-radius: 16px !important;
+  transition: all 0.3s ease;
+}
+
+.modern-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Data Table Enhancements */
+.v-data-table {
+  border-radius: 12px !important;
+}
+
+.v-data-table :deep(.v-data-table__thead) {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+}
+
+.v-data-table :deep(.v-data-table__tr:hover) {
+  background-color: rgba(25, 118, 210, 0.05) !important;
+}
+
+/* Dialog Actions Styling */
+.modern-dialog-actions {
+  padding: 16px 24px;
+  background: #fafafa;
+}
+
+/* Badge/Chip Styling */
+.modern-chip {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 16px;
+}
+
+.section-header-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 8px;
+}
+
+/* Loading States */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 16px;
+}
+
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #757575;
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  color: #bdbdbd;
+  margin-bottom: 16px;
+}
+
+/* Divider Styling */
+.modern-divider {
+  border-color: rgba(0, 0, 0, 0.08);
+  margin: 24px 0;
+}
+
+/* Input Groups */
+.input-group {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+  .modern-dialog-header {
+    padding: 16px;
+  }
+  
+  .form-label {
+    font-size: 12px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Smooth Transitions */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Focus States */
+.v-field:focus-within {
+  outline: 2px solid rgba(25, 118, 210, 0.2);
+  outline-offset: 2px;
+}
+
+/* Disabled State */
+.v-field--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Error States */
+.v-field--error {
+  border-color: #f44336 !important;
+}
+
+/* Success States */
+.v-field--success {
+  border-color: #4caf50 !important;
+}
+
+/* Info Banner */
+.info-banner {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(25, 118, 210, 0.1) 100%);
+  border-left: 4px solid #2196f3;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+/* Warning Banner */
+.warning-banner {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(245, 124, 0, 0.1) 100%);
+  border-left: 4px solid #ff9800;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+/* Success Banner */
+.success-banner {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%);
+  border-left: 4px solid #4caf50;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+/* Error Banner */
+.error-banner {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(211, 47, 47, 0.1) 100%);
+  border-left: 4px solid #f44336;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}

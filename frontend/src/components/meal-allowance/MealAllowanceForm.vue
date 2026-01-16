@@ -5,75 +5,148 @@
     max-width="1200px"
     persistent
   >
-    <v-card>
-      <v-card-title class="d-flex align-center bg-primary">
-        <v-icon left>mdi-food</v-icon>
-        {{ isEdit ? "Edit Meal Allowance" : "Create Meal Allowance" }}
-        <v-spacer></v-spacer>
-        <v-btn icon="mdi-close" variant="text" @click="close"></v-btn>
+    <v-card class="modern-dialog-card" elevation="24">
+      <!-- Enhanced Header -->
+      <v-card-title class="modern-dialog-header modern-dialog-header-warning">
+        <div class="d-flex align-center w-100">
+          <v-avatar color="white" size="48" class="mr-4">
+            <v-icon color="warning" size="32">mdi-food</v-icon>
+          </v-avatar>
+          <div>
+            <div class="text-h5 font-weight-bold">
+              {{ isEdit ? "Edit Meal Allowance" : "Create Meal Allowance" }}
+            </div>
+            <div class="text-subtitle-2 text-white-70">
+              {{ isEdit ? 'Update meal allowance details' : 'Add meal allowance for employees' }}
+            </div>
+          </div>
+          <v-spacer></v-spacer>
+          <v-btn icon variant="text" color="white" @click="close" size="small">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
       </v-card-title>
 
-      <v-card-text class="pt-4">
+      <v-card-text class="pa-6">
         <v-form ref="formRef" @submit.prevent="save">
           <v-row>
+            <!-- Title -->
             <v-col cols="12" md="6">
-              <v-text-field
-                v-model="form.title"
-                label="Title *"
-                :rules="[rules.required]"
-                outlined
-                dense
-              ></v-text-field>
+              <div class="form-field-wrapper">
+                <label class="form-label">
+                  <v-icon size="small" color="primary">mdi-format-title</v-icon>
+                  Title <span class="text-error">*</span>
+                </label>
+                <v-text-field
+                  v-model="form.title"
+                  placeholder="Enter title"
+                  :rules="[rules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-format-title"
+                  color="primary"
+                ></v-text-field>
+              </div>
             </v-col>
+
+            <!-- Location -->
             <v-col cols="12" md="6">
-              <v-text-field
-                v-model="form.location"
-                label="Location"
-                outlined
-                dense
-              ></v-text-field>
+              <div class="form-field-wrapper">
+                <label class="form-label">
+                  <v-icon size="small" color="primary">mdi-map-marker</v-icon>
+                  Location
+                </label>
+                <v-text-field
+                  v-model="form.location"
+                  placeholder="Enter location"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-map-marker"
+                  color="primary"
+                ></v-text-field>
+              </div>
             </v-col>
+
+            <!-- Period Start -->
             <v-col cols="12" md="6">
-              <v-text-field
-                v-model="form.period_start"
-                label="Period Start *"
-                type="date"
-                :rules="[rules.required]"
-                outlined
-                dense
-              ></v-text-field>
+              <div class="form-field-wrapper">
+                <label class="form-label">
+                  <v-icon size="small" color="primary">mdi-calendar-start</v-icon>
+                  Period Start <span class="text-error">*</span>
+                </label>
+                <v-text-field
+                  v-model="form.period_start"
+                  type="date"
+                  placeholder="Select start date"
+                  :rules="[rules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-calendar-start"
+                  color="primary"
+                ></v-text-field>
+              </div>
             </v-col>
+
+            <!-- Period End -->
             <v-col cols="12" md="6">
-              <v-text-field
-                v-model="form.period_end"
-                label="Period End *"
-                type="date"
-                :rules="[rules.required]"
-                outlined
-                dense
-              ></v-text-field>
+              <div class="form-field-wrapper">
+                <label class="form-label">
+                  <v-icon size="small" color="primary">mdi-calendar-end</v-icon>
+                  Period End <span class="text-error">*</span>
+                </label>
+                <v-text-field
+                  v-model="form.period_end"
+                  type="date"
+                  placeholder="Select end date"
+                  :rules="[rules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-calendar-end"
+                  color="primary"
+                ></v-text-field>
+              </div>
             </v-col>
+
+            <!-- Position/Role -->
             <v-col cols="12" md="6">
-              <v-select
-                v-model="form.position_id"
-                :items="positions"
-                item-title="position_name"
-                item-value="id"
-                label="Position/Role *"
-                :rules="[rules.required]"
-                outlined
-                dense
-                @update:model-value="loadEmployees"
-              ></v-select>
+              <div class="form-field-wrapper">
+                <label class="form-label">
+                  <v-icon size="small" color="primary">mdi-account-hard-hat</v-icon>
+                  Position/Role <span class="text-error">*</span>
+                </label>
+                <v-select
+                  v-model="form.position_id"
+                  :items="positions"
+                  item-title="position_name"
+                  item-value="id"
+                  placeholder="Select position/role"
+                  :rules="[rules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-account-hard-hat"
+                  color="primary"
+                  @update:model-value="loadEmployees"
+                ></v-select>
+              </div>
             </v-col>
+
+            <!-- Notes -->
             <v-col cols="12">
-              <v-textarea
-                v-model="form.notes"
-                label="Notes"
-                outlined
-                dense
-                rows="2"
-              ></v-textarea>
+              <div class="form-field-wrapper">
+                <label class="form-label">
+                  <v-icon size="small" color="primary">mdi-note-text</v-icon>
+                  Notes
+                </label>
+                <v-textarea
+                  v-model="form.notes"
+                  placeholder="Enter notes"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-note-text"
+                  color="primary"
+                  rows="2"
+                ></v-textarea>
+              </div>
             </v-col>
           </v-row>
 

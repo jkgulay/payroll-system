@@ -213,136 +213,238 @@
       </v-data-table>
     </v-card>
 
-    <!-- Add/Edit Dialog -->
-    <v-dialog v-model="dialog" max-width="800px" persistent>
-      <v-card>
-        <v-card-title class="text-h5">
-          {{
-            editMode
-              ? "Edit Loan"
-              : isEmployeeRequest
-              ? "Request Loan"
-              : "Add Loan"
-          }}
+    <!-- Add/Edit Dialog - Modern UI -->
+    <v-dialog v-model="dialog" max-width="900px" persistent>
+      <v-card class="modern-dialog-card" elevation="24">
+        <!-- Enhanced Header -->
+        <v-card-title class="modern-dialog-header modern-dialog-header-info">
+          <div class="d-flex align-center w-100">
+            <v-avatar color="white" size="48" class="mr-4">
+              <v-icon color="info" size="32">
+                {{ editMode ? 'mdi-pencil' : isEmployeeRequest ? 'mdi-hand-coin' : 'mdi-cash-plus' }}
+              </v-icon>
+            </v-avatar>
+            <div>
+              <div class="text-h5 font-weight-bold">
+                {{
+                  editMode
+                    ? "Edit Loan"
+                    : isEmployeeRequest
+                    ? "Request Loan"
+                    : "Add Loan"
+                }}
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ editMode ? 'Update loan details' : isEmployeeRequest ? 'Submit loan request for approval' : 'Create new employee loan' }}
+              </div>
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn icon variant="text" color="white" @click="closeDialog" size="small">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text class="pa-6">
           <v-form ref="form" v-model="formValid">
             <v-row>
+              <!-- Employee Selection -->
               <v-col cols="12" v-if="!isEmployeeRequest">
-                <v-autocomplete
-                  v-model="formData.employee_id"
-                  :items="employees"
-                  item-title="full_name"
-                  item-value="id"
-                  label="Employee *"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                  :disabled="editMode"
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template v-slot:title>
-                        {{ item.raw.full_name }}
-                      </template>
-                      <template v-slot:subtitle>
-                        {{ item.raw.employee_number }} - {{ item.raw.position }}
-                      </template>
-                    </v-list-item>
-                  </template>
-                </v-autocomplete>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-account-search</v-icon>
+                    Employee <span class="text-error">*</span>
+                  </label>
+                  <v-autocomplete
+                    v-model="formData.employee_id"
+                    :items="employees"
+                    item-title="full_name"
+                    item-value="id"
+                    placeholder="Search and select employee"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-account-search"
+                    color="primary"
+                    :rules="[rules.required]"
+                    :disabled="editMode"
+                  >
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template v-slot:title>
+                          {{ item.raw.full_name }}
+                        </template>
+                        <template v-slot:subtitle>
+                          {{ item.raw.employee_number }} - {{ item.raw.position }}
+                        </template>
+                      </v-list-item>
+                    </template>
+                  </v-autocomplete>
+                </div>
               </v-col>
 
+              <!-- Loan Type -->
               <v-col cols="12" md="6">
-                <v-select
-                  v-model="formData.loan_type"
-                  :items="loanTypes"
-                  label="Loan Type *"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                  @update:model-value="onLoanTypeChange"
-                ></v-select>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-tag</v-icon>
+                    Loan Type <span class="text-error">*</span>
+                  </label>
+                  <v-select
+                    v-model="formData.loan_type"
+                    :items="loanTypes"
+                    placeholder="Select loan type"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-tag"
+                    color="primary"
+                    :rules="[rules.required]"
+                    @update:model-value="onLoanTypeChange"
+                  ></v-select>
+                </div>
               </v-col>
 
+              <!-- Principal Amount -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="formData.principal_amount"
-                  label="Principal Amount *"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  :rules="[rules.required, rules.positive]"
-                  @update:model-value="calculateLoan"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-currency-php</v-icon>
+                    Principal Amount <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model.number="formData.principal_amount"
+                    type="number"
+                    prefix="₱"
+                    placeholder="0.00"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-currency-php"
+                    color="primary"
+                    :rules="[rules.required, rules.positive]"
+                    @update:model-value="calculateLoan"
+                  ></v-text-field>
+                </div>
               </v-col>
 
+              <!-- Interest Rate -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="formData.interest_rate"
-                  label="Interest Rate (%) *"
-                  type="number"
-                  suffix="%"
-                  variant="outlined"
-                  :rules="[rules.required, rules.percentage]"
-                  @update:model-value="calculateLoan"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-percent</v-icon>
+                    Interest Rate (%) <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model.number="formData.interest_rate"
+                    type="number"
+                    suffix="%"
+                    placeholder="0"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-percent"
+                    color="primary"
+                    :rules="[rules.required, rules.percentage]"
+                    @update:model-value="calculateLoan"
+                  ></v-text-field>
+                </div>
               </v-col>
 
+              <!-- Loan Term -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="formData.loan_term_months"
-                  label="Loan Term (Months) *"
-                  type="number"
-                  variant="outlined"
-                  :rules="[rules.required, rules.positive]"
-                  @update:model-value="calculateLoan"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-month</v-icon>
+                    Loan Term (Months) <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model.number="formData.loan_term_months"
+                    type="number"
+                    placeholder="12"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-month"
+                    color="primary"
+                    :rules="[rules.required, rules.positive]"
+                    @update:model-value="calculateLoan"
+                  ></v-text-field>
+                </div>
               </v-col>
 
+              <!-- Payment Frequency -->
               <v-col cols="12" md="6">
-                <v-select
-                  v-model="formData.payment_frequency"
-                  :items="frequencyOptions"
-                  label="Payment Frequency *"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                  @update:model-value="calculateLoan"
-                ></v-select>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-sync</v-icon>
+                    Payment Frequency <span class="text-error">*</span>
+                  </label>
+                  <v-select
+                    v-model="formData.payment_frequency"
+                    :items="frequencyOptions"
+                    placeholder="Select payment frequency"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-sync"
+                    color="primary"
+                    :rules="[rules.required]"
+                    @update:model-value="calculateLoan"
+                  ></v-select>
+                </div>
               </v-col>
 
+              <!-- Loan Date -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="formData.loan_date"
-                  label="Loan Date *"
-                  type="date"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar</v-icon>
+                    Loan Date <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="formData.loan_date"
+                    type="date"
+                    placeholder="Select loan date"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar"
+                    color="primary"
+                    :rules="[rules.required]"
+                  ></v-text-field>
+                </div>
               </v-col>
 
+              <!-- First Payment Date -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="formData.first_payment_date"
-                  label="First Payment Date *"
-                  type="date"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-calendar-start</v-icon>
+                    First Payment Date <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="formData.first_payment_date"
+                    type="date"
+                    placeholder="Select first payment date"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-start"
+                    color="primary"
+                    :rules="[rules.required]"
+                  ></v-text-field>
+                </div>
               </v-col>
 
-              <!-- Calculated Fields -->
+              <!-- Calculated Fields / Loan Summary -->
               <v-col cols="12">
-                <v-alert type="info" variant="tonal">
-                  <div class="text-subtitle-2 mb-2">Loan Summary</div>
+                <v-alert type="info" variant="tonal" icon="mdi-information" class="mt-2" style="border-radius: 12px;">
+                  <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center">
+                    <v-icon size="small" class="mr-2">mdi-calculator</v-icon>
+                    Loan Summary
+                  </div>
                   <div class="d-flex justify-space-between mb-1">
                     <span>Principal:</span>
-                    <span class="font-weight-bold"
+                    <span class="font-weight-bold text-primary"
                       >₱{{ formatNumber(formData.principal_amount || 0) }}</span
                     >
                   </div>
                   <div class="d-flex justify-space-between mb-1">
                     <span>Interest ({{ formData.interest_rate || 0 }}%):</span>
-                    <span class="font-weight-bold"
+                    <span class="font-weight-bold text-primary"
                       >₱{{ formatNumber(calculatedInterest) }}</span
                     >
                   </div>
