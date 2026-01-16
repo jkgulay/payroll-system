@@ -281,8 +281,6 @@
               class="mb-4"
             >
               <v-radio label="All Employees" value="all"></v-radio>
-              <v-radio label="By Position/Role" value="position"></v-radio>
-              <v-radio label="By Project" value="project"></v-radio>
               <v-radio label="By Department" value="department"></v-radio>
               <v-radio label="By Staff Type" value="staff_type"></v-radio>
             </v-radio-group>
