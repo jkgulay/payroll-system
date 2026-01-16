@@ -210,7 +210,14 @@ class PayrollController extends Controller
 
     private function generatePayrollItems(Payroll $payroll, array $filters = [])
     {
+        Log::info('=== Payroll Generation Debug ===');
+        Log::info('Filters received:', $filters);
+        Log::info('Has attendance value: ' . var_export($filters['has_attendance'] ?? 'not set', true));
+        Log::info('Has attendance empty check: ' . var_export(empty($filters['has_attendance']), true));
+        
         $query = Employee::where('activity_status', 'active');
+        $initialCount = Employee::where('activity_status', 'active')->count();
+        Log::info('Initial active employees: ' . $initialCount);
 
         // Apply filters based on filter type
         if (!empty($filters['type']) && $filters['type'] !== 'all') {
@@ -224,13 +231,19 @@ class PayrollController extends Controller
                 $query->whereIn('staff_type', $filters['staff_types']);
             }
         }
+        
+        $afterTypeFilter = $query->count();
+        Log::info('After type filter: ' . $afterTypeFilter);
 
         // Filter by attendance if requested
         if (!empty($filters['has_attendance'])) {
+            Log::info('Applying attendance filter for period: ' . $payroll->period_start . ' to ' . $payroll->period_end);
             $query->whereHas('attendance', function($q) use ($payroll) {
                 $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                   ->where('status', '!=', 'absent');
             });
+            $afterAttendance = $query->count();
+            Log::info('After attendance filter: ' . $afterAttendance);
         }
 
         // Order by employee number for consistent selection

@@ -22,6 +22,7 @@ class ThirteenthMonthPay extends Model
         'approved_by',
         'approved_at',
         'total_amount',
+        'department',
     ];
 
     protected $casts = [

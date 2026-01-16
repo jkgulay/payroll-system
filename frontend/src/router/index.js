@@ -178,6 +178,15 @@ const router = createRouter({
           meta: { title: "Allowances", roles: ["admin", "accountant", "hr"] },
         },
         {
+          path: "thirteenth-month-pay",
+          name: "thirteenth-month-pay",
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/ThirteenthMonthPayView.vue"
+            ),
+          meta: { title: "13th Month Pay", roles: ["admin", "accountant", "hr"] },
+        },
+        {
           path: "loans",
           name: "loans",
           component: () =>

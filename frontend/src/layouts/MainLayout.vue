@@ -415,6 +415,13 @@ const menuItems = computed(() => {
           roles: ["admin", "accountant", "hr"],
         },
         {
+          title: "13th Month Pay",
+          icon: "mdi-gift-outline",
+          value: "thirteenth-month-pay",
+          to: "/thirteenth-month-pay",
+          roles: ["admin", "accountant", "hr"],
+        },
+        {
           title: "Loans",
           icon: "mdi-hand-coin-outline",
           value: "loans",

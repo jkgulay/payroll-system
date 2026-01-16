@@ -482,6 +482,7 @@ const formData = ref({
   departments: [],
   staff_types: [],
   employee_limit: null,
+  has_attendance: false,
 });
 
 const headers = [
