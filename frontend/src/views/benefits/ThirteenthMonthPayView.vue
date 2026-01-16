@@ -139,6 +139,20 @@
               ></v-btn>
             </template>
           </v-tooltip>
+
+          <v-tooltip text="Delete" location="top">
+            <template v-slot:activator="{ props }">
+              <v-btn
+                v-if="item.status === 'computed'"
+                v-bind="props"
+                icon="mdi-delete"
+                size="small"
+                variant="text"
+                color="error"
+                @click="deleteItem(item)"
+              ></v-btn>
+            </template>
+          </v-tooltip>
         </template>
       </v-data-table>
     </v-card>
@@ -521,6 +535,19 @@ const markPaid = async (item) => {
   } catch (error) {
     console.error('Error marking as paid:', error)
     showSnackbar(error.response?.data?.message || 'Failed to mark as paid', 'error')
+  }
+}
+
+const deleteItem = async (item) => {
+  if (!confirm(`Are you sure you want to delete batch ${item.batch_number}? This action cannot be undone.`)) return
+  
+  try {
+    const response = await api.delete(`/thirteenth-month/${item.id}`)
+    showSnackbar(response.data.message || 'Deleted successfully', 'success')
+    fetchThirteenthMonth()
+  } catch (error) {
+    console.error('Error deleting:', error)
+    showSnackbar(error.response?.data?.message || 'Failed to delete', 'error')
   }
 }
 

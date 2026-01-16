@@ -324,4 +324,42 @@ class ThirteenthMonthPayController extends Controller
 
         return response()->json($departments);
     }
+
+    /**
+     * Delete 13th month pay record
+     * Only computed status can be deleted
+     */
+    public function destroy($id)
+    {
+        $thirteenthMonth = ThirteenthMonthPay::findOrFail($id);
+
+        // Only allow deletion of computed status
+        if ($thirteenthMonth->status !== 'computed') {
+            return response()->json([
+                'message' => 'Only computed 13th month pay records can be deleted'
+            ], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Delete related items first
+            $thirteenthMonth->items()->delete();
+            
+            // Delete the main record
+            $thirteenthMonth->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => '13th month pay record deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting 13th month pay: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to delete 13th month pay record',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
