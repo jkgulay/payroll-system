@@ -106,6 +106,10 @@ const customTheme = {
     navy: "#1e293b", // Navy - Dark elements
     indigo: "#6366f1", // Indigo - Primary highlights
     violet: "#8b5cf6", // Violet - Secondary highlights
+    // Legacy color aliases for backward compatibility
+    steel: "#64748b", // Maps to slate
+    hardhat: "#ec4899", // Maps to accent/pink
+    concrete: "#94a3b8", // Light slate
   },
 };
 
@@ -126,6 +130,10 @@ const constructionDark = {
     navy: "#0f172a",
     indigo: "#818cf8",
     violet: "#a78bfa",
+    // Legacy color aliases for backward compatibility
+    steel: "#94a3b8", // Light slate for dark mode
+    hardhat: "#f472b6", // Maps to accent/pink
+    concrete: "#cbd5e1", // Lighter slate
   },
 };
 

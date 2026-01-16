@@ -58,6 +58,7 @@ defineProps({
 .chart-skeleton {
   padding: 24px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   border-radius: 20px;
   border: 1px solid rgba(99, 102, 241, 0.1);

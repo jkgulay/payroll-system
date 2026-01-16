@@ -1041,6 +1041,7 @@ Role: Employee
   align-items: center;
   padding: 24px 32px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   border-radius: 20px;
   border: 1px solid rgba(99, 102, 241, 0.15);
@@ -1192,6 +1193,7 @@ Role: Employee
 // Modern chips
 :deep(.v-chip) {
   font-weight: 600;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
