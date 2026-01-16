@@ -292,7 +292,7 @@ class ThirteenthMonthPayController extends Controller
 
         // Get company info from environment or config
         $companyName = config('payroll.company.name', env('COMPANY_NAME', 'GIOVANNI CONSTRUCTION'));
-        $companyAddress = env('COMPANY_ADDRESS', 'Hinugyaw Subdivision, Gonoan Road, Butuan City');
+        $companyAddress = env('COMPANY_ADDRESS', 'Imadejas Subdivision, Capitol Bonbon');
 
         // Prepare data for PDF
         $data = [
