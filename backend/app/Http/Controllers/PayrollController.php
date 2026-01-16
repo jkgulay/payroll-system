@@ -221,14 +221,25 @@ class PayrollController extends Controller
 
         // Apply filters based on filter type
         if (!empty($filters['type']) && $filters['type'] !== 'all') {
+            $filterApplied = false;
+            
             if ($filters['type'] === 'position' && !empty($filters['position_ids'])) {
                 $query->whereIn('position_id', $filters['position_ids']);
+                $filterApplied = true;
             } elseif ($filters['type'] === 'project' && !empty($filters['project_ids'])) {
                 $query->whereIn('project_id', $filters['project_ids']);
+                $filterApplied = true;
             } elseif ($filters['type'] === 'department' && !empty($filters['departments'])) {
                 $query->whereIn('department', $filters['departments']);
+                $filterApplied = true;
             } elseif ($filters['type'] === 'staff_type' && !empty($filters['staff_types'])) {
                 $query->whereIn('staff_type', $filters['staff_types']);
+                $filterApplied = true;
+            }
+            
+            // If filter type is set but no specific values provided, treat as 'all'
+            if (!$filterApplied) {
+                Log::info('Filter type "' . $filters['type'] . '" set but no specific values provided, treating as "all"');
             }
         }
         
@@ -257,7 +268,21 @@ class PayrollController extends Controller
         $employees = $query->get();
         
         if ($employees->isEmpty()) {
-            throw new \Exception('No employees found matching the selected filters');
+            $errorMsg = 'No employees found matching the selected filters';
+            
+            // Provide more specific error message
+            if (!empty($filters['has_attendance'])) {
+                $errorMsg .= '. Note: The "Only include employees with attendance" option is enabled. ';
+                if ($afterTypeFilter > 0) {
+                    $errorMsg .= "Found {$afterTypeFilter} employee(s) in the selected department/filter, but none have attendance records for this period.";
+                } else {
+                    $errorMsg .= 'No employees found in the selected department/filter.';
+                }
+            } elseif ($afterTypeFilter === 0) {
+                $errorMsg .= '. No employees found in the selected department/filter.';
+            }
+            
+            throw new \Exception($errorMsg);
         }
 
         $totalGross = 0;
