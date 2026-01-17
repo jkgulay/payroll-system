@@ -61,6 +61,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/employees/{employee}/deductions', [App\Http\Controllers\Api\EmployeeController::class, 'deductions']);
     Route::get('/employees/{employee}/credentials', [App\Http\Controllers\Api\EmployeeController::class, 'getCredentials']);
     Route::post('/employees/{employee}/reset-password', [App\Http\Controllers\Api\EmployeeController::class, 'resetPassword']);
+    Route::post('/employees/{employee}/update-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'updatePayRate']);
+    Route::post('/employees/{employee}/clear-custom-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'clearCustomPayRate']);
 
     // Employee Applications
     Route::apiResource('employee-applications', App\Http\Controllers\Api\EmployeeApplicationController::class);

@@ -46,6 +46,7 @@ class Employee extends Model
         'separation_reason',
         'salary_type',
         'basic_salary',
+        'custom_pay_rate',
         // Government IDs
         'sss_number',
         'philhealth_number',
@@ -66,6 +67,7 @@ class Employee extends Model
         'date_regularized' => 'date',
         'date_separated' => 'date',
         'basic_salary' => 'decimal:2',
+        'custom_pay_rate' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
@@ -238,16 +240,21 @@ class Employee extends Model
 
     /**
      * Get the effective basic salary for this employee
-     * Priority: PositionRate daily_rate > manual basic_salary field
+     * Priority: custom_pay_rate > PositionRate daily_rate > manual basic_salary field
      */
     public function getBasicSalary(): float
     {
-        // If employee has position_id, get rate from PositionRate table
+        // Priority 1: Custom pay rate set by admin (overrides everything)
+        if ($this->custom_pay_rate !== null) {
+            return (float) $this->custom_pay_rate;
+        }
+
+        // Priority 2: If employee has position_id, get rate from PositionRate table
         if ($this->position_id && $this->positionRate) {
             return (float) $this->positionRate->daily_rate;
         }
 
-        // Fallback to manual basic_salary field (for backward compatibility)
+        // Priority 3: Fallback to manual basic_salary field (for backward compatibility)
         return (float) $this->basic_salary;
     }
 

@@ -212,6 +212,24 @@
             {{ item.position || "N/A" }}
           </template>
 
+          <template v-slot:item.pay_rate="{ item }">
+            <div class="text-right">
+              <div class="font-weight-bold">
+                {{ formatCurrency(getEmployeeEffectiveRate(item)) }}
+              </div>
+              <v-chip
+                v-if="item.custom_pay_rate"
+                size="x-small"
+                color="success"
+                variant="tonal"
+                class="mt-1"
+              >
+                <v-icon start size="x-small">mdi-star</v-icon>
+                Custom
+              </v-chip>
+            </div>
+          </template>
+
           <template v-slot:item.work_schedule="{ item }">
             <v-chip
               size="small"
@@ -261,6 +279,12 @@
                     <v-icon color="info">mdi-account-key</v-icon>
                   </template>
                   <v-list-item-title>View Credentials</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="openPayRateDialog(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="success">mdi-cash</v-icon>
+                  </template>
+                  <v-list-item-title>Update Pay Rate</v-list-item-title>
                 </v-list-item>
                 <v-divider></v-divider>
                 <v-list-item
@@ -909,6 +933,118 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Pay Rate Update Dialog -->
+    <v-dialog v-model="showPayRateDialog" max-width="600px">
+      <v-card>
+        <v-card-title class="text-h5 py-4 bg-success">
+          <v-icon start>mdi-cash</v-icon>
+          Update Employee Pay Rate
+        </v-card-title>
+        <v-divider></v-divider>
+
+        <v-card-text class="pt-6">
+          <v-alert type="info" variant="tonal" class="mb-4">
+            <div class="text-h6 mb-2">
+              {{ payRateEmployee?.employee_number }} -
+              {{ payRateEmployee?.first_name }}
+              {{ payRateEmployee?.last_name }}
+            </div>
+            <div class="text-caption mt-2">
+              <strong>Position:</strong> {{ payRateEmployee?.position || 'N/A' }}
+            </div>
+          </v-alert>
+
+          <v-form ref="payRateForm" v-model="payRateFormValid">
+            <!-- Current Rate Info -->
+            <v-sheet color="grey-lighten-4" rounded class="pa-4 mb-4">
+              <div class="text-subtitle-2 mb-2">Current Pay Rate Information</div>
+              <div class="mb-2">
+                <span class="text-caption">Position-Based Rate:</span>
+                <span class="text-body-1 font-weight-bold ml-2">
+                  {{ formatCurrency(getEmployeePositionRate(payRateEmployee)) }}
+                </span>
+              </div>
+              <div v-if="payRateEmployee?.custom_pay_rate" class="mb-2">
+                <span class="text-caption">Current Custom Rate:</span>
+                <span class="text-body-1 font-weight-bold ml-2 text-success">
+                  {{ formatCurrency(payRateEmployee?.custom_pay_rate) }}
+                </span>
+                <v-chip size="x-small" color="success" class="ml-2">Active</v-chip>
+              </div>
+              <div class="mt-2">
+                <span class="text-caption">Effective Rate:</span>
+                <span class="text-h6 font-weight-bold ml-2 text-primary">
+                  {{ formatCurrency(getEmployeeEffectiveRate(payRateEmployee)) }}/day
+                </span>
+              </div>
+            </v-sheet>
+
+            <!-- New Custom Rate Input -->
+            <v-text-field
+              v-model.number="payRateData.custom_pay_rate"
+              label="New Custom Pay Rate (₱)"
+              type="number"
+              variant="outlined"
+              :rules="[
+                (v) => v !== null && v !== undefined && v !== '' || 'Required',
+                (v) => v >= 0 || 'Rate must be positive',
+                (v) => v <= 999999.99 || 'Rate is too large',
+              ]"
+              prefix="₱"
+              hint="This will override the position-based rate"
+              persistent-hint
+              class="mb-4"
+            ></v-text-field>
+
+            <!-- Reason (optional) -->
+            <v-textarea
+              v-model="payRateData.reason"
+              label="Reason for Rate Change (Optional)"
+              variant="outlined"
+              rows="3"
+              counter="500"
+              hint="For audit trail purposes"
+              persistent-hint
+            ></v-textarea>
+
+            <v-alert type="warning" variant="tonal" class="mt-4">
+              <div class="text-subtitle-2 mb-1">This change will:</div>
+              <ul class="pl-4">
+                <li>Override the position-based rate for this employee</li>
+                <li>Apply to all future payroll, DTR, and 13th month calculations</li>
+                <li>Be logged in the audit trail</li>
+              </ul>
+            </v-alert>
+          </v-form>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-4">
+          <v-btn
+            v-if="payRateEmployee?.custom_pay_rate"
+            variant="text"
+            prepend-icon="mdi-restore"
+            color="warning"
+            @click="clearCustomPayRate"
+            :loading="clearingPayRate"
+          >
+            Clear Custom Rate
+          </v-btn>
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="closePayRateDialog"> Cancel </v-btn>
+          <v-btn
+            color="success"
+            @click="updatePayRate"
+            :loading="updatingPayRate"
+            :disabled="!payRateFormValid"
+          >
+            Update Pay Rate
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -973,6 +1109,17 @@ const newGeneratedPassword = ref("");
 const loadingCredentials = ref(false);
 const resettingPassword = ref(false);
 
+// Pay Rate Dialog
+const showPayRateDialog = ref(false);
+const payRateEmployee = ref(null);
+const payRateFormValid = ref(false);
+const payRateData = ref({
+  custom_pay_rate: null,
+  reason: '',
+});
+const updatingPayRate = ref(false);
+const clearingPayRate = ref(false);
+
 const projects = ref([]);
 const employeeForm = ref(null);
 
@@ -990,6 +1137,7 @@ const headers = [
   { title: "Department", key: "department", sortable: true },
   { title: "Staff Type", key: "staff_type", sortable: true },
   { title: "Position", key: "position", sortable: true },
+  { title: "Pay Rate", key: "pay_rate", sortable: false },
   { title: "Date Hired", key: "date_hired", sortable: true },
   { title: "Contract Type", key: "contract_type", sortable: true },
   { title: "Status", key: "activity_status", sortable: true },
@@ -1396,6 +1544,111 @@ function closeCredentialsDialog() {
   selectedCredentialsEmployee.value = null;
   employeeCredentials.value = null;
   newGeneratedPassword.value = "";
+}
+
+// Pay Rate Functions
+function openPayRateDialog(employee) {
+  payRateEmployee.value = employee;
+  payRateData.value = {
+    custom_pay_rate: employee.custom_pay_rate || getEmployeeEffectiveRate(employee),
+    reason: '',
+  };
+  showPayRateDialog.value = true;
+}
+
+function closePayRateDialog() {
+  showPayRateDialog.value = false;
+  payRateEmployee.value = null;
+  payRateData.value = {
+    custom_pay_rate: null,
+    reason: '',
+  };
+}
+
+async function updatePayRate() {
+  if (!payRateFormValid.value) return;
+
+  updatingPayRate.value = true;
+  try {
+    const response = await api.post(
+      `/employees/${payRateEmployee.value.id}/update-pay-rate`,
+      {
+        custom_pay_rate: payRateData.value.custom_pay_rate,
+        reason: payRateData.value.reason,
+      }
+    );
+
+    toast.success(`Pay rate updated successfully from ₱${response.data.old_rate} to ₱${response.data.new_rate}`);
+    
+    // Refresh the employee list to show updated rates
+    await fetchEmployees();
+    closePayRateDialog();
+  } catch (error) {
+    console.error('Error updating pay rate:', error);
+    toast.error(error.response?.data?.message || 'Failed to update pay rate');
+  } finally {
+    updatingPayRate.value = false;
+  }
+}
+
+async function clearCustomPayRate() {
+  if (!confirm('Are you sure you want to clear the custom pay rate? This will revert to the position-based rate.')) {
+    return;
+  }
+
+  clearingPayRate.value = true;
+  try {
+    const response = await api.post(
+      `/employees/${payRateEmployee.value.id}/clear-custom-pay-rate`,
+      {
+        reason: payRateData.value.reason,
+      }
+    );
+
+    toast.success(`Custom pay rate cleared. Rate changed from ₱${response.data.old_rate} to ₱${response.data.new_rate}`);
+    
+    // Refresh the employee list to show updated rates
+    await fetchEmployees();
+    closePayRateDialog();
+  } catch (error) {
+    console.error('Error clearing custom pay rate:', error);
+    toast.error(error.response?.data?.message || 'Failed to clear custom pay rate');
+  } finally {
+    clearingPayRate.value = false;
+  }
+}
+
+function getEmployeePositionRate(employee) {
+  if (!employee) return 0;
+  
+  // Get rate from position
+  if (employee.position) {
+    const rate = getRate(employee.position);
+    if (rate) return rate;
+  }
+  
+  // Fallback to basic_salary field
+  return employee.basic_salary || 0;
+}
+
+function getEmployeeEffectiveRate(employee) {
+  if (!employee) return 0;
+  
+  // Priority 1: Custom pay rate
+  if (employee.custom_pay_rate) {
+    return employee.custom_pay_rate;
+  }
+  
+  // Priority 2: Position-based rate
+  return getEmployeePositionRate(employee);
+}
+
+function formatCurrency(value) {
+  if (!value && value !== 0) return '₱0.00';
+  return '₱' + Number(value).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 // Format salary display based on position rate

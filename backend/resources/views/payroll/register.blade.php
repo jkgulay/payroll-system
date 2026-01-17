@@ -161,7 +161,7 @@
             @foreach($payroll->items as $index => $item)
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
-                <td class="text-right">{{ number_format($item->rate, 2) }}</td>
+                <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
                 <td>{{ $item->days_worked }}</td>
                 <td class="text-right">{{ number_format($item->basic_pay, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? $item->regular_ot_hours : '' }}</td>

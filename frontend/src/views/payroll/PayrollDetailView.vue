@@ -146,7 +146,7 @@
           <!-- Rate & Days -->
           <template v-slot:item.rate_days="{ item }">
             <div>
-              <div>₱{{ formatCurrency(item.rate) }}</div>
+              <div>₱{{ formatCurrency(item.effective_rate || item.basic_rate || 0) }}</div>
               <div class="text-caption">{{ item.days_worked }} days</div>
             </div>
           </template>

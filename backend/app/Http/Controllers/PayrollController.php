@@ -321,8 +321,8 @@ class PayrollController extends Controller
         $daysWorked = $attendances->where('status', 'present')->count();
         $regularOtHours = $attendances->sum('overtime_hours') ?? 0;
         
-        // Calculate rate (daily or hourly based on salary_type)
-        $rate = $employee->basic_salary ?? 570; // Default PHP minimum wage
+        // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
+        $rate = $employee->getBasicSalary();
         
         // Calculate basic pay
         $basicPay = $rate * $daysWorked;

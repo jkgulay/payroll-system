@@ -68,6 +68,27 @@ class PayrollItem extends Model
         'payslip_generated' => 'boolean',
     ];
 
+    protected $appends = ['effective_rate'];
+
+    /**
+     * Get the effective rate for display
+     * If basic_rate is 0 or null, get it from the employee's current rate
+     */
+    public function getEffectiveRateAttribute(): float
+    {
+        // If basic_rate is valid and not 0, use it
+        if ($this->basic_rate && $this->basic_rate > 0) {
+            return (float) $this->basic_rate;
+        }
+
+        // Otherwise, get the employee's current effective rate
+        if ($this->employee) {
+            return $this->employee->getBasicSalary();
+        }
+
+        return 0;
+    }
+
     public function payroll(): BelongsTo
     {
         return $this->belongsTo(Payroll::class);
