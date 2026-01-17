@@ -116,7 +116,7 @@
         <form @submit.prevent="sendMessage">
           <textarea
             v-model="inputMessage"
-            placeholder="Ask me anything about the payroll system..."
+            placeholder="Ask me anything about Giovanni Construction..."
             rows="2"
             @keydown.enter.exact.prevent="sendMessage"
             @keydown.shift.enter="handleShiftEnter"

@@ -1,10 +1,10 @@
-# Construction Payroll Management System
+# Giovanni Construction
 
-A comprehensive Philippine payroll management system designed specifically for construction companies. Built with modern technologies to handle complex payroll computations, employee management, attendance tracking, and government compliance requirements.
+A comprehensive Philippine payroll management system for Giovanni Construction. Built with modern technologies to handle complex payroll computations, employee management, attendance tracking, and government compliance requirements.
 
 ## Overview
 
-This system streamlines payroll operations for construction companies by automating calculations for Philippine labor laws and government contributions (SSS, PhilHealth, Pag-IBIG, and Withholding Tax). It features multi-user access with role-based permissions, offline-first architecture for field operations, and comprehensive reporting capabilities.
+This system streamlines payroll operations for Giovanni Construction by automating calculations for Philippine labor laws and government contributions (SSS, PhilHealth, Pag-IBIG, and Withholding Tax). It features multi-user access with role-based permissions, offline-first architecture for field operations, and comprehensive reporting capabilities.
 
 ## Tech Stack
 

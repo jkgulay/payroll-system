@@ -223,6 +223,15 @@ const router = createRouter({
           meta: { title: "Reports" },
         },
         {
+          path: "reports/attendance-summary",
+          name: "attendance-summary-report",
+          component: () =>
+            import(
+              /* webpackChunkName: "reports" */ "@/views/reports/AttendanceSummaryReport.vue"
+            ),
+          meta: { title: "Attendance Summary Report", roles: ["admin", "accountant"] },
+        },
+        {
           path: "payroll",
           name: "payroll",
           component: () =>
@@ -336,8 +345,8 @@ router.beforeEach(async (to, from, next) => {
 
   // Set page title
   document.title = to.meta.title
-    ? `${to.meta.title} - Payroll System`
-    : "Payroll System";
+    ? `${to.meta.title} - Giovanni Construction`
+    : "Giovanni Construction";
 
   next();
 });

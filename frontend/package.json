@@ -1,7 +1,7 @@
 {
   "name": "payroll-frontend",
   "version": "1.0.0",
-  "description": "Construction Payroll Management System - Frontend",
+  "description": "Giovanni Construction - Frontend",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run frontend\" \"npm run backend\" --names \"FRONTEND,BACKEND\" --prefix-colors \"blue,yellow\"",
@@ -51,7 +51,7 @@
   "main": "electron/main.js",
   "build": {
     "appId": "com.payroll.construction",
-    "productName": "Construction Payroll",
+    "productName": "Giovanni Construction",
     "directories": {
       "output": "dist-electron"
     },

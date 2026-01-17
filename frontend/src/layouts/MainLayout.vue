@@ -144,7 +144,7 @@
             {{ isMobile ? (pageTitle.length > 20 ? pageTitle.substring(0, 20) + '...' : pageTitle) : pageTitle }}
           </v-app-bar-title>
           <div v-if="!isMobile" class="text-caption text-medium-emphasis">
-            Construction Payroll System
+            Giovanni Construction
           </div>
         </div>
       </div>
@@ -211,7 +211,7 @@
                 Are you sure you want to logout?
               </div>
               <div class="logout-message-subtitle">
-                You will be signed out from the Construction Payroll System
+                You will be signed out from Giovanni Construction
               </div>
             </div>
           </div>
