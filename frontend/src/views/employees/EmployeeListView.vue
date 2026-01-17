@@ -40,11 +40,9 @@
           </v-col>
           <v-col cols="12" md="2">
             <v-select
-              v-model="filters.project_id"
-              :items="projects"
-              item-title="name"
-              item-value="id"
-              label="Project"
+              v-model="filters.department"
+              :items="departments"
+              label="Department"
               clearable
               variant="outlined"
               density="comfortable"
@@ -1071,7 +1069,7 @@ const itemsPerPage = ref(25);
 const totalEmployees = ref(0);
 
 const filters = ref({
-  project_id: null,
+  department: null,
   contract_type: null,
   activity_status: null,
   work_schedule: null,
@@ -1120,7 +1118,7 @@ const payRateData = ref({
 const updatingPayRate = ref(false);
 const clearingPayRate = ref(false);
 
-const projects = ref([]);
+const departments = ref([]);
 const employeeForm = ref(null);
 
 const contractTypeOptions = CONTRACT_TYPES;
@@ -1146,7 +1144,7 @@ const headers = [
 
 onMounted(async () => {
   await fetchEmployees();
-  await fetchProjects();
+  await fetchDepartments();
   await loadPositionRates();
 });
 
@@ -1199,8 +1197,20 @@ function onItemsPerPageChange(newItemsPerPage) {
   fetchEmployees();
 }
 
-async function fetchProjects() {
-  projects.value = await employeeStore.fetchProjects();
+async function fetchDepartments() {
+  try {
+    const response = await api.get('/employees/departments');
+    departments.value = response.data.filter(dept => dept && dept.trim() !== '');
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    // Fallback: extract departments from current employees if API fails
+    const uniqueDepts = [...new Set(
+      employeeStore.employees
+        .map(emp => emp.department)
+        .filter(dept => dept && dept.trim() !== '')
+    )].sort();
+    departments.value = uniqueDepts;
+  }
 }
 
 async function refreshEmployees() {
@@ -1212,7 +1222,7 @@ async function refreshEmployees() {
 function clearFilters() {
   search.value = "";
   filters.value = {
-    project_id: null,
+    department: null,
     contract_type: null,
     activity_status: null,
     work_schedule: null,

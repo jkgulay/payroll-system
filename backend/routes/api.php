@@ -54,7 +54,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['throttle:10,1'])->post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']);
     Route::get('/employees/import/template', [App\Http\Controllers\Api\EmployeeImportController::class, 'downloadTemplate']);
 
-    // Employees
+    // Employees - specific routes must come before resource routes
+    Route::get('/employees/departments', [App\Http\Controllers\Api\EmployeeController::class, 'getDepartments']);
     Route::apiResource('employees', App\Http\Controllers\Api\EmployeeController::class);
     Route::get('/employees/{employee}/allowances', [App\Http\Controllers\Api\EmployeeController::class, 'allowances']);
     Route::get('/employees/{employee}/loans', [App\Http\Controllers\Api\EmployeeController::class, 'loans']);

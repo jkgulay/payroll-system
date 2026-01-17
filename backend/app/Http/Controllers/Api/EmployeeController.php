@@ -51,6 +51,11 @@ class EmployeeController extends Controller
             $query->where('project_id', $request->project_id);
         }
 
+        // Filter by department
+        if ($request->has('department') && $request->department) {
+            $query->where('department', $request->department);
+        }
+
         // Filter by contract type
         if ($request->has('contract_type')) {
             $query->where('contract_type', $request->contract_type);
@@ -463,5 +468,24 @@ class EmployeeController extends Controller
             'old_rate' => $oldRate,
             'new_rate' => $newRate,
         ]);
+    }
+
+    /**
+     * Get list of unique departments
+     */
+    public function getDepartments()
+    {
+        try {
+            $departments = Employee::whereNotNull('department')
+                ->where('department', '!=', '')
+                ->distinct()
+                ->orderBy('department')
+                ->pluck('department');
+
+            return response()->json($departments);
+        } catch (\Exception $e) {
+            Log::error('Error fetching departments: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch departments'], 500);
+        }
     }
 }
