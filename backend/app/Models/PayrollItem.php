@@ -4,13 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PayrollItem extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'payroll_id',
@@ -36,11 +34,11 @@ class PayrollItem extends Model
         'withholding_tax',
         'total_other_deductions',
         'total_loan_deductions',
+        'employee_deductions',
         'total_deductions',
         'net_pay',
         'payslip_generated',
         'payslip_file_path',
-        'remarks',
     ];
 
     protected $casts = [
@@ -64,12 +62,33 @@ class PayrollItem extends Model
         'withholding_tax' => 'decimal:2',
         'total_other_deductions' => 'decimal:2',
         'total_loan_deductions' => 'decimal:2',
+        'employee_deductions' => 'decimal:2',
         'total_deductions' => 'decimal:2',
         'net_pay' => 'decimal:2',
         'payslip_generated' => 'boolean',
     ];
 
-    // Relationships
+    protected $appends = ['effective_rate'];
+
+    /**
+     * Get the effective rate for display
+     * If basic_rate is 0 or null, get it from the employee's current rate
+     */
+    public function getEffectiveRateAttribute(): float
+    {
+        // If basic_rate is valid and not 0, use it
+        if ($this->basic_rate && $this->basic_rate > 0) {
+            return (float) $this->basic_rate;
+        }
+
+        // Otherwise, get the employee's current effective rate
+        if ($this->employee) {
+            return $this->employee->getBasicSalary();
+        }
+
+        return 0;
+    }
+
     public function payroll(): BelongsTo
     {
         return $this->belongsTo(Payroll::class);
@@ -78,59 +97,5 @@ class PayrollItem extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
-    }
-
-    public function details(): HasMany
-    {
-        return $this->hasMany(PayrollItemDetail::class);
-    }
-
-    public function earningDetails(): HasMany
-    {
-        return $this->details()->where('type', 'earning');
-    }
-
-    public function deductionDetails(): HasMany
-    {
-        return $this->details()->where('type', 'deduction');
-    }
-
-    // Helper Methods
-    public function calculateGrossPay(): float
-    {
-        return $this->basic_pay
-            + $this->overtime_pay
-            + $this->holiday_pay
-            + $this->night_differential
-            + $this->water_allowance
-            + $this->cola
-            + $this->other_allowances
-            + $this->other_earnings;
-    }
-
-    public function calculateTotalDeductions(): float
-    {
-        return $this->sss_contribution
-            + $this->philhealth_contribution
-            + $this->pagibig_contribution
-            + $this->withholding_tax
-            + $this->sss_loan
-            + $this->pagibig_loan
-            + $this->other_loans
-            + $this->ppe_deduction
-            + $this->other_deductions;
-    }
-
-    public function calculateNetPay(): float
-    {
-        return $this->calculateGrossPay() - $this->calculateTotalDeductions();
-    }
-
-    public function updateTotals(): void
-    {
-        $this->gross_pay = $this->calculateGrossPay();
-        $this->total_deductions = $this->calculateTotalDeductions();
-        $this->net_pay = $this->calculateNetPay();
-        $this->save();
     }
 }

@@ -136,7 +136,7 @@ return [
          *
          * @var bool
          */
-        "enable_remote" => true,
+        "enable_remote" => false,
 
         /**
          * A ratio applied to the fonts height to be more like browsers' line height
@@ -151,5 +151,69 @@ return [
          * @var bool
          */
         "enable_html5_parser" => true,
+
+        /**
+         * Debug keep temp files
+         *
+         * Keep temporary files for debugging purposes
+         * Set to false to save memory and disk space
+         *
+         * @var bool
+         */
+        "debugKeepTemp" => false,
+
+        /**
+         * Debug CSS
+         *
+         * Set to false to disable CSS debugging and save memory
+         *
+         * @var bool
+         */
+        "debugCss" => false,
+
+        /**
+         * Debug Layout
+         *
+         * Set to false to disable layout debugging and save memory
+         *
+         * @var bool
+         */
+        "debugLayout" => false,
+
+        /**
+         * Debug Layout Lines
+         *
+         * Set to false to disable layout line debugging and save memory
+         *
+         * @var bool
+         */
+        "debugLayoutLines" => false,
+
+        /**
+         * Debug Layout Blocks
+         *
+         * Set to false to disable layout block debugging and save memory
+         *
+         * @var bool
+         */
+        "debugLayoutBlocks" => false,
+
+        /**
+         * Debug Layout Inline
+         *
+         * Set to false to disable layout inline debugging and save memory
+         *
+         * @var bool
+         */
+        "debugLayoutInline" => false,
+
+        /**
+         * Debug Layout Padding Box
+         *
+         * Set to false to disable padding box debugging and save memory
+         *
+         * @var bool
+         */
+        "debugLayoutPaddingBox" => false,
     ],
 ];

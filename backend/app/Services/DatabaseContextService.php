@@ -24,6 +24,10 @@ class DatabaseContextService
                 $context = $this->getEmployeeContext($query);
                 break;
                 
+            case 'payroll_count':
+                $context = $this->getPayrollCountContext($query);
+                break;
+                
             case 'payroll_expense':
             case 'salary_info':
                 $context = $this->getPayrollContext($query);
@@ -106,6 +110,55 @@ class DatabaseContextService
     }
 
     /**
+     * Get payroll count context
+     */
+    protected function getPayrollCountContext(string $query): array
+    {
+        $context = [
+            'total_payroll_records' => Payroll::count(),
+        ];
+
+        // Payroll by year
+        $currentYear = Carbon::now()->year;
+        $context['this_year'] = Payroll::whereYear('period_start', $currentYear)->count();
+        $context['last_year'] = Payroll::whereYear('period_start', $currentYear - 1)->count();
+
+        // Recent payrolls with details
+        $context['recent_payrolls'] = Payroll::orderBy('period_start', 'desc')
+            ->take(10)
+            ->get(['id', 'period_start', 'period_end', 'total_gross', 'total_net', 'status', 'created_at'])
+            ->map(function ($payroll) {
+                return [
+                    'id' => $payroll->id,
+                    'period' => $payroll->period_start->format('M d, Y') . ' - ' . $payroll->period_end->format('M d, Y'),
+                    'status' => $payroll->status,
+                    'total_gross' => $payroll->total_gross,
+                    'total_net' => $payroll->total_net,
+                    'created_at' => $payroll->created_at->format('M d, Y'),
+                ];
+            })
+            ->toArray();
+
+        // Monthly breakdown for current year (PostgreSQL compatible)
+        $monthlyBreakdown = Payroll::whereYear('period_start', $currentYear)
+            ->selectRaw('EXTRACT(MONTH FROM period_start)::integer as month, COUNT(*) as count')
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'month' => Carbon::create()->month($item->month)->format('F'),
+                    'count' => $item->count,
+                ];
+            })
+            ->toArray();
+        
+        $context['monthly_breakdown_' . $currentYear] = $monthlyBreakdown;
+
+        return $context;
+    }
+
+    /**
      * Get payroll-related context
      */
     protected function getPayrollContext(string $query): array
@@ -119,12 +172,12 @@ class DatabaseContextService
             $month = Carbon::parse($matches[1])->month;
             $year = $matches[2];
             
-            $payrollData = DB::table('payroll')
-                ->join('payroll_items', 'payroll.id', '=', 'payroll_items.payroll_id')
-                ->whereYear('payroll.period_start', $year)
-                ->whereMonth('payroll.period_start', $month)
-                ->whereNull('payroll.deleted_at')
-                ->selectRaw('SUM(payroll.total_gross_pay) as total_gross, SUM(payroll.total_net_pay) as total_net, COUNT(DISTINCT payroll_items.employee_id) as employee_count')
+            $payrollData = DB::table('payrolls')
+                ->join('payroll_items', 'payrolls.id', '=', 'payroll_items.payroll_id')
+                ->whereYear('payrolls.period_start', $year)
+                ->whereMonth('payrolls.period_start', $month)
+                ->whereNull('payrolls.deleted_at')
+                ->selectRaw('SUM(payrolls.total_gross) as total_gross, SUM(payrolls.total_net) as total_net, COUNT(DISTINCT payroll_items.employee_id) as employee_count')
                 ->first();
                 
             $context['period_payroll'] = [
@@ -140,13 +193,13 @@ class DatabaseContextService
             $q3Data = Payroll::whereYear('period_start', $currentYear)
                 ->whereMonth('period_start', '>=', 7)
                 ->whereMonth('period_start', '<=', 9)
-                ->selectRaw('SUM(total_gross_pay) as total_gross, SUM(total_net_pay) as total_net')
+                ->selectRaw('SUM(total_gross) as total_gross, SUM(total_net) as total_net')
                 ->first();
                 
             $q4Data = Payroll::whereYear('period_start', $currentYear)
                 ->whereMonth('period_start', '>=', 10)
                 ->whereMonth('period_start', '<=', 12)
-                ->selectRaw('SUM(total_gross_pay) as total_gross, SUM(total_net_pay) as total_net')
+                ->selectRaw('SUM(total_gross) as total_gross, SUM(total_net) as total_net')
                 ->first();
                 
             $context['quarterly_comparison'] = [

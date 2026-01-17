@@ -88,44 +88,52 @@ import {
 
 import { Intersect, Ripple, Touch } from "vuetify/directives";
 
-// Construction Company Theme
-// Inspired by steel, concrete, safety, and industrial design
+// Modern Professional Theme
+// Inspired by contemporary SaaS applications with vibrant gradients
 const customTheme = {
   dark: false,
   colors: {
-    primary: "#ff6f00", // Construction Orange - Bold, industrial (from login page)
-    secondary: "#37474F", // Charcoal Steel - Dark gray for construction machinery
-    accent: "#ff9800", // Safety Orange - High visibility (from login page)
-    error: "#C62828", // Safety Red - Danger/error signage
-    info: "#0277BD", // Steel Blue - Professional and technical
-    success: "#2E7D32", // Safety Green - Go/approved
-    warning: "#F9A825", // Caution Yellow - Warning signs
-    background: "#ECEFF1", // Light concrete gray
-    surface: "#FFFFFF",
-    steel: "#546E7A", // Steel gray for structural elements (from login page)
-    concrete: "#90A4AE", // Concrete gray for secondary elements
-    hardhat: "#ff9800", // Hardhat orange for important highlights (from login page)
-    blueprint: "#1565C0", // Blueprint blue for technical elements
+    primary: "#6366f1", // Modern Indigo - Primary brand color
+    secondary: "#8b5cf6", // Purple - Complementary accent
+    accent: "#ec4899", // Pink - Call-to-action highlights
+    error: "#ef4444", // Red - Error states
+    info: "#3b82f6", // Blue - Information
+    success: "#10b981", // Emerald - Success states
+    warning: "#f59e0b", // Amber - Warnings
+    background: "#f8fafc", // Slate 50 - Background
+    surface: "#ffffff", // White - Surface elements
+    slate: "#64748b", // Slate - Secondary text
+    navy: "#1e293b", // Navy - Dark elements
+    indigo: "#6366f1", // Indigo - Primary highlights
+    violet: "#8b5cf6", // Violet - Secondary highlights
+    // Legacy color aliases for backward compatibility
+    steel: "#64748b", // Maps to slate
+    hardhat: "#ec4899", // Maps to accent/pink
+    concrete: "#94a3b8", // Light slate
   },
 };
 
-// Dark theme for construction sites (optional)
+// Dark theme for night mode
 const constructionDark = {
   dark: true,
   colors: {
-    primary: "#ff9800", // Bright construction orange (from login page)
-    secondary: "#546E7A", // Lighter steel for dark mode
-    accent: "#ff9800", // Warm safety orange (from login page)
-    error: "#EF5350",
-    info: "#29B6F6",
-    success: "#66BB6A",
-    warning: "#FFCA28",
-    background: "#263238", // Dark concrete
-    surface: "#37474F", // Dark steel (from login page)
-    steel: "#607D8B",
-    concrete: "#78909C",
-    hardhat: "#ff9800", // From login page
-    blueprint: "#42A5F5",
+    primary: "#818cf8", // Lighter indigo for dark mode
+    secondary: "#a78bfa", // Lighter purple
+    accent: "#f472b6", // Lighter pink
+    error: "#f87171",
+    info: "#60a5fa",
+    success: "#34d399",
+    warning: "#fbbf24",
+    background: "#0f172a", // Slate 900
+    surface: "#1e293b", // Slate 800
+    slate: "#94a3b8",
+    navy: "#0f172a",
+    indigo: "#818cf8",
+    violet: "#a78bfa",
+    // Legacy color aliases for backward compatibility
+    steel: "#94a3b8", // Light slate for dark mode
+    hardhat: "#f472b6", // Maps to accent/pink
+    concrete: "#cbd5e1", // Lighter slate
   },
 };
 

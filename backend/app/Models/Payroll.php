@@ -7,163 +7,82 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\User;
 
 class Payroll extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'payroll';
-
     protected $fillable = [
         'payroll_number',
-        'period_type',
+        'period_name',
         'period_start',
         'period_end',
         'payment_date',
-        'pay_period_number',
-        'month',
-        'year',
         'status',
-        'total_gross_pay',
+        'total_gross',
         'total_deductions',
-        'total_net_pay',
-        'prepared_by',
-        'prepared_at',
-        'checked_by',
-        'checked_at',
-        'recommended_by',
-        'recommended_at',
-        'approved_by',
-        'approved_at',
-        'paid_by',
-        'paid_at',
-        'cancelled_by',
-        'cancelled_at',
-        'cancellation_reason',
+        'total_net',
         'notes',
         'created_by',
-        'updated_by',
-        'version',
+        'finalized_by',
+        'finalized_at',
     ];
 
     protected $casts = [
         'period_start' => 'date',
         'period_end' => 'date',
         'payment_date' => 'date',
-        'total_gross_pay' => 'decimal:2',
+        'finalized_at' => 'datetime',
+        'total_gross' => 'decimal:2',
         'total_deductions' => 'decimal:2',
-        'total_net_pay' => 'decimal:2',
-        'prepared_at' => 'datetime',
-        'checked_at' => 'datetime',
-        'recommended_at' => 'datetime',
-        'approved_at' => 'datetime',
-        'paid_at' => 'datetime',
-        'cancelled_at' => 'datetime',
+        'total_net' => 'decimal:2',
     ];
 
-    protected $appends = [
-        'period_label',
-    ];
-
-    public function getPeriodLabelAttribute(): string
-    {
-        return $this->period_start->format('M d') . ' - ' . $this->period_end->format('M d, Y');
-    }
-
-    // Relationships
-    public function payrollItems(): HasMany
+    public function items(): HasMany
     {
         return $this->hasMany(PayrollItem::class);
     }
 
-    public function preparedBy(): BelongsTo
+    public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'prepared_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function checkedBy(): BelongsTo
+    public function finalizer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'checked_by');
+        return $this->belongsTo(User::class, 'finalized_by');
     }
 
-    public function recommendedBy(): BelongsTo
+    protected static function boot()
     {
-        return $this->belongsTo(User::class, 'recommended_by');
+        parent::boot();
+
+        static::creating(function ($payroll) {
+            if (empty($payroll->payroll_number)) {
+                $payroll->payroll_number = self::generatePayrollNumber();
+            }
+        });
     }
 
-    public function approvedBy(): BelongsTo
+    public static function generatePayrollNumber(): string
     {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
+        $year = date('Y');
+        $month = date('m');
+        $prefix = "PR{$year}{$month}";
+        
+        $lastPayroll = self::withTrashed()
+            ->where('payroll_number', 'like', "{$prefix}%")
+            ->orderBy('payroll_number', 'desc')
+            ->first();
 
-    public function paidBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'paid_by');
-    }
+        if ($lastPayroll) {
+            $lastNumber = (int) substr($lastPayroll->payroll_number, -4);
+            $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+        } else {
+            $newNumber = '0001';
+        }
 
-    public function cancelledBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'cancelled_by');
-    }
-
-    // Scopes
-    public function scopeByStatus($query, $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    public function scopeByPeriod($query, $year, $month)
-    {
-        return $query->whereYear('period_start', $year)
-            ->whereMonth('period_start', $month);
-    }
-
-    public function scopePending($query)
-    {
-        return $query->whereIn('status', ['draft', 'processing']);
-    }
-
-    public function scopeProcessed($query)
-    {
-        return $query->whereIn('status', ['checked', 'recommended', 'approved', 'paid']);
-    }
-
-    // Helper Methods
-    public function canEdit(): bool
-    {
-        return in_array($this->status, ['draft', 'processing']);
-    }
-
-    public function canCheck(): bool
-    {
-        return $this->status === 'processing' && $this->prepared_at !== null;
-    }
-
-    public function canRecommend(): bool
-    {
-        return $this->status === 'checked' && $this->checked_at !== null;
-    }
-
-    public function canApprove(): bool
-    {
-        return $this->status === 'recommended' && $this->recommended_at !== null;
-    }
-
-    public function canMarkAsPaid(): bool
-    {
-        return $this->status === 'approved' && $this->approved_at !== null;
-    }
-
-    public function calculateTotals(): void
-    {
-        $this->total_gross_pay = $this->payrollItems()->sum('gross_pay');
-        $this->total_deductions = $this->payrollItems()->sum('total_deductions');
-        $this->total_net_pay = $this->payrollItems()->sum('net_pay');
-        $this->save();
-    }
-
-    public function getEmployeeCount(): int
-    {
-        return $this->payrollItems()->count();
+        return $prefix . $newNumber;
     }
 }

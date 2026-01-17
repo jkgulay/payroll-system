@@ -9,7 +9,9 @@ use App\Models\Employee;
 use App\Models\PayrollItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ThirteenthMonthPayController extends Controller
 {
@@ -20,18 +22,21 @@ class ThirteenthMonthPayController extends Controller
      */
     public function calculate(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'year' => 'required|integer|min:2020|max:' . (date('Y') + 1),
-            'period' => 'required|in:full_year,first_half,second_half',
-            'payment_date' => 'required|date',
-        ]);
+        try {
+            $validator = Validator::make($request->all(), [
+                'year' => 'required|integer|min:2020|max:' . (date('Y') + 1),
+                'period' => 'required|in:full_year,first_half,second_half',
+                'payment_date' => 'required|date',
+                'department' => 'nullable|string', // Add department filter
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
 
-        $year = $request->year;
+            $year = $request->year;
         $period = $request->period;
+        $department = $request->department;
 
         // Determine date range based on period
         $startDate = $year . '-01-01';
@@ -47,7 +52,9 @@ class ThirteenthMonthPayController extends Controller
 
         try {
             // Generate batch number
-            $lastBatch = ThirteenthMonthPay::whereYear('computation_date', $year)->latest()->first();
+            $lastBatch = ThirteenthMonthPay::where('year', $year)
+                ->orderBy('id', 'desc')
+                ->first();
             $batchNum = $lastBatch ? intval(substr($lastBatch->batch_number, -4)) + 1 : 1;
             $batchNumber = $year . '-13M-' . str_pad($batchNum, 4, '0', STR_PAD_LEFT);
 
@@ -59,21 +66,36 @@ class ThirteenthMonthPayController extends Controller
                 'computation_date' => now(),
                 'payment_date' => $request->payment_date,
                 'status' => 'computed',
-                'computed_by' => auth()->id(),
+                'computed_by' => auth()->id() ?? 1,
                 'total_amount' => 0,
+                'department' => $department, // Store department filter
             ]);
 
             // Get all active employees (not resigned or terminated)
-            $employees = Employee::whereNotIn('activity_status', ['resigned', 'terminated'])
-                ->get();
+            $employeesQuery = Employee::whereNotIn('activity_status', ['resigned', 'terminated']);
+            
+            // Apply department filter if provided
+            if ($department) {
+                $employeesQuery->where('department', $department);
+            }
+            
+            $employees = $employeesQuery->get();
 
             $totalAmount = 0;
 
             foreach ($employees as $employee) {
                 // Get total basic salary from payroll items for the period
+                // Use period_end date (when salary was earned) not payment_date (when salary was paid)
                 $basicSalary = PayrollItem::whereHas('payroll', function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('pay_date', [$startDate, $endDate])
-                        ->where('status', 'paid');
+                    $query->where(function($q) use ($startDate, $endDate) {
+                        // Check if payroll period overlaps with the 13th month calculation period
+                        $q->whereBetween('period_start', [$startDate, $endDate])
+                          ->orWhereBetween('period_end', [$startDate, $endDate])
+                          ->orWhere(function($q2) use ($startDate, $endDate) {
+                              $q2->where('period_start', '<=', $startDate)
+                                 ->where('period_end', '>=', $endDate);
+                          });
+                    })->whereIn('status', ['paid', 'finalized']);
                 })
                     ->where('employee_id', $employee->id)
                     ->sum('basic_pay');
@@ -124,8 +146,20 @@ class ThirteenthMonthPayController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('13th Month Pay Calculation Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
             return response()->json([
                 'message' => 'Failed to calculate 13th month pay',
+                'error' => $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
+        }
+        } catch (\Exception $e) {
+            Log::error('13th Month Pay Validation Error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Invalid request data',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -178,7 +212,7 @@ class ThirteenthMonthPayController extends Controller
 
         $thirteenthMonth->update([
             'status' => 'approved',
-            'approved_by' => auth()->id(),
+            'approved_by' => auth()->id() ?? 1,
             'approved_at' => now(),
         ]);
 
@@ -234,5 +268,98 @@ class ThirteenthMonthPayController extends Controller
         }
 
         return 0;
+    }
+
+    /**
+     * Export 13th month pay to PDF with department grouping
+     */
+    public function exportPdf($id, Request $request)
+    {
+        $thirteenthMonth = ThirteenthMonthPay::with([
+            'items.employee.positionRate',
+            'computedBy',
+            'approvedBy'
+        ])->findOrFail($id);
+
+        // Group employees by department
+        $employeesByDepartment = $thirteenthMonth->items()
+            ->with('employee')
+            ->get()
+            ->groupBy(function ($item) {
+                return $item->employee->department ?? 'NO DEPARTMENT';
+            })
+            ->sortKeys();
+
+        // Get company info from environment or config
+        $companyName = config('payroll.company.name', env('COMPANY_NAME', 'GIOVANNI CONSTRUCTION'));
+        $companyAddress = env('COMPANY_ADDRESS', 'Imadejas Subdivision, Capitol Bonbon');
+
+        // Prepare data for PDF
+        $data = [
+            'thirteenthMonth' => $thirteenthMonth,
+            'employeesByDepartment' => $employeesByDepartment,
+            'companyName' => $companyName,
+            'companyAddress' => $companyAddress,
+            'preparedBy' => $thirteenthMonth->computedBy->name ?? 'N/A',
+            'approvedBy' => $thirteenthMonth->approvedBy->name ?? 'N/A',
+        ];
+
+        $pdf = Pdf::loadView('pdf.thirteenth-month-pay', $data);
+        $pdf->setPaper('letter', 'portrait');
+
+        return $pdf->download('13th-month-pay-' . $thirteenthMonth->batch_number . '.pdf');
+    }
+
+    /**
+     * Get list of departments for filtering
+     */
+    public function getDepartments()
+    {
+        $departments = Employee::whereNotNull('department')
+            ->where('department', '!=', '')
+            ->distinct()
+            ->pluck('department')
+            ->sort()
+            ->values();
+
+        return response()->json($departments);
+    }
+
+    /**
+     * Delete 13th month pay record
+     * Only computed status can be deleted
+     */
+    public function destroy($id)
+    {
+        $thirteenthMonth = ThirteenthMonthPay::findOrFail($id);
+
+        // Only allow deletion of computed status
+        if ($thirteenthMonth->status !== 'computed') {
+            return response()->json([
+                'message' => 'Only computed 13th month pay records can be deleted'
+            ], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Delete related items first
+            $thirteenthMonth->items()->delete();
+            
+            // Delete the main record
+            $thirteenthMonth->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => '13th month pay record deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting 13th month pay: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to delete 13th month pay record',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

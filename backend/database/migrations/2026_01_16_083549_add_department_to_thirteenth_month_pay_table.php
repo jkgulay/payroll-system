@@ -8,13 +8,11 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
-     * Add version column for optimistic locking to prevent concurrent edit conflicts
      */
     public function up(): void
     {
-        Schema::table('payroll', function (Blueprint $table) {
-            $table->integer('version')->default(0)->after('updated_at');
+        Schema::table('thirteenth_month_pay', function (Blueprint $table) {
+            $table->string('department')->nullable()->after('period');
         });
     }
 
@@ -23,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('payroll', function (Blueprint $table) {
-            $table->dropColumn('version');
+        Schema::table('thirteenth_month_pay', function (Blueprint $table) {
+            $table->dropColumn('department');
         });
     }
 };

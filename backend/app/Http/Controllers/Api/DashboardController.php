@@ -7,12 +7,21 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
+use App\Models\EmployeeApplication;
+use App\Models\EmployeeLeave;
+use App\Models\AttendanceCorrection;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function stats(Request $request)
+    {
+        return $this->index($request);
+    }
+
     public function index(Request $request)
     {
         // Count all active employees (is_active = true)
@@ -35,7 +44,45 @@ class DashboardController extends Controller
         // Get current period payroll total
         $currentMonth = Carbon::now()->format('Y-m');
         $periodPayroll = Payroll::whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$currentMonth])
-            ->sum('total_gross_pay');
+            ->sum('total_gross');
+
+        // Pending Applications
+        $pendingApplications = EmployeeApplication::where('application_status', 'pending')->count();
+
+        // Pending Leaves
+        $pendingLeaves = EmployeeLeave::where('status', 'pending')->count();
+
+        // Pending Attendance Corrections
+        $pendingAttendanceCorrections = AttendanceCorrection::where('status', 'pending')->count();
+
+        // Draft Payrolls
+        $draftPayrolls = Payroll::where('status', 'draft')->count();
+
+        // Employees with complete data (has government info)
+        $employeesCompleteData = Employee::where('is_active', true)
+            ->whereHas('governmentInfo')
+            ->count();
+
+        // Monthly Attendance Rate
+        $workingDaysThisMonth = Carbon::now()->diffInDaysFiltered(function(Carbon $date) {
+            return !$date->isWeekend();
+        }, Carbon::now()->startOfMonth());
+        
+        $expectedAttendance = $totalEmployees * $workingDaysThisMonth;
+        $actualAttendance = Attendance::whereRaw("TO_CHAR(attendance_date, 'YYYY-MM') = ?", [$currentMonth])
+            ->whereIn('status', ['present', 'late'])
+            ->count();
+        
+        $monthlyAttendanceRate = $expectedAttendance > 0 
+            ? round(($actualAttendance / $expectedAttendance) * 100, 1) 
+            : 0;
+
+        // Last Biometric Import (from audit logs)
+        $lastBiometricImport = AuditLog::where('action', 'biometric_import')
+            ->orWhere('description', 'like', '%biometric%')
+            ->orWhere('description', 'like', '%import%attendance%')
+            ->latest()
+            ->first();
 
         // Get recent payrolls
         $recentPayrolls = Payroll::orderBy('created_at', 'desc')
@@ -47,7 +94,7 @@ class DashboardController extends Controller
                     'payroll_number' => $payroll->payroll_number,
                     'period_start_date' => $payroll->period_start,
                     'period_end_date' => $payroll->period_end,
-                    'total_gross' => $payroll->total_gross_pay,
+                    'total_gross' => $payroll->total_gross,
                     'status' => $payroll->status,
                 ];
             });
@@ -58,7 +105,14 @@ class DashboardController extends Controller
                 'activeEmployees' => $activeStatus,
                 'periodPayroll' => $periodPayroll ?? 0,
                 'presentToday' => $presentToday,
-                'pendingApprovals' => 0,
+                'pendingApprovals' => 0, // Legacy field, kept for compatibility
+                'pendingApplications' => $pendingApplications,
+                'pendingLeaves' => $pendingLeaves,
+                'pendingAttendanceCorrections' => $pendingAttendanceCorrections,
+                'draftPayrolls' => $draftPayrolls,
+                'employeesCompleteData' => $employeesCompleteData,
+                'monthlyAttendanceRate' => $monthlyAttendanceRate,
+                'lastBiometricImportDate' => $lastBiometricImport ? $lastBiometricImport->created_at : null,
             ],
             'recent_attendance' => [],
             'recent_payrolls' => $recentPayrolls,
@@ -556,6 +610,160 @@ class DashboardController extends Controller
         }
 
         return response()->json($distribution);
+    }
+
+    /**
+     * Get recent system activities
+     */
+    public function recentActivities(Request $request)
+    {
+        $limit = $request->input('limit', 15);
+        
+        $activities = AuditLog::with('user')
+            ->whereIn('action', [
+                'employee_created',
+                'employee_updated', 
+                'payroll_approved',
+                'payroll_finalized',
+                'leave_approved',
+                'leave_rejected',
+                'attendance_corrected',
+                'biometric_import',
+                'application_approved',
+                'application_rejected'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'module' => $log->module,
+                    'user' => $log->user ? [
+                        'name' => $log->user->name,
+                        'email' => $log->user->email,
+                    ] : null,
+                    'created_at' => $log->created_at,
+                ];
+            });
+
+        return response()->json($activities);
+    }
+
+    /**
+     * Get upcoming events and deadlines
+     */
+    public function upcomingEvents(Request $request)
+    {
+        $events = [];
+        $now = Carbon::now();
+        $nextWeek = Carbon::now()->addWeek();
+        $nextMonth = Carbon::now()->addMonth();
+
+        // Upcoming approved leaves
+        $upcomingLeaves = EmployeeLeave::with(['employee', 'leaveType'])
+            ->where('status', 'approved')
+            ->where('leave_date_from', '>=', $now)
+            ->where('leave_date_from', '<=', $nextMonth)
+            ->orderBy('leave_date_from')
+            ->limit(5)
+            ->get()
+            ->map(function ($leave) {
+                $leaveTypeName = $leave->leaveType ? $leave->leaveType->name : 'Leave';
+                return [
+                    'type' => 'leave',
+                    'title' => $leave->employee->full_name . ' - ' . $leaveTypeName,
+                    'date' => $leave->leave_date_from,
+                    'description' => $leave->leave_date_from->format('M d') . ' - ' . $leave->leave_date_to->format('M d, Y'),
+                    'icon' => 'mdi-calendar-remove',
+                    'color' => 'info',
+                ];
+            });
+
+        // Upcoming employee anniversaries (work anniversaries)
+        $upcomingAnniversaries = Employee::where('is_active', true)
+            ->whereNotNull('date_hired')
+            ->get()
+            ->filter(function ($employee) use ($now, $nextMonth) {
+                $dateHired = Carbon::parse($employee->date_hired);
+                $thisYearAnniversary = Carbon::create($now->year, $dateHired->month, $dateHired->day);
+                return $thisYearAnniversary->between($now, $nextMonth);
+            })
+            ->sortBy(function ($employee) use ($now) {
+                $dateHired = Carbon::parse($employee->date_hired);
+                return Carbon::create($now->year, $dateHired->month, $dateHired->day);
+            })
+            ->take(5)
+            ->map(function ($employee) use ($now) {
+                $dateHired = Carbon::parse($employee->date_hired);
+                $thisYearAnniversary = Carbon::create($now->year, $dateHired->month, $dateHired->day);
+                $years = $now->year - $dateHired->year;
+                return [
+                    'type' => 'anniversary',
+                    'title' => $employee->full_name . ' - ' . $years . ' year(s)',
+                    'date' => $thisYearAnniversary,
+                    'description' => 'Work anniversary on ' . $thisYearAnniversary->format('M d, Y'),
+                    'icon' => 'mdi-cake-variant',
+                    'color' => 'success',
+                ];
+            });
+
+        // Upcoming payroll cutoffs (15th and end of month)
+        $payrollCutoffs = [];
+        $currentMonth = $now->month;
+        $currentYear = $now->year;
+        
+        // Check 15th of current month
+        $cutoff15 = Carbon::create($currentYear, $currentMonth, 15);
+        if ($cutoff15->isFuture() && $cutoff15->lte($nextWeek)) {
+            $payrollCutoffs[] = [
+                'type' => 'payroll_cutoff',
+                'title' => 'Payroll Cutoff - Mid-Month',
+                'date' => $cutoff15,
+                'description' => 'Attendance cutoff for 1st-15th',
+                'icon' => 'mdi-calendar-clock',
+                'color' => 'warning',
+            ];
+        }
+
+        // Check end of current month
+        $cutoffEOM = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth();
+        if ($cutoffEOM->isFuture() && $cutoffEOM->lte($nextWeek)) {
+            $payrollCutoffs[] = [
+                'type' => 'payroll_cutoff',
+                'title' => 'Payroll Cutoff - End of Month',
+                'date' => $cutoffEOM,
+                'description' => 'Attendance cutoff for 16th-' . $cutoffEOM->day,
+                'icon' => 'mdi-calendar-clock',
+                'color' => 'warning',
+            ];
+        }
+
+        // Check 15th of next month
+        $nextMonthDate = $now->copy()->addMonth();
+        $cutoff15Next = Carbon::create($nextMonthDate->year, $nextMonthDate->month, 15);
+        if ($cutoff15Next->lte($nextWeek)) {
+            $payrollCutoffs[] = [
+                'type' => 'payroll_cutoff',
+                'title' => 'Payroll Cutoff - Mid-Month',
+                'date' => $cutoff15Next,
+                'description' => 'Attendance cutoff for 1st-15th',
+                'icon' => 'mdi-calendar-clock',
+                'color' => 'warning',
+            ];
+        }
+
+        // Merge all events
+        $events = collect($upcomingLeaves)
+            ->concat($upcomingAnniversaries)
+            ->concat($payrollCutoffs)
+            ->sortBy('date')
+            ->values()
+            ->take(10);
+
+        return response()->json($events);
     }
 
     // HELPER METHODS

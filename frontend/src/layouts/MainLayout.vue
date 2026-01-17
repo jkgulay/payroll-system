@@ -382,16 +382,9 @@ const menuItems = computed(() => {
     },
     {
       title: "Payroll",
-      icon: "mdi-currency-php",
+      icon: "mdi-cash-multiple",
       value: "payroll",
       to: "/payroll",
-      roles: ["admin", "accountant"],
-    },
-    {
-      title: "Pay Rates",
-      icon: "mdi-cash-multiple",
-      value: "pay-rates",
-      to: "/payroll/pay-rates",
       roles: ["admin", "accountant"],
     },
     {
@@ -419,6 +412,13 @@ const menuItems = computed(() => {
           icon: "mdi-food",
           value: "allowances",
           to: "/allowances",
+          roles: ["admin", "accountant", "hr"],
+        },
+        {
+          title: "13th Month Pay",
+          icon: "mdi-gift-outline",
+          value: "thirteenth-month-pay",
+          to: "/thirteenth-month-pay",
           roles: ["admin", "accountant", "hr"],
         },
         {
@@ -564,9 +564,11 @@ async function downloadCurrentPayslip() {
 </script>
 
 <style scoped lang="scss">
-// Construction-themed Navigation Drawer
+// Modern Navigation Drawer with glassmorphism
 .construction-drawer {
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
   position: fixed !important;
   top: 0 !important;
   bottom: 0 !important;
@@ -574,13 +576,26 @@ async function downloadCurrentPayslip() {
   overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(139, 92, 246, 0.2);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
 
   :deep(.v-navigation-drawer__content) {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     overflow-y: auto !important;
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.1), transparent 50%);
+      pointer-events: none;
+    }
   }
 
   :deep(.v-list) {
@@ -589,30 +604,52 @@ async function downloadCurrentPayslip() {
   }
 
   :deep(.v-list-item) {
-    color: rgba(255, 255, 255, 0.85) !important;
-    margin: 4px 8px;
-    border-radius: 12px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: rgba(255, 255, 255, 0.9) !important;
+    margin: 6px 12px;
+    border-radius: 14px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
 
     .v-list-item-title {
-      color: rgba(255, 255, 255, 0.9) !important;
+      color: rgba(255, 255, 255, 0.95) !important;
       font-weight: 500;
+      font-size: 0.95rem;
     }
 
     .v-icon {
-      color: rgba(255, 255, 255, 0.7) !important;
+      color: rgba(255, 255, 255, 0.75) !important;
+      transition: all 0.3s ease;
     }
 
     &:hover {
-      background: rgba(99, 102, 241, 0.2) !important;
-      transform: translateX(4px);
+      background: rgba(99, 102, 241, 0.15) !important;
+      transform: translateX(6px) scale(1.02);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+      
+      &::before {
+        opacity: 1;
+      }
 
       .v-list-item-title {
         color: white !important;
       }
 
       .v-icon {
-        color: rgba(255, 255, 255, 0.9) !important;
+        color: white !important;
+        transform: scale(1.1);
       }
     }
   }
@@ -620,19 +657,24 @@ async function downloadCurrentPayslip() {
   :deep(.v-list-item--active) {
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
     color: white !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35), 
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 
     &::before {
-      opacity: 0;
+      opacity: 1;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
     }
 
     .v-list-item-title {
       color: white !important;
       font-weight: 600;
+      letter-spacing: 0.2px;
     }
 
     .v-icon {
       color: white !important;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     }
   }
 
@@ -797,34 +839,74 @@ async function downloadCurrentPayslip() {
 }
 
 .user-profile-item {
-  background: rgba(0, 0, 0, 0.2);
-  margin: 8px;
-  border-radius: 12px;
-  padding: 12px 8px;
-  transition: all 0.3s ease;
-  min-height: 64px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+  backdrop-filter: blur(10px);
+  margin: 12px;
+  border-radius: 16px;
+  padding: 16px 12px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 72px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at top right, rgba(236, 72, 153, 0.1), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.2) 100%);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+    border-color: rgba(139, 92, 246, 0.4);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
 
   :deep(.v-list-item-title) {
     color: white !important;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem;
+    letter-spacing: 0.2px;
   }
 
   :deep(.v-list-item-subtitle) {
-    color: rgba(255, 255, 255, 0.75) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    font-weight: 500;
+    margin-top: 4px;
     text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.8px;
-    font-weight: 600;
-    margin-top: 2px;
   }
 
   :deep(.v-avatar) {
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border: 3px solid rgba(139, 92, 246, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      border-color: rgba(139, 92, 246, 0.8);
+      transform: scale(1.05);
+    }
   }
 
   :deep(.v-btn) {
-    color: rgba(255, 255, 255, 0.8) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      color: white !important;
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
   }
 }
 
@@ -856,106 +938,176 @@ async function downloadCurrentPayslip() {
   }
 }
 
-// Steel beam divider effect
+// Modern divider effect
 :deep(.steel-divider) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  height: 1px;
-  margin: 12px 16px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(139, 92, 246, 0.4) 50%, 
+    transparent 100%) !important;
+  height: 2px;
+  margin: 16px 20px;
+  border-radius: 999px;
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.3);
 }
 
-// Logout button styling in drawer
+// Modern logout button styling in drawer
 .logout-btn,
 .logout-btn-rail {
-  background-color: rgba(239, 68, 68, 0.15) !important;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.2) 100%) !important;
   color: #fca5a5 !important;
   font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
 
   &:hover {
-    background-color: rgba(239, 68, 68, 0.25) !important;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.35) 100%) !important;
     color: #fef2f2 !important;
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+    transform: translateY(-2px);
+    border-color: rgba(239, 68, 68, 0.5);
     
     .v-icon {
       color: #fef2f2 !important;
+      transform: rotate(-10deg) scale(1.1);
     }
   }
 
   .v-icon {
     color: #fca5a5 !important;
     font-size: 24px !important;
+    transition: all 0.3s ease;
   }
 }
 
 .logout-btn-rail {
-  width: 48px !important;
-  height: 48px !important;
-  min-width: 48px !important;
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  border-radius: 14px !important;
 }
 
-// Breadcrumbs styling
+// Modern breadcrumbs styling
 .breadcrumbs-construction {
   :deep(.v-breadcrumbs-item) {
-    color: #546e7a;
+    color: #64748b;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    padding: 6px 12px;
+    border-radius: 8px;
 
     &:hover {
-      color: #d84315;
+      color: #6366f1;
+      background: rgba(99, 102, 241, 0.08);
+      transform: translateY(-1px);
     }
   }
 
   :deep(.v-breadcrumbs-item--disabled) {
-    color: #d84315;
+    color: #6366f1;
     font-weight: 600;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
+    padding: 6px 12px;
+    border-radius: 8px;
   }
 
   :deep(.v-breadcrumbs-divider) {
-    color: #b0bec5;
+    color: #cbd5e1;
+    font-size: 1.1rem;
   }
 }
 
-// Construction App Bar styling
+// Modern App Bar styling with glassmorphism
 .construction-appbar {
-  backdrop-filter: blur(10px);
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 
+              0 0 0 1px rgba(99, 102, 241, 0.05) inset !important;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, 
+      transparent 0%, 
+      rgba(99, 102, 241, 0.3) 25%,
+      rgba(139, 92, 246, 0.4) 50%,
+      rgba(236, 72, 153, 0.3) 75%,
+      transparent 100%);
+    opacity: 0.6;
+  }
 }
 
 .construction-chip {
   font-weight: 600;
-  text-transform: uppercase;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.5px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.12) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+  }
 }
 
-// Rotating hardhat animation
+// Modern icon animation
 .rotating-hardhat {
-  animation: subtle-rotate 3s ease-in-out infinite;
+  animation: modernBounce 3s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
 }
 
-@keyframes subtle-rotate {
-  0%,
-  100% {
-    transform: rotate(0deg);
+@keyframes modernBounce {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
   }
   25% {
-    transform: rotate(-5deg);
+    transform: translateY(-3px) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0deg);
   }
   75% {
-    transform: rotate(5deg);
+    transform: translateY(-3px) rotate(5deg);
   }
 }
 
-// Main content area
+// Main content area with modern gradient background
 .main-content {
-  background: #f8fafc;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
   min-height: 100vh;
   overflow-y: auto;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.03), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.03), transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
 }
 
 .main-container {
   min-height: 100vh;
-  padding-bottom: 24px;
+  padding-bottom: 32px;
+  position: relative;
+  z-index: 1;
 }
 
 // Page transitions

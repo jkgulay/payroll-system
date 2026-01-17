@@ -169,54 +169,6 @@ const router = createRouter({
           meta: { title: "Resume Review", roles: ["admin"] },
         },
         {
-          path: "payroll",
-          name: "payroll",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollListView.vue"
-            ),
-          meta: { title: "Payroll", roles: ["admin", "accountant"] },
-        },
-        {
-          path: "payroll/create",
-          name: "payroll-create",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollFormView.vue"
-            ),
-          meta: { title: "Create Payroll" },
-        },
-        {
-          path: "payroll/:id",
-          name: "payroll-detail",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollDetailView.vue"
-            ),
-          meta: { title: "Payroll Details" },
-        },
-        {
-          path: "payroll/pay-rates",
-          name: "pay-rates",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayRateManagementView.vue"
-            ),
-          meta: {
-            title: "Compensation & Pay Rates",
-            roles: ["admin", "accountant"],
-          },
-        },
-        {
-          path: "payroll/:id/process",
-          name: "payroll-process",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollProcessView.vue"
-            ),
-          meta: { title: "Process Payroll" },
-        },
-        {
           path: "allowances",
           name: "allowances",
           component: () =>
@@ -224,6 +176,15 @@ const router = createRouter({
               /* webpackChunkName: "benefits" */ "@/views/benefits/MealAllowanceView.vue"
             ),
           meta: { title: "Allowances", roles: ["admin", "accountant", "hr"] },
+        },
+        {
+          path: "thirteenth-month-pay",
+          name: "thirteenth-month-pay",
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/ThirteenthMonthPayView.vue"
+            ),
+          meta: { title: "13th Month Pay", roles: ["admin", "accountant", "hr"] },
         },
         {
           path: "loans",
@@ -262,16 +223,22 @@ const router = createRouter({
           meta: { title: "Reports" },
         },
         {
-          path: "analytics",
-          name: "analytics",
+          path: "payroll",
+          name: "payroll",
           component: () =>
             import(
-              /* webpackChunkName: "analytics" */ "@/views/AnalyticsDashboard.vue"
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollListView.vue"
             ),
-          meta: {
-            title: "Analytics Dashboard",
-            roles: ["admin", "accountant"],
-          },
+          meta: { title: "Payroll Management", roles: ["admin", "accountant"] },
+        },
+        {
+          path: "payroll/:id",
+          name: "payroll-detail",
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollDetailView.vue"
+            ),
+          meta: { title: "Payroll Details", roles: ["admin", "accountant"] },
         },
         {
           path: "settings",

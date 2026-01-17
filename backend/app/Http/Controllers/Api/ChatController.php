@@ -62,11 +62,18 @@ class ChatController extends Controller
                 ], 200);
             }
 
-            // Return a user-friendly error message
+            // Log the failure reason
+            Log::warning('AI Chat Failed', [
+                'user_message' => $userMessage,
+                'intent' => $intent,
+                'error' => $response['message'] ?? 'Unknown error',
+            ]);
+
+            // Return the actual error message from AI service
             return response()->json([
-                'success' => false,
-                'message' => 'I\'m having trouble understanding that question. Could you try rephrasing it?',
-            ], 200); // Changed to 200 to avoid triggering error handlers
+                'success' => true, // Keep true to avoid error UI
+                'message' => $response['message'] ?? 'I\'m having trouble processing that request. Please try again later.',
+            ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Handle validation errors gracefully

@@ -56,36 +56,90 @@ defineProps({
 
 <style scoped>
 .chart-skeleton {
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 .chart-bars {
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
-  height: 200px;
-  gap: 12px;
+  height: 240px;
+  gap: 16px;
 }
 
 .chart-bar {
   flex: 1;
   background: linear-gradient(
     180deg,
-    #e0e0e0 0%,
-    #f5f5f5 100%
+    rgba(99, 102, 241, 0.2) 0%,
+    rgba(139, 92, 246, 0.15) 50%,
+    rgba(236, 72, 153, 0.1) 100%
   );
-  border-radius: 4px 4px 0 0;
-  animation: pulse 1.5s ease-in-out infinite;
+  border-radius: 12px 12px 0 0;
+  animation: shimmer 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    animation: wave 2s ease-in-out infinite;
+  }
 }
 
-@keyframes pulse {
+@keyframes shimmer {
   0%, 100% {
     opacity: 1;
+    transform: scaleY(1);
   }
   50% {
-    opacity: 0.6;
+    opacity: 0.7;
+    transform: scaleY(0.95);
+  }
+}
+
+@keyframes wave {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+:deep(.v-skeleton-loader__bone) {
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(139, 92, 246, 0.12) 50%,
+    rgba(99, 102, 241, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonWave 2s ease-in-out infinite;
+}
+
+@keyframes skeletonWave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }
 </style>

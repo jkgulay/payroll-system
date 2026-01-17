@@ -23,6 +23,19 @@
     <v-card class="mb-4">
       <v-card-text>
         <v-row>
+          <v-col cols="12" md="3">
+            <v-text-field
+              v-model="filters.search"
+              prepend-inner-icon="mdi-magnify"
+              label="Search deductions..."
+              variant="outlined"
+              density="compact"
+              clearable
+              hint="Search by name, employee, or reference number"
+              persistent-hint
+              @update:model-value="debouncedSearch"
+            ></v-text-field>
+          </v-col>
           <v-col cols="12" md="3" v-if="userRole !== 'employee'">
             <v-autocomplete
               v-model="filters.employee_id"
@@ -36,7 +49,7 @@
               @update:model-value="fetchDeductions"
             ></v-autocomplete>
           </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 4 : 3">
+          <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
             <v-select
               v-model="filters.deduction_type"
               :items="deductionTypes"
@@ -47,7 +60,7 @@
               @update:model-value="fetchDeductions"
             ></v-select>
           </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 4 : 3">
+          <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
             <v-select
               v-model="filters.status"
               :items="statusOptions"
@@ -58,7 +71,7 @@
               @update:model-value="fetchDeductions"
             ></v-select>
           </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 4 : 3">
+          <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
             <v-btn
               color="secondary"
               variant="outlined"
@@ -193,82 +206,175 @@
       </v-data-table>
     </v-card>
 
-    <!-- Add/Edit Dialog -->
-    <v-dialog v-model="dialog" max-width="700px" persistent>
-      <v-card>
-        <v-card-title class="text-h5">
-          {{ editMode ? "Edit Deduction" : "Add Deduction" }}
+    <!-- Add/Edit Dialog - Modern UI -->
+    <v-dialog v-model="dialog" max-width="800px" persistent>
+      <v-card class="modern-dialog-card" elevation="24">
+        <!-- Enhanced Header -->
+        <v-card-title class="modern-dialog-header modern-dialog-header-error">
+          <div class="d-flex align-center w-100">
+            <v-avatar color="white" size="48" class="mr-4">
+              <v-icon color="error" size="32">{{ editMode ? 'mdi-pencil' : 'mdi-cash-minus' }}</v-icon>
+            </v-avatar>
+            <div>
+              <div class="text-h5 font-weight-bold">
+                {{ editMode ? "Edit Deduction" : "Add Deduction" }}
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ editMode ? 'Update deduction details' : 'Create new deduction for employee' }}
+              </div>
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn icon variant="text" color="white" @click="closeDialog" size="small">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text class="pa-6">
           <v-form ref="form" v-model="formValid">
             <v-row>
+              <!-- Employee Selection -->
               <v-col cols="12">
-                <v-autocomplete
-                  v-model="formData.employee_id"
-                  :items="employees"
-                  item-title="full_name"
-                  item-value="id"
-                  label="Employee *"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                  :disabled="editMode"
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template v-slot:title>
-                        {{ item.raw.full_name }}
-                      </template>
-                      <template v-slot:subtitle>
-                        {{ item.raw.employee_number }} - {{ item.raw.position }}
-                      </template>
-                    </v-list-item>
-                  </template>
-                </v-autocomplete>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-account-search</v-icon>
+                    Search and Select Employee <span class="text-error">*</span>
+                  </label>
+                  <v-autocomplete
+                    v-model="formData.employee_id"
+                    :items="employees"
+                    item-title="full_name"
+                    item-value="id"
+                    placeholder="Search by name, employee number, or position"
+                    variant="outlined"
+                    density="comfortable"
+                    :rules="[rules.required]"
+                    :disabled="editMode"
+                    clearable
+                    prepend-inner-icon="mdi-account-search"
+                    color="primary"
+                    hint="Search by name, employee number, or position"
+                    persistent-hint
+                    no-data-text="No employees found matching your search"
+                    :custom-filter="customEmployeeFilter"
+                  >
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template v-slot:prepend>
+                          <v-avatar color="primary" size="40">
+                            <span class="text-white text-subtitle-2">
+                              {{ getInitials(item.raw.full_name) }}
+                            </span>
+                          </v-avatar>
+                        </template>
+                        <template v-slot:title>
+                          <span class="font-weight-medium">{{ item.raw.full_name }}</span>
+                        </template>
+                        <template v-slot:subtitle>
+                          <v-chip size="x-small" class="mr-1" color="primary" variant="outlined">
+                            {{ item.raw.employee_number }}
+                          </v-chip>
+                          <span class="text-caption">{{ item.raw.position || 'N/A' }}</span>
+                        </template>
+                      </v-list-item>
+                    </template>
+                    <template v-slot:selection="{ item }">
+                      <v-chip size="small" color="primary" variant="flat">
+                        <v-avatar start>
+                          <span class="text-white text-caption">
+                            {{ getInitials(item.raw.full_name) }}
+                          </span>
+                        </v-avatar>
+                        {{ item.raw.full_name }} - {{ item.raw.employee_number }}
+                      </v-chip>
+                    </template>
+                  </v-autocomplete>
+                </div>
               </v-col>
 
+              <!-- Deduction Type -->
               <v-col cols="12" md="6">
-                <v-select
-                  v-model="formData.deduction_type"
-                  :items="deductionTypes"
-                  label="Deduction Type *"
-                  variant="outlined"
-                  :rules="[rules.required]"
-                ></v-select>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-tag</v-icon>
+                    Deduction Type <span class="text-error">*</span>
+                  </label>
+                  <v-select
+                    v-model="formData.deduction_type"
+                    :items="deductionTypes"
+                    placeholder="Select deduction type"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-tag"
+                    color="primary"
+                    :rules="[rules.required]"
+                  ></v-select>
+                </div>
               </v-col>
 
+              <!-- Deduction Name -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="formData.deduction_name"
-                  label="Deduction Name"
-                  variant="outlined"
-                  hint="Auto-generated from type if left blank"
-                  persistent-hint
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-text</v-icon>
+                    Deduction Name
+                    <v-chip size="x-small" color="info" class="ml-2">Auto-generated</v-chip>
+                  </label>
+                  <v-text-field
+                    v-model="formData.deduction_name"
+                    placeholder="Auto-generated from type if left blank"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-text"
+                    color="primary"
+                    hint="Auto-generated from type if left blank"
+                    persistent-hint
+                  ></v-text-field>
+                </div>
               </v-col>
 
+              <!-- Total Amount -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="formData.total_amount"
-                  label="Total Amount *"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  :rules="[rules.required, rules.positive]"
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-currency-php</v-icon>
+                    Total Amount <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model.number="formData.total_amount"
+                    type="number"
+                    prefix="₱"
+                    placeholder="0.00"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-currency-php"
+                    color="primary"
+                    :rules="[rules.required, rules.positive]"
+                  ></v-text-field>
+                </div>
               </v-col>
 
+              <!-- Amount per Cutoff -->
               <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="formData.amount_per_cutoff"
-                  label="Amount per Cutoff *"
-                  type="number"
-                  prefix="₱"
-                  variant="outlined"
-                  :rules="[rules.required, rules.positive]"
-                  hint="Semi-monthly deduction amount"
-                  persistent-hint
-                ></v-text-field>
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-cash</v-icon>
+                    Amount per Cutoff <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model.number="formData.amount_per_cutoff"
+                    type="number"
+                    prefix="₱"
+                    placeholder="0.00"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-cash"
+                    color="primary"
+                    :rules="[rules.required, rules.positive]"
+                    hint="Semi-monthly deduction amount"
+                    persistent-hint
+                  ></v-text-field>
+                </div>
               </v-col>
 
               <v-col cols="12" md="6">
@@ -552,6 +658,7 @@ const activeTab = ref("all");
 
 // Filters
 const filters = ref({
+  search: "",
   employee_id: null,
   deduction_type: null,
   status: null,
@@ -594,6 +701,20 @@ const filteredDeductions = computed(() => {
 
   return deductions.value;
 });
+
+// Custom filter for employee autocomplete
+const customEmployeeFilter = (itemTitle, queryText, item) => {
+  if (!queryText) return true;
+  
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.full_name?.toLowerCase() || '';
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || '';
+  const position = item.raw.position?.toLowerCase() || '';
+  
+  return fullName.includes(search) || 
+         employeeNumber.includes(search) || 
+         position.includes(search);
+};
 
 // Headers
 const headers = computed(() => {
@@ -660,6 +781,7 @@ const fetchDeductions = async () => {
   loading.value = true;
   try {
     const params = {};
+    if (filters.value.search) params.search = filters.value.search;
     if (filters.value.employee_id)
       params.employee_id = filters.value.employee_id;
     if (filters.value.deduction_type)
@@ -679,13 +801,38 @@ const fetchDeductions = async () => {
   }
 };
 
+// Debounce search to avoid too many API calls
+let searchTimeout = null;
+const debouncedSearch = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    fetchDeductions();
+  }, 500);
+};
+
 // Fetch employees
 const fetchEmployees = async () => {
   try {
-    const response = await api.get("/employees?per_page=1000");
-    employees.value = response.data.data || response.data;
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 10000, // Large number to get all employees
+        paginate: false
+      }
+    });
+    
+    // Handle both paginated and non-paginated responses
+    if (response.data.data) {
+      employees.value = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      employees.value = response.data;
+    } else {
+      employees.value = [];
+    }
+    
+    console.log('Loaded employees:', employees.value.length);
   } catch (error) {
     console.error("Failed to load employees:", error);
+    toast.error("Failed to load employees");
   }
 };
 
@@ -781,6 +928,7 @@ const viewDetails = (deduction) => {
 // Clear filters
 const clearFilters = () => {
   filters.value = {
+    search: "",
     employee_id: null,
     deduction_type: null,
     status: null,
@@ -825,6 +973,13 @@ const formatDate = (date) => {
     month: "short",
     day: "numeric",
   });
+};
+
+const getInitials = (name) => {
+  if (!name) return "??";
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
 const getDeductionTypeColor = (type) => {

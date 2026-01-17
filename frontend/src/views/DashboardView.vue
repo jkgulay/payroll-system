@@ -32,49 +32,24 @@
 
     <!-- Statistics Cards Row -->
     <v-row class="mb-6">
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" sm="6" md="3">
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis"
-                >Total Revenue</span
-              >
-              <v-icon size="20" color="success">mdi-trending-up</v-icon>
-            </div>
-            <div class="text-h4 font-weight-bold mb-2">
-              ₱{{ formatNumber(stats.periodPayroll) }}
-            </div>
-            <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis"
-                >Current period total</span
-              >
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" sm="6" lg="3">
-        <v-card class="modern-card stat-card" elevation="0">
-          <v-card-text class="pa-5">
-            <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis"
-                >Active Employees</span
-              >
+              <span class="text-subtitle-2 text-medium-emphasis">Active Employees</span>
               <v-icon size="20" color="primary">mdi-account-group</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               {{ stats.activeEmployees }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis"
-                >Currently active</span
-              >
+              <span class="text-caption text-medium-emphasis">of {{ stats.totalEmployees }} total</span>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" sm="6" md="3">
         <v-card
           class="modern-card stat-card"
           elevation="0"
@@ -83,231 +58,287 @@
         >
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis"
-                >Attendance Today</span
-              >
+              <span class="text-subtitle-2 text-medium-emphasis">Present Today</span>
               <v-icon size="20" color="info">mdi-clock-check</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
               {{ stats.presentToday }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis"
-                >Present today - Click to view</span
-              >
+              <span class="text-caption text-medium-emphasis">Click to view details</span>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" sm="6" md="3">
         <v-card class="modern-card stat-card" elevation="0">
           <v-card-text class="pa-5">
             <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis"
-                >Total Employees</span
-              >
-              <v-icon size="20" color="warning">mdi-account-hard-hat</v-icon>
+              <span class="text-subtitle-2 text-medium-emphasis">Period Payroll</span>
+              <v-icon size="20" color="success">mdi-currency-usd</v-icon>
             </div>
             <div class="text-h4 font-weight-bold mb-2">
-              {{ stats.totalEmployees }}
+              ₱{{ formatNumber(stats.periodPayroll) }}
             </div>
             <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis"
-                >Total in system</span
-              >
+              <span class="text-caption text-medium-emphasis">Current month</span>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="3">
+        <v-card 
+          class="modern-card stat-card" 
+          elevation="0"
+          style="cursor: pointer"
+          @click="$router.push('/resume-review')"
+        >
+          <v-card-text class="pa-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <span class="text-subtitle-2 text-medium-emphasis">Pending Actions</span>
+              <v-icon size="20" color="warning">mdi-alert-circle</v-icon>
+            </div>
+            <div class="text-h4 font-weight-bold mb-2">
+              {{ totalPendingActions }}
+            </div>
+            <div class="d-flex align-center">
+              <span class="text-caption text-medium-emphasis">Requires attention</span>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Main Content Row -->
-    <v-row>
-      <!-- Left Column - Charts and Payroll -->
+    <!-- Main Content Section -->
+    <v-row class="mb-6">
+      <!-- Left Column - Pending Actions & Charts -->
       <v-col cols="12" lg="8">
-        <!-- Revenue Chart -->
+        <!-- Pending Actions -->
         <v-card class="modern-card mb-6" elevation="0">
-          <v-card-title class="pa-5 d-flex justify-space-between align-center">
-            <div>
-              <div class="text-h6 font-weight-bold">Total Revenue</div>
-              <div class="text-caption text-medium-emphasis mt-1">
-                Monthly payroll overview
-              </div>
-            </div>
-            <v-btn-toggle
-              v-model="revenueFilter"
-              mandatory
-              density="compact"
-              variant="outlined"
-              divided
+          <v-card-title class="pa-5">
+            <v-icon color="warning" size="small" class="mr-2">mdi-bell-alert</v-icon>
+            <div class="text-subtitle-1 font-weight-bold">Items Requiring Attention</div>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-0">
+            <v-list class="py-0">
+              <!-- Pending Applications -->
+              <v-list-item
+                v-if="stats.pendingApplications > 0"
+                @click="$router.push('/resume-review')"
+                class="px-5 py-4"
+              >
+                <template v-slot:prepend>
+                  <v-avatar color="warning" size="40">
+                    <v-icon>mdi-account-clock</v-icon>
+                  </v-avatar>
+                </template>
+                <v-list-item-title class="font-weight-medium">
+                  Job Applications
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ stats.pendingApplications }} applications awaiting review
+                </v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-chip color="warning" size="small" variant="flat">
+                    {{ stats.pendingApplications }}
+                  </v-chip>
+                </template>
+              </v-list-item>
+              <v-divider v-if="stats.pendingApplications > 0 && (stats.pendingLeaves > 0 || stats.pendingAttendanceCorrections > 0 || stats.draftPayrolls > 0)"></v-divider>
+
+              <!-- Pending Leaves -->
+              <v-list-item
+                v-if="stats.pendingLeaves > 0"
+                @click="$router.push('/hr/leave-approval')"
+                class="px-5 py-4"
+              >
+                <template v-slot:prepend>
+                  <v-avatar color="info" size="40">
+                    <v-icon>mdi-calendar-clock</v-icon>
+                  </v-avatar>
+                </template>
+                <v-list-item-title class="font-weight-medium">
+                  Leave Requests
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ stats.pendingLeaves }} leave requests need approval
+                </v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-chip color="info" size="small" variant="flat">
+                    {{ stats.pendingLeaves }}
+                  </v-chip>
+                </template>
+              </v-list-item>
+              <v-divider v-if="stats.pendingLeaves > 0 && (stats.pendingAttendanceCorrections > 0 || stats.draftPayrolls > 0)"></v-divider>
+
+              <!-- Pending Attendance Corrections -->
+              <v-list-item
+                v-if="stats.pendingAttendanceCorrections > 0"
+                @click="$router.push({ path: '/attendance', query: { tab: 'approvals' } })"
+                class="px-5 py-4"
+              >
+                <template v-slot:prepend>
+                  <v-avatar color="primary" size="40">
+                    <v-icon>mdi-clock-alert</v-icon>
+                  </v-avatar>
+                </template>
+                <v-list-item-title class="font-weight-medium">
+                  Attendance Corrections
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ stats.pendingAttendanceCorrections }} corrections pending
+                </v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-chip color="primary" size="small" variant="flat">
+                    {{ stats.pendingAttendanceCorrections }}
+                  </v-chip>
+                </template>
+              </v-list-item>
+              <v-divider v-if="stats.pendingAttendanceCorrections > 0 && stats.draftPayrolls > 0"></v-divider>
+
+              <!-- Draft Payrolls -->
+              <v-list-item
+                v-if="stats.draftPayrolls > 0"
+                @click="$router.push('/payroll')"
+                class="px-5 py-4"
+              >
+                <template v-slot:prepend>
+                  <v-avatar color="success" size="40">
+                    <v-icon>mdi-file-document-edit</v-icon>
+                  </v-avatar>
+                </template>
+                <v-list-item-title class="font-weight-medium">
+                  Draft Payrolls
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ stats.draftPayrolls }} payrolls ready to finalize
+                </v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-chip color="success" size="small" variant="flat">
+                    {{ stats.draftPayrolls }}
+                  </v-chip>
+                </template>
+              </v-list-item>
+
+              <!-- No Pending Actions -->
+              <v-list-item v-if="totalPendingActions === 0" class="px-5 py-8">
+                <v-list-item-title class="text-center text-medium-emphasis">
+                  <v-icon size="48" color="success" class="mb-2">mdi-check-circle</v-icon>
+                  <div>All caught up! No pending actions.</div>
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+
+        <!-- Recent Activity Feed -->
+        <RecentActivityFeed class="mb-6" />
+
+        <!-- Upcoming Events -->
+        <UpcomingEvents />
+      </v-col>
+
+      <!-- Right Column - Quick Actions & Widgets -->
+      <v-col cols="12" lg="4">
+        <!-- Quick Actions -->
+        <v-card class="modern-card mb-4" elevation="0">
+          <v-card-title class="pa-5">
+            <v-icon color="primary" size="small" class="mr-2">mdi-lightning-bolt</v-icon>
+            <div class="text-subtitle-1 font-weight-bold">Quick Actions</div>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-3">
+            <v-btn
+              block
+              variant="tonal"
+              color="primary"
+              prepend-icon="mdi-account-plus"
+              class="mb-2 justify-start"
+              @click="showAddEmployeeDialog = true"
             >
-              <v-btn value="earnings" size="small">Earnings</v-btn>
-              <v-btn value="spendings" size="small">Spendings</v-btn>
-            </v-btn-toggle>
+              Add Employee
+            </v-btn>
+            <v-btn
+              block
+              variant="tonal"
+              color="success"
+              prepend-icon="mdi-currency-usd"
+              class="mb-2 justify-start"
+              @click="$router.push('/payroll/create')"
+            >
+              Create Payroll
+            </v-btn>
+            <v-btn
+              block
+              variant="tonal"
+              color="info"
+              prepend-icon="mdi-file-upload"
+              class="mb-2 justify-start"
+              @click="$router.push('/biometric-import')"
+            >
+              Import Attendance
+            </v-btn>
+          </v-card-text>
+        </v-card>
+
+        <!-- System Health -->
+        <v-card class="modern-card mb-4" elevation="0">
+          <v-card-title class="pa-5">
+            <v-icon color="success" size="small" class="mr-2">mdi-shield-check</v-icon>
+            <div class="text-subtitle-1 font-weight-bold">System Health</div>
           </v-card-title>
           <v-divider></v-divider>
           <v-card-text class="pa-5">
-            <PayrollTrendChart
-              v-if="revenueFilter === 'earnings'"
-              :months="6"
-            />
-            <PayrollComparisonChart v-else />
+            <v-list class="py-0" density="compact">
+              <v-list-item class="px-0 mb-3">
+                <v-list-item-title class="text-caption text-medium-emphasis mb-1">
+                  Employee Data Completion
+                </v-list-item-title>
+                <template v-slot:append>
+                  <div class="d-flex align-center">
+                    <span class="font-weight-bold mr-2 text-body-2">{{ employeeDataCompletion }}%</span>
+                    <v-progress-circular
+                      :model-value="employeeDataCompletion"
+                      size="28"
+                      width="3"
+                      :color="employeeDataCompletion > 90 ? 'success' : 'warning'"
+                    ></v-progress-circular>
+                  </div>
+                </template>
+              </v-list-item>
+              
+              <v-list-item class="px-0 mb-3">
+                <v-list-item-title class="text-caption text-medium-emphasis">
+                  Monthly Attendance Rate
+                </v-list-item-title>
+                <template v-slot:append>
+                  <v-chip 
+                    size="small" 
+                    :color="stats.monthlyAttendanceRate > 95 ? 'success' : 'warning'"
+                    variant="flat"
+                  >
+                    {{ stats.monthlyAttendanceRate || 0 }}%
+                  </v-chip>
+                </template>
+              </v-list-item>
+
+              <v-list-item class="px-0">
+                <v-list-item-title class="text-caption text-medium-emphasis">
+                  Last Biometric Import
+                </v-list-item-title>
+                <template v-slot:append>
+                  <span class="text-caption font-weight-medium">{{ lastBiometricImport }}</span>
+                </template>
+              </v-list-item>
+            </v-list>
           </v-card-text>
         </v-card>
 
-        <!-- Attendance Statistics Card -->
-        <v-card class="modern-card mb-6" elevation="0">
-          <v-card-title class="pa-5">
-            <v-icon color="info" size="small" class="mr-2"
-              >mdi-clock-check-outline</v-icon
-            >
-            <div class="text-subtitle-1 font-weight-bold">
-              Attendance Statistics This Month
-            </div>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-5" style="height: 400px">
-            <AttendanceStatusChart period="current-month" />
-          </v-card-text>
-        </v-card>
-
-        <!-- Payroll Summary Table -->
-        <v-card class="modern-card" elevation="0">
-          <v-card-title class="pa-5 d-flex justify-space-between align-center">
-            <div>
-              <div class="text-h6 font-weight-bold">Employees Payroll</div>
-              <div class="text-caption text-medium-emphasis mt-1">
-                Recent payroll transactions
-              </div>
-            </div>
-            <v-btn
-              variant="text"
-              color="primary"
-              append-icon="mdi-arrow-right"
-              to="/payroll"
-            >
-              View All
-            </v-btn>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-data-table
-            :headers="payrollHeaders"
-            :items="recentPayrolls"
-            :items-per-page="5"
-            class="modern-table"
-          >
-            <template v-slot:item.payroll_number="{ item }">
-              <span class="font-weight-medium">#{{ item.payroll_number }}</span>
-            </template>
-
-            <template v-slot:item.period="{ item }">
-              <div class="text-body-2">
-                {{ formatDateShort(item.period_start_date) }} -
-                {{ formatDateShort(item.period_end_date) }}
-              </div>
-            </template>
-
-            <template v-slot:item.amount="{ item }">
-              <span class="font-weight-bold"
-                >₱{{ formatNumber(item.total_gross) }}</span
-              >
-            </template>
-
-            <template v-slot:item.status="{ item }">
-              <v-chip
-                :color="getPayrollColor(item.status)"
-                size="small"
-                variant="flat"
-              >
-                {{ item.status }}
-              </v-chip>
-            </template>
-
-            <template v-slot:item.actions="{ item }">
-              <v-btn
-                icon="mdi-eye"
-                size="small"
-                variant="text"
-                :to="`/payroll/${item.id}`"
-              ></v-btn>
-            </template>
-          </v-data-table>
-        </v-card>
-      </v-col>
-
-      <!-- Right Column - Calendar & Info -->
-      <v-col cols="12" lg="4">
         <!-- Calendar Widget -->
-        <DashboardCalendar class="mb-6" />
-
-        <!-- Today Staff Info -->
-        <v-card class="modern-card mb-6" elevation="0">
-          <v-card-title class="pa-5">
-            <v-icon color="primary" size="small" class="mr-2"
-              >mdi-account-group</v-icon
-            >
-            <div class="text-subtitle-1 font-weight-bold">Today Staff Info</div>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-5" style="height: 350px">
-            <TodayStaffInfoChart />
-          </v-card-text>
-        </v-card>
-
-        <!-- Pending Applications (if any) -->
-        <v-card
-          v-if="pendingApplications.length > 0"
-          class="modern-card"
-          elevation="0"
-        >
-          <v-card-title class="pa-5 d-flex justify-space-between align-center">
-            <div class="text-subtitle-1 font-weight-bold">
-              Pending Applications
-            </div>
-            <v-chip size="small" color="warning" variant="flat">
-              {{ pendingApplications.length }}
-            </v-chip>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-list class="py-0">
-            <v-list-item
-              v-for="app in pendingApplications.slice(0, 3)"
-              :key="app.id"
-              @click="viewApplication(app)"
-              class="px-5"
-            >
-              <template v-slot:prepend>
-                <v-avatar color="warning" size="40">
-                  <v-icon>mdi-account</v-icon>
-                </v-avatar>
-              </template>
-              <v-list-item-title class="font-weight-medium">
-                {{ app.first_name }} {{ app.last_name }}
-              </v-list-item-title>
-              <v-list-item-subtitle>{{ app.position }}</v-list-item-subtitle>
-              <template v-slot:append>
-                <v-btn
-                  icon="mdi-chevron-right"
-                  size="small"
-                  variant="text"
-                ></v-btn>
-              </template>
-            </v-list-item>
-          </v-list>
-          <v-divider v-if="pendingApplications.length > 3"></v-divider>
-          <v-card-actions v-if="pendingApplications.length > 3" class="pa-3">
-            <v-btn
-              block
-              variant="text"
-              size="small"
-              color="primary"
-              append-icon="mdi-arrow-right"
-            >
-              View All ({{ pendingApplications.length }})
-            </v-btn>
-          </v-card-actions>
-        </v-card>
+        <DashboardCalendar />
       </v-col>
     </v-row>
 
@@ -650,8 +681,8 @@ import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
 import DashboardCalendar from "@/components/DashboardCalendar.vue";
-import PayrollTrendChart from "@/components/charts/PayrollTrendChart.vue";
-import PayrollComparisonChart from "@/components/charts/PayrollComparisonChart.vue";
+import RecentActivityFeed from "@/components/RecentActivityFeed.vue";
+import UpcomingEvents from "@/components/UpcomingEvents.vue";
 import EmployeeDistributionChart from "@/components/charts/EmployeeDistributionChart.vue";
 import AttendanceStatusChart from "@/components/charts/AttendanceStatusChart.vue";
 import TodayStaffInfoChart from "@/components/charts/TodayStaffInfoChart.vue";
@@ -665,10 +696,15 @@ const stats = ref({
   periodPayroll: 0,
   presentToday: 0,
   pendingApprovals: 0,
+  pendingApplications: 0,
+  pendingLeaves: 0,
+  pendingAttendanceCorrections: 0,
+  draftPayrolls: 0,
+  employeesCompleteData: 0,
+  monthlyAttendanceRate: 0,
+  lastBiometricImportDate: null,
 });
 
-const recentPayrolls = ref([]);
-const revenueFilter = ref("earnings");
 const refreshing = ref(false);
 
 // Application management
@@ -705,14 +741,6 @@ const currentDateRange = computed(() => {
   })}`;
 });
 
-const payrollHeaders = [
-  { title: "Payroll Number", key: "payroll_number" },
-  { title: "Period", key: "period" },
-  { title: "Amount", key: "amount" },
-  { title: "Status", key: "status" },
-  { title: "Actions", key: "actions", sortable: false },
-];
-
 // Circular progress for community growth
 const circumference = 2 * Math.PI * 50;
 
@@ -726,6 +754,34 @@ const employeeGrowthPercentage = computed(() => {
 const progressOffset = computed(() => {
   const progress = employeeGrowthPercentage.value;
   return circumference - (progress / 100) * circumference;
+});
+
+const totalPendingActions = computed(() => {
+  return (
+    stats.value.pendingApplications +
+    stats.value.pendingLeaves +
+    stats.value.pendingAttendanceCorrections +
+    stats.value.draftPayrolls
+  );
+});
+
+const employeeDataCompletion = computed(() => {
+  if (stats.value.totalEmployees === 0) return 0;
+  return Math.round(
+    (stats.value.employeesCompleteData / stats.value.totalEmployees) * 100
+  );
+});
+
+const lastBiometricImport = computed(() => {
+  if (!stats.value.lastBiometricImportDate) return 'Never';
+  const date = new Date(stats.value.lastBiometricImportDate);
+  const now = new Date();
+  const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+  
+  if (diffInDays === 0) return 'Today';
+  if (diffInDays === 1) return 'Yesterday';
+  if (diffInDays < 7) return `${diffInDays} days ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 });
 
 let unsubscribeAttendance = null;
@@ -753,7 +809,6 @@ async function fetchDashboardData() {
   try {
     const response = await api.get("/dashboard");
     stats.value = response.data.stats;
-    recentPayrolls.value = response.data.recent_payrolls || [];
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
   }
@@ -858,18 +913,6 @@ function formatDateShort(dateString) {
   if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function getPayrollColor(status) {
-  const colors = {
-    draft: "grey",
-    processing: "info",
-    checked: "warning",
-    recommended: "accent",
-    approved: "success",
-    paid: "primary",
-  };
-  return colors[status] || "grey";
 }
 
 // Application Management Functions
@@ -978,28 +1021,85 @@ Role: Employee
 .modern-dashboard {
   max-width: 1600px;
   margin: 0 auto;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 20px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  }
 
   @media (max-width: 960px) {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+    padding: 20px;
   }
 }
 
 .modern-card {
-  border-radius: 16px !important;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 20px !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.1) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 60%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
 
   &:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
-    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15), 
+                0 8px 16px rgba(0, 0, 0, 0.08),
+                0 0 0 1px rgba(99, 102, 241, 0.1) inset !important;
+    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(99, 102, 241, 0.25) !important;
+    
+    &::after {
+      opacity: 1;
+    }
   }
 }
 
@@ -1014,13 +1114,30 @@ Role: Employee
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  }
+  
+  :deep(.v-icon) {
+    background: linear-gradient(135deg, currentColor 0%, currentColor 100%);
+    padding: 10px;
+    border-radius: 12px;
+    opacity: 0.15;
+    transition: all 0.3s ease;
+  }
+  
+  &:hover {
+    :deep(.v-icon) {
+      opacity: 0.25;
+      transform: scale(1.1) rotate(-5deg);
+    }
   }
 }
 
 .circular-progress {
   .progress-circle {
-    transition: stroke-dashoffset 1s ease;
+    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 2px 8px currentColor);
   }
 }
 
@@ -1029,15 +1146,62 @@ Role: Employee
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  font-weight: 700;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .modern-table {
   :deep(thead) {
-    background-color: #f8fafc;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    
+    th {
+      font-weight: 600;
+      color: #475569;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+    }
   }
 
-  :deep(tbody tr:hover) {
-    background-color: #f1f5f9 !important;
+  :deep(tbody tr) {
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(139, 92, 246, 0.03) 100%) !important;
+      transform: scale(1.01);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+  }
+}
+
+// Enhanced list items
+:deep(.v-list-item) {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px;
+  margin: 4px 8px;
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%) !important;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+  }
+}
+
+// Modern chips
+:deep(.v-chip) {
+  font-weight: 600;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 }
 </style>

@@ -47,6 +47,7 @@ class UpdateEmployeeRequest extends FormRequest
             'employment_type' => ['nullable', 'in:regular,contractual,part_time'], // Legacy support
             'date_hired' => ['nullable', 'date', 'before_or_equal:today'],
             'basic_salary' => ['nullable', 'numeric', 'min:450', 'max:999999.99'],
+            'custom_pay_rate' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'salary_type' => ['nullable', 'in:daily,monthly,hourly'],
 
             // Government IDs

@@ -51,6 +51,11 @@ class EmployeeController extends Controller
             $query->where('project_id', $request->project_id);
         }
 
+        // Filter by department
+        if ($request->has('department') && $request->department) {
+            $query->where('department', $request->department);
+        }
+
         // Filter by contract type
         if ($request->has('contract_type')) {
             $query->where('contract_type', $request->contract_type);
@@ -370,5 +375,117 @@ class EmployeeController extends Controller
         Log::info("User account created for employee {$employee->employee_number} (ID: {$employee->id}) by user " . auth()->id());
 
         return $user;
+    }
+
+    /**
+     * Update employee's custom pay rate
+     * Allows admin to set a custom rate that overrides position-based rate
+     */
+    public function updatePayRate(Request $request, Employee $employee)
+    {
+        $validated = $request->validate([
+            'custom_pay_rate' => 'required|numeric|min:0|max:999999.99',
+            'reason' => 'nullable|string|max:500', // Optional reason for audit trail
+        ]);
+
+        $oldRate = $employee->getBasicSalary();
+        $newRate = $validated['custom_pay_rate'];
+
+        // Update the custom pay rate
+        $employee->custom_pay_rate = $newRate;
+        $employee->save();
+
+        // Log the change for audit
+        $description = "Pay rate updated from ₱" . number_format((float)$oldRate, 2) . " to ₱" . number_format((float)$newRate, 2) . 
+            " for employee {$employee->employee_number} ({$employee->full_name})";
+        if (!empty($validated['reason'])) {
+            $description .= ". Reason: {$validated['reason']}";
+        }
+        
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'employees',
+            'action' => 'pay_rate_update',
+            'description' => $description,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'old_values' => ['custom_pay_rate' => $oldRate, 'employee_id' => $employee->id],
+            'new_values' => ['custom_pay_rate' => $newRate, 'employee_id' => $employee->id],
+        ]);
+
+        Log::info("Pay rate updated for employee {$employee->employee_number} from {$oldRate} to {$newRate} by user " . auth()->id());
+
+        return response()->json([
+            'message' => 'Pay rate updated successfully',
+            'employee' => $employee->load(['project', 'positionRate']),
+            'old_rate' => $oldRate,
+            'new_rate' => $newRate,
+        ]);
+    }
+
+    /**
+     * Clear employee's custom pay rate (revert to position-based rate)
+     */
+    public function clearCustomPayRate(Request $request, Employee $employee)
+    {
+        if ($employee->custom_pay_rate === null) {
+            return response()->json([
+                'message' => 'Employee does not have a custom pay rate set',
+            ], 422);
+        }
+
+        $oldRate = $employee->custom_pay_rate;
+        $employee->custom_pay_rate = null;
+        $employee->save();
+
+        // Get the rate that will now be used (position rate or basic_salary)
+        $newRate = $employee->getBasicSalary();
+
+        // Log the change for audit
+        $description = "Custom pay rate cleared. Rate changed from ₱" . number_format((float)$oldRate, 2) . " to ₱" . number_format((float)$newRate, 2) . 
+            " (position-based rate) for employee {$employee->employee_number} ({$employee->full_name})";
+        $reason = $request->input('reason');
+        if (!empty($reason)) {
+            $description .= ". Reason: {$reason}";
+        }
+        
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'employees',
+            'action' => 'pay_rate_clear',
+            'description' => $description,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'old_values' => ['custom_pay_rate' => $oldRate, 'employee_id' => $employee->id],
+            'new_values' => ['custom_pay_rate' => null, 'position_rate' => $newRate, 'employee_id' => $employee->id],
+        ]);
+
+        Log::info("Custom pay rate cleared for employee {$employee->employee_number} by user " . auth()->id());
+
+        return response()->json([
+            'message' => 'Custom pay rate cleared successfully. Reverted to position-based rate.',
+            'employee' => $employee->load(['project', 'positionRate']),
+            'old_rate' => $oldRate,
+            'new_rate' => $newRate,
+        ]);
+    }
+
+    /**
+     * Get list of unique departments
+     */
+    public function getDepartments()
+    {
+        try {
+            $departments = Employee::whereNotNull('department')
+                ->where('department', '!=', '')
+                ->distinct()
+                ->orderBy('department')
+                ->pluck('department');
+
+            return response()->json($departments);
+        } catch (\Exception $e) {
+            Log::error('Error fetching departments: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch departments'], 500);
+        }
     }
 }

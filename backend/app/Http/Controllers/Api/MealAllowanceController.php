@@ -339,6 +339,10 @@ class MealAllowanceController extends Controller
         }
 
         try {
+            // Increase memory limit for PDF generation
+            ini_set('memory_limit', '1024M');
+            ini_set('max_execution_time', '300');
+            
             // Ensure storage directory exists
             $storagePath = storage_path('app/public/meal_allowances');
             if (!file_exists($storagePath)) {
@@ -360,11 +364,14 @@ class MealAllowanceController extends Controller
                 'grandTotal' => $mealAllowance->grand_total,
             ];
 
-            // Generate PDF using DomPDF with options
+            // Generate PDF using DomPDF with optimized options
             $pdf = Pdf::loadView('pdfs.meal_allowance', $data)
                 ->setPaper('letter', 'portrait')
                 ->setOption('enable_php', false)
-                ->setOption('enable_remote', true)
+                ->setOption('enable_remote', false)
+                ->setOption('isHtml5ParserEnabled', true)
+                ->setOption('isRemoteEnabled', false)
+                ->setOption('debugKeepTemp', false)
                 ->setOption('chroot', base_path())
                 ->setOption('tempDir', sys_get_temp_dir())
                 ->setOption('fontDir', storage_path('fonts'))

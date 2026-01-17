@@ -1,280 +1,354 @@
 <template>
-  <div>
-    <v-row class="mb-4" align="center">
-      <v-col>
-        <v-btn
-          icon="mdi-arrow-left"
-          variant="text"
-          @click="$router.push('/payroll')"
-          class="mr-2"
-        ></v-btn>
-        <h1 class="text-h4 font-weight-bold d-inline">Payroll Details</h1>
-      </v-col>
-      <v-col cols="auto">
-        <v-btn
-          color="primary"
-          @click="openExportDialog"
-          prepend-icon="mdi-file-pdf-box"
-        >
-          Export PDF
-        </v-btn>
+  <v-container fluid class="pa-6">
+    <v-row v-if="loading" class="fill-height" align-content="center" justify="center">
+      <v-col class="text-center">
+        <v-progress-circular indeterminate color="primary" :size="70"></v-progress-circular>
       </v-col>
     </v-row>
 
-    <v-card v-if="loading" class="pa-8">
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        class="mx-auto d-block"
-      ></v-progress-circular>
-    </v-card>
-
-    <div v-else-if="payroll">
-      <!-- Payroll Header Info -->
-      <v-card class="mb-4">
-        <v-card-title class="d-flex align-center">
-          <span>{{ payroll.payroll_number }}</span>
-          <v-spacer></v-spacer>
-          <v-chip :color="getStatusColor(payroll.status)" variant="flat">
-            {{ getStatusLabel(payroll.status) }}
-          </v-chip>
-        </v-card-title>
-        <v-card-text>
-          <v-row>
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">Period</div>
-              <div class="text-body-1 font-weight-medium">
-                {{ formatDate(payroll.period_start) }} -
-                {{ formatDate(payroll.period_end) }}
-              </div>
-            </v-col>
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">Payment Date</div>
-              <div class="text-body-1 font-weight-medium">
-                {{ formatDate(payroll.payment_date) }}
-              </div>
-            </v-col>
-            <v-col cols="12" md="2">
-              <div class="text-caption text-medium-emphasis">Employees</div>
-              <div class="text-h6 font-weight-bold">
-                {{ payroll.payroll_items?.length || 0 }}
-              </div>
-            </v-col>
-            <v-col cols="12" md="4">
-              <div class="text-caption text-medium-emphasis">Total Net Pay</div>
-              <div class="text-h6 font-weight-bold text-success">
-                {{ formatCurrency(payroll.total_net_pay) }}
-              </div>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
-
-      <!-- Quick Actions -->
-      <v-card class="mb-4">
-        <v-card-text>
-          <v-btn-group divided variant="outlined" class="w-100">
-            <v-btn
-              v-if="payroll.status === 'draft'"
-              @click="showProcessDialog = true"
-              prepend-icon="mdi-play-circle"
-              color="primary"
-            >
-              Process Payroll
-            </v-btn>
-            <v-btn @click="openExportDialog" prepend-icon="mdi-file-pdf-box">
-              Export PDF
-            </v-btn>
-            <v-btn
-              @click="$router.push('/payroll')"
-              prepend-icon="mdi-arrow-left"
-            >
-              Back to List
-            </v-btn>
-          </v-btn-group>
-        </v-card-text>
-      </v-card>
-
-      <!-- Summary Cards -->
+    <div v-else>
+      <!-- Header -->
       <v-row class="mb-4">
-        <v-col cols="12" md="4">
+        <v-col cols="12">
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-arrow-left"
+            @click="$router.push('/payroll')"
+            class="mb-4"
+          >
+            Back to Payroll List
+          </v-btn>
+
+          <div class="d-flex justify-space-between align-center">
+            <div>
+              <h1 class="text-h4 font-weight-bold mb-2">
+                {{ payroll?.payroll_number }}
+              </h1>
+              <p class="text-subtitle-1 text-medium-emphasis">
+                {{ payroll?.period_name }}
+              </p>
+            </div>
+            <div class="d-flex gap-2">
+              <v-chip
+                :color="getStatusColor(payroll?.status)"
+                size="large"
+                variant="flat"
+              >
+                {{ payroll?.status?.toUpperCase() }}
+              </v-chip>
+              <v-btn
+                v-if="payroll?.status === 'draft'"
+                color="success"
+                prepend-icon="mdi-check-circle"
+                @click="finalizePayroll"
+                :loading="finalizing"
+              >
+                Finalize Payroll
+              </v-btn>
+              <v-btn
+                color="primary"
+                prepend-icon="mdi-download"
+                @click="downloadRegister"
+              >
+                Download Register
+              </v-btn>
+            </div>
+          </div>
+        </v-col>
+      </v-row>
+
+      <!-- Payroll Info Cards -->
+      <v-row class="mb-4">
+        <v-col cols="12" md="3">
           <v-card>
             <v-card-text>
-              <div class="text-caption text-medium-emphasis">Gross Pay</div>
-              <div class="text-h5 font-weight-bold">
-                {{ formatCurrency(payroll.total_gross_pay) }}
+              <div class="text-overline mb-1">Period</div>
+              <div class="text-body-1">
+                {{ formatDate(payroll?.period_start) }} - {{ formatDate(payroll?.period_end) }}
               </div>
             </v-card-text>
           </v-card>
         </v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="3">
           <v-card>
             <v-card-text>
-              <div class="text-caption text-medium-emphasis">
-                Total Deductions
-              </div>
-              <div class="text-h5 font-weight-bold text-error">
-                {{ formatCurrency(payroll.total_deductions) }}
+              <div class="text-overline mb-1">Payment Date</div>
+              <div class="text-body-1">{{ formatDate(payroll?.payment_date) }}</div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col cols="12" md="2">
+          <v-card>
+            <v-card-text>
+              <div class="text-overline mb-1">Employees</div>
+              <div class="text-h6 font-weight-bold">{{ payroll?.items?.length || 0 }}</div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col cols="12" md="2">
+          <v-card>
+            <v-card-text>
+              <div class="text-overline mb-1">Total Gross</div>
+              <div class="text-h6 font-weight-bold text-info">
+                ₱{{ formatCurrency(payroll?.total_gross) }}
               </div>
             </v-card-text>
           </v-card>
         </v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="2">
           <v-card>
             <v-card-text>
-              <div class="text-caption text-medium-emphasis">Net Pay</div>
-              <div class="text-h5 font-weight-bold text-success">
-                {{ formatCurrency(payroll.total_net_pay) }}
+              <div class="text-overline mb-1">Total Net</div>
+              <div class="text-h6 font-weight-bold text-success">
+                ₱{{ formatCurrency(payroll?.total_net) }}
               </div>
             </v-card-text>
           </v-card>
         </v-col>
       </v-row>
-    </div>
 
-    <!-- Export Payroll Dialog -->
-    <ExportPayrollDialog
-      v-model="showExportDialog"
-      :payroll-id="payrollId"
-      @exported="handleExported"
-    />
-
-    <!-- Process Payroll Confirmation Dialog -->
-    <v-dialog v-model="showProcessDialog" max-width="500px" persistent>
+      <!-- Employee Payroll Items -->
       <v-card>
-        <v-card-title class="text-h5 py-4">
-          <v-icon start color="primary">mdi-play-circle</v-icon>
-          Process Payroll
-        </v-card-title>
-        <v-divider></v-divider>
-
-        <v-card-text class="pt-6">
-          <p>
-            Process payroll for <strong>{{ payroll?.period_label }}</strong
-            >?
-          </p>
-          <p class="text-body-2 text-medium-emphasis mt-2">
-            This will calculate salaries for all employees based on their
-            attendance records.
-          </p>
-          <v-alert type="info" variant="tonal" class="mt-4" density="compact">
-            Make sure all attendance records are complete before processing.
-          </v-alert>
-        </v-card-text>
-
-        <v-divider></v-divider>
-
-        <v-card-actions class="pa-4">
+        <v-card-title class="d-flex align-center">
+          <v-icon icon="mdi-account-group" class="mr-2"></v-icon>
+          Employee Payroll Details
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="showProcessDialog = false"
-            :disabled="processing"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            variant="elevated"
-            @click="processPayroll"
-            :loading="processing"
-          >
-            <v-icon start>mdi-play-circle</v-icon>
-            Process
-          </v-btn>
-        </v-card-actions>
+          <v-text-field
+            v-model="search"
+            prepend-inner-icon="mdi-magnify"
+            label="Search employee..."
+            single-line
+            hide-details
+            density="compact"
+            style="max-width: 300px"
+          ></v-text-field>
+        </v-card-title>
+
+        <v-data-table
+          :headers="headers"
+          :items="payroll?.items || []"
+          :search="search"
+          :items-per-page="15"
+          class="elevation-1"
+        >
+          <!-- Employee -->
+          <template v-slot:item.employee="{ item }">
+            <div>
+              <div class="font-weight-medium">
+                {{ item.employee?.first_name }} {{ item.employee?.last_name }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {{ item.employee?.employee_number }}
+              </div>
+            </div>
+          </template>
+
+          <!-- Rate & Days -->
+          <template v-slot:item.rate_days="{ item }">
+            <div>
+              <div>₱{{ formatCurrency(item.effective_rate || item.basic_rate || 0) }}</div>
+              <div class="text-caption">{{ item.days_worked }} days</div>
+            </div>
+          </template>
+
+          <!-- Basic Pay -->
+          <template v-slot:item.basic_pay="{ item }">
+            <div class="text-right">₱{{ formatCurrency(item.basic_pay) }}</div>
+          </template>
+
+          <!-- Overtime -->
+          <template v-slot:item.overtime="{ item }">
+            <div>
+              <div v-if="item.regular_ot_hours > 0" class="text-caption">
+                {{ item.regular_ot_hours }}h: ₱{{ formatCurrency(item.regular_ot_pay) }}
+              </div>
+              <div v-else class="text-caption text-medium-emphasis">-</div>
+            </div>
+          </template>
+
+          <!-- Gross Pay -->
+          <template v-slot:item.gross_pay="{ item }">
+            <div class="text-right font-weight-bold text-info">
+              ₱{{ formatCurrency(item.gross_pay) }}
+            </div>
+          </template>
+
+          <!-- Deductions -->
+          <template v-slot:item.deductions="{ item }">
+            <div class="text-caption">
+              <div>SSS: ₱{{ formatCurrency(item.sss_contribution) }}</div>
+              <div>PhilHealth: ₱{{ formatCurrency(item.philhealth_contribution) }}</div>
+              <div>Pag-IBIG: ₱{{ formatCurrency(item.pagibig_contribution) }}</div>
+              <div v-if="item.total_loan_deductions > 0">
+                Loans: ₱{{ formatCurrency(item.total_loan_deductions) }}
+              </div>
+              <div v-if="item.employee_deductions > 0" class="text-warning">
+                Other Deductions: ₱{{ formatCurrency(item.employee_deductions) }}
+              </div>
+            </div>
+          </template>
+
+          <!-- Net Pay -->
+          <template v-slot:item.net_pay="{ item }">
+            <div class="text-right font-weight-bold text-success">
+              ₱{{ formatCurrency(item.net_pay) }}
+            </div>
+          </template>
+
+          <!-- Actions -->
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              icon="mdi-download"
+              size="small"
+              variant="text"
+              color="primary"
+              @click="downloadPayslip(item)"
+            >
+            </v-btn>
+          </template>
+        </v-data-table>
       </v-card>
-    </v-dialog>
-  </div>
+    </div>
+  </v-container>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import ExportPayrollDialog from "@/components/payroll/ExportPayrollDialog.vue";
-import { useToast } from "vue-toastification";
-import api from "@/services/api";
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useToast } from 'vue-toastification';
+import api from '@/services/api';
 
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
-const payrollId = computed(() => parseInt(route.params.id));
-const showExportDialog = ref(false);
-const showProcessDialog = ref(false);
 const loading = ref(false);
-const processing = ref(false);
+const finalizing = ref(false);
+const search = ref('');
 const payroll = ref(null);
 
-const openExportDialog = () => {
-  showExportDialog.value = true;
-};
+const headers = [
+  { title: 'Employee', key: 'employee', sortable: true },
+  { title: 'Rate & Days', key: 'rate_days', sortable: false },
+  { title: 'Basic Pay', key: 'basic_pay', sortable: true, align: 'end' },
+  { title: 'Overtime', key: 'overtime', sortable: false },
+  { title: 'Gross Pay', key: 'gross_pay', sortable: true, align: 'end' },
+  { title: 'Deductions', key: 'deductions', sortable: false },
+  { title: 'Net Pay', key: 'net_pay', sortable: true, align: 'end' },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' },
+];
 
-const handleExported = () => {
-  toast.success("Payroll exported successfully");
-};
+onMounted(() => {
+  fetchPayroll();
+});
 
-const processPayroll = async () => {
-  processing.value = true;
-  try {
-    const response = await api.post(`/payroll/${payrollId.value}/process`);
-    toast.success(response.data.message || "Payroll processed successfully");
-    showProcessDialog.value = false;
-    await fetchPayrollDetails();
-  } catch (error) {
-    console.error("Error processing payroll:", error);
-    toast.error(error.response?.data?.error || "Failed to process payroll");
-  } finally {
-    processing.value = false;
-  }
-};
-
-const fetchPayrollDetails = async () => {
+async function fetchPayroll() {
   loading.value = true;
   try {
-    const response = await api.get(`/payroll/${payrollId.value}`);
+    const response = await api.get(`/payrolls/${route.params.id}`);
     payroll.value = response.data;
   } catch (error) {
-    console.error("Error fetching payroll:", error);
-    toast.error("Failed to load payroll details");
+    console.error('Error fetching payroll:', error);
+    toast.error('Failed to load payroll details');
+    router.push('/payroll');
   } finally {
     loading.value = false;
   }
-};
+}
 
-const formatDate = (date) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+async function finalizePayroll() {
+  if (!confirm('Are you sure you want to finalize this payroll? You will not be able to edit it after finalization.')) {
+    return;
+  }
 
-const formatCurrency = (amount) => {
-  if (!amount) return "₱0.00";
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-  }).format(amount);
-};
+  finalizing.value = true;
+  try {
+    await api.post(`/payrolls/${payroll.value.id}/finalize`);
+    toast.success('Payroll finalized successfully');
+    await fetchPayroll();
+  } catch (error) {
+    console.error('Error finalizing payroll:', error);
+    toast.error('Failed to finalize payroll');
+  } finally {
+    finalizing.value = false;
+  }
+}
 
-const getStatusColor = (status) => {
+async function downloadRegister() {
+  try {
+    const response = await api.get(`/payrolls/${payroll.value.id}/download-register`, {
+      responseType: 'blob',
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `payroll_register_${payroll.value.payroll_number}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    toast.success('Payroll register downloaded');
+  } catch (error) {
+    console.error('Error downloading register:', error);
+    toast.error('Failed to download payroll register');
+  }
+}
+
+async function downloadPayslip(item) {
+  try {
+    const response = await api.get(
+      `/payrolls/${payroll.value.id}/employees/${item.employee_id}/download-payslip`,
+      { responseType: 'blob' }
+    );
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `payslip_${item.employee.employee_number}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    toast.success('Payslip downloaded');
+  } catch (error) {
+    console.error('Error downloading payslip:', error);
+    toast.error('Failed to download payslip');
+  }
+}
+
+function getStatusColor(status) {
   const colors = {
-    draft: "grey",
-    processing: "info",
-    checked: "warning",
-    recommended: "accent",
-    approved: "success",
-    paid: "primary",
+    draft: 'warning',
+    finalized: 'info',
+    paid: 'success',
   };
-  return colors[status] || "grey";
-};
+  return colors[status] || 'grey';
+}
 
-const getStatusLabel = (status) => {
-  return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown";
-};
+function formatDate(date) {
+  if (!date) return '';
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
-onMounted(() => {
-  fetchPayrollDetails();
-});
+function formatCurrency(amount) {
+  if (!amount) return '0.00';
+  return parseFloat(amount).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 </script>
+
+<style scoped>
+.v-card {
+  border-radius: 12px;
+}
+.gap-2 {
+  gap: 8px;
+}
+</style>

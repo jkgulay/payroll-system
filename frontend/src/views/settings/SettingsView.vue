@@ -23,23 +23,6 @@
       <v-col cols="12" md="6">
         <v-card>
           <v-card-title>
-            <v-icon start>mdi-cash-settings</v-icon>
-            Payroll Settings
-          </v-card-title>
-          <v-card-text>
-            <p class="text-body-2 text-medium-emphasis">
-              Configure payroll cutoffs, payment schedules, and rules
-            </p>
-            <v-btn color="primary" variant="tonal" class="mt-4"
-              >Edit Payroll Settings</v-btn
-            >
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title>
             <v-icon start>mdi-bank</v-icon>
             Government Rates
           </v-card-title>

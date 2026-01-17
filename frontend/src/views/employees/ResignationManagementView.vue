@@ -765,11 +765,6 @@ const calculateFinalPay = async () => {
     showSnackbar('Final pay calculated successfully', 'success')
     showFinalPayDialog.value = false
     
-    // Show calculation breakdown
-    if (response.data.breakdown) {
-      console.log('Final Pay Breakdown:', response.data.breakdown)
-    }
-    
     await loadResignations()
   } catch (error) {
     showSnackbar(error.response?.data?.message || 'Failed to calculate final pay', 'error')

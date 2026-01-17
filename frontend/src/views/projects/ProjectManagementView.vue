@@ -135,16 +135,6 @@
                   <v-list-item-title>Reactivate</v-list-item-title>
                 </v-list-item>
 
-                <v-list-item
-                  v-if="project.employees_count > 0"
-                  @click="openPayrollDialog(project)"
-                >
-                  <template v-slot:prepend>
-                    <v-icon size="small">mdi-currency-usd</v-icon>
-                  </template>
-                  <v-list-item-title>Generate Payroll</v-list-item-title>
-                </v-list-item>
-
                 <v-divider></v-divider>
 
                 <v-list-item
@@ -181,70 +171,143 @@
       </div>
     </v-card>
 
-    <!-- Create/Edit Dialog -->
-    <v-dialog v-model="dialog" max-width="600px" persistent>
-      <v-card>
-        <v-card-title>
-          <span class="text-h5">{{
-            editMode ? "Edit Project" : "New Project"
-          }}</span>
+    <!-- Create/Edit Dialog - Modern UI -->
+    <v-dialog v-model="dialog" max-width="700px" persistent>
+      <v-card class="modern-dialog-card" elevation="24">
+        <!-- Enhanced Header -->
+        <v-card-title class="modern-dialog-header modern-dialog-header-primary">
+          <div class="d-flex align-center w-100">
+            <v-avatar color="white" size="48" class="mr-4">
+              <v-icon color="primary" size="32">{{ editMode ? 'mdi-pencil' : 'mdi-folder-plus' }}</v-icon>
+            </v-avatar>
+            <div>
+              <div class="text-h5 font-weight-bold">
+                {{ editMode ? "Edit Project" : "New Project" }}
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ editMode ? 'Update project information' : 'Create a new project' }}
+              </div>
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn icon variant="text" color="white" @click="closeDialog" size="small">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text class="pa-6">
           <v-form ref="formRef" @submit.prevent="saveProject">
-            <v-text-field
-              v-model="formData.code"
-              label="Project Code"
-              variant="outlined"
-              density="comfortable"
-              hint="Leave blank to auto-generate"
-              persistent-hint
-              class="mb-2"
-            ></v-text-field>
+            <v-row>
+              <!-- Project Code -->
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-barcode</v-icon>
+                    Project Code
+                    <v-chip size="x-small" color="info" class="ml-2">Auto-generated</v-chip>
+                  </label>
+                  <v-text-field
+                    v-model="formData.code"
+                    placeholder="Leave blank to auto-generate"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-barcode"
+                    color="primary"
+                    hint="Leave blank to auto-generate"
+                    persistent-hint
+                  ></v-text-field>
+                </div>
+              </v-col>
 
-            <v-text-field
-              v-model="formData.name"
-              label="Project Name *"
-              variant="outlined"
-              density="comfortable"
-              :rules="[(v) => !!v || 'Name is required']"
-              required
-              class="mb-2"
-            ></v-text-field>
+              <!-- Project Name -->
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-folder</v-icon>
+                    Project Name <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="formData.name"
+                    placeholder="Enter project name"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-folder"
+                    color="primary"
+                    :rules="[(v) => !!v || 'Name is required']"
+                    required
+                  ></v-text-field>
+                </div>
+              </v-col>
 
-            <v-textarea
-              v-model="formData.description"
-              label="Description"
-              variant="outlined"
-              density="comfortable"
-              rows="3"
-              class="mb-2"
-            ></v-textarea>
+              <!-- Description -->
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-text-box</v-icon>
+                    Description
+                  </label>
+                  <v-textarea
+                    v-model="formData.description"
+                    placeholder="Enter project description"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-text"
+                    color="primary"
+                    rows="3"
+                  ></v-textarea>
+                </div>
+              </v-col>
 
-            <v-autocomplete
-              v-model="formData.head_employee_id"
-              :items="employees"
-              item-title="full_name"
-              item-value="id"
-              label="Project Head"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              :loading="loadingEmployees"
-            ></v-autocomplete>
+              <!-- Project Head -->
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-account-tie</v-icon>
+                    Project Head
+                  </label>
+                  <v-autocomplete
+                    v-model="formData.head_employee_id"
+                    :items="employees"
+                    item-title="full_name"
+                    item-value="id"
+                    placeholder="Select project head"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-account-tie"
+                    color="primary"
+                    clearable
+                    :loading="loadingEmployees"
+                  ></v-autocomplete>
+                </div>
+              </v-col>
+            </v-row>
           </v-form>
         </v-card-text>
 
-        <v-card-actions>
+        <v-divider></v-divider>
+
+        <!-- Enhanced Actions -->
+        <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeDialog">Cancel</v-btn>
+          <v-btn
+            variant="text"
+            color="grey-darken-1"
+            size="large"
+            @click="closeDialog"
+            prepend-icon="mdi-close"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="primary"
-            variant="flat"
-            @click="saveProject"
+            size="large"
             :loading="saving"
+            @click="saveProject"
+            prepend-icon="mdi-check"
+            class="px-6"
+            elevation="2"
           >
-            {{ editMode ? "Update" : "Create" }}
+            <span class="font-weight-bold">{{ editMode ? "Update" : "Create" }}</span>
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -336,72 +399,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Generate Payroll Dialog -->
-    <v-dialog v-model="payrollDialog" max-width="500px" persistent>
-      <v-card>
-        <v-card-title>
-          <span class="text-h5">Generate Payroll</span>
-        </v-card-title>
-
-        <v-card-text>
-          <div class="mb-4">
-            <strong>Project:</strong> {{ payrollProject?.name }}
-          </div>
-          <div class="mb-4">
-            <strong>Employees:</strong>
-            {{ payrollProject?.employees_count }} active employee(s)
-          </div>
-
-          <v-form ref="payrollFormRef">
-            <v-text-field
-              v-model="payrollForm.period_start_date"
-              label="Period Start Date *"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              :rules="[(v) => !!v || 'Required']"
-              required
-              class="mb-2"
-            ></v-text-field>
-
-            <v-text-field
-              v-model="payrollForm.period_end_date"
-              label="Period End Date *"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              :rules="[(v) => !!v || 'Required']"
-              required
-              class="mb-2"
-            ></v-text-field>
-
-            <v-text-field
-              v-model="payrollForm.payment_date"
-              label="Payment Date *"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              :rules="[(v) => !!v || 'Required']"
-              required
-            ></v-text-field>
-          </v-form>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closePayrollDialog">Cancel</v-btn>
-          <v-btn
-            color="primary"
-            variant="flat"
-            @click="generatePayroll"
-            :loading="generatingPayroll"
-          >
-            Generate
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
     <!-- Snackbar -->
     <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
       {{ snackbarText }}
@@ -418,10 +415,8 @@ const loading = ref(false);
 const loadingEmployees = ref(false);
 const loadingDetails = ref(false);
 const saving = ref(false);
-const generatingPayroll = ref(false);
 const dialog = ref(false);
 const detailsDialog = ref(false);
-const payrollDialog = ref(false);
 const editMode = ref(false);
 const filterTab = ref("all");
 const search = ref("");
@@ -429,7 +424,6 @@ const projects = ref([]);
 const employees = ref([]);
 const selectedProject = ref(null);
 const projectEmployees = ref([]);
-const payrollProject = ref(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
 const snackbarColor = ref("success");
@@ -443,14 +437,7 @@ const formData = ref({
   is_active: true,
 });
 
-const payrollForm = ref({
-  period_start_date: "",
-  period_end_date: "",
-  payment_date: "",
-});
-
 const formRef = ref(null);
-const payrollFormRef = ref(null);
 
 // Table headers
 const employeeHeaders = [
@@ -638,50 +625,6 @@ const deleteProject = async (project) => {
     const message = error.response?.data?.message || "Failed to delete project";
     showSnackbar(message, "error");
     console.error("Error deleting project:", error);
-  }
-};
-
-const openPayrollDialog = (project) => {
-  payrollProject.value = project;
-  payrollForm.value = {
-    period_start_date: "",
-    period_end_date: "",
-    payment_date: "",
-  };
-  payrollDialog.value = true;
-};
-
-const closePayrollDialog = () => {
-  payrollDialog.value = false;
-  payrollProject.value = null;
-  payrollForm.value = {
-    period_start_date: "",
-    period_end_date: "",
-    payment_date: "",
-  };
-};
-
-const generatePayroll = async () => {
-  if (!payrollFormRef.value) return;
-
-  const valid = await payrollFormRef.value.validate();
-  if (!valid.valid) return;
-
-  generatingPayroll.value = true;
-  try {
-    const response = await api.post(
-      `/projects/${payrollProject.value.id}/generate-payroll`,
-      payrollForm.value
-    );
-    showSnackbar(response.data.message, "success");
-    closePayrollDialog();
-  } catch (error) {
-    const message =
-      error.response?.data?.message || "Failed to generate payroll";
-    showSnackbar(message, "error");
-    console.error("Error generating payroll:", error);
-  } finally {
-    generatingPayroll.value = false;
   }
 };
 

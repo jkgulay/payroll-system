@@ -16,6 +16,10 @@ class DailyTimeRecordController extends Controller
      */
     public function generate(Request $request)
     {
+        // Increase memory limit for PDF generation
+        ini_set('memory_limit', '1024M');
+        ini_set('max_execution_time', '300');
+        
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'date_from' => 'required|date',
@@ -67,6 +71,10 @@ class DailyTimeRecordController extends Controller
      */
     public function generateDaily(Request $request)
     {
+        // Increase memory limit for PDF generation
+        ini_set('memory_limit', '1024M');
+        ini_set('max_execution_time', '300');
+        
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',

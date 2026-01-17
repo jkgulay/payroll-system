@@ -30,7 +30,7 @@ class EmployeeImportController extends Controller
     {
         // Increase execution time for large imports
         set_time_limit(300); // 5 minutes
-        ini_set('memory_limit', '512M'); // Increase memory limit
+        ini_set('memory_limit', '1024M'); // Increase memory limit
 
         // Load position rates for salary lookup
         $positionRates = PositionRate::where('is_active', true)
@@ -198,7 +198,9 @@ class EmployeeImportController extends Controller
                         'contract_type' => $contractType,
                         'activity_status' => 'active', // All imported employees are active
                         'work_schedule' => $workSchedule,
-                        'project_id' => 1, // Default to first project
+                        'project_id' => null, // Project assignment is optional
+                        'department' => !empty($data['department']) ? $data['department'] : null,
+                        'staff_type' => !empty($data['staff_type']) ? $data['staff_type'] : null,
                         'position' => $position,
                         'basic_salary' => $basicSalary,
                         'salary_type' => 'daily', // Default for construction
@@ -211,11 +213,6 @@ class EmployeeImportController extends Controller
                     $employee = Employee::create($employeeData);
 
                     $imported++;
-
-                    // Store department info in a note (since no department table yet)
-                    if (!empty($data['department'])) {
-                        Log::info("Employee {$data['staff_code']} department: {$data['department']}");
-                    }
                 } catch (\Exception $e) {
                     // Delete created user if employee creation failed
                     if (isset($user) && $user->id) {
