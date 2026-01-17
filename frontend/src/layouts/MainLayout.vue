@@ -395,11 +395,33 @@ const menuItems = computed(() => {
       roles: ["accountant"],
     },
     {
-      title: "Resume Review",
-      icon: "mdi-file-certificate-outline",
-      value: "resume-review",
-      to: "/resume-review",
+      title: "HR Management",
+      icon: "mdi-account-tie",
+      value: "hr-management",
       roles: ["admin"],
+      children: [
+        {
+          title: "Resume Review",
+          icon: "mdi-file-certificate-outline",
+          value: "resume-review",
+          to: "/resume-review",
+          roles: ["admin"],
+        },
+        {
+          title: "Leave Approval",
+          icon: "mdi-calendar-check",
+          value: "leave-approval",
+          to: "/leave-approval",
+          roles: ["admin", "hr"],
+        },
+        {
+          title: "Resignations",
+          icon: "mdi-briefcase-remove-outline",
+          value: "resignations",
+          to: "/resignations",
+          roles: ["admin", "accountant"],
+        },
+      ],
     },
     {
       title: "Benefits & Deductions",
@@ -449,25 +471,11 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
-      title: "Resignations",
-      icon: "mdi-briefcase-remove-outline",
-      value: "resignations",
-      to: "/resignations",
-      roles: ["admin", "accountant"],
-    },
-    {
       title: "My Leaves",
       icon: "mdi-calendar-clock",
       value: "my-leaves",
       to: "/my-leaves",
       roles: ["employee"],
-    },
-    {
-      title: "Leave Approval",
-      icon: "mdi-calendar-check",
-      value: "leave-approval",
-      to: "/leave-approval",
-      roles: ["admin", "hr"],
     },
     {
       title: "My Loans",
