@@ -137,9 +137,13 @@
           <template v-slot:item.full_name="{ item }">
             <div>
               <div class="font-weight-medium">
-                {{ item.first_name }} {{ item.middle_name }} {{ item.last_name }}
+                {{ item.first_name }} {{ item.middle_name }}
+                {{ item.last_name }}
               </div>
-              <div class="text-caption text-medium-emphasis" v-if="item.username">
+              <div
+                class="text-caption text-medium-emphasis"
+                v-if="item.username"
+              >
                 @{{ item.username }}
               </div>
             </div>
@@ -160,14 +164,15 @@
             <span v-else class="text-medium-emphasis">N/A</span>
           </template>
 
-          <template v-slot:item.staff_type="{ item }">
-            <span v-if="item.staff_type">{{ item.staff_type }}</span>
-            <span v-else class="text-medium-emphasis">N/A</span>
-          </template>
-
           <template v-slot:item.date_hired="{ item }">
             <span v-if="item.date_hired">
-              {{ new Date(item.date_hired).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+              {{
+                new Date(item.date_hired).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              }}
             </span>
             <span v-else class="text-medium-emphasis">--</span>
           </template>
@@ -188,8 +193,8 @@
                 item.gender === 'Male' || item.gender === 'male'
                   ? 'blue'
                   : item.gender === 'Female' || item.gender === 'female'
-                  ? 'pink'
-                  : 'grey'
+                    ? 'pink'
+                    : 'grey'
               "
               size="small"
               variant="tonal"
@@ -949,14 +954,17 @@
               {{ payRateEmployee?.last_name }}
             </div>
             <div class="text-caption mt-2">
-              <strong>Position:</strong> {{ payRateEmployee?.position || 'N/A' }}
+              <strong>Position:</strong>
+              {{ payRateEmployee?.position || "N/A" }}
             </div>
           </v-alert>
 
           <v-form ref="payRateForm" v-model="payRateFormValid">
             <!-- Current Rate Info -->
             <v-sheet color="grey-lighten-4" rounded class="pa-4 mb-4">
-              <div class="text-subtitle-2 mb-2">Current Pay Rate Information</div>
+              <div class="text-subtitle-2 mb-2">
+                Current Pay Rate Information
+              </div>
               <div class="mb-2">
                 <span class="text-caption">Position-Based Rate:</span>
                 <span class="text-body-1 font-weight-bold ml-2">
@@ -968,12 +976,16 @@
                 <span class="text-body-1 font-weight-bold ml-2 text-success">
                   {{ formatCurrency(payRateEmployee?.custom_pay_rate) }}
                 </span>
-                <v-chip size="x-small" color="success" class="ml-2">Active</v-chip>
+                <v-chip size="x-small" color="success" class="ml-2"
+                  >Active</v-chip
+                >
               </div>
               <div class="mt-2">
                 <span class="text-caption">Effective Rate:</span>
                 <span class="text-h6 font-weight-bold ml-2 text-primary">
-                  {{ formatCurrency(getEmployeeEffectiveRate(payRateEmployee)) }}/day
+                  {{
+                    formatCurrency(getEmployeeEffectiveRate(payRateEmployee))
+                  }}/day
                 </span>
               </div>
             </v-sheet>
@@ -985,7 +997,8 @@
               type="number"
               variant="outlined"
               :rules="[
-                (v) => v !== null && v !== undefined && v !== '' || 'Required',
+                (v) =>
+                  (v !== null && v !== undefined && v !== '') || 'Required',
                 (v) => v >= 0 || 'Rate must be positive',
                 (v) => v <= 999999.99 || 'Rate is too large',
               ]"
@@ -1010,7 +1023,9 @@
               <div class="text-subtitle-2 mb-1">This change will:</div>
               <ul class="pl-4">
                 <li>Override the position-based rate for this employee</li>
-                <li>Apply to all future payroll, DTR, and 13th month calculations</li>
+                <li>
+                  Apply to all future payroll, DTR, and 13th month calculations
+                </li>
                 <li>Be logged in the audit trail</li>
               </ul>
             </v-alert>
@@ -1113,7 +1128,7 @@ const payRateEmployee = ref(null);
 const payRateFormValid = ref(false);
 const payRateData = ref({
   custom_pay_rate: null,
-  reason: '',
+  reason: "",
 });
 const updatingPayRate = ref(false);
 const clearingPayRate = ref(false);
@@ -1133,7 +1148,6 @@ const headers = [
   { title: "Email", key: "email", sortable: false },
   { title: "Mobile", key: "mobile_number", sortable: false },
   { title: "Department", key: "department", sortable: true },
-  { title: "Staff Type", key: "staff_type", sortable: true },
   { title: "Position", key: "position", sortable: true },
   { title: "Pay Rate", key: "pay_rate", sortable: false },
   { title: "Date Hired", key: "date_hired", sortable: true },
@@ -1169,7 +1183,7 @@ watch(
         toast.info(`Salary updated to ₱${rate}/day based on position`);
       }
     }
-  }
+  },
 );
 
 async function fetchEmployees() {
@@ -1199,16 +1213,20 @@ function onItemsPerPageChange(newItemsPerPage) {
 
 async function fetchDepartments() {
   try {
-    const response = await api.get('/employees/departments');
-    departments.value = response.data.filter(dept => dept && dept.trim() !== '');
+    const response = await api.get("/employees/departments");
+    departments.value = response.data.filter(
+      (dept) => dept && dept.trim() !== "",
+    );
   } catch (error) {
-    console.error('Error fetching departments:', error);
+    console.error("Error fetching departments:", error);
     // Fallback: extract departments from current employees if API fails
-    const uniqueDepts = [...new Set(
-      employeeStore.employees
-        .map(emp => emp.department)
-        .filter(dept => dept && dept.trim() !== '')
-    )].sort();
+    const uniqueDepts = [
+      ...new Set(
+        employeeStore.employees
+          .map((emp) => emp.department)
+          .filter((dept) => dept && dept.trim() !== ""),
+      ),
+    ].sort();
     departments.value = uniqueDepts;
   }
 }
@@ -1260,7 +1278,7 @@ async function editEmployee(employee) {
 async function suspendEmployee(employee) {
   if (
     !confirm(
-      `Are you sure you want to suspend ${employee.first_name} ${employee.last_name}?`
+      `Are you sure you want to suspend ${employee.first_name} ${employee.last_name}?`,
     )
   ) {
     return;
@@ -1314,7 +1332,7 @@ async function submitResignation() {
 async function terminateEmployee(employee) {
   if (
     !confirm(
-      `Are you sure you want to terminate ${employee.first_name} ${employee.last_name}?`
+      `Are you sure you want to terminate ${employee.first_name} ${employee.last_name}?`,
     )
   ) {
     return;
@@ -1338,7 +1356,7 @@ async function terminateEmployee(employee) {
 async function deleteEmployee(employee) {
   if (
     !confirm(
-      `Are you sure you want to DELETE ${employee.first_name} ${employee.last_name}? This action cannot be undone!`
+      `Are you sure you want to DELETE ${employee.first_name} ${employee.last_name}? This action cannot be undone!`,
     )
   ) {
     return;
@@ -1359,7 +1377,7 @@ async function saveEmployee() {
   try {
     await api.put(
       `/employees/${selectedEmployee.value.id}`,
-      selectedEmployee.value
+      selectedEmployee.value,
     );
     toast.success("Employee updated successfully!");
     await fetchEmployees();
@@ -1502,7 +1520,7 @@ async function viewCredentials(employee) {
 async function resetEmployeePassword() {
   if (
     !confirm(
-      `Generate new temporary password for ${selectedCredentialsEmployee.value.first_name} ${selectedCredentialsEmployee.value.last_name}?`
+      `Generate new temporary password for ${selectedCredentialsEmployee.value.first_name} ${selectedCredentialsEmployee.value.last_name}?`,
     )
   ) {
     return;
@@ -1511,7 +1529,7 @@ async function resetEmployeePassword() {
   resettingPassword.value = true;
   try {
     const response = await api.post(
-      `/employees/${selectedCredentialsEmployee.value.id}/reset-password`
+      `/employees/${selectedCredentialsEmployee.value.id}/reset-password`,
     );
     newGeneratedPassword.value = response.data.temporary_password;
     toast.success("New temporary password generated!");
@@ -1560,8 +1578,9 @@ function closeCredentialsDialog() {
 function openPayRateDialog(employee) {
   payRateEmployee.value = employee;
   payRateData.value = {
-    custom_pay_rate: employee.custom_pay_rate || getEmployeeEffectiveRate(employee),
-    reason: '',
+    custom_pay_rate:
+      employee.custom_pay_rate || getEmployeeEffectiveRate(employee),
+    reason: "",
   };
   showPayRateDialog.value = true;
 }
@@ -1571,7 +1590,7 @@ function closePayRateDialog() {
   payRateEmployee.value = null;
   payRateData.value = {
     custom_pay_rate: null,
-    reason: '',
+    reason: "",
   };
 }
 
@@ -1585,24 +1604,30 @@ async function updatePayRate() {
       {
         custom_pay_rate: payRateData.value.custom_pay_rate,
         reason: payRateData.value.reason,
-      }
+      },
     );
 
-    toast.success(`Pay rate updated successfully from ₱${response.data.old_rate} to ₱${response.data.new_rate}`);
-    
+    toast.success(
+      `Pay rate updated successfully from ₱${response.data.old_rate} to ₱${response.data.new_rate}`,
+    );
+
     // Refresh the employee list to show updated rates
     await fetchEmployees();
     closePayRateDialog();
   } catch (error) {
-    console.error('Error updating pay rate:', error);
-    toast.error(error.response?.data?.message || 'Failed to update pay rate');
+    console.error("Error updating pay rate:", error);
+    toast.error(error.response?.data?.message || "Failed to update pay rate");
   } finally {
     updatingPayRate.value = false;
   }
 }
 
 async function clearCustomPayRate() {
-  if (!confirm('Are you sure you want to clear the custom pay rate? This will revert to the position-based rate.')) {
+  if (
+    !confirm(
+      "Are you sure you want to clear the custom pay rate? This will revert to the position-based rate.",
+    )
+  ) {
     return;
   }
 
@@ -1612,17 +1637,21 @@ async function clearCustomPayRate() {
       `/employees/${payRateEmployee.value.id}/clear-custom-pay-rate`,
       {
         reason: payRateData.value.reason,
-      }
+      },
     );
 
-    toast.success(`Custom pay rate cleared. Rate changed from ₱${response.data.old_rate} to ₱${response.data.new_rate}`);
-    
+    toast.success(
+      `Custom pay rate cleared. Rate changed from ₱${response.data.old_rate} to ₱${response.data.new_rate}`,
+    );
+
     // Refresh the employee list to show updated rates
     await fetchEmployees();
     closePayRateDialog();
   } catch (error) {
-    console.error('Error clearing custom pay rate:', error);
-    toast.error(error.response?.data?.message || 'Failed to clear custom pay rate');
+    console.error("Error clearing custom pay rate:", error);
+    toast.error(
+      error.response?.data?.message || "Failed to clear custom pay rate",
+    );
   } finally {
     clearingPayRate.value = false;
   }
@@ -1630,35 +1659,38 @@ async function clearCustomPayRate() {
 
 function getEmployeePositionRate(employee) {
   if (!employee) return 0;
-  
+
   // Get rate from position
   if (employee.position) {
     const rate = getRate(employee.position);
     if (rate) return rate;
   }
-  
+
   // Fallback to basic_salary field
   return employee.basic_salary || 0;
 }
 
 function getEmployeeEffectiveRate(employee) {
   if (!employee) return 0;
-  
+
   // Priority 1: Custom pay rate
   if (employee.custom_pay_rate) {
     return employee.custom_pay_rate;
   }
-  
+
   // Priority 2: Position-based rate
   return getEmployeePositionRate(employee);
 }
 
 function formatCurrency(value) {
-  if (!value && value !== 0) return '₱0.00';
-  return '₱' + Number(value).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  if (!value && value !== 0) return "₱0.00";
+  return (
+    "₱" +
+    Number(value).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
 }
 
 // Format salary display based on position rate

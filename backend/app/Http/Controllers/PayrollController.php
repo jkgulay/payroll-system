@@ -171,14 +171,14 @@ class PayrollController extends Controller
         // Increase memory limit for PDF generation
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', '300');
-        
+
         $payroll = Payroll::findOrFail($payrollId);
-        
+
         $item = PayrollItem::where('payroll_id', $payrollId)
             ->where('employee_id', $employeeId)
             ->with('employee')
             ->first();
-        
+
         if (!$item) {
             return response()->json(['message' => 'Payroll item not found'], 404);
         }
@@ -197,20 +197,20 @@ class PayrollController extends Controller
         // Increase memory limit for PDF generation
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', '300');
-        
+
         $payroll->load(['items.employee.position']);
-        
+
         $pdf = Pdf::loadView('payroll.register', compact('payroll'));
-        
+
         return $pdf->download("payroll_register_{$payroll->payroll_number}.pdf");
     }
 
     public function exportToExcel(Payroll $payroll)
     {
         $payroll->load(['items.employee.position']);
-        
+
         $filename = "payroll_{$payroll->period_name}_" . now()->format('YmdHis') . ".xlsx";
-        
+
         return Excel::download(new PayrollExport($payroll), $filename);
     }
 
@@ -220,7 +220,7 @@ class PayrollController extends Controller
         Log::info('Filters received:', $filters);
         Log::info('Has attendance value: ' . var_export($filters['has_attendance'] ?? 'not set', true));
         Log::info('Has attendance empty check: ' . var_export(empty($filters['has_attendance']), true));
-        
+
         $query = Employee::where('activity_status', 'active');
         $initialCount = Employee::where('activity_status', 'active')->count();
         Log::info('Initial active employees: ' . $initialCount);
@@ -228,7 +228,7 @@ class PayrollController extends Controller
         // Apply filters based on filter type
         if (!empty($filters['type']) && $filters['type'] !== 'all') {
             $filterApplied = false;
-            
+
             if ($filters['type'] === 'position' && !empty($filters['position_ids'])) {
                 $query->whereIn('position_id', $filters['position_ids']);
                 $filterApplied = true;
@@ -242,22 +242,22 @@ class PayrollController extends Controller
                 $query->whereIn('staff_type', $filters['staff_types']);
                 $filterApplied = true;
             }
-            
+
             // If filter type is set but no specific values provided, treat as 'all'
             if (!$filterApplied) {
                 Log::info('Filter type "' . $filters['type'] . '" set but no specific values provided, treating as "all"');
             }
         }
-        
+
         $afterTypeFilter = $query->count();
         Log::info('After type filter: ' . $afterTypeFilter);
 
         // Filter by attendance if requested
         if (!empty($filters['has_attendance'])) {
             Log::info('Applying attendance filter for period: ' . $payroll->period_start . ' to ' . $payroll->period_end);
-            $query->whereHas('attendance', function($q) use ($payroll) {
+            $query->whereHas('attendance', function ($q) use ($payroll) {
                 $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-                  ->where('status', '!=', 'absent');
+                    ->where('status', '!=', 'absent');
             });
             $afterAttendance = $query->count();
             Log::info('After attendance filter: ' . $afterAttendance);
@@ -272,10 +272,10 @@ class PayrollController extends Controller
         }
 
         $employees = $query->get();
-        
+
         if ($employees->isEmpty()) {
             $errorMsg = 'No employees found matching the selected filters';
-            
+
             // Provide more specific error message
             if (!empty($filters['has_attendance'])) {
                 $errorMsg .= '. Note: The "Only include employees with attendance" option is enabled. ';
@@ -287,7 +287,7 @@ class PayrollController extends Controller
             } elseif ($afterTypeFilter === 0) {
                 $errorMsg .= '. No employees found in the selected department/filter.';
             }
-            
+
             throw new \Exception($errorMsg);
         }
 
@@ -297,12 +297,12 @@ class PayrollController extends Controller
 
         foreach ($employees as $employee) {
             $item = $this->calculatePayrollItem($payroll, $employee);
-            
+
             $payrollItem = PayrollItem::create($item);
-            
+
             // Record deduction installments for this employee
             $this->recordDeductionInstallments($payroll, $employee);
-            
+
             $totalGross += $item['gross_pay'];
             $totalDeductions += $item['total_deductions'];
             $totalNet += $item['net_pay'];
@@ -326,43 +326,83 @@ class PayrollController extends Controller
         // Calculate days worked and hours
         $daysWorked = $attendances->where('status', 'present')->count();
         $regularOtHours = $attendances->sum('overtime_hours') ?? 0;
-        
+
         // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
         $rate = $employee->getBasicSalary();
-        
+
         // Calculate basic pay
         $basicPay = $rate * $daysWorked;
-        
+
         // Calculate overtime pay (1.25x for regular OT)
         $hourlyRate = $rate / 8; // Assuming 8-hour workday
         $regularOtPay = $regularOtHours * $hourlyRate * 1.25;
-        
-        // Get allowances - sum allowances that are active and effective during the payroll period
-        $allowances = EmployeeAllowance::where('employee_id', $employee->id)
+
+        // Get allowances - get all active allowances for detailed breakdown
+        $employeeAllowances = EmployeeAllowance::where('employee_id', $employee->id)
             ->where('is_active', true)
             ->where('effective_date', '<=', $payroll->period_end)
             ->where(function ($query) use ($payroll) {
                 $query->whereNull('end_date')
                     ->orWhere('end_date', '>=', $payroll->period_start);
             })
-            ->sum('amount') ?? 0;
-        
+            ->get();
+
+        // Create allowances breakdown array
+        $allowancesBreakdown = [];
+        $allowances = 0;
+        foreach ($employeeAllowances as $allowance) {
+            $allowancesBreakdown[] = [
+                'type' => $allowance->allowance_type,
+                'name' => $allowance->allowance_name,
+                'amount' => (float) $allowance->amount,
+                'is_taxable' => $allowance->is_taxable,
+            ];
+            $allowances += $allowance->amount;
+        }
+
+        // Get approved meal allowances for this period
+        $mealAllowanceItems = \App\Models\MealAllowanceItem::where('employee_id', $employee->id)
+            ->whereHas('mealAllowance', function ($query) use ($payroll) {
+                $query->where('status', 'approved')
+                    ->where(function ($q) use ($payroll) {
+                        // Meal allowance period overlaps with payroll period
+                        $q->whereBetween('period_start', [$payroll->period_start, $payroll->period_end])
+                            ->orWhereBetween('period_end', [$payroll->period_start, $payroll->period_end])
+                            ->orWhere(function ($q2) use ($payroll) {
+                                $q2->where('period_start', '<=', $payroll->period_start)
+                                    ->where('period_end', '>=', $payroll->period_end);
+                            });
+                    });
+            })
+            ->get();
+
+        foreach ($mealAllowanceItems as $mealItem) {
+            $mealAllowance = $mealItem->mealAllowance;
+            $allowancesBreakdown[] = [
+                'type' => 'meal',
+                'name' => $mealAllowance->title ?? 'Meal Allowance',
+                'amount' => (float) $mealItem->total_amount,
+                'is_taxable' => false,
+            ];
+            $allowances += $mealItem->total_amount;
+        }
+
         // Calculate COLA (Cost of Living Allowance) - typically per day
         $cola = $daysWorked * 0; // Set to 0, can be configured
-        
+
         // Calculate gross pay
         $grossPay = $basicPay + $regularOtPay + $cola + $allowances;
-        
+
         // Calculate government deductions
         $sss = $this->calculateSSS($grossPay);
         $philhealth = $this->calculatePhilHealth($grossPay);
         $pagibig = $this->calculatePagibig($grossPay);
-        
+
         // Get loans deduction for this period
         $loanDeduction = EmployeeLoan::where('employee_id', $employee->id)
             ->where('status', 'active')
             ->sum('monthly_amortization') ?? 0;
-        
+
         // Get active employee deductions for this period
         $employeeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
             ->where('status', 'active')
@@ -372,53 +412,50 @@ class PayrollController extends Controller
                     ->orWhere('end_date', '>=', $payroll->period_start);
             })
             ->get();
-        
+
         // Sum up all active deductions
         $totalEmployeeDeductions = $employeeDeductions->sum('amount_per_cutoff');
-        
+
         // Employee savings
         $employeeSavings = 0; // Can be configured
-        
+
         // Cash advance
         $cashAdvance = 0; // Can be configured
-        
+
         // Other deductions (legacy, now using employee_deductions table)
         $otherDeductions = 0;
-        
+
         // Total deductions
-        $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction + 
-                          $employeeSavings + $cashAdvance + $otherDeductions + $totalEmployeeDeductions;
-        
+        $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
+            $employeeSavings + $cashAdvance + $otherDeductions + $totalEmployeeDeductions;
+
         // Net pay
         $netPay = $grossPay - $totalDeductions;
 
         return [
             'payroll_id' => $payroll->id,
             'employee_id' => $employee->id,
-            'basic_rate' => $rate,
+            'rate' => $rate,
             'days_worked' => $daysWorked,
             'basic_pay' => $basicPay,
-            'overtime_hours' => $regularOtHours,
-            'overtime_pay' => $regularOtPay,
-            'holiday_pay' => 0,
-            'night_differential' => 0,
-            'adjustments' => 0,
-            'adjustment_notes' => null,
-            'water_allowance' => 0,
+            'regular_ot_hours' => $regularOtHours,
+            'regular_ot_pay' => $regularOtPay,
+            'special_ot_hours' => 0,
+            'special_ot_pay' => 0,
             'cola' => $cola,
             'other_allowances' => $allowances,
-            'total_allowances' => $allowances + $cola,
-            'total_bonuses' => 0,
+            'allowances_breakdown' => $allowancesBreakdown,
             'gross_pay' => $grossPay,
-            'sss_contribution' => $sss,
-            'philhealth_contribution' => $philhealth,
-            'pagibig_contribution' => $pagibig,
+            'sss' => $sss,
+            'philhealth' => $philhealth,
+            'pagibig' => $pagibig,
             'withholding_tax' => 0,
-            'total_other_deductions' => $employeeSavings + $cashAdvance + $otherDeductions + $totalEmployeeDeductions,
-            'total_loan_deductions' => $loanDeduction,
+            'employee_savings' => $employeeSavings,
+            'cash_advance' => $cashAdvance,
+            'loans' => $loanDeduction,
+            'other_deductions' => $otherDeductions + $totalEmployeeDeductions,
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
-            'employee_deductions' => $totalEmployeeDeductions,
         ];
     }
 
@@ -440,7 +477,7 @@ class PayrollController extends Controller
         foreach ($activeDeductions as $deduction) {
             // Calculate payment amount (use amount_per_cutoff, but not more than balance)
             $paymentAmount = min($deduction->amount_per_cutoff, $deduction->balance);
-            
+
             if ($paymentAmount > 0) {
                 $newBalance = $deduction->balance - $paymentAmount;
                 $newInstallmentsPaid = $deduction->installments_paid + 1;
@@ -466,7 +503,7 @@ class PayrollController extends Controller
         // SSS calculation - 2024 rates (semi-monthly deduction)
         // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
         $monthlySalary = $grossPay * 2;
-        
+
         if ($monthlySalary < 4250) return 180;
         if ($monthlySalary < 4750) return 202.50;
         if ($monthlySalary < 5250) return 225;
@@ -509,10 +546,10 @@ class PayrollController extends Controller
         $monthlySalary = $grossPay * 2;
         $contribution = $monthlySalary * 0.05;
         $employeeShare = $contribution / 2;
-        
+
         // Minimum: PHP 450, Maximum: PHP 1,800 per month (semi-monthly: 225-900)
         $monthlyEmployeeShare = min(max($employeeShare, 450), 1800);
-        
+
         // Return semi-monthly amount
         return $monthlyEmployeeShare / 2;
     }
@@ -523,10 +560,10 @@ class PayrollController extends Controller
         // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
         $monthlySalary = $grossPay * 2;
         $monthlyContribution = $monthlySalary * 0.02;
-        
+
         // Maximum of PHP 100 per month
         $monthlyContribution = min($monthlyContribution, 100);
-        
+
         // Return semi-monthly amount
         return $monthlyContribution / 2;
     }

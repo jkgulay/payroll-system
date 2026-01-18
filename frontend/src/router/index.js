@@ -94,7 +94,10 @@ const router = createRouter({
             import(
               /* webpackChunkName: "employees" */ "@/views/employees/ResignationManagementView.vue"
             ),
-          meta: { title: "Resignation Management", roles: ["admin", "accountant"] },
+          meta: {
+            title: "Resignation Management",
+            roles: ["admin", "accountant"],
+          },
         },
         {
           path: "my-resignation",
@@ -184,7 +187,10 @@ const router = createRouter({
             import(
               /* webpackChunkName: "benefits" */ "@/views/benefits/ThirteenthMonthPayView.vue"
             ),
-          meta: { title: "13th Month Pay", roles: ["admin", "accountant", "hr"] },
+          meta: {
+            title: "13th Month Pay",
+            roles: ["admin", "accountant", "hr"],
+          },
         },
         {
           path: "loans",
@@ -229,7 +235,10 @@ const router = createRouter({
             import(
               /* webpackChunkName: "reports" */ "@/views/reports/AttendanceSummaryReport.vue"
             ),
-          meta: { title: "Attendance Summary Report", roles: ["admin", "accountant"] },
+          meta: {
+            title: "Attendance Summary Report",
+            roles: ["admin", "accountant"],
+          },
         },
         {
           path: "payroll",
@@ -257,6 +266,15 @@ const router = createRouter({
               /* webpackChunkName: "settings" */ "@/views/settings/SettingsView.vue"
             ),
           meta: { title: "Settings", roles: ["admin"] },
+        },
+        {
+          path: "position-rates",
+          name: "position-rates",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/PositionRatesView.vue"
+            ),
+          meta: { title: "Position Rates", roles: ["admin", "accountant"] },
         },
         {
           path: "security",

@@ -19,6 +19,25 @@
       <v-divider></v-divider>
 
       <v-card-text>
+        <v-alert type="info" variant="tonal" class="mb-4">
+          <p class="font-weight-bold mb-2">Import Process:</p>
+          <ol>
+            <li>
+              <strong>Step 1:</strong> Set default values (optional - for
+              employees without Position or Project)
+            </li>
+            <li>
+              <strong>Step 2:</strong> Upload Excel file with employee data
+            </li>
+            <li>
+              <strong>Step 3:</strong> Backend processes and imports employees
+            </li>
+          </ol>
+          <p class="mt-2 text-body-2">
+            This method is fast - similar to the biometric import process.
+          </p>
+        </v-alert>
+
         <!-- Step 1: Upload File -->
         <v-card v-if="step === 1" class="mb-4" variant="outlined">
           <v-card-title class="text-h6">
@@ -26,31 +45,105 @@
             Upload Employee Data
           </v-card-title>
           <v-card-text>
+            <!-- Bulk Defaults -->
+            <v-card variant="outlined" class="mb-4">
+              <v-card-title class="text-subtitle-1">
+                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
+                Default Values (Optional)
+              </v-card-title>
+              <v-card-text>
+                <p class="text-body-2 text-medium-emphasis mb-3">
+                  Apply these defaults to employees without Position or Project
+                  data
+                </p>
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <v-autocomplete
+                      v-model="defaultPosition"
+                      :items="positionOptions"
+                      label="Default Position (Job Role)"
+                      placeholder="Select from Pay Rates"
+                      density="compact"
+                      clearable
+                      hint="For employees without Position"
+                      persistent-hint
+                    >
+                      <template v-slot:prepend-inner>
+                        <v-icon size="small">mdi-briefcase</v-icon>
+                      </template>
+                    </v-autocomplete>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-autocomplete
+                      v-model="defaultProject"
+                      :items="projectOptions"
+                      label="Default Project"
+                      placeholder="Select project"
+                      density="compact"
+                      clearable
+                      hint="For employees without Department"
+                      persistent-hint
+                    >
+                      <template v-slot:prepend-inner>
+                        <v-icon size="small">mdi-folder-outline</v-icon>
+                      </template>
+                    </v-autocomplete>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+
             <div
               class="drop-zone"
               :class="{ 'drop-zone-active': isDragging }"
               @drop.prevent="handleDrop"
               @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
+              @click="$refs.fileInput.click()"
+              style="cursor: pointer"
             >
               <v-icon size="64" color="primary" class="mb-4">
                 mdi-cloud-upload
               </v-icon>
-              <p class="text-h6 mb-2">Drag & Drop your Excel/CSV file here</p>
-              <p class="text-body-2 text-grey mb-4">or</p>
-              <v-btn color="primary" @click="$refs.fileInput.click()">
-                Browse Files
-              </v-btn>
+              <p class="text-h6 mb-2">
+                {{
+                  selectedFile
+                    ? selectedFile.name
+                    : "Drop employee file here or click to browse"
+                }}
+              </p>
+              <p class="text-caption text-grey mt-4">
+                Supported formats: Excel (.xlsx, .xls)
+              </p>
               <input
                 ref="fileInput"
                 type="file"
-                accept=".xlsx,.xls,.csv"
+                accept=".xlsx,.xls"
                 style="display: none"
                 @change="handleFileSelect"
               />
-              <p class="text-caption text-grey mt-4">
-                Supported formats: Excel (.xlsx, .xls), CSV (.csv)
-              </p>
+            </div>
+
+            <div
+              v-if="selectedFile"
+              class="mt-4 d-flex justify-space-between align-center"
+            >
+              <div class="d-flex align-center">
+                <v-icon color="success" class="mr-2">mdi-file-check</v-icon>
+                <span
+                  >{{ selectedFile.name }} ({{
+                    formatFileSize(selectedFile.size)
+                  }})</span
+                >
+              </div>
+              <v-btn
+                color="primary"
+                @click="submitImport"
+                :loading="importing"
+                :disabled="!selectedFile"
+              >
+                Import Employees
+              </v-btn>
             </div>
 
             <v-alert v-if="uploadError" type="error" class="mt-4">
@@ -59,218 +152,24 @@
           </v-card-text>
         </v-card>
 
-        <!-- Step 2: Preview & Fill Missing Data -->
+        <!-- Step 2: Import Progress -->
         <v-card v-if="step === 2" class="mb-4" variant="outlined">
-          <v-card-title class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center">
-              <v-icon class="mr-2">mdi-numeric-2-circle</v-icon>
-              <span
-                >Preview & Complete Data ({{
-                  employees.length
-                }}
-                employees)</span
-              >
-            </div>
-            <div>
-              <v-btn
-                color="grey"
-                variant="text"
-                @click="step = 1"
-                class="mr-2"
-                :disabled="importing"
-              >
-                Back
-              </v-btn>
-              <v-btn color="primary" @click="submitImport" :loading="importing">
-                Import Employees
-              </v-btn>
-            </div>
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2">mdi-upload</v-icon>
+            <span>Importing Employees...</span>
           </v-card-title>
-
-          <!-- Import Progress Indicator -->
-          <v-card-text v-if="importing" class="py-6">
+          <v-card-text class="py-6">
             <v-progress-linear
-              v-model="importProgress"
+              indeterminate
               color="primary"
               height="25"
               rounded
               class="mb-2"
             >
-              <template v-slot:default="{ value }">
-                <strong>{{ Math.ceil(value) }}%</strong>
-              </template>
             </v-progress-linear>
             <div class="text-center text-body-2 text-medium-emphasis">
               {{ importStatus }}
             </div>
-            <v-alert
-              v-if="employees.length > 100"
-              type="info"
-              variant="tonal"
-              class="mt-4"
-            >
-              Importing {{ employees.length }} employees. This may take a few
-              minutes...
-            </v-alert>
-          </v-card-text>
-
-          <v-card-text v-else>
-            <v-alert type="info" class="mb-4" variant="tonal">
-              <p class="font-weight-bold mb-2">Fill missing required fields:</p>
-              <ul>
-                <li>
-                  <strong>Position:</strong> Job title (e.g., Mason, Foreman,
-                  Helper)
-                </li>
-                <li>
-                  <strong>Basic Salary:</strong> Daily rate (minimum ₱570)
-                </li>
-                <li><strong>Work Schedule:</strong> Full Time or Part Time</li>
-              </ul>
-            </v-alert>
-
-            <!-- Bulk Actions -->
-            <v-card class="mb-4" variant="outlined">
-              <v-card-title class="text-subtitle-1">
-                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
-                Apply to All
-              </v-card-title>
-              <v-card-text>
-                <v-row>
-                  <v-col cols="12" md="4">
-                    <v-autocomplete
-                      v-model="bulkDefaults.position"
-                      :items="positionOptions"
-                      label="Default Position"
-                      placeholder="Select from Pay Rates"
-                      density="compact"
-                      hide-details
-                      clearable
-                      hint="Positions from Pay Rates page"
-                    >
-                      <template v-slot:prepend-inner>
-                        <v-icon size="small">mdi-briefcase</v-icon>
-                      </template>
-                    </v-autocomplete>
-                  </v-col>
-                  <v-col cols="12" md="4">
-                    <v-text-field
-                      v-model.number="bulkDefaults.basic_salary"
-                      label="Default Salary (Daily)"
-                      type="number"
-                      prefix="₱"
-                      density="compact"
-                      hide-details
-                      readonly
-                      :placeholder="
-                        bulkDefaults.position
-                          ? 'Auto-filled from position'
-                          : '450'
-                      "
-                      :hint="
-                        bulkDefaults.position
-                          ? 'Auto-set from selected position'
-                          : 'Select a position first'
-                      "
-                      persistent-hint
-                    >
-                      <template v-slot:prepend-inner>
-                        <v-icon size="small">mdi-currency-php</v-icon>
-                      </template>
-                    </v-text-field>
-                  </v-col>
-                  <v-col cols="12" md="4">
-                    <v-select
-                      v-model="bulkDefaults.work_schedule"
-                      label="Work Schedule"
-                      :items="[
-                        { title: 'Full Time', value: 'full_time' },
-                        { title: 'Part Time', value: 'part_time' },
-                      ]"
-                      density="compact"
-                      hide-details
-                    ></v-select>
-                  </v-col>
-                </v-row>
-                <v-btn
-                  color="primary"
-                  variant="text"
-                  class="mt-2"
-                  @click="applyBulkDefaults"
-                  size="small"
-                >
-                  Apply to All Employees
-                </v-btn>
-              </v-card-text>
-            </v-card>
-
-            <!-- Employee List -->
-            <v-data-table
-              :headers="previewHeaders"
-              :items="employees"
-              :items-per-page="10"
-              class="elevation-1"
-            >
-              <template v-slot:item.name="{ item }">
-                <div class="d-flex align-center">
-                  <v-avatar color="primary" size="32" class="mr-2">
-                    <span class="text-white text-caption">
-                      {{ getInitials(item.name) }}
-                    </span>
-                  </v-avatar>
-                  <div>
-                    <div class="font-weight-medium">{{ item.name }}</div>
-                    <div class="text-caption text-grey">
-                      {{ item.staff_code }}
-                    </div>
-                  </div>
-                </div>
-              </template>
-
-              <template v-slot:item.position="{ item }">
-                <v-text-field
-                  v-model="item.position"
-                  density="compact"
-                  hide-details
-                  placeholder="Position"
-                  :class="{ 'error-field': !item.position }"
-                ></v-text-field>
-              </template>
-
-              <template v-slot:item.basic_salary="{ item }">
-                <v-text-field
-                  v-model.number="item.basic_salary"
-                  type="number"
-                  density="compact"
-                  hide-details
-                  prefix="₱"
-                  placeholder="570"
-                  :class="{
-                    'error-field':
-                      !item.basic_salary || item.basic_salary < 570,
-                  }"
-                ></v-text-field>
-              </template>
-
-              <template v-slot:item.work_schedule="{ item }">
-                <v-select
-                  v-model="item.work_schedule"
-                  :items="[
-                    { title: 'Full Time', value: 'full_time' },
-                    { title: 'Part Time', value: 'part_time' },
-                  ]"
-                  density="compact"
-                  hide-details
-                  :class="{ 'error-field': !item.work_schedule }"
-                ></v-select>
-              </template>
-
-              <template v-slot:item.entry_status="{ item }">
-                <v-chip :color="getStatusColor(item.entry_status)" size="small">
-                  {{ item.entry_status }}
-                </v-chip>
-              </template>
-            </v-data-table>
           </v-card-text>
         </v-card>
 
@@ -335,357 +234,157 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import api from "../../services/api";
-import * as XLSX from "xlsx/xlsx.mjs";
 import { useToast } from "vue-toastification";
 import { onMounted } from "vue";
 
 const router = useRouter();
 const toast = useToast();
 
-// Load position rates on mount
+// Load position rates and projects on mount
 onMounted(async () => {
   try {
-    const response = await api.get("/position-rates");
+    const [positionResponse, projectResponse] = await Promise.all([
+      api.get("/position-rates"),
+      api.get("/projects"),
+    ]);
+
     // Create a map of position name -> daily rate
     positionRates.value = {};
-    response.data.forEach((rate) => {
+    positionResponse.data.forEach((rate) => {
       positionRates.value[rate.position_name] = rate.daily_rate;
     });
+
+    // Store projects for dropdown
+    projects.value = projectResponse.data;
   } catch (error) {
-    console.error("Failed to load position rates:", error);
+    console.error("Failed to load data:", error);
   }
 });
 
 const step = ref(1);
 const isDragging = ref(false);
 const uploadError = ref("");
-const employees = ref([]);
+const selectedFile = ref(null);
 const importing = ref(false);
-const importProgress = ref(0); // Progress percentage
 const importStatus = ref(""); // Current status message
 const importResult = ref({ imported: 0, failed: 0, errors: [] });
 const positionRates = ref({}); // Store position name -> daily rate mapping
-const missingPositions = ref(new Set()); // Track positions not in pay rates table
+const projects = ref([]); // Available projects
 
-const bulkDefaults = ref({
-  position: "",
-  basic_salary: null,
-  work_schedule: "full_time",
-});
+// Default values to apply during import
+const defaultPosition = ref("");
+const defaultProject = ref(null);
 
 // Position options from pay rates table
 const positionOptions = computed(() => {
   return Object.keys(positionRates.value).sort();
 });
 
-// Watch for position changes in bulk defaults and auto-fill salary
-watch(
-  () => bulkDefaults.value.position,
-  (newPosition) => {
-    if (newPosition && positionRates.value[newPosition]) {
-      bulkDefaults.value.basic_salary = positionRates.value[newPosition];
-    } else {
-      bulkDefaults.value.basic_salary = null;
-    }
-  }
-);
-
-const previewHeaders = [
-  { title: "Employee", key: "name", sortable: true },
-  { title: "Gender", key: "gender", sortable: true },
-  { title: "Entry Date", key: "entry_date", sortable: true },
-  { title: "Position", key: "position", sortable: false },
-  { title: "Daily Salary", key: "basic_salary", sortable: false },
-  { title: "Schedule", key: "work_schedule", sortable: false },
-  { title: "Status", key: "entry_status", sortable: true },
-];
+// Project options
+const projectOptions = computed(() => {
+  return projects.value.map((p) => ({
+    title: p.name,
+    value: p.id,
+  }));
+});
 
 const handleDrop = (e) => {
   isDragging.value = false;
   const files = e.dataTransfer.files;
   if (files.length > 0) {
-    processFile(files[0]);
+    const file = files[0];
+    if (file && (file.name.endsWith(".xls") || file.name.endsWith(".xlsx"))) {
+      selectedFile.value = file;
+      uploadError.value = "";
+    } else {
+      uploadError.value = "Please upload a valid Excel file (.xls or .xlsx)";
+    }
   }
 };
 
 const handleFileSelect = (e) => {
   const files = e.target.files;
   if (files.length > 0) {
-    processFile(files[0]);
+    const file = files[0];
+    if (file && (file.name.endsWith(".xls") || file.name.endsWith(".xlsx"))) {
+      selectedFile.value = file;
+      uploadError.value = "";
+    } else {
+      uploadError.value = "Please upload a valid Excel file (.xls or .xlsx)";
+    }
   }
 };
 
-const processFile = async (file) => {
-  uploadError.value = "";
-
-  // Validate file type
-  const validTypes = [
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel",
-    "text/csv",
-  ];
-
-  if (
-    !validTypes.includes(file.type) &&
-    !file.name.match(/\.(xlsx|xls|csv)$/i)
-  ) {
-    uploadError.value = "Invalid file type. Please upload Excel or CSV file.";
-    return;
-  }
-
-  try {
-    const data = await readFile(file);
-    parseEmployeeData(data);
-    step.value = 2;
-  } catch (error) {
-    uploadError.value = "Failed to read file: " + error.message;
-  }
-};
-
-const readFile = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-        resolve(jsonData);
-      } catch (error) {
-        reject(error);
-      }
-    };
-
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsArrayBuffer(file);
-  });
-};
-
-const parseEmployeeData = (data) => {
-  missingPositions.value.clear();
-  employees.value = data.map((row) => {
-    const position = row["Position"] || row["position"] || "";
-    let basic_salary = row["Basic Salary"] || row["basic_salary"] || null;
-
-    // Auto-apply salary from position rates if position exists but no salary
-    if (position && !basic_salary) {
-      if (positionRates.value[position]) {
-        basic_salary = positionRates.value[position];
-      } else {
-        // Track positions not in pay rates table
-        missingPositions.value.add(position);
-        basic_salary = 450; // Default rate (consistent with Add Employee dialog)
-      }
-    } else if (!basic_salary) {
-      basic_salary = 450;
-    }
-
-    return {
-      staff_code: row["Staff Code"] || row["staff_code"] || "",
-      name: row["Name"] || row["name"] || "",
-      department: row["Department"] || row["department"] || "",
-      gender: row["Gender"] || row["gender"] || "Male",
-      card_no: row["Card No"] || row["card_no"] || "",
-      punch_password: row["Punch Password"] || row["punch_password"] || "",
-      mobile_no: row["Mobile No"] || row["mobile_no"] || "",
-      email: row["Email"] || row["email"] || "",
-      entry_date: formatDate(row["Entry Date"] || row["entry_date"]),
-      entry_status: row["Entry Status"] || row["entry_status"] || "",
-      fingerprint_face:
-        row["Fingerprint/Face"] || row["fingerprint_face"] || "",
-      // Fields auto-filled based on position rates
-      position: position,
-      basic_salary: basic_salary,
-      work_schedule:
-        row["Work Schedule"] ||
-        row["work_schedule"] ||
-        // Legacy mapping
-        (row["Employment Type"] === "Part Time" ||
-        row["employment_type"] === "part_time"
-          ? "part_time"
-          : "full_time"),
-    };
-  });
-
-  // Show warning if positions are missing from pay rates
-  if (missingPositions.value.size > 0) {
-    const positions = Array.from(missingPositions.value).join(", ");
-    toast.warning(
-      `${missingPositions.value.size} position(s) not found in Pay Rates: ${positions}. Using default rate (₱450/day). Add these positions in Payroll > Pay Rates.`,
-      { timeout: 8000 }
-    );
-  }
-};
-
-const formatDate = (dateValue) => {
-  if (!dateValue) return "";
-
-  // Handle Excel date serial number
-  if (typeof dateValue === "number") {
-    const excelEpoch = new Date(1899, 11, 30);
-    const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
-    return date.toISOString().split("T")[0];
-  }
-
-  // Handle string dates
-  if (typeof dateValue === "string") {
-    const date = new Date(dateValue);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split("T")[0];
-    }
-  }
-
-  return dateValue;
-};
-
-const applyBulkDefaults = () => {
-  employees.value.forEach((emp) => {
-    // Apply position
-    if (bulkDefaults.value.position && !emp.position) {
-      emp.position = bulkDefaults.value.position;
-    }
-
-    // Auto-apply salary based on position if not already set
-    if (emp.position && !emp.basic_salary) {
-      // Try to get rate from position rates
-      if (positionRates.value[emp.position]) {
-        emp.basic_salary = positionRates.value[emp.position];
-      } else if (bulkDefaults.value.basic_salary) {
-        // Fallback to bulk default salary
-        emp.basic_salary = bulkDefaults.value.basic_salary;
-      } else {
-        // Ultimate fallback to default rate (consistent with Add Employee dialog)
-        emp.basic_salary = 450;
-      }
-    } else if (bulkDefaults.value.basic_salary && !emp.basic_salary) {
-      // Apply bulk default salary if no position match
-      emp.basic_salary = bulkDefaults.value.basic_salary;
-    } else if (!emp.basic_salary) {
-      // Ensure everyone has a salary
-      emp.basic_salary = 450;
-    }
-
-    // Apply work schedule
-    if (bulkDefaults.value.work_schedule && !emp.work_schedule) {
-      emp.work_schedule = bulkDefaults.value.work_schedule;
-    }
-  });
-  toast.success("Bulk defaults applied! Salaries auto-set based on positions.");
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 };
 
 const submitImport = async () => {
-  // Validate required fields
-  const invalid = employees.value.filter(
-    (emp) => !emp.position || !emp.basic_salary || !emp.work_schedule
-  );
-
-  if (invalid.length > 0) {
-    toast.error(
-      `${invalid.length} employee(s) have missing required fields. Please fill Position, Salary, and Work Schedule.`
-    );
-    return;
-  }
+  if (!selectedFile.value) return;
 
   importing.value = true;
-
-  // Show a toast for large imports
-  if (employees.value.length > 50) {
-    toast.info(
-      `Importing ${employees.value.length} employees... This may take a few minutes.`,
-      {
-        timeout: 10000,
-      }
-    );
-  }
+  step.value = 2; // Show progress
+  uploadError.value = "";
 
   try {
-    // Clean up empty strings and convert to null
-    importProgress.value = 10;
-    importStatus.value = "Preparing employee data...";
+    importStatus.value = "Uploading file...";
 
-    const cleanedEmployees = employees.value.map((emp) => {
-      const cleaned = {};
-      Object.keys(emp).forEach((key) => {
-        // Convert empty strings to null, but keep actual values
-        cleaned[key] = emp[key] === "" ? null : emp[key];
-      });
-      // Ensure gender has a default value
-      if (!cleaned.gender) {
-        cleaned.gender = "Male";
-      }
-      return cleaned;
+    const formData = new FormData();
+    formData.append("file", selectedFile.value);
+
+    // Add default values if set
+    if (defaultPosition.value) {
+      formData.append("default_position", defaultPosition.value);
+    }
+    if (defaultProject.value) {
+      formData.append("default_project_id", defaultProject.value);
+    }
+
+    importStatus.value = "Processing employees...";
+
+    const response = await api.post("/employees/import-file", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 300000, // 5 minutes
     });
 
-    importProgress.value = 30;
-    importStatus.value = `Uploading ${cleanedEmployees.length} employees...`;
-
-    const response = await api.post(
-      "/employees/import",
-      {
-        employees: cleanedEmployees,
-      },
-      {
-        timeout: 300000, // 5 minutes for very large imports
-        onUploadProgress: (progressEvent) => {
-          // Update progress during upload (30% - 90%)
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 60) / progressEvent.total
-          );
-          importProgress.value = 30 + percentCompleted;
-          importStatus.value = `Processing employees... ${Math.round(
-            (progressEvent.loaded / progressEvent.total) * 100
-          )}%`;
-        },
-      }
-    );
-
-    importProgress.value = 95;
-    importStatus.value = "Finalizing import...";
-
-    importResult.value = response.data;
-
-    importProgress.value = 100;
-    importStatus.value = "Import complete!";
+    importResult.value = {
+      imported: response.data.imported,
+      failed: response.data.failed,
+      errors: response.data.errors || [],
+    };
 
     step.value = 3;
 
     if (response.data.failed === 0) {
       toast.success(
-        `Successfully imported ${response.data.imported} employees!`
+        `Successfully imported ${response.data.imported} employees!`,
       );
     } else {
       toast.warning(
-        `Imported ${response.data.imported} employees, ${response.data.failed} failed.`
+        `Imported ${response.data.imported} employees, ${response.data.failed} failed.`,
       );
     }
   } catch (error) {
     console.error("Import error:", error);
-    console.error("Error response:", error.response);
-    console.error("Error data:", error.response?.data);
-    console.error("Error code:", error.code);
-    console.error("Error message:", error.message);
 
     let errorMessage = "Failed to import employees";
 
-    // Check for timeout error
-    if (error.code === "ECONNABORTED" || error.message.includes("timeout")) {
-      errorMessage = `Request timed out. You're importing ${employees.value.length} employees. Try importing in smaller batches (max 100 at a time).`;
-    } else if (error.response?.data?.message) {
+    if (error.response?.data?.message) {
       errorMessage = error.response.data.message;
-    } else if (error.response?.data?.errors) {
-      const errors = error.response.data.errors;
-      const firstError = Object.values(errors)[0];
-      errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
     } else if (error.message) {
       errorMessage = error.message;
     }
 
+    uploadError.value = errorMessage;
     toast.error(errorMessage, { timeout: 10000 });
+    step.value = 1; // Go back to upload
   } finally {
     importing.value = false;
   }
@@ -696,55 +395,22 @@ const downloadTemplate = async () => {
     const response = await api.get("/employees/import/template");
     const template = response.data.template;
 
-    // Create Excel file
-    const ws = XLSX.utils.json_to_sheet(template);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Employees");
-
-    // Add instructions sheet
-    const instructions = [
-      {
-        Field: "staff_code",
-        Required: "Yes",
-        Description: "Employee number (unique)",
-      },
-      { Field: "name", Required: "Yes", Description: "Full name" },
-      { Field: "gender", Required: "Yes", Description: "Male or Female" },
-      {
-        Field: "entry_date",
-        Required: "Yes",
-        Description: "Date hired (YYYY-MM-DD)",
-      },
-      {
-        Field: "entry_status",
-        Required: "Yes",
-        Description: "Official/Regular/Probationary/Contractual",
-      },
-      { Field: "position", Required: "Yes", Description: "Job position" },
-      {
-        Field: "basic_salary",
-        Required: "Yes",
-        Description: "Daily rate (minimum 570)",
-      },
-      {
-        Field: "punch_password",
-        Required: "No",
-        Description: "Biometric device PIN",
-      },
-      { Field: "mobile_no", Required: "No", Description: "Mobile number" },
-      { Field: "email", Required: "No", Description: "Email address" },
-      {
-        Field: "department",
-        Required: "No",
-        Description: "Department name (for reference)",
-      },
+    // Simple download - create CSV or use backend-generated Excel
+    const rows = [
+      Object.keys(template[0]),
+      ...template.map((obj) => Object.values(obj)),
     ];
+    const csvContent = rows.map((row) => row.join(",")).join("\\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "employee_import_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
 
-    const wsInstructions = XLSX.utils.json_to_sheet(instructions);
-    XLSX.utils.book_append_sheet(wb, wsInstructions, "Instructions");
-
-    // Download
-    XLSX.writeFile(wb, "employee_import_template.xlsx");
     toast.success("Template downloaded!");
   } catch (error) {
     console.error("Template download error:", error);
@@ -754,37 +420,13 @@ const downloadTemplate = async () => {
 
 const resetImport = () => {
   step.value = 1;
-  employees.value = [];
+  selectedFile.value = null;
   uploadError.value = "";
   importing.value = false;
-  importProgress.value = 0;
   importStatus.value = "";
   importResult.value = { imported: 0, failed: 0, errors: [] };
-  bulkDefaults.value = {
-    position: "",
-    basic_salary: null,
-    work_schedule: "full_time",
-  };
-};
-
-const getInitials = (name) => {
-  if (!name) return "??";
-  const parts = name.split(" ");
-  return parts.length > 1
-    ? parts[0][0] + parts[parts.length - 1][0]
-    : parts[0][0];
-};
-
-const getStatusColor = (status) => {
-  const colors = {
-    official: "success",
-    regular: "success",
-    probationary: "warning",
-    probation: "warning",
-    contractual: "info",
-    contract: "info",
-  };
-  return colors[status?.toLowerCase()] || "grey";
+  defaultPosition.value = "";
+  defaultProject.value = null;
 };
 </script>
 

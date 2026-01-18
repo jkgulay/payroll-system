@@ -33,7 +33,7 @@ class PayrollService
     /**
      * Process payroll for specific employees
      */
-    public function processPayroll(Payroll $payroll, array $employeeIds = null)
+    public function processPayroll(Payroll $payroll, ?array $employeeIds = null)
     {
         DB::beginTransaction();
         try {
@@ -52,9 +52,9 @@ class PayrollService
 
             foreach ($employees as $employee) {
                 $item = $this->calculatePayrollItem($payroll, $employee);
-                
+
                 PayrollItem::create($item);
-                
+
                 $totalGross += $item['gross_pay'];
                 $totalDeductions += $item['total_deductions'];
                 $totalNet += $item['net_pay'];
@@ -89,17 +89,17 @@ class PayrollService
         // Calculate days worked and hours
         $daysWorked = $attendances->where('status', 'present')->count();
         $regularOtHours = $attendances->sum('overtime_hours') ?? 0;
-        
+
         // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
         $rate = $employee->getBasicSalary();
-        
+
         // Calculate basic pay
         $basicPay = $rate * $daysWorked;
-        
+
         // Calculate overtime pay (1.25x for regular OT)
         $hourlyRate = $rate / 8; // Assuming 8-hour workday
         $regularOtPay = $regularOtHours * $hourlyRate * 1.25;
-        
+
         // Get allowances - sum allowances that are active and effective during the payroll period
         $allowances = EmployeeAllowance::where('employee_id', $employee->id)
             ->where('is_active', true)
@@ -109,63 +109,60 @@ class PayrollService
                     ->orWhere('end_date', '>=', $payroll->period_start);
             })
             ->sum('amount') ?? 0;
-        
+
         // Calculate COLA (Cost of Living Allowance) - typically per day
         $cola = $daysWorked * 0; // Set to 0, can be configured
-        
+
         // Calculate gross pay
         $grossPay = $basicPay + $regularOtPay + $cola + $allowances;
-        
+
         // Calculate government deductions
         $sss = $this->calculateSSS($grossPay);
         $philhealth = $this->calculatePhilHealth($grossPay);
         $pagibig = $this->calculatePagibig($grossPay);
-        
+
         // Get loans deduction for this period
         $loanDeduction = EmployeeLoan::where('employee_id', $employee->id)
             ->where('status', 'active')
             ->sum('monthly_amortization') ?? 0;
-        
+
         // Employee savings
         $employeeSavings = 0; // Can be configured
-        
+
         // Cash advance
         $cashAdvance = 0; // Can be configured
-        
+
         // Other deductions
         $otherDeductions = 0;
-        
+
         // Total deductions
-        $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction + 
-                          $employeeSavings + $cashAdvance + $otherDeductions;
-        
+        $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
+            $employeeSavings + $cashAdvance + $otherDeductions;
+
         // Net pay
         $netPay = $grossPay - $totalDeductions;
 
         return [
             'payroll_id' => $payroll->id,
             'employee_id' => $employee->id,
-            'basic_rate' => $rate,
+            'rate' => $rate,
             'days_worked' => $daysWorked,
             'basic_pay' => $basicPay,
-            'overtime_hours' => $regularOtHours,
-            'overtime_pay' => $regularOtPay,
-            'holiday_pay' => 0,
-            'night_differential' => 0,
-            'adjustments' => 0,
-            'adjustment_notes' => null,
-            'water_allowance' => 0,
+            'regular_ot_hours' => $regularOtHours,
+            'regular_ot_pay' => $regularOtPay,
+            'special_ot_hours' => 0,
+            'special_ot_pay' => 0,
             'cola' => $cola,
             'other_allowances' => $allowances,
-            'total_allowances' => $allowances + $cola,
-            'total_bonuses' => 0,
             'gross_pay' => $grossPay,
-            'sss_contribution' => $sss,
-            'philhealth_contribution' => $philhealth,
-            'pagibig_contribution' => $pagibig,
+            'sss' => $sss,
+            'philhealth' => $philhealth,
+            'pagibig' => $pagibig,
             'withholding_tax' => 0,
-            'total_other_deductions' => $employeeSavings + $cashAdvance + $otherDeductions,
-            'total_loan_deductions' => $loanDeduction,
+            'employee_savings' => $employeeSavings,
+            'cash_advance' => $cashAdvance,
+            'loans' => $loanDeduction,
+            'other_deductions' => $otherDeductions,
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
         ];
@@ -220,7 +217,7 @@ class PayrollService
         // PhilHealth 2024: 4% of basic salary (2% employee share)
         $contribution = $grossPay * 0.04;
         $employeeShare = $contribution / 2;
-        
+
         // Minimum: PHP 450, Maximum: PHP 1,800 per month
         return min(max($employeeShare, 450), 1800);
     }
@@ -232,7 +229,7 @@ class PayrollService
     {
         // Pag-IBIG: 2% of monthly salary
         $contribution = $grossPay * 0.02;
-        
+
         // Maximum of PHP 100 per month
         return min($contribution, 100);
     }

@@ -78,9 +78,9 @@ class ReportController extends Controller
 
         $remittance = [
             'period' => Carbon::createFromDate($year, $month, 1)->format('F Y'),
-            'total_sss' => $payrollItems->sum('sss_contribution'),
-            'total_philhealth' => $payrollItems->sum('philhealth_contribution'),
-            'total_pagibig' => $payrollItems->sum('pagibig_contribution'),
+            'total_sss' => $payrollItems->sum('sss'),
+            'total_philhealth' => $payrollItems->sum('philhealth'),
+            'total_pagibig' => $payrollItems->sum('pagibig'),
             'total_tax' => $payrollItems->sum('withholding_tax'),
             'employee_count' => $payrollItems->count(),
             'details' => $payrollItems,

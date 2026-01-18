@@ -45,7 +45,10 @@
       <v-list density="compact" nav class="pa-2">
         <template v-for="section in menuSections" :key="section.title">
           <!-- Section Header -->
-          <v-list-subheader v-if="!rail" class="menu-section-header text-caption font-weight-bold text-medium-emphasis px-4 py-2 mt-2">
+          <v-list-subheader
+            v-if="!rail"
+            class="menu-section-header text-caption font-weight-bold text-medium-emphasis px-4 py-2 mt-2"
+          >
             {{ section.title }}
           </v-list-subheader>
           <v-divider v-else class="my-2 mx-4"></v-divider>
@@ -85,7 +88,7 @@
                   :prepend-icon="item.icon"
                   :title="rail ? '' : item.title"
                   :value="item.value"
-                  :to="item.to || (item.children?.[0]?.to)"
+                  :to="item.to || item.children?.[0]?.to"
                   color="hardhat"
                   class="menu-item mb-1"
                   rounded="lg"
@@ -149,8 +152,18 @@
           class="mr-3 rotating-hardhat"
         ></v-icon>
         <div>
-          <v-app-bar-title :class="isMobile ? 'text-subtitle-1' : 'construction-header text-h6'">
-            {{ isMobile ? (pageTitle.length > 20 ? pageTitle.substring(0, 20) + '...' : pageTitle) : pageTitle }}
+          <v-app-bar-title
+            :class="
+              isMobile ? 'text-subtitle-1' : 'construction-header text-h6'
+            "
+          >
+            {{
+              isMobile
+                ? pageTitle.length > 20
+                  ? pageTitle.substring(0, 20) + "..."
+                  : pageTitle
+                : pageTitle
+            }}
           </v-app-bar-title>
           <div v-if="!isMobile" class="text-caption text-medium-emphasis">
             Giovanni Construction
@@ -161,7 +174,12 @@
       <v-spacer></v-spacer>
 
       <!-- Notification Bell -->
-      <v-btn icon="mdi-bell-outline" variant="text" color="steel" :size="isMobile ? 'small' : 'default'"></v-btn>
+      <v-btn
+        icon="mdi-bell-outline"
+        variant="text"
+        color="steel"
+        :size="isMobile ? 'small' : 'default'"
+      ></v-btn>
     </v-app-bar>
 
     <!-- Main Content Area -->
@@ -214,7 +232,11 @@
         <v-card-text class="logout-dialog-content pa-8">
           <!-- Warning Banner -->
           <div class="logout-warning-banner">
-            <v-icon icon="mdi-alert-circle-outline" size="24" color="#ff6f00"></v-icon>
+            <v-icon
+              icon="mdi-alert-circle-outline"
+              size="24"
+              color="#ff6f00"
+            ></v-icon>
             <div class="ml-3">
               <div class="logout-message-title">
                 Are you sure you want to logout?
@@ -289,7 +311,7 @@ onMounted(() => {
 });
 
 const userName = computed(
-  () => authStore.user?.name || authStore.user?.username || "User"
+  () => authStore.user?.name || authStore.user?.username || "User",
 );
 const userRole = computed(() => {
   const role = authStore.user?.role || "Employee";
@@ -508,6 +530,13 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant", "employee"],
     },
     {
+      title: "Position Rates",
+      icon: "mdi-cash-multiple",
+      value: "position-rates",
+      to: "/position-rates",
+      roles: ["admin", "accountant"],
+    },
+    {
       title: "Settings",
       icon: "mdi-cog-outline",
       value: "settings",
@@ -519,28 +548,28 @@ const menuItems = computed(() => {
   // Filter items based on user role
   const currentRole = authStore.userRole;
   return allItems.filter(
-    (item) => !item.roles || item.roles.includes(currentRole)
+    (item) => !item.roles || item.roles.includes(currentRole),
   );
 });
 
 // Organize menu items into sections with labels
 const menuSections = computed(() => {
   const currentRole = authStore.userRole;
-  
+
   // Define sections based on role
   const sections = [
     {
-      title: 'MAIN MENU',
-      items: []
+      title: "MAIN MENU",
+      items: [],
     },
     {
-      title: 'TEAM MANAGEMENT',
-      items: []
+      title: "TEAM MANAGEMENT",
+      items: [],
     },
     {
-      title: 'LIST',
-      items: []
-    }
+      title: "LIST",
+      items: [],
+    },
   ];
 
   // Main Menu items (common actions)
@@ -573,6 +602,7 @@ const menuSections = computed(() => {
       to: "/attendance",
       roles: ["admin", "accountant"],
     },
+
     {
       title: "Settings",
       icon: "mdi-cog-outline",
@@ -603,6 +633,13 @@ const menuSections = computed(() => {
       icon: "mdi-cash-multiple",
       value: "payroll",
       to: "/payroll",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Position Rates",
+      icon: "mdi-cash-multiple",
+      value: "position-rates",
+      to: "/position-rates",
       roles: ["admin", "accountant"],
     },
     {
@@ -731,19 +768,19 @@ const menuSections = computed(() => {
 
   // Filter and assign items to sections
   sections[0].items = mainMenuItems.filter(
-    (item) => !item.roles || item.roles.includes(currentRole)
+    (item) => !item.roles || item.roles.includes(currentRole),
   );
-  
+
   sections[1].items = teamManagementItems.filter(
-    (item) => !item.roles || item.roles.includes(currentRole)
+    (item) => !item.roles || item.roles.includes(currentRole),
   );
-  
+
   sections[2].items = listItems.filter(
-    (item) => !item.roles || item.roles.includes(currentRole)
+    (item) => !item.roles || item.roles.includes(currentRole),
   );
 
   // Remove empty sections
-  return sections.filter(section => section.items.length > 0);
+  return sections.filter((section) => section.items.length > 0);
 });
 
 async function handleLogout() {
@@ -806,7 +843,11 @@ async function downloadCurrentPayslip() {
 <style scoped lang="scss">
 // Modern Navigation Drawer with glassmorphism
 .construction-drawer {
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 41, 59, 0.95) 0%,
+    rgba(15, 23, 42, 0.98) 100%
+  ) !important;
   backdrop-filter: blur(40px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
   position: fixed !important;
@@ -825,15 +866,19 @@ async function downloadCurrentPayslip() {
     flex-direction: column !important;
     overflow-y: auto !important;
     position: relative;
-    
+
     &::before {
-      content: '';
+      content: "";
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.1), transparent 50%);
+      background: radial-gradient(
+        circle at top left,
+        rgba(99, 102, 241, 0.1),
+        transparent 50%
+      );
       pointer-events: none;
     }
   }
@@ -850,15 +895,19 @@ async function downloadCurrentPayslip() {
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    
+
     &::before {
-      content: '';
+      content: "";
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05));
+      background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.1),
+        rgba(139, 92, 246, 0.05)
+      );
       opacity: 0;
       transition: opacity 0.3s ease;
     }
@@ -878,7 +927,7 @@ async function downloadCurrentPayslip() {
       background: rgba(99, 102, 241, 0.15) !important;
       transform: translateX(6px) scale(1.02);
       box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
-      
+
       &::before {
         opacity: 1;
       }
@@ -897,13 +946,18 @@ async function downloadCurrentPayslip() {
   :deep(.v-list-item--active) {
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
     color: white !important;
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35), 
-                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    box-shadow:
+      0 8px 20px rgba(99, 102, 241, 0.35),
+      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     border: 1px solid rgba(255, 255, 255, 0.15);
 
     &::before {
       opacity: 1;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1),
+        transparent
+      );
     }
 
     .v-list-item-title {
@@ -930,7 +984,7 @@ async function downloadCurrentPayslip() {
       }
     }
   }
-  
+
   // Rail mode specific styling
   &.v-navigation-drawer--rail {
     :deep(.v-list-item) {
@@ -945,11 +999,11 @@ async function downloadCurrentPayslip() {
       display: flex !important;
       flex-shrink: 0 !important;
       position: relative !important;
-      
+
       .v-list-item__overlay {
         border-radius: 12px !important;
       }
-      
+
       .v-list-item__prepend {
         margin: 0 !important;
         padding: 0 !important;
@@ -962,7 +1016,7 @@ async function downloadCurrentPayslip() {
         position: absolute !important;
         left: 0 !important;
         top: 0 !important;
-        
+
         .v-icon {
           font-size: 22px !important;
           margin: 0 !important;
@@ -972,44 +1026,44 @@ async function downloadCurrentPayslip() {
           position: relative !important;
         }
       }
-      
+
       .v-list-item__content {
         display: none !important;
         width: 0 !important;
         flex: none !important;
       }
-      
+
       .v-list-item__append {
         display: none !important;
         width: 0 !important;
       }
-      
+
       &:hover {
         transform: scale(1.05);
         background: rgba(99, 102, 241, 0.25) !important;
       }
-      
+
       &::before {
         border-radius: 12px !important;
       }
     }
-    
+
     :deep(.v-list-item--active) {
       background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-      
+
       .v-icon {
         color: white !important;
       }
-      
+
       &::before {
         opacity: 0 !important;
       }
     }
-    
+
     :deep(.v-list-group) {
       display: none;
     }
-    
+
     .user-profile-item {
       padding: 0 !important;
       margin: 8px auto !important;
@@ -1020,7 +1074,7 @@ async function downloadCurrentPayslip() {
       position: relative;
       border-radius: 50% !important;
       display: flex !important;
-      
+
       :deep(.v-list-item__prepend) {
         margin: 0 !important;
         padding: 0 !important;
@@ -1033,11 +1087,11 @@ async function downloadCurrentPayslip() {
         left: 0 !important;
         top: 0 !important;
       }
-      
+
       :deep(.v-list-item__content) {
         display: none !important;
       }
-      
+
       :deep(.v-list-item__append) {
         display: flex !important;
         position: absolute;
@@ -1046,7 +1100,7 @@ async function downloadCurrentPayslip() {
         opacity: 1 !important;
         z-index: 100 !important;
         width: auto !important;
-        
+
         .v-btn {
           width: 24px !important;
           height: 24px !important;
@@ -1054,24 +1108,24 @@ async function downloadCurrentPayslip() {
           padding: 0 !important;
           background: rgba(0, 0, 0, 0.3) !important;
           opacity: 1 !important;
-          
+
           &:hover {
             background: rgba(0, 0, 0, 0.5) !important;
           }
         }
       }
-      
+
       :deep(.v-avatar) {
         margin: 0 !important;
         position: relative !important;
       }
-      
+
       &:hover {
         transform: none !important;
         background: rgba(0, 0, 0, 0.3) !important;
       }
     }
-    
+
     .steel-divider {
       margin: 8px 16px !important;
     }
@@ -1079,7 +1133,11 @@ async function downloadCurrentPayslip() {
 }
 
 .user-profile-item {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.15) 0%,
+    rgba(139, 92, 246, 0.1) 100%
+  );
   backdrop-filter: blur(10px);
   margin: 12px;
   border-radius: 16px;
@@ -1089,24 +1147,32 @@ async function downloadCurrentPayslip() {
   border: 1px solid rgba(139, 92, 246, 0.2);
   position: relative;
   overflow: hidden;
-  
+
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at top right, rgba(236, 72, 153, 0.1), transparent 70%);
+    background: radial-gradient(
+      circle at top right,
+      rgba(236, 72, 153, 0.1),
+      transparent 70%
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
   }
-  
+
   &:hover {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.2) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.25) 0%,
+      rgba(139, 92, 246, 0.2) 100%
+    );
     box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
     border-color: rgba(139, 92, 246, 0.4);
-    
+
     &::before {
       opacity: 1;
     }
@@ -1132,7 +1198,7 @@ async function downloadCurrentPayslip() {
     border: 3px solid rgba(139, 92, 246, 0.4);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease;
-    
+
     &:hover {
       border-color: rgba(139, 92, 246, 0.8);
       transform: scale(1.05);
@@ -1142,7 +1208,7 @@ async function downloadCurrentPayslip() {
   :deep(.v-btn) {
     color: rgba(255, 255, 255, 0.85) !important;
     transition: all 0.3s ease;
-    
+
     &:hover {
       color: white !important;
       background: rgba(255, 255, 255, 0.1) !important;
@@ -1180,10 +1246,12 @@ async function downloadCurrentPayslip() {
 
 // Modern divider effect
 :deep(.steel-divider) {
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(139, 92, 246, 0.4) 50%, 
-    transparent 100%) !important;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.4) 50%,
+    transparent 100%
+  ) !important;
   height: 2px;
   margin: 16px 20px;
   border-radius: 999px;
@@ -1205,15 +1273,17 @@ async function downloadCurrentPayslip() {
   position: relative;
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     left: 16px;
     right: 16px;
     bottom: -4px;
     height: 1px;
-    background: linear-gradient(90deg, 
-      rgba(139, 92, 246, 0.3) 0%, 
-      transparent 100%);
+    background: linear-gradient(
+      90deg,
+      rgba(139, 92, 246, 0.3) 0%,
+      transparent 100%
+    );
   }
 
   &:first-of-type {
@@ -1224,7 +1294,11 @@ async function downloadCurrentPayslip() {
 // Modern logout button styling in drawer
 .logout-btn,
 .logout-btn-rail {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.2) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.15) 0%,
+    rgba(220, 38, 38, 0.2) 100%
+  ) !important;
   color: #fca5a5 !important;
   font-weight: 600;
   border: 1px solid rgba(239, 68, 68, 0.3);
@@ -1232,12 +1306,16 @@ async function downloadCurrentPayslip() {
   backdrop-filter: blur(8px);
 
   &:hover {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.35) 100%) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(239, 68, 68, 0.3) 0%,
+      rgba(220, 38, 38, 0.35) 100%
+    ) !important;
     color: #fef2f2 !important;
     box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
     transform: translateY(-2px);
     border-color: rgba(239, 68, 68, 0.5);
-    
+
     .v-icon {
       color: #fef2f2 !important;
       transform: rotate(-10deg) scale(1.1);
@@ -1277,7 +1355,11 @@ async function downloadCurrentPayslip() {
   :deep(.v-breadcrumbs-item--disabled) {
     color: #6366f1;
     font-weight: 600;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.1) 0%,
+      rgba(139, 92, 246, 0.08) 100%
+    );
     padding: 6px 12px;
     border-radius: 8px;
   }
@@ -1292,25 +1374,32 @@ async function downloadCurrentPayslip() {
 .construction-appbar {
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(248, 250, 252, 0.95) 100%
+  ) !important;
   border-bottom: 1px solid rgba(99, 102, 241, 0.15) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 
-              0 0 0 1px rgba(99, 102, 241, 0.05) inset !important;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(99, 102, 241, 0.05) inset !important;
   position: relative;
-  
+
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, 
-      transparent 0%, 
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
       rgba(99, 102, 241, 0.3) 25%,
       rgba(139, 92, 246, 0.4) 50%,
       rgba(236, 72, 153, 0.3) 75%,
-      transparent 100%);
+      transparent 100%
+    );
     opacity: 0.6;
   }
 }
@@ -1319,13 +1408,21 @@ async function downloadCurrentPayslip() {
   font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.5px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.1) 0%,
+    rgba(139, 92, 246, 0.08) 100%
+  );
   border: 1px solid rgba(99, 102, 241, 0.2);
   backdrop-filter: blur(8px);
   transition: all 0.3s ease;
-  
+
   &:hover {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.12) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.15) 0%,
+      rgba(139, 92, 246, 0.12) 100%
+    );
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
   }
@@ -1338,7 +1435,8 @@ async function downloadCurrentPayslip() {
 }
 
 @keyframes modernBounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
   25% {
@@ -1358,17 +1456,25 @@ async function downloadCurrentPayslip() {
   min-height: 100vh;
   overflow-y: auto;
   position: relative;
-  
+
   &::before {
-    content: '';
+    content: "";
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: 
-      radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.03), transparent 40%),
-      radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.03), transparent 40%);
+    background:
+      radial-gradient(
+        circle at 20% 20%,
+        rgba(99, 102, 241, 0.03),
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 80% 80%,
+        rgba(139, 92, 246, 0.03),
+        transparent 40%
+      );
     pointer-events: none;
     z-index: 0;
   }
@@ -1384,7 +1490,9 @@ async function downloadCurrentPayslip() {
 // Page transitions
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .fade-enter-from {
@@ -1405,7 +1513,8 @@ async function downloadCurrentPayslip() {
   border-radius: 20px !important;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.98) !important;
-  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.4),
+  box-shadow:
+    0 40px 80px -20px rgba(0, 0, 0, 0.4),
     0 20px 40px -20px rgba(255, 111, 0, 0.15),
     0 0 0 1px rgba(255, 152, 0, 0.1) inset !important;
   -webkit-backdrop-filter: blur(20px);
@@ -1458,7 +1567,8 @@ async function downloadCurrentPayslip() {
 }
 
 @keyframes pulseIcon {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -1552,12 +1662,14 @@ async function downloadCurrentPayslip() {
   font-weight: 600 !important;
   background: linear-gradient(135deg, #ff6f00 0%, #ff9800 100%) !important;
   color: white !important;
-  box-shadow: 0 8px 20px rgba(255, 111, 0, 0.3),
+  box-shadow:
+    0 8px 20px rgba(255, 111, 0, 0.3),
     0 4px 10px rgba(255, 111, 0, 0.2) !important;
   transition: all 0.3s ease !important;
 
   &:hover {
-    box-shadow: 0 12px 28px rgba(255, 111, 0, 0.4),
+    box-shadow:
+      0 12px 28px rgba(255, 111, 0, 0.4),
       0 6px 14px rgba(255, 111, 0, 0.3) !important;
     transform: translateY(-2px);
   }
@@ -1565,4 +1677,5 @@ async function downloadCurrentPayslip() {
   &:active {
     transform: translateY(0);
   }
-}</style>
+}
+</style>

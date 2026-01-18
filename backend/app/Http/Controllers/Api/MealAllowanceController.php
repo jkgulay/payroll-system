@@ -159,7 +159,30 @@ class MealAllowanceController extends Controller
      */
     public function show(MealAllowance $mealAllowance)
     {
-        return response()->json($mealAllowance->load(['items.employee', 'creator', 'approver', 'project', 'position']));
+        // Load relations but limit items to first 100 for performance
+        $mealAllowance->load(['creator', 'approver', 'project', 'position']);
+        $mealAllowance->load(['items' => function ($query) {
+            $query->with('employee')->limit(100);
+        }]);
+
+        // Add items count
+        $mealAllowance->loadCount('items');
+
+        return response()->json($mealAllowance);
+    }
+
+    /**
+     * Get paginated items for a meal allowance
+     */
+    public function getItems(Request $request, MealAllowance $mealAllowance)
+    {
+        $perPage = $request->input('per_page', 50);
+
+        $items = $mealAllowance->items()
+            ->with('employee')
+            ->paginate($perPage);
+
+        return response()->json($items);
     }
 
     /**
@@ -342,7 +365,7 @@ class MealAllowanceController extends Controller
             // Increase memory limit for PDF generation
             ini_set('memory_limit', '1024M');
             ini_set('max_execution_time', '300');
-            
+
             // Ensure storage directory exists
             $storagePath = storage_path('app/public/meal_allowances');
             if (!file_exists($storagePath)) {

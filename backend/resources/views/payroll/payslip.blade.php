@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>Payslip</title>
@@ -10,29 +11,35 @@
             padding: 20px;
             font-size: 12px;
         }
+
         .header {
             text-align: center;
             margin-bottom: 20px;
             border-bottom: 3px solid #333;
             padding-bottom: 10px;
         }
+
         .company-name {
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 5px;
         }
+
         .payroll-title {
             font-size: 18px;
             font-weight: bold;
             margin-top: 10px;
         }
+
         .period-info {
             font-size: 13px;
             margin-top: 5px;
         }
+
         .section {
             margin-bottom: 15px;
         }
+
         .section-title {
             background-color: #f0f0f0;
             padding: 5px 10px;
@@ -40,32 +47,39 @@
             margin-bottom: 10px;
             border-left: 4px solid #333;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
         }
+
         table td {
             padding: 6px 10px;
             border: 1px solid #ddd;
         }
+
         .label {
             font-weight: bold;
             width: 40%;
             background-color: #f9f9f9;
         }
+
         .value {
             text-align: right;
         }
+
         .total-row {
             background-color: #e8e8e8;
             font-weight: bold;
             font-size: 14px;
         }
+
         .net-pay {
             background-color: #4CAF50;
             color: white;
             font-size: 16px;
         }
+
         .footer {
             margin-top: 30px;
             padding-top: 15px;
@@ -73,28 +87,33 @@
             text-align: center;
             font-size: 11px;
         }
+
         .acknowledgment {
             margin-top: 40px;
             font-size: 11px;
             font-style: italic;
             text-align: center;
         }
+
         .signature-section {
             margin-top: 50px;
             display: table;
             width: 100%;
         }
+
         .signature-box {
             display: table-cell;
             width: 50%;
             text-align: center;
         }
+
         .signature-line {
             border-top: 1px solid #333;
             margin: 40px 50px 5px 50px;
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <div class="company-name">GIOVANNI CONSTRUCTION</div>
@@ -164,7 +183,14 @@
                 <td class="value">PHP {{ number_format($item->cola, 2) }}</td>
             </tr>
             @endif
-            @if($item->other_allowances > 0)
+            @if(!empty($item->allowances_breakdown) && count($item->allowances_breakdown) > 0)
+            @foreach($item->allowances_breakdown as $allowance)
+            <tr>
+                <td class="label">{{ strtoupper($allowance['name']) }}</td>
+                <td class="value">PHP {{ number_format($allowance['amount'], 2) }}</td>
+            </tr>
+            @endforeach
+            @elseif($item->other_allowances > 0)
             <tr>
                 <td class="label">OTHER ALLOWANCES</td>
                 <td class="value">PHP {{ number_format($item->other_allowances, 2) }}</td>
@@ -195,32 +221,26 @@
             @endif
             <tr>
                 <td class="label">SSS Contribution</td>
-                <td class="value">PHP {{ number_format($item->sss_contribution ?? 0, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->sss ?? 0, 2) }}</td>
             </tr>
             <tr>
                 <td class="label">PhilHealth Contribution (PHIC)</td>
-                <td class="value">PHP {{ number_format($item->philhealth_contribution ?? 0, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->philhealth ?? 0, 2) }}</td>
             </tr>
             <tr>
-                <td class="label">Pag-IBIG Contribution (HDMF)</td>
-                <td class="value">PHP {{ number_format($item->pagibig_contribution ?? 0, 2) }}</td>
+                <td class="label">Pag-IBIG Contribution</td>
+                <td class="value">PHP {{ number_format($item->pagibig ?? 0, 2) }}</td>
             </tr>
-            @if($item->total_loan_deductions > 0)
+            @if($item->loans > 0)
             <tr>
                 <td class="label">Loans</td>
-                <td class="value">PHP {{ number_format($item->total_loan_deductions, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->loans, 2) }}</td>
             </tr>
             @endif
-            @if($item->employee_deductions > 0)
-            <tr>
-                <td class="label">Employee Deductions</td>
-                <td class="value">PHP {{ number_format($item->employee_deductions, 2) }}</td>
-            </tr>
-            @endif
-            @if($item->total_other_deductions > 0)
+            @if($item->other_deductions > 0)
             <tr>
                 <td class="label">Other Deductions</td>
-                <td class="value">PHP {{ number_format($item->total_other_deductions, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->other_deductions, 2) }}</td>
             </tr>
             @endif
             <tr class="total-row">
@@ -261,4 +281,5 @@
         Generated on {{ now()->format('F d, Y h:i A') }}
     </div>
 </body>
+
 </html>

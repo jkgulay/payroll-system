@@ -64,17 +64,17 @@ class DashboardController extends Controller
             ->count();
 
         // Monthly Attendance Rate
-        $workingDaysThisMonth = Carbon::now()->diffInDaysFiltered(function(Carbon $date) {
+        $workingDaysThisMonth = Carbon::now()->diffInDaysFiltered(function (Carbon $date) {
             return !$date->isWeekend();
         }, Carbon::now()->startOfMonth());
-        
+
         $expectedAttendance = $totalEmployees * $workingDaysThisMonth;
         $actualAttendance = Attendance::whereRaw("TO_CHAR(attendance_date, 'YYYY-MM') = ?", [$currentMonth])
             ->whereIn('status', ['present', 'late'])
             ->count();
-        
-        $monthlyAttendanceRate = $expectedAttendance > 0 
-            ? round(($actualAttendance / $expectedAttendance) * 100, 1) 
+
+        $monthlyAttendanceRate = $expectedAttendance > 0
+            ? round(($actualAttendance / $expectedAttendance) * 100, 1)
             : 0;
 
         // Last Biometric Import (from audit logs)
@@ -317,9 +317,9 @@ class DashboardController extends Controller
             $contributions = PayrollItem::whereHas('payroll', function ($query) use ($monthYear) {
                 $query->whereRaw("TO_CHAR(period_start, 'YYYY-MM') = ?", [$monthYear]);
             })->selectRaw('
-                SUM(sss_contribution) as total_sss,
-                SUM(philhealth_contribution) as total_philhealth,
-                SUM(pagibig_contribution) as total_pagibig,
+                SUM(sss) as total_sss,
+                SUM(philhealth) as total_philhealth,
+                SUM(pagibig) as total_pagibig,
                 SUM(tax_withheld) as total_tax
             ')->first();
 
@@ -618,11 +618,11 @@ class DashboardController extends Controller
     public function recentActivities(Request $request)
     {
         $limit = $request->input('limit', 15);
-        
+
         $activities = AuditLog::with('user')
             ->whereIn('action', [
                 'employee_created',
-                'employee_updated', 
+                'employee_updated',
                 'payroll_approved',
                 'payroll_finalized',
                 'leave_approved',
@@ -714,7 +714,7 @@ class DashboardController extends Controller
         $payrollCutoffs = [];
         $currentMonth = $now->month;
         $currentYear = $now->year;
-        
+
         // Check 15th of current month
         $cutoff15 = Carbon::create($currentYear, $currentMonth, 15);
         if ($cutoff15->isFuture() && $cutoff15->lte($nextWeek)) {
