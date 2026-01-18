@@ -56,16 +56,6 @@ class Applicant extends Model
         return $this->belongsTo(JobPosting::class);
     }
 
-    public function documents()
-    {
-        return $this->hasMany(ApplicantDocument::class);
-    }
-
-    public function interviews()
-    {
-        return $this->hasMany(InterviewSchedule::class);
-    }
-
     public function reviewedBy()
     {
         return $this->belongsTo(User::class, 'reviewed_by');

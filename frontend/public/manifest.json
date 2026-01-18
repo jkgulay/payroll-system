@@ -1,7 +1,7 @@
 {
-  "name": "Construction Payroll System",
-  "short_name": "Payroll",
-  "description": "Construction Payroll Management System",
+  "name": "Giovanni Construction",
+  "short_name": "Giovanni Construction",
+  "description": "Giovanni Construction",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

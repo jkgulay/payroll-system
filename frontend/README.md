@@ -1,6 +1,6 @@
-# Construction Payroll System - Frontend
+# Giovanni Construction - Frontend
 
-Vue 3 + Vuetify 3 frontend for the Construction Payroll Management System.
+Vue 3 + Vuetify 3 frontend for Giovanni Construction.
 
 ## Features
 
@@ -147,7 +147,7 @@ Create a `.env` file from `.env.example`:
 
 ```env
 VITE_API_URL=http://localhost:8000/api
-VITE_APP_NAME="Construction Payroll System"
+VITE_APP_NAME="Giovanni Construction"
 VITE_ENABLE_OFFLINE_MODE=true
 ```
 

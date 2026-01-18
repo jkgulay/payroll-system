@@ -116,8 +116,8 @@
             <tr>
                 <td class="label">POSITION</td>
                 <td>{{ $employee->position->name ?? 'N/A' }}</td>
-                <td class="label">PROJECT</td>
-                <td>{{ $employee->project->name ?? 'N/A' }}</td>
+                <td class="label">DEPARTMENT</td>
+                <td>{{ $employee->department ?? 'N/A' }}</td>
             </tr>
         </table>
     </div>
@@ -128,7 +128,7 @@
         <table>
             <tr>
                 <td class="label">RATE</td>
-                <td class="value">₱{{ number_format($item->rate, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->rate, 2) }}</td>
             </tr>
             <tr>
                 <td class="label">No. of Days</td>
@@ -136,7 +136,7 @@
             </tr>
             <tr>
                 <td class="label">BASIC PAY (AMOUNT)</td>
-                <td class="value">₱{{ number_format($item->basic_pay, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->basic_pay, 2) }}</td>
             </tr>
             @if($item->regular_ot_hours > 0)
             <tr>
@@ -145,7 +145,7 @@
             </tr>
             <tr>
                 <td class="label">REGULAR OT PAY</td>
-                <td class="value">₱{{ number_format($item->regular_ot_pay, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->regular_ot_pay, 2) }}</td>
             </tr>
             @endif
             @if($item->special_ot_hours > 0)
@@ -155,24 +155,24 @@
             </tr>
             <tr>
                 <td class="label">SPECIAL OT PAY</td>
-                <td class="value">₱{{ number_format($item->special_ot_pay, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->special_ot_pay, 2) }}</td>
             </tr>
             @endif
             @if($item->cola > 0)
             <tr>
                 <td class="label">COLA</td>
-                <td class="value">₱{{ number_format($item->cola, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->cola, 2) }}</td>
             </tr>
             @endif
             @if($item->other_allowances > 0)
             <tr>
                 <td class="label">OTHER ALLOWANCES</td>
-                <td class="value">₱{{ number_format($item->other_allowances, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->other_allowances, 2) }}</td>
             </tr>
             @endif
             <tr class="total-row">
                 <td class="label">GROSS AMOUNT</td>
-                <td class="value">₱{{ number_format($item->gross_pay, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->gross_pay, 2) }}</td>
             </tr>
         </table>
     </div>
@@ -184,39 +184,49 @@
             @if($item->employee_savings > 0)
             <tr>
                 <td class="label">Employee's Savings</td>
-                <td class="value">₱{{ number_format($item->employee_savings, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->employee_savings, 2) }}</td>
             </tr>
             @endif
             @if($item->cash_advance > 0)
             <tr>
                 <td class="label">Cash Advance</td>
-                <td class="value">₱{{ number_format($item->cash_advance, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->cash_advance, 2) }}</td>
             </tr>
             @endif
             <tr>
-                <td class="label">SSS</td>
-                <td class="value">₱{{ number_format($item->sss, 2) }}</td>
+                <td class="label">SSS Contribution</td>
+                <td class="value">PHP {{ number_format($item->sss_contribution ?? 0, 2) }}</td>
             </tr>
             <tr>
-                <td class="label">PhilHealth (PHIC)</td>
-                <td class="value">₱{{ number_format($item->philhealth, 2) }}</td>
+                <td class="label">PhilHealth Contribution (PHIC)</td>
+                <td class="value">PHP {{ number_format($item->philhealth_contribution ?? 0, 2) }}</td>
             </tr>
             <tr>
-                <td class="label">Pag-IBIG (HDMF)</td>
-                <td class="value">₱{{ number_format($item->pagibig, 2) }}</td>
+                <td class="label">Pag-IBIG Contribution (HDMF)</td>
+                <td class="value">PHP {{ number_format($item->pagibig_contribution ?? 0, 2) }}</td>
             </tr>
-            @if($item->loans > 0)
+            @if($item->total_loan_deductions > 0)
             <tr>
                 <td class="label">Loans</td>
-                <td class="value">₱{{ number_format($item->loans, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->total_loan_deductions, 2) }}</td>
             </tr>
             @endif
-            @if($item->other_deductions > 0)
+            @if($item->employee_deductions > 0)
+            <tr>
+                <td class="label">Employee Deductions</td>
+                <td class="value">PHP {{ number_format($item->employee_deductions, 2) }}</td>
+            </tr>
+            @endif
+            @if($item->total_other_deductions > 0)
             <tr>
                 <td class="label">Other Deductions</td>
-                <td class="value">₱{{ number_format($item->other_deductions, 2) }}</td>
+                <td class="value">PHP {{ number_format($item->total_other_deductions, 2) }}</td>
             </tr>
             @endif
+            <tr class="total-row">
+                <td class="label">TOTAL DEDUCTIONS</td>
+                <td class="value">PHP {{ number_format($item->total_deductions, 2) }}</td>
+            </tr>
         </table>
     </div>
 
@@ -225,7 +235,7 @@
         <table>
             <tr class="net-pay">
                 <td class="label">NET AMOUNT</td>
-                <td class="value">₱{{ number_format($item->net_pay, 2) }}</td>
+                <td class="value"><?php echo 'PHP '; ?>{{ number_format($item->net_pay, 2) }}</td>
             </tr>
         </table>
     </div>

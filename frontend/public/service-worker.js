@@ -1,4 +1,4 @@
-// Service Worker for Payroll System - Offline Support
+// Service Worker for Giovanni Construction - Offline Support
 const CACHE_NAME = 'payroll-system-v1';
 const RUNTIME_CACHE = 'payroll-runtime-v1';
 
@@ -142,7 +142,7 @@ async function syncData() {
 // Push notifications
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'Payroll System';
+  const title = data.title || 'Giovanni Construction';
   const options = {
     body: data.body || 'You have a new notification',
     icon: '/icon-192.png',

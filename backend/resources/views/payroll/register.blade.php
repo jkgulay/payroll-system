@@ -126,8 +126,7 @@
     </div>
 
     <div class="project-info">
-        <div><strong>PROJECT LOCATION:</strong> {{ $payroll->items->first()?->employee->project->name ?? 'N/A' }}</div>
-        <div style="margin-left: 120px;"><strong>:</strong> {{ $payroll->items->first()?->employee->project->location ?? 'N/A' }}</div>
+        <div><strong>DEPARTMENT:</strong> {{ $payroll->items->first()?->employee->department ?? 'N/A' }}</div>
         <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee->position->position_name ?? 'N/A' }}</div>
     </div>
 
@@ -173,9 +172,9 @@
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_deductions > 0 ? number_format($item->other_deductions, 2) : '' }}</td>
                 <td class="text-right">{{ $item->cash_advance > 0 ? number_format($item->cash_advance, 2) : '' }}</td>
-                <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
-                <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
-                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
+                <td class="text-right">{{ $item->philhealth_contribution > 0 ? number_format($item->philhealth_contribution, 2) : '' }}</td>
+                <td class="text-right">{{ $item->pagibig_contribution > 0 ? number_format($item->pagibig_contribution, 2) : '' }}</td>
+                <td class="text-right">{{ $item->sss_contribution > 0 ? number_format($item->sss_contribution, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
                 <td></td>
             </tr>
@@ -197,9 +196,9 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>
                 <td>-</td>
                 <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('philhealth_contribution'), 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('pagibig_contribution'), 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('sss_contribution'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->total_net, 2) }}</td>
                 <td></td>
             </tr>
