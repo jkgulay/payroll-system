@@ -147,7 +147,6 @@
           >
           </v-btn>
           <v-btn
-            v-if="item.status === 'draft'"
             icon="mdi-delete"
             size="small"
             variant="text"
@@ -481,17 +480,73 @@
     </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="deleteDialog" max-width="400">
+    <v-dialog v-model="deleteDialog" max-width="500">
       <v-card>
-        <v-card-title class="text-h5">Confirm Delete</v-card-title>
-        <v-card-text>
-          Are you sure you want to delete this payroll? This action cannot be undone.
+        <v-card-title class="text-h5 bg-error text-white pa-4">
+          <v-icon color="white" class="mr-2">mdi-alert-circle</v-icon>
+          Confirm Delete
+        </v-card-title>
+        <v-card-text class="pa-6">
+          <v-alert type="warning" variant="tonal" class="mb-4">
+            <template v-slot:prepend>
+              <v-icon>mdi-alert</v-icon>
+            </template>
+            <div class="text-subtitle-2 font-weight-bold mb-2">
+              Warning: This action cannot be undone!
+            </div>
+            <div class="text-caption">
+              Deleting this payroll will permanently remove all associated data including employee payroll items and deductions.
+            </div>
+          </v-alert>
+          
+          <div v-if="selectedPayroll" class="mb-4">
+            <div class="text-subtitle-2 font-weight-bold mb-2">Payroll Details:</div>
+            <v-list density="compact" bg-color="grey-lighten-4" class="rounded">
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon size="small">mdi-label</v-icon>
+                </template>
+                <v-list-item-title>{{ selectedPayroll.period_name }}</v-list-item-title>
+                <v-list-item-subtitle>Period</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon size="small">mdi-account-group</v-icon>
+                </template>
+                <v-list-item-title>{{ selectedPayroll.items_count }} employees</v-list-item-title>
+                <v-list-item-subtitle>Affected Employees</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon size="small">mdi-cash</v-icon>
+                </template>
+                <v-list-item-title>₱{{ formatCurrency(selectedPayroll.total_net) }}</v-list-item-title>
+                <v-list-item-subtitle>Total Net Pay</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon size="small">mdi-flag</v-icon>
+                </template>
+                <v-list-item-title>
+                  <v-chip :color="getStatusColor(selectedPayroll.status)" size="small">
+                    {{ selectedPayroll.status.toUpperCase() }}
+                  </v-chip>
+                </v-list-item-title>
+                <v-list-item-subtitle>Status</v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </div>
+
+          <p class="text-body-2 mb-0">
+            Are you absolutely sure you want to delete this payroll?
+          </p>
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn text @click="deleteDialog = false">Cancel</v-btn>
-          <v-btn color="error" :loading="deleting" @click="deletePayroll">
-            Delete
+          <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" variant="flat" :loading="deleting" @click="deletePayroll">
+            <v-icon class="mr-1">mdi-delete</v-icon>
+            Delete Permanently
           </v-btn>
         </v-card-actions>
       </v-card>

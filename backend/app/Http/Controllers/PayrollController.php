@@ -136,12 +136,7 @@ class PayrollController extends Controller
 
     public function destroy(Payroll $payroll)
     {
-        if ($payroll->status !== 'draft') {
-            return response()->json([
-                'message' => 'Only draft payrolls can be deleted'
-            ], 400);
-        }
-
+        // Allow deletion of any payroll status (draft, finalized, paid)
         $payroll->delete();
 
         return response()->json([
