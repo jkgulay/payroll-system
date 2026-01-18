@@ -43,48 +43,57 @@
 
       <!-- Navigation Menu -->
       <v-list density="compact" nav class="pa-2">
-        <template v-for="item in menuItems" :key="item.value">
-          <!-- Items with children (submenu) - hide in rail mode -->
-          <v-list-group v-if="item.children && !rail" :value="item.value">
-            <template v-slot:activator="{ props }">
-              <v-list-item
-                v-bind="props"
-                :prepend-icon="item.icon"
-                :title="item.title"
-                color="hardhat"
-                class="menu-item mb-1"
-                rounded="lg"
-              ></v-list-item>
-            </template>
-            <v-list-item
-              v-for="child in item.children"
-              :key="child.value"
-              :prepend-icon="child.icon"
-              :title="child.title"
-              :value="child.value"
-              :to="child.to"
-              color="hardhat"
-              class="menu-item mb-1 ml-4"
-              rounded="lg"
-            ></v-list-item>
-          </v-list-group>
+        <template v-for="section in menuSections" :key="section.title">
+          <!-- Section Header -->
+          <v-list-subheader v-if="!rail" class="menu-section-header text-caption font-weight-bold text-medium-emphasis px-4 py-2 mt-2">
+            {{ section.title }}
+          </v-list-subheader>
+          <v-divider v-else class="my-2 mx-4"></v-divider>
 
-          <!-- Regular items without children -->
-          <v-tooltip v-else location="right" :disabled="!rail || isMobile">
-            <template v-slot:activator="{ props: tooltipProps }">
+          <!-- Section Items -->
+          <template v-for="item in section.items" :key="item.value">
+            <!-- Items with children (submenu) - hide in rail mode -->
+            <v-list-group v-if="item.children && !rail" :value="item.value">
+              <template v-slot:activator="{ props }">
+                <v-list-item
+                  v-bind="props"
+                  :prepend-icon="item.icon"
+                  :title="item.title"
+                  color="hardhat"
+                  class="menu-item mb-1"
+                  rounded="lg"
+                ></v-list-item>
+              </template>
               <v-list-item
-                v-bind="tooltipProps"
-                :prepend-icon="item.icon"
-                :title="rail ? '' : item.title"
-                :value="item.value"
-                :to="item.to || (item.children?.[0]?.to)"
+                v-for="child in item.children"
+                :key="child.value"
+                :prepend-icon="child.icon"
+                :title="child.title"
+                :value="child.value"
+                :to="child.to"
                 color="hardhat"
-                class="menu-item mb-1"
+                class="menu-item mb-1 ml-4"
                 rounded="lg"
               ></v-list-item>
-            </template>
-            <span>{{ item.title }}</span>
-          </v-tooltip>
+            </v-list-group>
+
+            <!-- Regular items without children -->
+            <v-tooltip v-else location="right" :disabled="!rail || isMobile">
+              <template v-slot:activator="{ props: tooltipProps }">
+                <v-list-item
+                  v-bind="tooltipProps"
+                  :prepend-icon="item.icon"
+                  :title="rail ? '' : item.title"
+                  :value="item.value"
+                  :to="item.to || (item.children?.[0]?.to)"
+                  color="hardhat"
+                  class="menu-item mb-1"
+                  rounded="lg"
+                ></v-list-item>
+              </template>
+              <span>{{ item.title }}</span>
+            </v-tooltip>
+          </template>
         </template>
       </v-list>
 
@@ -512,6 +521,229 @@ const menuItems = computed(() => {
   return allItems.filter(
     (item) => !item.roles || item.roles.includes(currentRole)
   );
+});
+
+// Organize menu items into sections with labels
+const menuSections = computed(() => {
+  const currentRole = authStore.userRole;
+  
+  // Define sections based on role
+  const sections = [
+    {
+      title: 'MAIN MENU',
+      items: []
+    },
+    {
+      title: 'TEAM MANAGEMENT',
+      items: []
+    },
+    {
+      title: 'LIST',
+      items: []
+    }
+  ];
+
+  // Main Menu items (common actions)
+  const mainMenuItems = [
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard-variant",
+      value: "admin-dashboard",
+      to: "/admin-dashboard",
+      roles: ["admin"],
+    },
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard-variant",
+      value: "accountant-dashboard",
+      to: "/accountant-dashboard",
+      roles: ["accountant"],
+    },
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard",
+      value: "employee-dashboard",
+      to: "/employee-dashboard",
+      roles: ["employee"],
+    },
+    {
+      title: "Attendance",
+      icon: "mdi-clock-check-outline",
+      value: "attendance",
+      to: "/attendance",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Settings",
+      icon: "mdi-cog-outline",
+      value: "settings",
+      to: "/settings",
+      roles: ["admin"],
+    },
+    {
+      title: "My Profile",
+      icon: "mdi-badge-account-horizontal-outline",
+      value: "profile",
+      to: "/profile",
+      roles: ["admin", "accountant", "employee"],
+    },
+  ];
+
+  // Team Management items
+  const teamManagementItems = [
+    {
+      title: "Employees",
+      icon: "mdi-hard-hat",
+      value: "employees",
+      to: "/employees",
+      roles: ["admin"],
+    },
+    {
+      title: "Payrolls",
+      icon: "mdi-cash-multiple",
+      value: "payroll",
+      to: "/payroll",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Projects",
+      icon: "mdi-office-building",
+      value: "projects",
+      to: "/projects",
+      roles: ["admin"],
+    },
+    {
+      title: "Hiring",
+      icon: "mdi-account-plus-outline",
+      value: "hr-management",
+      roles: ["admin"],
+      children: [
+        {
+          title: "Resume Review",
+          icon: "mdi-file-certificate-outline",
+          value: "resume-review",
+          to: "/resume-review",
+          roles: ["admin"],
+        },
+        {
+          title: "Leave Approval",
+          icon: "mdi-calendar-check",
+          value: "leave-approval",
+          to: "/leave-approval",
+          roles: ["admin", "hr"],
+        },
+        {
+          title: "Resignations",
+          icon: "mdi-briefcase-remove-outline",
+          value: "resignations",
+          to: "/resignations",
+          roles: ["admin", "accountant"],
+        },
+      ],
+    },
+    {
+      title: "My Resumes",
+      icon: "mdi-file-document-outline",
+      value: "resumes",
+      to: "/resumes",
+      roles: ["accountant"],
+    },
+  ];
+
+  // List items (reports and data views)
+  const listItems = [
+    {
+      title: "Reports",
+      icon: "mdi-file-chart-outline",
+      value: "reports",
+      to: "/reports",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Benefits & Deductions",
+      icon: "mdi-cash-multiple",
+      value: "benefits",
+      roles: ["admin", "accountant"],
+      children: [
+        {
+          title: "Allowances",
+          icon: "mdi-food",
+          value: "allowances",
+          to: "/allowances",
+          roles: ["admin", "accountant", "hr"],
+        },
+        {
+          title: "13th Month Pay",
+          icon: "mdi-gift-outline",
+          value: "thirteenth-month-pay",
+          to: "/thirteenth-month-pay",
+          roles: ["admin", "accountant", "hr"],
+        },
+        {
+          title: "Loans",
+          icon: "mdi-hand-coin-outline",
+          value: "loans",
+          to: "/loans",
+        },
+        {
+          title: "Deductions",
+          icon: "mdi-cash-minus",
+          value: "deductions",
+          to: "/deductions",
+        },
+        {
+          title: "Cash Bonds",
+          icon: "mdi-cash-lock",
+          value: "cash-bonds",
+          to: "/cash-bonds",
+        },
+      ],
+    },
+    {
+      title: "Biometric Import",
+      icon: "mdi-file-upload-outline",
+      value: "biometric-import",
+      to: "/biometric-import",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "My Leaves",
+      icon: "mdi-calendar-clock",
+      value: "my-leaves",
+      to: "/my-leaves",
+      roles: ["employee"],
+    },
+    {
+      title: "My Loans",
+      icon: "mdi-hand-coin-outline",
+      value: "my-loans",
+      to: "/loans",
+      roles: ["employee"],
+    },
+    {
+      title: "My Resignation",
+      icon: "mdi-briefcase-remove-outline",
+      value: "my-resignation",
+      to: "/my-resignation",
+      roles: ["employee"],
+    },
+  ];
+
+  // Filter and assign items to sections
+  sections[0].items = mainMenuItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole)
+  );
+  
+  sections[1].items = teamManagementItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole)
+  );
+  
+  sections[2].items = listItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole)
+  );
+
+  // Remove empty sections
+  return sections.filter(section => section.items.length > 0);
 });
 
 async function handleLogout() {
@@ -956,6 +1188,37 @@ async function downloadCurrentPayslip() {
   margin: 16px 20px;
   border-radius: 999px;
   box-shadow: 0 0 16px rgba(139, 92, 246, 0.3);
+}
+
+// Menu section headers
+.menu-section-header {
+  color: rgba(255, 255, 255, 0.5) !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  margin-top: 16px !important;
+  margin-bottom: 8px !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  user-select: none;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: -4px;
+    height: 1px;
+    background: linear-gradient(90deg, 
+      rgba(139, 92, 246, 0.3) 0%, 
+      transparent 100%);
+  }
+
+  &:first-of-type {
+    margin-top: 4px !important;
+  }
 }
 
 // Modern logout button styling in drawer
