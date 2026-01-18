@@ -109,7 +109,7 @@
         </div>
         <div class="info-row">
             <div><span class="info-label">Department:</span> {{ $payslip->employee->department->name ?? 'N/A' }}</div>
-            <div><span class="info-label">Position:</span> {{ $payslip->employee->position }}</div>
+            <div><span class="info-label">Position:</span> {{ $payslip->employee->position->position_name ?? ($payslip->employee->staff_type ?? 'N/A') }}</div>
         </div>
         <div class="info-row">
             <div><span class="info-label">Pay Period:</span> {{ date('M d, Y', strtotime($payslip->payroll->period_start)) }} - {{ date('M d, Y', strtotime($payslip->payroll->period_end)) }}</div>

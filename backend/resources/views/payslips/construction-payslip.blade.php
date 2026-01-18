@@ -172,7 +172,7 @@
         </div>
         <div class="info-row">
             <div class="info-label">Position:</div>
-            <div class="info-value">{{ $employee->position }}</div>
+            <div class="info-value">{{ $employee->position->position_name ?? ($employee->staff_type ?? 'N/A') }}</div>
             <div class="info-label">Payment Date:</div>
             <div class="info-value">{{ $payslip->payroll->paid_at ? date('M d, Y', strtotime($payslip->payroll->paid_at)) : 'Pending' }}</div>
         </div>

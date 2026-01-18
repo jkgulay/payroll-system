@@ -176,7 +176,7 @@ class PayrollController extends Controller
 
         $item = PayrollItem::where('payroll_id', $payrollId)
             ->where('employee_id', $employeeId)
-            ->with('employee')
+            ->with('employee.position')
             ->first();
 
         if (!$item) {

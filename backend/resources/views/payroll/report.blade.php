@@ -150,7 +150,7 @@
             <tr>
                 <td class="text-center">{{ $payslip->employee->employee_number ?? 'N/A' }}</td>
                 <td>{{ $payslip->employee->first_name }} {{ $payslip->employee->last_name }}</td>
-                <td>{{ $payslip->employee->position ?? 'N/A' }}</td>
+                <td>{{ $payslip->employee->position->position_name ?? ($payslip->employee->staff_type ?? 'N/A') }}</td>
                 <td>{{ $payslip->employee->department->name ?? 'N/A' }}</td>
                 <td class="text-right">₱{{ number_format($payslip->basic_salary, 2) }}</td>
                 <td class="text-right">₱{{ number_format($payslip->allowances ?? 0, 2) }}</td>

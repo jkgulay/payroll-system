@@ -19,14 +19,14 @@ class DailyTimeRecordController extends Controller
         // Increase memory limit for PDF generation
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', '300');
-        
+
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'date_from' => 'required|date',
             'date_to' => 'required|date|after_or_equal:date_from',
         ]);
 
-        $employee = Employee::with(['positionRate', 'project'])->findOrFail($validated['employee_id']);
+        $employee = Employee::with(['position', 'project'])->findOrFail($validated['employee_id']);
 
         $attendance = Attendance::where('employee_id', $employee->id)
             ->whereBetween('attendance_date', [$validated['date_from'], $validated['date_to']])
@@ -101,13 +101,13 @@ class DailyTimeRecordController extends Controller
         // Increase memory limit for PDF generation
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', '300');
-        
+
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
         ]);
 
-        $employee = Employee::with(['positionRate', 'project'])->findOrFail($validated['employee_id']);
+        $employee = Employee::with(['position', 'project'])->findOrFail($validated['employee_id']);
 
         $attendance = Attendance::where('employee_id', $employee->id)
             ->whereDate('attendance_date', $validated['date'])
@@ -148,7 +148,7 @@ class DailyTimeRecordController extends Controller
             'date_to' => 'required|date|after_or_equal:date_from',
         ]);
 
-        $employee = Employee::with(['positionRate', 'project'])->findOrFail($validated['employee_id']);
+        $employee = Employee::with(['position', 'project'])->findOrFail($validated['employee_id']);
 
         $attendance = Attendance::where('employee_id', $employee->id)
             ->whereBetween('attendance_date', [$validated['date_from'], $validated['date_to']])
@@ -180,7 +180,7 @@ class DailyTimeRecordController extends Controller
         // SSS calculation - 2024 rates (semi-monthly deduction)
         // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
         $monthlySalary = $grossPay * 2;
-        
+
         if ($monthlySalary < 4250) return 180;
         if ($monthlySalary < 4750) return 202.50;
         if ($monthlySalary < 5250) return 225;
@@ -223,10 +223,10 @@ class DailyTimeRecordController extends Controller
         $monthlySalary = $grossPay * 2;
         $contribution = $monthlySalary * 0.05;
         $employeeShare = $contribution / 2;
-        
+
         // Minimum: PHP 450, Maximum: PHP 1,800 per month (semi-monthly: 225-900)
         $monthlyEmployeeShare = min(max($employeeShare, 450), 1800);
-        
+
         // Return semi-monthly amount
         return $monthlyEmployeeShare / 2;
     }
@@ -237,10 +237,10 @@ class DailyTimeRecordController extends Controller
         // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
         $monthlySalary = $grossPay * 2;
         $monthlyContribution = $monthlySalary * 0.02;
-        
+
         // Maximum of PHP 100 per month
         $monthlyContribution = min($monthlyContribution, 100);
-        
+
         // Return semi-monthly amount
         return $monthlyContribution / 2;
     }

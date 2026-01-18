@@ -119,7 +119,7 @@
         </div>
         <div class="info-row">
             <span class="info-label">Position:</span>
-            <span>{{ $employee->position ?? 'N/A' }}</span>
+            <span>{{ $employee->position->position_name ?? ($employee->staff_type ?? 'N/A') }}</span>
         </div>
         <div class="info-row">
             <span class="info-label">Department:</span>

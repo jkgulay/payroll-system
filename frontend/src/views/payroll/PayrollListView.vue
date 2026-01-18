@@ -6,7 +6,11 @@
         <div class="d-flex justify-space-between align-center">
           <div>
             <h1 class="text-h4 font-weight-bold mb-2">
-              <v-icon icon="mdi-cash-multiple" size="large" class="mr-2"></v-icon>
+              <v-icon
+                icon="mdi-cash-multiple"
+                size="large"
+                class="mr-2"
+              ></v-icon>
               Payroll Management
             </h1>
             <p class="text-subtitle-1 text-medium-emphasis">
@@ -39,7 +43,9 @@
         <v-card>
           <v-card-text>
             <div class="text-overline mb-1">Draft</div>
-            <div class="text-h5 font-weight-bold text-warning">{{ stats.draft }}</div>
+            <div class="text-h5 font-weight-bold text-warning">
+              {{ stats.draft }}
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -47,7 +53,9 @@
         <v-card>
           <v-card-text>
             <div class="text-overline mb-1">Finalized</div>
-            <div class="text-h5 font-weight-bold text-info">{{ stats.finalized }}</div>
+            <div class="text-h5 font-weight-bold text-info">
+              {{ stats.finalized }}
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -55,7 +63,9 @@
         <v-card>
           <v-card-text>
             <div class="text-overline mb-1">Paid</div>
-            <div class="text-h5 font-weight-bold text-success">{{ stats.paid }}</div>
+            <div class="text-h5 font-weight-bold text-success">
+              {{ stats.paid }}
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -103,7 +113,8 @@
           <div>
             <div class="font-weight-medium">{{ item.period_name }}</div>
             <div class="text-caption text-medium-emphasis">
-              {{ formatDate(item.period_start) }} - {{ formatDate(item.period_end) }}
+              {{ formatDate(item.period_start) }} -
+              {{ formatDate(item.period_end) }}
             </div>
           </div>
         </template>
@@ -165,18 +176,30 @@
         <v-card-title class="modern-dialog-header modern-dialog-header-success">
           <div class="d-flex align-center w-100">
             <v-avatar color="white" size="48" class="mr-4">
-              <v-icon color="success" size="32">{{ editMode ? 'mdi-pencil' : 'mdi-cash-multiple' }}</v-icon>
+              <v-icon color="success" size="32">{{
+                editMode ? "mdi-pencil" : "mdi-cash-multiple"
+              }}</v-icon>
             </v-avatar>
             <div>
               <div class="text-h5 font-weight-bold">
-                {{ editMode ? 'Edit' : 'Create' }} Payroll
+                {{ editMode ? "Edit" : "Create" }} Payroll
               </div>
               <div class="text-subtitle-2 text-white-70">
-                {{ editMode ? 'Update payroll period details' : 'Generate new payroll period' }}
+                {{
+                  editMode
+                    ? "Update payroll period details"
+                    : "Generate new payroll period"
+                }}
               </div>
             </div>
             <v-spacer></v-spacer>
-            <v-btn icon variant="text" color="white" @click="closeDialog" size="small">
+            <v-btn
+              icon
+              variant="text"
+              color="white"
+              @click="closeDialog"
+              size="small"
+            >
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </div>
@@ -193,7 +216,7 @@
               <v-text-field
                 v-model="formData.period_name"
                 placeholder="Enter period name"
-                :rules="[v => !!v || 'Period name is required']"
+                :rules="[(v) => !!v || 'Period name is required']"
                 required
                 variant="outlined"
                 density="comfortable"
@@ -207,14 +230,16 @@
               <v-col cols="6">
                 <div class="form-field-wrapper">
                   <label class="form-label">
-                    <v-icon size="small" color="primary">mdi-calendar-start</v-icon>
+                    <v-icon size="small" color="primary"
+                      >mdi-calendar-start</v-icon
+                    >
                     Period Start <span class="text-error">*</span>
                   </label>
                   <v-text-field
                     v-model="formData.period_start"
                     type="date"
                     placeholder="Select start date"
-                    :rules="[v => !!v || 'Start date is required']"
+                    :rules="[(v) => !!v || 'Start date is required']"
                     required
                     variant="outlined"
                     density="comfortable"
@@ -228,14 +253,16 @@
               <v-col cols="6">
                 <div class="form-field-wrapper">
                   <label class="form-label">
-                    <v-icon size="small" color="primary">mdi-calendar-end</v-icon>
+                    <v-icon size="small" color="primary"
+                      >mdi-calendar-end</v-icon
+                    >
                     Period End <span class="text-error">*</span>
                   </label>
                   <v-text-field
                     v-model="formData.period_end"
                     type="date"
                     placeholder="Select end date"
-                    :rules="[v => !!v || 'End date is required']"
+                    :rules="[(v) => !!v || 'End date is required']"
                     required
                     variant="outlined"
                     density="comfortable"
@@ -256,7 +283,7 @@
                 v-model="formData.payment_date"
                 type="date"
                 placeholder="Select payment date"
-                :rules="[v => !!v || 'Payment date is required']"
+                :rules="[(v) => !!v || 'Payment date is required']"
                 required
                 variant="outlined"
                 density="comfortable"
@@ -307,8 +334,8 @@
                       color="primary"
                     ></v-icon>
                   </template>
-                  <div style="max-width: 300px;">
-                    Useful for creating partial payrolls or testing.<br>
+                  <div style="max-width: 300px">
+                    Useful for creating partial payrolls or testing.<br />
                     Employees are selected in order by employee number.
                   </div>
                 </v-tooltip>
@@ -328,7 +355,12 @@
               multiple
               chips
               closable-chips
-              :rules="[v => formData.filter_type !== 'position' || (v && v.length > 0) || 'Select at least one position']"
+              :rules="[
+                (v) =>
+                  formData.filter_type !== 'position' ||
+                  (v && v.length > 0) ||
+                  'Select at least one position',
+              ]"
               hint="Select one or more positions to include in payroll"
               persistent-hint
             >
@@ -364,7 +396,12 @@
               multiple
               chips
               closable-chips
-              :rules="[v => formData.filter_type !== 'project' || (v && v.length > 0) || 'Select at least one project']"
+              :rules="[
+                (v) =>
+                  formData.filter_type !== 'project' ||
+                  (v && v.length > 0) ||
+                  'Select at least one project',
+              ]"
               hint="Select one or more projects to include in payroll"
               persistent-hint
             >
@@ -381,7 +418,8 @@
                     {{ item.raw.name }}
                   </template>
                   <template v-slot:subtitle>
-                    {{ item.raw.code }} - {{ item.raw.employees_count || 0 }} employees
+                    {{ item.raw.code }} -
+                    {{ item.raw.employees_count || 0 }} employees
                   </template>
                 </v-list-item>
               </template>
@@ -397,7 +435,12 @@
               multiple
               chips
               closable-chips
-              :rules="[v => formData.filter_type !== 'department' || (v && v.length > 0) || 'Select at least one department']"
+              :rules="[
+                (v) =>
+                  formData.filter_type !== 'department' ||
+                  (v && v.length > 0) ||
+                  'Select at least one department',
+              ]"
               hint="Select one or more departments to include in payroll"
               persistent-hint
             ></v-autocomplete>
@@ -412,7 +455,12 @@
               multiple
               chips
               closable-chips
-              :rules="[v => formData.filter_type !== 'staff_type' || (v && v.length > 0) || 'Select at least one staff type']"
+              :rules="[
+                (v) =>
+                  formData.filter_type !== 'staff_type' ||
+                  (v && v.length > 0) ||
+                  'Select at least one staff type',
+              ]"
               hint="Select one or more staff types to include in payroll"
               persistent-hint
             ></v-autocomplete>
@@ -443,16 +491,20 @@
               <div class="text-caption">
                 <strong>Note:</strong>
                 <span v-if="formData.filter_type === 'position'">
-                  Only employees with the selected position(s) will be included in this payroll.
+                  Only employees with the selected position(s) will be included
+                  in this payroll.
                 </span>
                 <span v-else-if="formData.filter_type === 'project'">
-                  Only employees assigned to the selected project(s) will be included in this payroll.
+                  Only employees assigned to the selected project(s) will be
+                  included in this payroll.
                 </span>
                 <span v-else-if="formData.filter_type === 'department'">
-                  Only employees from the selected department(s) will be included in this payroll.
+                  Only employees from the selected department(s) will be
+                  included in this payroll.
                 </span>
                 <span v-else-if="formData.filter_type === 'staff_type'">
-                  Only employees with the selected staff type(s) will be included in this payroll.
+                  Only employees with the selected staff type(s) will be
+                  included in this payroll.
                 </span>
               </div>
             </v-alert>
@@ -468,12 +520,8 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn text @click="closeDialog">Cancel</v-btn>
-          <v-btn
-            color="primary"
-            :loading="saving"
-            @click="savePayroll"
-          >
-            {{ editMode ? 'Update' : 'Create' }}
+          <v-btn color="primary" :loading="saving" @click="savePayroll">
+            {{ editMode ? "Update" : "Create" }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -495,32 +543,46 @@
               Warning: This action cannot be undone!
             </div>
             <div class="text-caption">
-              Deleting this payroll will permanently remove all associated data including employee payroll items and deductions.
+              Deleting this payroll will permanently remove all associated data
+              including employee payroll items and deductions.
             </div>
           </v-alert>
-          
+
           <div v-if="selectedPayroll" class="mb-4">
-            <div class="text-subtitle-2 font-weight-bold mb-2">Payroll Details:</div>
+            <div class="text-subtitle-2 font-weight-bold mb-2">
+              Payroll Details:
+            </div>
             <v-list density="compact" bg-color="grey-lighten-4" class="rounded">
               <v-list-item>
                 <template v-slot:prepend>
                   <v-icon size="small">mdi-label</v-icon>
                 </template>
-                <v-list-item-title>{{ selectedPayroll.period_name }}</v-list-item-title>
+                <v-list-item-title>{{
+                  selectedPayroll.period_name
+                }}</v-list-item-title>
                 <v-list-item-subtitle>Period</v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
                 <template v-slot:prepend>
                   <v-icon size="small">mdi-account-group</v-icon>
                 </template>
-                <v-list-item-title>{{ selectedPayroll.items_count }} employees</v-list-item-title>
+                <v-list-item-title
+                  >{{
+                    selectedPayroll.items_count
+                  }}
+                  employees</v-list-item-title
+                >
                 <v-list-item-subtitle>Affected Employees</v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
                 <template v-slot:prepend>
                   <v-icon size="small">mdi-cash</v-icon>
                 </template>
-                <v-list-item-title>₱{{ formatCurrency(selectedPayroll.total_net) }}</v-list-item-title>
+                <v-list-item-title
+                  >₱{{
+                    formatCurrency(selectedPayroll.total_net)
+                  }}</v-list-item-title
+                >
                 <v-list-item-subtitle>Total Net Pay</v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
@@ -528,7 +590,10 @@
                   <v-icon size="small">mdi-flag</v-icon>
                 </template>
                 <v-list-item-title>
-                  <v-chip :color="getStatusColor(selectedPayroll.status)" size="small">
+                  <v-chip
+                    :color="getStatusColor(selectedPayroll.status)"
+                    size="small"
+                  >
                     {{ selectedPayroll.status.toUpperCase() }}
                   </v-chip>
                 </v-list-item-title>
@@ -544,7 +609,12 @@
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
-          <v-btn color="error" variant="flat" :loading="deleting" @click="deletePayroll">
+          <v-btn
+            color="error"
+            variant="flat"
+            :loading="deleting"
+            @click="deletePayroll"
+          >
             <v-icon class="mr-1">mdi-delete</v-icon>
             Delete Permanently
           </v-btn>
@@ -555,10 +625,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { useToast } from 'vue-toastification';
-import api from '@/services/api';
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useToast } from "vue-toastification";
+import api from "@/services/api";
 
 const router = useRouter();
 const toast = useToast();
@@ -568,7 +638,7 @@ const saving = ref(false);
 const deleting = ref(false);
 const loadingPositions = ref(false);
 const loadingProjects = ref(false);
-const search = ref('');
+const search = ref("");
 const dialog = ref(false);
 const deleteDialog = ref(false);
 const editMode = ref(false);
@@ -583,12 +653,12 @@ const departmentOptions = ref([]);
 const staffTypeOptions = ref([]);
 
 const formData = ref({
-  period_name: '',
-  period_start: '',
-  period_end: '',
-  payment_date: '',
-  notes: '',
-  filter_type: 'all',
+  period_name: "",
+  period_start: "",
+  period_end: "",
+  payment_date: "",
+  notes: "",
+  filter_type: "all",
   position_ids: [],
   project_ids: [],
   departments: [],
@@ -598,21 +668,21 @@ const formData = ref({
 });
 
 const headers = [
-  { title: 'Payroll #', key: 'payroll_number', sortable: true },
-  { title: 'Period', key: 'period', sortable: false },
-  { title: 'Payment Date', key: 'payment_date', sortable: true },
-  { title: 'Employees', key: 'items_count', sortable: true },
-  { title: 'Total Net Pay', key: 'total_net', sortable: true, align: 'end' },
-  { title: 'Status', key: 'status', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center' },
+  { title: "Payroll #", key: "payroll_number", sortable: true },
+  { title: "Period", key: "period", sortable: false },
+  { title: "Payment Date", key: "payment_date", sortable: true },
+  { title: "Employees", key: "items_count", sortable: true },
+  { title: "Total Net Pay", key: "total_net", sortable: true, align: "end" },
+  { title: "Status", key: "status", sortable: true },
+  { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
 const stats = computed(() => {
   return {
     total: payrolls.value.length,
-    draft: payrolls.value.filter(p => p.status === 'draft').length,
-    finalized: payrolls.value.filter(p => p.status === 'finalized').length,
-    paid: payrolls.value.filter(p => p.status === 'paid').length,
+    draft: payrolls.value.filter((p) => p.status === "draft").length,
+    finalized: payrolls.value.filter((p) => p.status === "finalized").length,
+    paid: payrolls.value.filter((p) => p.status === "paid").length,
   };
 });
 
@@ -626,11 +696,11 @@ onMounted(() => {
 async function fetchPayrolls() {
   loading.value = true;
   try {
-    const response = await api.get('/payrolls');
+    const response = await api.get("/payrolls");
     payrolls.value = response.data.data || response.data;
   } catch (error) {
-    console.error('Error fetching payrolls:', error);
-    toast.error('Failed to load payrolls');
+    console.error("Error fetching payrolls:", error);
+    toast.error("Failed to load payrolls");
   } finally {
     loading.value = false;
   }
@@ -639,10 +709,12 @@ async function fetchPayrolls() {
 async function fetchPositions() {
   loadingPositions.value = true;
   try {
-    const response = await api.get('/position-rates');
-    positions.value = (response.data.data || response.data).filter(p => p.is_active);
+    const response = await api.get("/position-rates");
+    positions.value = (response.data.data || response.data).filter(
+      (p) => p.is_active,
+    );
   } catch (error) {
-    console.error('Error fetching positions:', error);
+    console.error("Error fetching positions:", error);
   } finally {
     loadingPositions.value = false;
   }
@@ -651,10 +723,12 @@ async function fetchPositions() {
 async function fetchProjects() {
   loadingProjects.value = true;
   try {
-    const response = await api.get('/projects');
-    projects.value = (response.data.data || response.data).filter(p => p.is_active);
+    const response = await api.get("/projects");
+    projects.value = (response.data.data || response.data).filter(
+      (p) => p.is_active,
+    );
   } catch (error) {
-    console.error('Error fetching projects:', error);
+    console.error("Error fetching projects:", error);
   } finally {
     loadingProjects.value = false;
   }
@@ -662,39 +736,40 @@ async function fetchProjects() {
 
 async function fetchDepartmentsAndStaffTypes() {
   try {
-    // Fetch all employees to get unique departments and staff types
-    const response = await api.get('/employees', {
-      params: { per_page: 10000 } // Get all employees
+    // Fetch all employees to get unique departments
+    const response = await api.get("/employees", {
+      params: { per_page: 10000 }, // Get all employees
     });
     const employees = response.data.data || response.data;
-    
+
     // Extract unique departments (filter out null/empty values)
-    const depts = [...new Set(employees
-      .map(e => e.department)
-      .filter(d => d && d.trim() !== '')
-    )].sort();
+    const depts = [
+      ...new Set(
+        employees.map((e) => e.department).filter((d) => d && d.trim() !== ""),
+      ),
+    ].sort();
     departmentOptions.value = depts;
-    
-    // Extract unique staff types (filter out null/empty values)
-    const types = [...new Set(employees
-      .map(e => e.staff_type)
-      .filter(t => t && t.trim() !== '')
-    )].sort();
-    staffTypeOptions.value = types;
+
+    // Get staff types from position_rates table (active positions)
+    const positionResponse = await api.get("/position-rates");
+    const activePositions = (
+      positionResponse.data.data || positionResponse.data
+    ).filter((p) => p.is_active);
+    staffTypeOptions.value = activePositions.map((p) => p.position_name).sort();
   } catch (error) {
-    console.error('Error fetching departments and staff types:', error);
+    console.error("Error fetching departments and staff types:", error);
   }
 }
 
 function openCreateDialog() {
   editMode.value = false;
   formData.value = {
-    period_name: '',
-    period_start: '',
-    period_end: '',
-    payment_date: '',
-    notes: '',
-    filter_type: 'all',
+    period_name: "",
+    period_start: "",
+    period_end: "",
+    payment_date: "",
+    notes: "",
+    filter_type: "all",
     position_ids: [],
     project_ids: [],
     departments: [],
@@ -713,7 +788,7 @@ function editPayroll(item) {
     period_start: item.period_start,
     period_end: item.period_end,
     payment_date: item.payment_date,
-    notes: item.notes || '',
+    notes: item.notes || "",
   };
   dialog.value = true;
 }
@@ -738,13 +813,13 @@ async function savePayroll() {
   };
 
   // Add filter-specific data
-  if (formData.value.filter_type === 'position') {
+  if (formData.value.filter_type === "position") {
     payload.position_ids = formData.value.position_ids;
-  } else if (formData.value.filter_type === 'project') {
+  } else if (formData.value.filter_type === "project") {
     payload.project_ids = formData.value.project_ids;
-  } else if (formData.value.filter_type === 'department') {
+  } else if (formData.value.filter_type === "department") {
     payload.departments = formData.value.departments;
-  } else if (formData.value.filter_type === 'staff_type') {
+  } else if (formData.value.filter_type === "staff_type") {
     payload.staff_types = formData.value.staff_types;
   }
 
@@ -770,18 +845,23 @@ async function savePayroll() {
   try {
     if (editMode.value) {
       await api.put(`/payrolls/${selectedPayroll.value.id}`, payload);
-      toast.success('Payroll updated successfully');
+      toast.success("Payroll updated successfully");
     } else {
-      const response = await api.post('/payrolls', payload);
-      const employeeCount = response.data.items_count || response.data.payroll?.items_count || 0;
-      const limitText = formData.value.employee_limit ? ` (limited to ${formData.value.employee_limit})` : '';
-      toast.success(`Payroll created successfully for ${employeeCount} employee(s)${limitText}`);
+      const response = await api.post("/payrolls", payload);
+      const employeeCount =
+        response.data.items_count || response.data.payroll?.items_count || 0;
+      const limitText = formData.value.employee_limit
+        ? ` (limited to ${formData.value.employee_limit})`
+        : "";
+      toast.success(
+        `Payroll created successfully for ${employeeCount} employee(s)${limitText}`,
+      );
     }
     await fetchPayrolls();
     closeDialog();
   } catch (error) {
-    console.error('Error saving payroll:', error);
-    toast.error(error.response?.data?.message || 'Failed to save payroll');
+    console.error("Error saving payroll:", error);
+    toast.error(error.response?.data?.message || "Failed to save payroll");
   } finally {
     saving.value = false;
   }
@@ -800,12 +880,12 @@ async function deletePayroll() {
   deleting.value = true;
   try {
     await api.delete(`/payrolls/${selectedPayroll.value.id}`);
-    toast.success('Payroll deleted successfully');
+    toast.success("Payroll deleted successfully");
     await fetchPayrolls();
     deleteDialog.value = false;
   } catch (error) {
-    console.error('Error deleting payroll:', error);
-    toast.error('Failed to delete payroll');
+    console.error("Error deleting payroll:", error);
+    toast.error("Failed to delete payroll");
   } finally {
     deleting.value = false;
   }
@@ -813,25 +893,25 @@ async function deletePayroll() {
 
 function getStatusColor(status) {
   const colors = {
-    draft: 'warning',
-    finalized: 'info',
-    paid: 'success',
+    draft: "warning",
+    finalized: "info",
+    paid: "success",
   };
-  return colors[status] || 'grey';
+  return colors[status] || "grey";
 }
 
 function formatDate(date) {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
 function formatCurrency(amount) {
-  if (!amount) return '0.00';
-  return parseFloat(amount).toLocaleString('en-US', {
+  if (!amount) return "0.00";
+  return parseFloat(amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
