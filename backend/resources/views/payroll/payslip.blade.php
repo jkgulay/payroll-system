@@ -194,29 +194,39 @@
             </tr>
             @endif
             <tr>
-                <td class="label">SSS</td>
-                <td class="value">₱{{ number_format($item->sss, 2) }}</td>
+                <td class="label">SSS Contribution</td>
+                <td class="value">₱{{ number_format($item->sss_contribution ?? 0, 2) }}</td>
             </tr>
             <tr>
-                <td class="label">PhilHealth (PHIC)</td>
-                <td class="value">₱{{ number_format($item->philhealth, 2) }}</td>
+                <td class="label">PhilHealth Contribution (PHIC)</td>
+                <td class="value">₱{{ number_format($item->philhealth_contribution ?? 0, 2) }}</td>
             </tr>
             <tr>
-                <td class="label">Pag-IBIG (HDMF)</td>
-                <td class="value">₱{{ number_format($item->pagibig, 2) }}</td>
+                <td class="label">Pag-IBIG Contribution (HDMF)</td>
+                <td class="value">₱{{ number_format($item->pagibig_contribution ?? 0, 2) }}</td>
             </tr>
-            @if($item->loans > 0)
+            @if($item->total_loan_deductions > 0)
             <tr>
                 <td class="label">Loans</td>
-                <td class="value">₱{{ number_format($item->loans, 2) }}</td>
+                <td class="value">₱{{ number_format($item->total_loan_deductions, 2) }}</td>
             </tr>
             @endif
-            @if($item->other_deductions > 0)
+            @if($item->employee_deductions > 0)
+            <tr>
+                <td class="label">Employee Deductions</td>
+                <td class="value">₱{{ number_format($item->employee_deductions, 2) }}</td>
+            </tr>
+            @endif
+            @if($item->total_other_deductions > 0)
             <tr>
                 <td class="label">Other Deductions</td>
-                <td class="value">₱{{ number_format($item->other_deductions, 2) }}</td>
+                <td class="value">₱{{ number_format($item->total_other_deductions, 2) }}</td>
             </tr>
             @endif
+            <tr class="total-row">
+                <td class="label">TOTAL DEDUCTIONS</td>
+                <td class="value">₱{{ number_format($item->total_deductions, 2) }}</td>
+            </tr>
         </table>
     </div>
 

@@ -183,6 +183,47 @@
         Total Undertime: {{ number_format($totals['undertime_hours'], 2) }} hours
     </div>
 
+    <div class="totals">
+        <strong>Earnings & Deductions Summary:</strong><br>
+        <table style="margin-top: 10px;">
+            <tr>
+                <th colspan="2" style="background-color: #e8f5e9;">EARNINGS</th>
+                <th colspan="2" style="background-color: #ffebee;">DEDUCTIONS</th>
+            </tr>
+            <tr>
+                <td style="text-align: left; padding: 5px;">Daily Rate:</td>
+                <td style="text-align: right; padding: 5px;">₱{{ number_format($earnings['rate'], 2) }}</td>
+                <td style="text-align: left; padding: 5px;">SSS Contribution:</td>
+                <td style="text-align: right; padding: 5px;">₱{{ number_format($deductions['sss'], 2) }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left; padding: 5px;">Basic Pay:</td>
+                <td style="text-align: right; padding: 5px;">₱{{ number_format($earnings['basic_pay'], 2) }}</td>
+                <td style="text-align: left; padding: 5px;">PhilHealth Contribution:</td>
+                <td style="text-align: right; padding: 5px;">₱{{ number_format($deductions['philhealth'], 2) }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left; padding: 5px;">Overtime Pay:</td>
+                <td style="text-align: right; padding: 5px;">₱{{ number_format($earnings['overtime_pay'], 2) }}</td>
+                <td style="text-align: left; padding: 5px;">Pag-IBIG Contribution:</td>
+                <td style="text-align: right; padding: 5px;">₱{{ number_format($deductions['pagibig'], 2) }}</td>
+            </tr>
+            <tr style="font-weight: bold; background-color: #f0f0f0;">
+                <td style="text-align: left; padding: 5px;">GROSS PAY:</td>
+                <td style="text-align: right; padding: 5px;">₱{{ number_format($earnings['gross_pay'], 2) }}</td>
+                <td style="text-align: left; padding: 5px;">TOTAL DEDUCTIONS:</td>
+                <td style="text-align: right; padding: 5px;">₱{{ number_format($deductions['total'], 2) }}</td>
+            </tr>
+            <tr style="font-weight: bold; background-color: #4CAF50; color: white;">
+                <td colspan="3" style="text-align: left; padding: 8px; font-size: 13px;">NET PAY:</td>
+                <td style="text-align: right; padding: 8px; font-size: 13px;">₱{{ number_format($net_pay, 2) }}</td>
+            </tr>
+        </table>
+        <div style="margin-top: 10px; font-size: 9px; font-style: italic;">
+            * Government contributions are calculated based on gross pay for this period
+        </div>
+    </div>
+
     <div class="signature-section">
         <div class="signature-box">
             <div class="signature-line">

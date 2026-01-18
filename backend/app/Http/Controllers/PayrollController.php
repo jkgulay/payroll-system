@@ -10,12 +10,14 @@ use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
 use App\Models\User;
+use App\Exports\PayrollExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PayrollController extends Controller
 {
@@ -206,6 +208,15 @@ class PayrollController extends Controller
         $pdf = Pdf::loadView('payroll.register', compact('payroll'));
         
         return $pdf->download("payroll_register_{$payroll->payroll_number}.pdf");
+    }
+
+    public function exportToExcel(Payroll $payroll)
+    {
+        $payroll->load(['items.employee.position']);
+        
+        $filename = "payroll_{$payroll->period_name}_" . now()->format('YmdHis') . ".xlsx";
+        
+        return Excel::download(new PayrollExport($payroll), $filename);
     }
 
     private function generatePayrollItems(Payroll $payroll, array $filters = [])
@@ -457,58 +468,71 @@ class PayrollController extends Controller
 
     private function calculateSSS($grossPay)
     {
-        // Simplified SSS calculation - 2024 rates
-        if ($grossPay < 4250) return 180;
-        if ($grossPay < 4750) return 202.50;
-        if ($grossPay < 5250) return 225;
-        if ($grossPay < 5750) return 247.50;
-        if ($grossPay < 6250) return 270;
-        if ($grossPay < 6750) return 292.50;
-        if ($grossPay < 7250) return 315;
-        if ($grossPay < 7750) return 337.50;
-        if ($grossPay < 8250) return 360;
-        if ($grossPay < 8750) return 382.50;
-        if ($grossPay < 9250) return 405;
-        if ($grossPay < 9750) return 427.50;
-        if ($grossPay < 10250) return 450;
-        if ($grossPay < 10750) return 472.50;
-        if ($grossPay < 11250) return 495;
-        if ($grossPay < 11750) return 517.50;
-        if ($grossPay < 12250) return 540;
-        if ($grossPay < 12750) return 562.50;
-        if ($grossPay < 13250) return 585;
-        if ($grossPay < 13750) return 607.50;
-        if ($grossPay < 14250) return 630;
-        if ($grossPay < 14750) return 652.50;
-        if ($grossPay < 15250) return 675;
-        if ($grossPay < 15750) return 697.50;
-        if ($grossPay < 16250) return 720;
-        if ($grossPay < 16750) return 742.50;
-        if ($grossPay < 17250) return 765;
-        if ($grossPay < 17750) return 787.50;
-        if ($grossPay < 18250) return 810;
-        if ($grossPay < 18750) return 832.50;
-        if ($grossPay < 19250) return 855;
-        if ($grossPay < 19750) return 877.50;
+        // SSS calculation - 2024 rates (semi-monthly deduction)
+        // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
+        $monthlySalary = $grossPay * 2;
+        
+        if ($monthlySalary < 4250) return 180;
+        if ($monthlySalary < 4750) return 202.50;
+        if ($monthlySalary < 5250) return 225;
+        if ($monthlySalary < 5750) return 247.50;
+        if ($monthlySalary < 6250) return 270;
+        if ($monthlySalary < 6750) return 292.50;
+        if ($monthlySalary < 7250) return 315;
+        if ($monthlySalary < 7750) return 337.50;
+        if ($monthlySalary < 8250) return 360;
+        if ($monthlySalary < 8750) return 382.50;
+        if ($monthlySalary < 9250) return 405;
+        if ($monthlySalary < 9750) return 427.50;
+        if ($monthlySalary < 10250) return 450;
+        if ($monthlySalary < 10750) return 472.50;
+        if ($monthlySalary < 11250) return 495;
+        if ($monthlySalary < 11750) return 517.50;
+        if ($monthlySalary < 12250) return 540;
+        if ($monthlySalary < 12750) return 562.50;
+        if ($monthlySalary < 13250) return 585;
+        if ($monthlySalary < 13750) return 607.50;
+        if ($monthlySalary < 14250) return 630;
+        if ($monthlySalary < 14750) return 652.50;
+        if ($monthlySalary < 15250) return 675;
+        if ($monthlySalary < 15750) return 697.50;
+        if ($monthlySalary < 16250) return 720;
+        if ($monthlySalary < 16750) return 742.50;
+        if ($monthlySalary < 17250) return 765;
+        if ($monthlySalary < 17750) return 787.50;
+        if ($monthlySalary < 18250) return 810;
+        if ($monthlySalary < 18750) return 832.50;
+        if ($monthlySalary < 19250) return 855;
+        if ($monthlySalary < 19750) return 877.50;
         return 900; // Maximum
     }
 
     private function calculatePhilHealth($grossPay)
     {
-        // PhilHealth 2024: 4% of basic salary (2% employee share)
-        $contribution = $grossPay * 0.04;
+        // PhilHealth 2024: 5% of basic salary (2.5% employee share)
+        // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
+        $monthlySalary = $grossPay * 2;
+        $contribution = $monthlySalary * 0.05;
         $employeeShare = $contribution / 2;
         
-        // Minimum: PHP 450, Maximum: PHP 1,800 per month
-        return min(max($employeeShare, 450), 1800);
+        // Minimum: PHP 450, Maximum: PHP 1,800 per month (semi-monthly: 225-900)
+        $monthlyEmployeeShare = min(max($employeeShare, 450), 1800);
+        
+        // Return semi-monthly amount
+        return $monthlyEmployeeShare / 2;
     }
 
     private function calculatePagibig($grossPay)
     {
         // Pag-IBIG: 2% of monthly salary
-        $contribution = $grossPay * 0.02;
+        // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
+        $monthlySalary = $grossPay * 2;
+        $monthlyContribution = $monthlySalary * 0.02;
         
         // Maximum of PHP 100 per month
-        return min($contribution, 100);
+        $monthlyContribution = min($monthlyContribution, 100);
+        
+        // Return semi-monthly amount
+        return $monthlyContribution / 2;
     }
 }

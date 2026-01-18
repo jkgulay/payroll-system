@@ -132,6 +132,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Payroll - specific routes MUST come before apiResource
     Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize']);
     Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister']);
+    Route::get('/payrolls/{payroll}/export-excel', [App\Http\Controllers\PayrollController::class, 'exportToExcel']);
     Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip']);
     Route::apiResource('payrolls', App\Http\Controllers\PayrollController::class);
 
