@@ -126,8 +126,7 @@
     </div>
 
     <div class="project-info">
-        <div><strong>PROJECT LOCATION:</strong> {{ $payroll->items->first()?->employee->project->name ?? 'N/A' }}</div>
-        <div style="margin-left: 120px;"><strong>:</strong> {{ $payroll->items->first()?->employee->project->location ?? 'N/A' }}</div>
+        <div><strong>DEPARTMENT:</strong> {{ $payroll->items->first()?->employee->department ?? 'N/A' }}</div>
         <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee->position->position_name ?? 'N/A' }}</div>
     </div>
 

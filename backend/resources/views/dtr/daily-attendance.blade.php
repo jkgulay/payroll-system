@@ -155,8 +155,8 @@
             <span>{{ $employee->position ?? 'N/A' }}</span>
         </div>
         <div class="info-row">
-            <span class="info-label">Project/Department:</span>
-            <span>{{ $employee->project->name ?? 'N/A' }}</span>
+            <span class="info-label">Department:</span>
+            <span>{{ $employee->department ?? 'N/A' }}</span>
         </div>
         <div class="info-row">
             <span class="info-label">Date:</span>
