@@ -861,7 +861,28 @@ async function savePayroll() {
     closeDialog();
   } catch (error) {
     console.error("Error saving payroll:", error);
-    toast.error(error.response?.data?.message || "Failed to save payroll");
+    
+    // Extract detailed error message from response
+    let errorMessage = "Failed to save payroll";
+    
+    if (error.response?.data) {
+      const data = error.response.data;
+      // Check for detailed error field first, then fall back to message
+      if (data.error) {
+        errorMessage = data.error;
+      } else if (data.message && data.message !== "Validation failed") {
+        errorMessage = data.message;
+      }
+      
+      // Add employee count info if available
+      if (data.employee_count) {
+        console.log("Employee count breakdown:", data.employee_count);
+      }
+    }
+    
+    toast.error(errorMessage, {
+      duration: 8000, // Show longer for detailed messages
+    });
   } finally {
     saving.value = false;
   }

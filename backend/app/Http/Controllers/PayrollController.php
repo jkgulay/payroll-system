@@ -288,7 +288,19 @@ class PayrollController extends Controller
                 $errorMsg .= '. No employees found in the selected department/filter.';
             }
 
-            throw new \Exception($errorMsg);
+            // Throw a validation exception instead of generic exception
+            throw new \Illuminate\Validation\ValidationException(
+                validator([], []),
+                response()->json([
+                    'message' => 'Validation failed',
+                    'error' => $errorMsg,
+                    'employee_count' => [
+                        'total_active' => $initialCount ?? 0,
+                        'after_filter' => $afterTypeFilter,
+                        'with_attendance' => 0
+                    ]
+                ], 422)
+            );
         }
 
         $totalGross = 0;

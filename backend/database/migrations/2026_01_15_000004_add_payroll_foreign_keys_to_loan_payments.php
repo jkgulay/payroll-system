@@ -13,9 +13,34 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('loan_payments', function (Blueprint $table) {
-            // Add foreign key constraints for payroll tables
-            $table->foreign('payroll_id')->references('id')->on('payrolls')->onDelete('set null');
-            $table->foreign('payroll_item_id')->references('id')->on('payroll_items')->onDelete('set null');
+            // Check and add foreign key constraints for payroll tables if they don't exist
+            $connection = Schema::getConnection();
+            
+            // Check if payroll_id foreign key exists
+            $payrollFkExists = $connection->select("
+                SELECT constraint_name 
+                FROM information_schema.table_constraints 
+                WHERE table_name = 'loan_payments' 
+                AND constraint_name = 'loan_payments_payroll_id_foreign'
+                AND constraint_type = 'FOREIGN KEY'
+            ");
+            
+            if (empty($payrollFkExists)) {
+                $table->foreign('payroll_id')->references('id')->on('payrolls')->onDelete('set null');
+            }
+            
+            // Check if payroll_item_id foreign key exists
+            $payrollItemFkExists = $connection->select("
+                SELECT constraint_name 
+                FROM information_schema.table_constraints 
+                WHERE table_name = 'loan_payments' 
+                AND constraint_name = 'loan_payments_payroll_item_id_foreign'
+                AND constraint_type = 'FOREIGN KEY'
+            ");
+            
+            if (empty($payrollItemFkExists)) {
+                $table->foreign('payroll_item_id')->references('id')->on('payroll_items')->onDelete('set null');
+            }
         });
     }
 
