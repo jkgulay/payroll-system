@@ -277,6 +277,15 @@ const router = createRouter({
           meta: { title: "Position Rates", roles: ["admin", "accountant"] },
         },
         {
+          path: "audit-trail",
+          name: "audit-trail",
+          component: () =>
+            import(
+              /* webpackChunkName: "audit" */ "@/views/audit/AuditTrailView.vue"
+            ),
+          meta: { title: "Audit Trail", roles: ["admin"] },
+        },
+        {
           path: "security",
           name: "security",
           component: () =>

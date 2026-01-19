@@ -234,11 +234,11 @@
           </v-card-text>
         </v-card>
 
-        <!-- Recent Activity Feed -->
-        <RecentActivityFeed class="mb-6" />
+        <!-- Recent Activity Widget -->
+        <RecentActivityWidget :limit="10" class="mb-6" />
 
         <!-- Upcoming Events -->
-        <UpcomingEvents />
+        <UpcomingEvents class="mb-6" />
       </v-col>
 
       <!-- Right Column - Quick Actions & Widgets -->
@@ -681,11 +681,11 @@ import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
 import DashboardCalendar from "@/components/DashboardCalendar.vue";
-import RecentActivityFeed from "@/components/RecentActivityFeed.vue";
 import UpcomingEvents from "@/components/UpcomingEvents.vue";
 import EmployeeDistributionChart from "@/components/charts/EmployeeDistributionChart.vue";
 import AttendanceStatusChart from "@/components/charts/AttendanceStatusChart.vue";
 import TodayStaffInfoChart from "@/components/charts/TodayStaffInfoChart.vue";
+import RecentActivityWidget from "@/components/audit/RecentActivityWidget.vue";
 
 const toast = useToast();
 const router = useRouter();

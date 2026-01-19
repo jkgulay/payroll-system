@@ -543,6 +543,13 @@ const menuItems = computed(() => {
       to: "/settings",
       roles: ["admin"],
     },
+    {
+      title: "Audit Trail",
+      icon: "mdi-shield-search",
+      value: "audit-trail",
+      to: "/audit-trail",
+      roles: ["admin"],
+    },
   ];
 
   // Filter items based on user role

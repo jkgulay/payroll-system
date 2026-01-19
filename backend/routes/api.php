@@ -262,6 +262,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Audit Logs
     Route::get('/audit-logs', [App\Http\Controllers\Api\AuditLogController::class, 'index']);
     Route::get('/audit-logs/module/{module}', [App\Http\Controllers\Api\AuditLogController::class, 'byModule']);
+    Route::get('/audit-logs/export', [App\Http\Controllers\Api\AuditLogController::class, 'export']);
 
     // Notifications
     Route::get('/notifications', [App\Http\Controllers\Api\NotificationController::class, 'index']);
