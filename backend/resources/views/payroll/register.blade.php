@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>Payroll Register</title>
@@ -8,113 +9,138 @@
             size: A4 landscape;
             margin: 10mm;
         }
+
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 10px;
             font-size: 9px;
         }
+
         .header {
             text-align: center;
             margin-bottom: 20px;
         }
+
         .company-name {
             font-size: 20px;
             font-weight: bold;
             letter-spacing: 2px;
         }
+
         .company-address {
             font-size: 10px;
             margin-top: 3px;
         }
+
         .title {
             font-size: 16px;
             font-weight: bold;
             letter-spacing: 8px;
             margin-top: 15px;
         }
+
         .period {
             font-size: 11px;
             margin-top: 5px;
         }
+
         .project-info {
             margin: 15px 0;
             font-size: 10px;
         }
+
         .project-info div {
             margin: 3px 0;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }
-        th, td {
+
+        th,
+        td {
             border: 1px solid #000;
             padding: 4px 3px;
             font-size: 8px;
         }
+
         th {
             background-color: white;
             color: black;
             text-align: center;
             font-weight: bold;
         }
+
         td {
             text-align: center;
         }
+
         .text-left {
             text-align: left;
             padding-left: 5px;
         }
+
         .text-right {
             text-align: right;
             padding-right: 5px;
         }
+
         .nothing-follows {
             text-align: center;
             font-style: italic;
             font-size: 9px;
             padding: 5px;
         }
+
         .total-row {
             font-weight: bold;
             font-size: 9px;
         }
+
         .acknowledgment {
             margin-top: 10px;
             font-size: 8px;
             font-style: italic;
             text-align: center;
         }
+
         .signature-section {
             display: table;
             width: 100%;
             margin-top: 40px;
         }
+
         .signature-box {
             display: table-cell;
             width: 25%;
             text-align: center;
             padding: 0 5px;
         }
+
         .signature-title {
             font-size: 8px;
             margin-bottom: 5px;
         }
+
         .signature-line {
             border-top: 1px solid #000;
             margin: 30px 10px 5px 10px;
         }
+
         .signature-name {
             font-size: 8px;
             font-weight: bold;
         }
+
         .signature-position {
             font-size: 7px;
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <div class="company-name">GIOVANNI CONSTRUCTION</div>
@@ -126,8 +152,7 @@
     </div>
 
     <div class="project-info">
-        <div><strong>PROJECT LOCATION:</strong> {{ $payroll->items->first()?->employee->project->name ?? 'N/A' }}</div>
-        <div style="margin-left: 120px;"><strong>:</strong> {{ $payroll->items->first()?->employee->project->location ?? 'N/A' }}</div>
+        <div><strong>DEPARTMENT:</strong> {{ $payroll->items->first()?->employee->department ?? 'N/A' }}</div>
         <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee->position->position_name ?? 'N/A' }}</div>
     </div>
 
@@ -197,9 +222,9 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>
                 <td>-</td>
                 <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->total_net, 2) }}</td>
                 <td></td>
             </tr>
@@ -248,4 +273,5 @@
         </div>
     </div>
 </body>
+
 </html>

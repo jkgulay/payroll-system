@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>Payslip</title>
@@ -10,39 +11,47 @@
             margin: 0;
             padding: 20px;
         }
+
         .header {
             text-align: center;
             margin-bottom: 30px;
             border-bottom: 2px solid #333;
             padding-bottom: 10px;
         }
+
         .company-name {
             font-size: 20px;
             font-weight: bold;
             margin-bottom: 5px;
         }
+
         .payslip-title {
             font-size: 16px;
             font-weight: bold;
             margin-top: 10px;
         }
+
         .info-section {
             margin-bottom: 20px;
         }
+
         .info-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 5px;
         }
+
         .info-label {
             font-weight: bold;
             width: 150px;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
+
         th {
             background-color: #f0f0f0;
             padding: 10px;
@@ -50,17 +59,21 @@
             border: 1px solid #ddd;
             font-weight: bold;
         }
+
         td {
             padding: 8px;
             border: 1px solid #ddd;
         }
+
         .text-right {
             text-align: right;
         }
+
         .total-row {
             font-weight: bold;
             background-color: #f9f9f9;
         }
+
         .net-pay {
             font-size: 16px;
             font-weight: bold;
@@ -70,6 +83,7 @@
             border: 2px solid #4caf50;
             text-align: center;
         }
+
         .footer {
             margin-top: 40px;
             padding-top: 20px;
@@ -80,6 +94,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <div class="company-name">Construction Company</div>
@@ -94,7 +109,7 @@
         </div>
         <div class="info-row">
             <div><span class="info-label">Department:</span> {{ $payslip->employee->department->name ?? 'N/A' }}</div>
-            <div><span class="info-label">Position:</span> {{ $payslip->employee->position }}</div>
+            <div><span class="info-label">Position:</span> {{ $payslip->employee->position->position_name ?? ($payslip->employee->staff_type ?? 'N/A') }}</div>
         </div>
         <div class="info-row">
             <div><span class="info-label">Pay Period:</span> {{ date('M d, Y', strtotime($payslip->payroll->period_start)) }} - {{ date('M d, Y', strtotime($payslip->payroll->period_end)) }}</div>
@@ -116,15 +131,15 @@
             </tr>
             <tr>
                 <td>Basic Salary</td>
-                <td class="text-right">₱{{ number_format($payslip->basic_salary, 2) }}</td>
+                <td class="text-right">₱{{ number_format($payslip->basic_pay ?? 0, 2) }}</td>
             </tr>
             <tr>
-                <td>Overtime Pay</td>
-                <td class="text-right">₱{{ number_format($payslip->overtime_pay, 2) }}</td>
+                <td>Regular Overtime Pay</td>
+                <td class="text-right">₱{{ number_format($payslip->regular_ot_pay ?? 0, 2) }}</td>
             </tr>
             <tr>
-                <td>Holiday Pay</td>
-                <td class="text-right">₱{{ number_format($payslip->holiday_pay, 2) }}</td>
+                <td>Special Overtime Pay</td>
+                <td class="text-right">₱{{ number_format($payslip->special_ot_pay ?? 0, 2) }}</td>
             </tr>
             <tr>
                 <td>Night Differential</td>
@@ -149,15 +164,15 @@
             </tr>
             <tr>
                 <td>SSS Contribution</td>
-                <td class="text-right">₱{{ number_format($payslip->sss_contribution, 2) }}</td>
+                <td class="text-right">₱{{ number_format($payslip->sss, 2) }}</td>
             </tr>
             <tr>
                 <td>PhilHealth Contribution</td>
-                <td class="text-right">₱{{ number_format($payslip->philhealth_contribution, 2) }}</td>
+                <td class="text-right">₱{{ number_format($payslip->philhealth, 2) }}</td>
             </tr>
             <tr>
                 <td>Pag-IBIG Contribution</td>
-                <td class="text-right">₱{{ number_format($payslip->pagibig_contribution, 2) }}</td>
+                <td class="text-right">₱{{ number_format($payslip->pagibig, 2) }}</td>
             </tr>
             <tr>
                 <td>Withholding Tax</td>
@@ -195,4 +210,5 @@
         <p>Generated on {{ date('F d, Y h:i A') }}</p>
     </div>
 </body>
+
 </html>

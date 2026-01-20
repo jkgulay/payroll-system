@@ -1,8 +1,17 @@
 <template>
   <v-container fluid class="pa-6">
-    <v-row v-if="loading" class="fill-height" align-content="center" justify="center">
+    <v-row
+      v-if="loading"
+      class="fill-height"
+      align-content="center"
+      justify="center"
+    >
       <v-col class="text-center">
-        <v-progress-circular indeterminate color="primary" :size="70"></v-progress-circular>
+        <v-progress-circular
+          indeterminate
+          color="primary"
+          :size="70"
+        ></v-progress-circular>
       </v-col>
     </v-row>
 
@@ -64,7 +73,8 @@
             <v-card-text>
               <div class="text-overline mb-1">Period</div>
               <div class="text-body-1">
-                {{ formatDate(payroll?.period_start) }} - {{ formatDate(payroll?.period_end) }}
+                {{ formatDate(payroll?.period_start) }} -
+                {{ formatDate(payroll?.period_end) }}
               </div>
             </v-card-text>
           </v-card>
@@ -73,7 +83,9 @@
           <v-card>
             <v-card-text>
               <div class="text-overline mb-1">Payment Date</div>
-              <div class="text-body-1">{{ formatDate(payroll?.payment_date) }}</div>
+              <div class="text-body-1">
+                {{ formatDate(payroll?.payment_date) }}
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
@@ -81,7 +93,9 @@
           <v-card>
             <v-card-text>
               <div class="text-overline mb-1">Employees</div>
-              <div class="text-h6 font-weight-bold">{{ payroll?.items?.length || 0 }}</div>
+              <div class="text-h6 font-weight-bold">
+                {{ payroll?.items?.length || 0 }}
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
@@ -146,7 +160,9 @@
           <!-- Rate & Days -->
           <template v-slot:item.rate_days="{ item }">
             <div>
-              <div>₱{{ formatCurrency(item.effective_rate || item.basic_rate || 0) }}</div>
+              <div>
+                ₱{{ formatCurrency(item.effective_rate || item.rate || 0) }}
+              </div>
               <div class="text-caption">{{ item.days_worked }} days</div>
             </div>
           </template>
@@ -160,7 +176,9 @@
           <template v-slot:item.overtime="{ item }">
             <div>
               <div v-if="item.regular_ot_hours > 0" class="text-caption">
-                {{ item.regular_ot_hours }}h: ₱{{ formatCurrency(item.regular_ot_pay) }}
+                {{ item.regular_ot_hours }}h: ₱{{
+                  formatCurrency(item.regular_ot_pay)
+                }}
               </div>
               <div v-else class="text-caption text-medium-emphasis">-</div>
             </div>
@@ -176,14 +194,16 @@
           <!-- Deductions -->
           <template v-slot:item.deductions="{ item }">
             <div class="text-caption">
-              <div>SSS: ₱{{ formatCurrency(item.sss_contribution) }}</div>
-              <div>PhilHealth: ₱{{ formatCurrency(item.philhealth_contribution) }}</div>
-              <div>Pag-IBIG: ₱{{ formatCurrency(item.pagibig_contribution) }}</div>
+              <div>SSS: ₱{{ formatCurrency(item.sss) }}</div>
+              <div>PhilHealth: ₱{{ formatCurrency(item.philhealth) }}</div>
+              <div>Pag-IBIG: ₱{{ formatCurrency(item.pagibig) }}</div>
               <div v-if="item.total_loan_deductions > 0">
                 Loans: ₱{{ formatCurrency(item.total_loan_deductions) }}
               </div>
               <div v-if="item.employee_deductions > 0" class="text-warning">
-                Other Deductions: ₱{{ formatCurrency(item.employee_deductions) }}
+                Other Deductions: ₱{{
+                  formatCurrency(item.employee_deductions)
+                }}
               </div>
             </div>
           </template>
@@ -213,10 +233,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useToast } from 'vue-toastification';
-import api from '@/services/api';
+import { ref, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useToast } from "vue-toastification";
+import api from "@/services/api";
 
 const route = useRoute();
 const router = useRouter();
@@ -224,18 +244,18 @@ const toast = useToast();
 
 const loading = ref(false);
 const finalizing = ref(false);
-const search = ref('');
+const search = ref("");
 const payroll = ref(null);
 
 const headers = [
-  { title: 'Employee', key: 'employee', sortable: true },
-  { title: 'Rate & Days', key: 'rate_days', sortable: false },
-  { title: 'Basic Pay', key: 'basic_pay', sortable: true, align: 'end' },
-  { title: 'Overtime', key: 'overtime', sortable: false },
-  { title: 'Gross Pay', key: 'gross_pay', sortable: true, align: 'end' },
-  { title: 'Deductions', key: 'deductions', sortable: false },
-  { title: 'Net Pay', key: 'net_pay', sortable: true, align: 'end' },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center' },
+  { title: "Employee", key: "employee", sortable: true },
+  { title: "Rate & Days", key: "rate_days", sortable: false },
+  { title: "Basic Pay", key: "basic_pay", sortable: true, align: "end" },
+  { title: "Overtime", key: "overtime", sortable: false },
+  { title: "Gross Pay", key: "gross_pay", sortable: true, align: "end" },
+  { title: "Deductions", key: "deductions", sortable: false },
+  { title: "Net Pay", key: "net_pay", sortable: true, align: "end" },
+  { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
 onMounted(() => {
@@ -248,27 +268,31 @@ async function fetchPayroll() {
     const response = await api.get(`/payrolls/${route.params.id}`);
     payroll.value = response.data;
   } catch (error) {
-    console.error('Error fetching payroll:', error);
-    toast.error('Failed to load payroll details');
-    router.push('/payroll');
+    console.error("Error fetching payroll:", error);
+    toast.error("Failed to load payroll details");
+    router.push("/payroll");
   } finally {
     loading.value = false;
   }
 }
 
 async function finalizePayroll() {
-  if (!confirm('Are you sure you want to finalize this payroll? You will not be able to edit it after finalization.')) {
+  if (
+    !confirm(
+      "Are you sure you want to finalize this payroll? You will not be able to edit it after finalization.",
+    )
+  ) {
     return;
   }
 
   finalizing.value = true;
   try {
     await api.post(`/payrolls/${payroll.value.id}/finalize`);
-    toast.success('Payroll finalized successfully');
+    toast.success("Payroll finalized successfully");
     await fetchPayroll();
   } catch (error) {
-    console.error('Error finalizing payroll:', error);
-    toast.error('Failed to finalize payroll');
+    console.error("Error finalizing payroll:", error);
+    toast.error("Failed to finalize payroll");
   } finally {
     finalizing.value = false;
   }
@@ -276,22 +300,28 @@ async function finalizePayroll() {
 
 async function downloadRegister() {
   try {
-    const response = await api.get(`/payrolls/${payroll.value.id}/download-register`, {
-      responseType: 'blob',
-    });
+    const response = await api.get(
+      `/payrolls/${payroll.value.id}/download-register`,
+      {
+        responseType: "blob",
+      },
+    );
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', `payroll_register_${payroll.value.payroll_number}.pdf`);
+    link.setAttribute(
+      "download",
+      `payroll_register_${payroll.value.payroll_number}.pdf`,
+    );
     document.body.appendChild(link);
     link.click();
     link.remove();
 
-    toast.success('Payroll register downloaded');
+    toast.success("Payroll register downloaded");
   } catch (error) {
-    console.error('Error downloading register:', error);
-    toast.error('Failed to download payroll register');
+    console.error("Error downloading register:", error);
+    toast.error("Failed to download payroll register");
   }
 }
 
@@ -299,45 +329,48 @@ async function downloadPayslip(item) {
   try {
     const response = await api.get(
       `/payrolls/${payroll.value.id}/employees/${item.employee_id}/download-payslip`,
-      { responseType: 'blob' }
+      { responseType: "blob" },
     );
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', `payslip_${item.employee.employee_number}.pdf`);
+    link.setAttribute(
+      "download",
+      `payslip_${item.employee.employee_number}.pdf`,
+    );
     document.body.appendChild(link);
     link.click();
     link.remove();
 
-    toast.success('Payslip downloaded');
+    toast.success("Payslip downloaded");
   } catch (error) {
-    console.error('Error downloading payslip:', error);
-    toast.error('Failed to download payslip');
+    console.error("Error downloading payslip:", error);
+    toast.error("Failed to download payslip");
   }
 }
 
 function getStatusColor(status) {
   const colors = {
-    draft: 'warning',
-    finalized: 'info',
-    paid: 'success',
+    draft: "warning",
+    finalized: "info",
+    paid: "success",
   };
-  return colors[status] || 'grey';
+  return colors[status] || "grey";
 }
 
 function formatDate(date) {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
 function formatCurrency(amount) {
-  if (!amount) return '0.00';
-  return parseFloat(amount).toLocaleString('en-US', {
+  if (!amount) return "0.00";
+  return parseFloat(amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

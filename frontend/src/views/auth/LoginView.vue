@@ -25,14 +25,14 @@
               <h1
                 class="display-1 font-weight-bold text-white mb-4 text-shadow"
               >
-                Payroll Management System
+                Giovanni Construction Management System
               </h1>
               <p class="text-h6 text-white-80 mb-6 text-shadow">
-                A comprehensive Philippine payroll management system designed
-                specifically for construction companies. Built with modern
-                technologies to handle complex payroll computations, employee
-                management, attendance tracking, and government compliance
-                requirements.
+                At Giovanni Construction, we specialize in building not just
+                structures but also efficient solutions for managing your
+                workforce. Our system is designed to tackle the unique demands
+                of the construction industry, from payroll and compliance to
+                attendance tracking, so you can focus on building the future.
               </p>
             </div>
           </v-col>

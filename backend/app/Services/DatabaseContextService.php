@@ -17,50 +17,50 @@ class DatabaseContextService
     public function getContextForQuery(string $query, array $intent): array
     {
         $context = [];
-        
+
         switch ($intent['intent']) {
             case 'employee_count':
             case 'employee_search':
                 $context = $this->getEmployeeContext($query);
                 break;
-                
+
             case 'payroll_count':
                 $context = $this->getPayrollCountContext($query);
                 break;
-                
+
             case 'payroll_expense':
             case 'salary_info':
                 $context = $this->getPayrollContext($query);
                 break;
-                
+
             case 'attendance':
                 $context = $this->getAttendanceContext($query);
                 break;
-                
+
             case 'leave':
                 $context = $this->getLeaveContext($query);
                 break;
-                
+
             case 'overtime':
                 $context = $this->getOvertimeContext($query);
                 break;
-                
+
             case 'tax_compliance':
                 $context = $this->getTaxComplianceContext($query);
                 break;
-                
+
             case 'documents':
                 $context = $this->getDocumentContext($query);
                 break;
-                
+
             case 'system_help':
                 $context = $this->getSystemHelpContext();
                 break;
-                
+
             default:
                 $context = $this->getGeneralContext();
         }
-        
+
         return $context;
     }
 
@@ -152,7 +152,7 @@ class DatabaseContextService
                 ];
             })
             ->toArray();
-        
+
         $context['monthly_breakdown_' . $currentYear] = $monthlyBreakdown;
 
         return $context;
@@ -171,7 +171,7 @@ class DatabaseContextService
         if (preg_match('/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i', $query, $matches)) {
             $month = Carbon::parse($matches[1])->month;
             $year = $matches[2];
-            
+
             $payrollData = DB::table('payrolls')
                 ->join('payroll_items', 'payrolls.id', '=', 'payroll_items.payroll_id')
                 ->whereYear('payrolls.period_start', $year)
@@ -179,7 +179,7 @@ class DatabaseContextService
                 ->whereNull('payrolls.deleted_at')
                 ->selectRaw('SUM(payrolls.total_gross) as total_gross, SUM(payrolls.total_net) as total_net, COUNT(DISTINCT payroll_items.employee_id) as employee_count')
                 ->first();
-                
+
             $context['period_payroll'] = [
                 'period' => Carbon::create($year, $month)->format('F Y'),
                 'total_gross_pay' => $payrollData->total_gross ?? 0,
@@ -195,13 +195,13 @@ class DatabaseContextService
                 ->whereMonth('period_start', '<=', 9)
                 ->selectRaw('SUM(total_gross) as total_gross, SUM(total_net) as total_net')
                 ->first();
-                
+
             $q4Data = Payroll::whereYear('period_start', $currentYear)
                 ->whereMonth('period_start', '>=', 10)
                 ->whereMonth('period_start', '<=', 12)
                 ->selectRaw('SUM(total_gross) as total_gross, SUM(total_net) as total_net')
                 ->first();
-                
+
             $context['quarterly_comparison'] = [
                 'q3' => [
                     'total_gross' => $q3Data->total_gross ?? 0,
@@ -255,12 +255,12 @@ class DatabaseContextService
         // Current month overtime
         if (strpos($query, 'overtime') !== false) {
             $overtimeTotal = DB::table('payroll_items')
-                ->join('payroll', 'payroll_items.payroll_id', '=', 'payroll.id')
-                ->whereYear('payroll.period_start', $currentYear)
-                ->whereMonth('payroll.period_start', $currentMonth)
-                ->whereNull('payroll.deleted_at')
-                ->sum('payroll_items.overtime_pay');
-                
+                ->join('payrolls', 'payroll_items.payroll_id', '=', 'payrolls.id')
+                ->whereYear('payrolls.period_start', $currentYear)
+                ->whereMonth('payrolls.period_start', $currentMonth)
+                ->whereNull('payrolls.deleted_at')
+                ->sum('payroll_items.regular_ot_pay');
+
             $context['overtime'] = [
                 'period' => Carbon::create($currentYear, $currentMonth)->format('F Y'),
                 'total_overtime_pay' => $overtimeTotal ?? 0,
@@ -291,7 +291,7 @@ class DatabaseContextService
                         'date' => $att->attendance_date->format('Y-m-d'),
                     ];
                 });
-                
+
             $context['yesterday_absences'] = [
                 'date' => $yesterday->format('F d, Y'),
                 'count' => $absences->count(),
@@ -303,7 +303,7 @@ class DatabaseContextService
         if (strpos($query, 'low attendance') !== false) {
             $startOfMonth = Carbon::now()->startOfMonth();
             $endOfMonth = Carbon::now()->endOfMonth();
-            
+
             $lowAttendance = DB::table('attendance')
                 ->select('employee_id')
                 ->selectRaw('COUNT(CASE WHEN status = \'present\' THEN 1 END) as present_days')
@@ -314,12 +314,12 @@ class DatabaseContextService
                 ->groupBy('employee_id')
                 ->havingRaw('(CAST(present_days AS FLOAT) / total_days) < 0.8')
                 ->get();
-                
+
             $employeeIds = $lowAttendance->pluck('employee_id');
             $employees = Employee::whereIn('id', $employeeIds)
                 ->select('id', 'first_name', 'last_name')
                 ->get();
-                
+
             $context['low_attendance'] = $lowAttendance->map(function ($att) use ($employees) {
                 $employee = $employees->firstWhere('id', $att->employee_id);
                 return [
@@ -355,7 +355,7 @@ class DatabaseContextService
                         'days' => $leave->number_of_days,
                     ];
                 });
-                
+
             $context['pending_leave_requests'] = [
                 'count' => $pending->count(),
                 'requests' => $pending,
@@ -372,13 +372,13 @@ class DatabaseContextService
     {
         $currentMonth = Carbon::now()->month;
         $currentYear = Carbon::now()->year;
-        
+
         $overtimeData = DB::table('payroll_items')
-            ->join('payroll', 'payroll_items.payroll_id', '=', 'payroll.id')
-            ->whereYear('payroll.period_start', $currentYear)
-            ->whereMonth('payroll.period_start', $currentMonth)
-            ->whereNull('payroll.deleted_at')
-            ->selectRaw('SUM(payroll_items.overtime_hours) as total_hours, SUM(payroll_items.overtime_pay) as total_pay, COUNT(DISTINCT payroll_items.employee_id) as employee_count')
+            ->join('payrolls', 'payroll_items.payroll_id', '=', 'payrolls.id')
+            ->whereYear('payrolls.period_start', $currentYear)
+            ->whereMonth('payrolls.period_start', $currentMonth)
+            ->whereNull('payrolls.deleted_at')
+            ->selectRaw('SUM(payroll_items.regular_ot_hours) as total_hours, SUM(payroll_items.regular_ot_pay) as total_pay, COUNT(DISTINCT payroll_items.employee_id) as employee_count')
             ->first();
 
         return [
@@ -395,15 +395,15 @@ class DatabaseContextService
     protected function getTaxComplianceContext(string $query): array
     {
         $currentYear = Carbon::now()->year;
-        
+
         $taxData = DB::table('payroll_items')
-            ->join('payroll', 'payroll_items.payroll_id', '=', 'payroll.id')
-            ->whereYear('payroll.period_start', $currentYear)
-            ->whereNull('payroll.deleted_at')
+            ->join('payrolls', 'payroll_items.payroll_id', '=', 'payrolls.id')
+            ->whereYear('payrolls.period_start', $currentYear)
+            ->whereNull('payrolls.deleted_at')
             ->selectRaw('
-                SUM(payroll_items.sss_contribution) as total_sss,
-                SUM(payroll_items.philhealth_contribution) as total_philhealth,
-                SUM(payroll_items.pagibig_contribution) as total_hdmf,
+                SUM(payroll_items.sss) as total_sss,
+                SUM(payroll_items.philhealth) as total_philhealth,
+                SUM(payroll_items.pagibig) as total_hdmf,
                 SUM(payroll_items.withholding_tax) as total_tax,
                 SUM(payroll_items.total_deductions) as total_deductions
             ')
@@ -429,23 +429,23 @@ class DatabaseContextService
         // Count employees missing required documents
         $missingDocs = Employee::where(function ($q) {
             $q->whereNull('tin_number')
-              ->orWhereNull('sss_number')
-              ->orWhereNull('philhealth_number')
-              ->orWhereNull('pagibig_number');
+                ->orWhereNull('sss_number')
+                ->orWhereNull('philhealth_number')
+                ->orWhereNull('pagibig_number');
         })->select('id', 'first_name', 'last_name', 'tin_number', 'sss_number', 'philhealth_number', 'pagibig_number')
-        ->get()
-        ->map(function ($emp) {
-            $missing = [];
-            if (!$emp->tin_number) $missing[] = 'TIN';
-            if (!$emp->sss_number) $missing[] = 'SSS';
-            if (!$emp->philhealth_number) $missing[] = 'PhilHealth';
-            if (!$emp->pagibig_number) $missing[] = 'Pag-IBIG';
-            
-            return [
-                'name' => $emp->first_name . ' ' . $emp->last_name,
-                'missing_documents' => $missing,
-            ];
-        });
+            ->get()
+            ->map(function ($emp) {
+                $missing = [];
+                if (!$emp->tin_number) $missing[] = 'TIN';
+                if (!$emp->sss_number) $missing[] = 'SSS';
+                if (!$emp->philhealth_number) $missing[] = 'PhilHealth';
+                if (!$emp->pagibig_number) $missing[] = 'Pag-IBIG';
+
+                return [
+                    'name' => $emp->first_name . ' ' . $emp->last_name,
+                    'missing_documents' => $missing,
+                ];
+            });
 
         return [
             'employees_with_missing_documents' => $missingDocs->count(),

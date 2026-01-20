@@ -120,8 +120,9 @@ return new class extends Migration
         Schema::create('loan_payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('employee_loan_id')->constrained('employee_loans')->onDelete('cascade');
-            $table->foreignId('payroll_id')->nullable()->constrained('payroll')->onDelete('set null');
-            $table->foreignId('payroll_item_id')->nullable()->constrained('payroll_items')->onDelete('set null');
+            // Payroll references will be added later when payroll tables are created
+            $table->unsignedBigInteger('payroll_id')->nullable();
+            $table->unsignedBigInteger('payroll_item_id')->nullable();
             $table->date('payment_date');
             $table->decimal('amount', 10, 2);
             $table->decimal('principal_payment', 10, 2);

@@ -23,8 +23,10 @@
 </template>
 
 <script setup>
+import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 
+const router = useRouter();
 const toast = useToast();
 
 const reports = [
@@ -66,6 +68,10 @@ const reports = [
 ];
 
 function generateReport(report) {
-  toast.info(`${report.title} report - Coming soon`);
+  if (report.id === "attendance-summary") {
+    router.push("/reports/attendance-summary");
+  } else {
+    toast.info(`${report.title} report - Coming soon`);
+  }
 }
 </script>

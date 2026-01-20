@@ -13,72 +13,64 @@ class PayrollItem extends Model
     protected $fillable = [
         'payroll_id',
         'employee_id',
-        'basic_rate',
+        'rate',
         'days_worked',
         'basic_pay',
-        'overtime_hours',
-        'overtime_pay',
-        'holiday_pay',
-        'night_differential',
-        'adjustments',
-        'adjustment_notes',
-        'water_allowance',
+        'regular_ot_hours',
+        'regular_ot_pay',
+        'special_ot_hours',
+        'special_ot_pay',
         'cola',
         'other_allowances',
-        'total_allowances',
-        'total_bonuses',
+        'allowances_breakdown',
         'gross_pay',
-        'sss_contribution',
-        'philhealth_contribution',
-        'pagibig_contribution',
+        'sss',
+        'philhealth',
+        'pagibig',
         'withholding_tax',
-        'total_other_deductions',
-        'total_loan_deductions',
-        'employee_deductions',
+        'employee_savings',
+        'cash_advance',
+        'loans',
+        'other_deductions',
         'total_deductions',
         'net_pay',
-        'payslip_generated',
-        'payslip_file_path',
     ];
 
     protected $casts = [
-        'basic_rate' => 'decimal:2',
+        'rate' => 'decimal:2',
         'days_worked' => 'decimal:2',
         'basic_pay' => 'decimal:2',
-        'overtime_hours' => 'decimal:2',
-        'overtime_pay' => 'decimal:2',
-        'holiday_pay' => 'decimal:2',
-        'night_differential' => 'decimal:2',
-        'adjustments' => 'decimal:2',
-        'water_allowance' => 'decimal:2',
+        'regular_ot_hours' => 'decimal:2',
+        'regular_ot_pay' => 'decimal:2',
+        'special_ot_hours' => 'decimal:2',
+        'special_ot_pay' => 'decimal:2',
         'cola' => 'decimal:2',
         'other_allowances' => 'decimal:2',
-        'total_allowances' => 'decimal:2',
-        'total_bonuses' => 'decimal:2',
+        'allowances_breakdown' => 'array',
         'gross_pay' => 'decimal:2',
-        'sss_contribution' => 'decimal:2',
-        'philhealth_contribution' => 'decimal:2',
-        'pagibig_contribution' => 'decimal:2',
+        'sss' => 'decimal:2',
+        'philhealth' => 'decimal:2',
+        'pagibig' => 'decimal:2',
         'withholding_tax' => 'decimal:2',
-        'total_other_deductions' => 'decimal:2',
-        'total_loan_deductions' => 'decimal:2',
-        'employee_deductions' => 'decimal:2',
+        'employee_savings' => 'decimal:2',
+        'cash_advance' => 'decimal:2',
+        'loans' => 'decimal:2',
+        'other_deductions' => 'decimal:2',
         'total_deductions' => 'decimal:2',
         'net_pay' => 'decimal:2',
-        'payslip_generated' => 'boolean',
     ];
 
     protected $appends = ['effective_rate'];
 
     /**
      * Get the effective rate for display
-     * If basic_rate is 0 or null, get it from the employee's current rate
+     * If rate is 0 or null, get it from the employee's current rate
      */
     public function getEffectiveRateAttribute(): float
     {
-        // If basic_rate is valid and not 0, use it
-        if ($this->basic_rate && $this->basic_rate > 0) {
-            return (float) $this->basic_rate;
+        // If rate is valid and not 0, use it
+        if ($this->rate && $this->rate > 0) {
+            return (float) $this->rate;
         }
 
         // Otherwise, get the employee's current effective rate

@@ -50,8 +50,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/two-factor/disable', [App\Http\Controllers\Api\TwoFactorController::class, 'disable']);
     Route::post('/two-factor/recovery-codes', [App\Http\Controllers\Api\TwoFactorController::class, 'regenerateRecoveryCodes']);
 
-    // Employee Import - MUST come before employees apiResource (rate limited)
-    Route::middleware(['throttle:10,1'])->post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']);
+    // Employee Import - MUST come before employees apiResource
+    Route::post('/employees/import-file', [App\Http\Controllers\Api\EmployeeImportController::class, 'importFromFile']); // NEW: Fast file upload method
+    Route::post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']); // OLD: JSON data method (kept for backwards compatibility)
     Route::get('/employees/import/template', [App\Http\Controllers\Api\EmployeeImportController::class, 'downloadTemplate']);
 
     // Employees - specific routes must come before resource routes
@@ -116,6 +117,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/meal-allowances/positions', [App\Http\Controllers\Api\MealAllowanceController::class, 'getPositions']);
     Route::post('/meal-allowances/employees-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'getEmployeesByPosition']);
     Route::post('/meal-allowances/bulk-assign-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'bulkAssignByPosition']);
+    Route::get('/meal-allowances/{mealAllowance}/items', [App\Http\Controllers\Api\MealAllowanceController::class, 'getItems']);
     Route::post('/meal-allowances/{mealAllowance}/submit', [App\Http\Controllers\Api\MealAllowanceController::class, 'submit']);
     Route::post('/meal-allowances/{mealAllowance}/approval', [App\Http\Controllers\Api\MealAllowanceController::class, 'updateApproval']);
     Route::post('/meal-allowances/{mealAllowance}/generate-pdf', [App\Http\Controllers\Api\MealAllowanceController::class, 'generatePdf']);
@@ -132,6 +134,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Payroll - specific routes MUST come before apiResource
     Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize']);
     Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister']);
+    Route::get('/payrolls/{payroll}/export-excel', [App\Http\Controllers\PayrollController::class, 'exportToExcel']);
     Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip']);
     Route::apiResource('payrolls', App\Http\Controllers\PayrollController::class);
 
@@ -259,6 +262,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Audit Logs
     Route::get('/audit-logs', [App\Http\Controllers\Api\AuditLogController::class, 'index']);
     Route::get('/audit-logs/module/{module}', [App\Http\Controllers\Api\AuditLogController::class, 'byModule']);
+    Route::get('/audit-logs/export', [App\Http\Controllers\Api\AuditLogController::class, 'export']);
 
     // Notifications
     Route::get('/notifications', [App\Http\Controllers\Api\NotificationController::class, 'index']);

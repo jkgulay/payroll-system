@@ -34,6 +34,8 @@ class BiometricImportController extends Controller
 
         $validated = $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv',
+            'default_position' => 'nullable|string',
+            'default_project_id' => 'nullable|integer|exists:projects,id',
         ]);
 
         try {
@@ -50,8 +52,13 @@ class BiometricImportController extends Controller
                 ], 422);
             }
 
-            // Import staff data
-            $result = $this->staffImportService->importStaffInformation($staffData);
+            // Import staff data with optional defaults
+            $defaults = [
+                'position' => $validated['default_position'] ?? null,
+                'project_id' => $validated['default_project_id'] ?? null,
+            ];
+
+            $result = $this->staffImportService->importStaffInformation($staffData, $defaults);
 
             // Log the import
             AuditLog::create([
@@ -124,7 +131,7 @@ class BiometricImportController extends Controller
             // Import punch records
             $year = $validated['year'] ?? now()->year;
             $month = $validated['month'] ?? null;
-            
+
             $result = $this->punchRecordImportService->importPunchRecords($punchData, $year, $month);
 
             // Log the import
@@ -184,9 +191,9 @@ class BiometricImportController extends Controller
 
             // First row is header
             $headers = array_shift($rows);
-            
+
             // Clean headers
-            $headers = array_map(function($header) {
+            $headers = array_map(function ($header) {
                 return trim($header);
             }, $headers);
 

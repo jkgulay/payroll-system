@@ -44,11 +44,21 @@ class AttendanceSummaryExport implements FromCollection, WithHeadings, WithMappi
             'Status',
             'Approved',
             'Manual Entry',
+            'Daily Rate',
+            'Basic Pay',
+            'OT Pay',
+            'Daily Gross',
         ];
     }
 
     public function map($attendance): array
     {
+        $rate = $attendance->employee->getBasicSalary();
+        $basicPay = $attendance->status === 'present' ? $rate : 0;
+        $hourlyRate = $rate / 8;
+        $overtimePay = ($attendance->overtime_hours ?? 0) * $hourlyRate * 1.25;
+        $dailyGross = $basicPay + $overtimePay;
+
         return [
             $attendance->employee->employee_number ?? '',
             $attendance->employee->full_name ?? '',
@@ -64,6 +74,10 @@ class AttendanceSummaryExport implements FromCollection, WithHeadings, WithMappi
             strtoupper($attendance->status),
             $attendance->is_approved ? 'Yes' : 'No',
             $attendance->is_manual_entry ? 'Yes' : 'No',
+            $rate,
+            $basicPay,
+            $overtimePay,
+            $dailyGross,
         ];
     }
 
