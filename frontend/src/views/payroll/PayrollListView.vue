@@ -15,7 +15,10 @@
           </div>
         </div>
         <div class="action-buttons">
-          <button class="action-btn action-btn-primary" @click="openCreateDialog">
+          <button
+            class="action-btn action-btn-primary"
+            @click="openCreateDialog"
+          >
             <v-icon size="20">mdi-plus</v-icon>
             <span>Create Payroll</span>
           </button>
@@ -91,85 +94,84 @@
         </v-row>
       </div>
 
-
       <div class="table-section">
         <v-data-table
-        :headers="headers"
-        :items="payrolls"
-        :search="search"
-        :loading="loading"
-        :items-per-page="15"
-        class="elevation-1"
-      >
-        <!-- Status -->
-        <template v-slot:item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.status)"
-            size="small"
-            variant="flat"
-          >
-            {{ item.status.toUpperCase() }}
-          </v-chip>
-        </template>
+          :headers="headers"
+          :items="payrolls"
+          :search="search"
+          :loading="loading"
+          :items-per-page="15"
+          class="elevation-1"
+        >
+          <!-- Status -->
+          <template v-slot:item.status="{ item }">
+            <v-chip
+              :color="getStatusColor(item.status)"
+              size="small"
+              variant="flat"
+            >
+              {{ item.status.toUpperCase() }}
+            </v-chip>
+          </template>
 
-        <!-- Period -->
-        <template v-slot:item.period="{ item }">
-          <div>
-            <div class="font-weight-medium">{{ item.period_name }}</div>
-            <div class="text-caption text-medium-emphasis">
-              {{ formatDate(item.period_start) }} -
-              {{ formatDate(item.period_end) }}
+          <!-- Period -->
+          <template v-slot:item.period="{ item }">
+            <div>
+              <div class="font-weight-medium">{{ item.period_name }}</div>
+              <div class="text-caption text-medium-emphasis">
+                {{ formatDate(item.period_start) }} -
+                {{ formatDate(item.period_end) }}
+              </div>
             </div>
-          </div>
-        </template>
+          </template>
 
-        <!-- Payment Date -->
-        <template v-slot:item.payment_date="{ item }">
-          {{ formatDate(item.payment_date) }}
-        </template>
+          <!-- Payment Date -->
+          <template v-slot:item.payment_date="{ item }">
+            {{ formatDate(item.payment_date) }}
+          </template>
 
-        <!-- Employees Count -->
-        <template v-slot:item.items_count="{ item }">
-          <v-chip size="small" variant="outlined">
-            {{ item.items_count }} employees
-          </v-chip>
-        </template>
+          <!-- Employees Count -->
+          <template v-slot:item.items_count="{ item }">
+            <v-chip size="small" variant="outlined">
+              {{ item.items_count }} employees
+            </v-chip>
+          </template>
 
-        <!-- Total Net -->
-        <template v-slot:item.total_net="{ item }">
-          <div class="text-right font-weight-bold">
-            ₱{{ formatCurrency(item.total_net) }}
-          </div>
-        </template>
+          <!-- Total Net -->
+          <template v-slot:item.total_net="{ item }">
+            <div class="text-right font-weight-bold">
+              ₱{{ formatCurrency(item.total_net) }}
+            </div>
+          </template>
 
-        <!-- Actions -->
-        <template v-slot:item.actions="{ item }">
-          <v-btn
-            icon="mdi-eye"
-            size="small"
-            variant="text"
-            color="primary"
-            @click="viewPayroll(item)"
-          >
-          </v-btn>
-          <v-btn
-            v-if="item.status === 'draft'"
-            icon="mdi-pencil"
-            size="small"
-            variant="text"
-            color="warning"
-            @click="editPayroll(item)"
-          >
-          </v-btn>
-          <v-btn
-            icon="mdi-delete"
-            size="small"
-            variant="text"
-            color="error"
-            @click="confirmDelete(item)"
-          >
-          </v-btn>
-        </template>
+          <!-- Actions -->
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              icon="mdi-eye"
+              size="small"
+              variant="text"
+              color="primary"
+              @click="viewPayroll(item)"
+            >
+            </v-btn>
+            <v-btn
+              v-if="item.status === 'draft'"
+              icon="mdi-pencil"
+              size="small"
+              variant="text"
+              color="warning"
+              @click="editPayroll(item)"
+            >
+            </v-btn>
+            <v-btn
+              icon="mdi-delete"
+              size="small"
+              variant="text"
+              color="error"
+              @click="confirmDelete(item)"
+            >
+            </v-btn>
+          </template>
         </v-data-table>
       </div>
     </div>
@@ -865,10 +867,10 @@ async function savePayroll() {
     closeDialog();
   } catch (error) {
     console.error("Error saving payroll:", error);
-    
+
     // Extract detailed error message from response
     let errorMessage = "Failed to save payroll";
-    
+
     if (error.response?.data) {
       const data = error.response.data;
       // Check for detailed error field first, then fall back to message
@@ -877,13 +879,13 @@ async function savePayroll() {
       } else if (data.message && data.message !== "Validation failed") {
         errorMessage = data.message;
       }
-      
+
       // Add employee count info if available
       if (data.employee_count) {
         console.log("Employee count breakdown:", data.employee_count);
       }
     }
-    
+
     toast.error(errorMessage, {
       duration: 8000, // Show longer for detailed messages
     });
@@ -945,7 +947,7 @@ function formatCurrency(amount) {
 
 <style scoped lang="scss">
 .payroll-page {
-    max-width: 1600px;
+  max-width: 1600px;
   margin: 0 auto;
 }
 

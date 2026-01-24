@@ -118,7 +118,6 @@
         </v-row>
       </div>
 
-
       <div class="table-section">
         <v-data-table
           :headers="headers"
@@ -340,7 +339,9 @@
           </div>
           <div>
             <div class="header-title">Process Employee Resignation</div>
-            <div class="header-subtitle">Submit resignation request on behalf of employee</div>
+            <div class="header-subtitle">
+              Submit resignation request on behalf of employee
+            </div>
           </div>
         </div>
 
@@ -389,8 +390,8 @@
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn 
-            variant="outlined" 
+          <v-btn
+            variant="outlined"
             class="cancel-btn"
             @click="showResignDialog = false"
           >
@@ -419,11 +420,21 @@
       <v-card>
         <div class="dialog-header">
           <div class="header-icon-badge">
-            <v-icon size="24">{{ isEditing ? "mdi-pencil" : "mdi-eye" }}</v-icon>
+            <v-icon size="24">{{
+              isEditing ? "mdi-pencil" : "mdi-eye"
+            }}</v-icon>
           </div>
           <div>
-            <div class="header-title">{{ isEditing ? "Edit Employee" : "Employee Details" }}</div>
-            <div class="header-subtitle">{{ isEditing ? "Update employee information" : "View complete employee information" }}</div>
+            <div class="header-title">
+              {{ isEditing ? "Edit Employee" : "Employee Details" }}
+            </div>
+            <div class="header-subtitle">
+              {{
+                isEditing
+                  ? "Update employee information"
+                  : "View complete employee information"
+              }}
+            </div>
           </div>
         </div>
         <v-divider></v-divider>
@@ -741,10 +752,10 @@
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn 
-            variant="outlined" 
+          <v-btn
+            variant="outlined"
             class="cancel-btn"
-            size="large" 
+            size="large"
             @click="closeDialog"
           >
             {{ isEditing ? "Cancel" : "Close" }}
@@ -788,7 +799,9 @@
           </div>
           <div>
             <div class="header-title">Employee Account Created</div>
-            <div class="header-subtitle">Save these credentials - they will not be shown again</div>
+            <div class="header-subtitle">
+              Save these credentials - they will not be shown again
+            </div>
           </div>
         </div>
         <v-divider></v-divider>
@@ -852,10 +865,7 @@
             Copy Credentials
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn 
-            class="primary-action-btn" 
-            @click="showPasswordDialog = false"
-          >
+          <v-btn class="primary-action-btn" @click="showPasswordDialog = false">
             <v-icon start>mdi-check</v-icon>
             Done
           </v-btn>
@@ -872,7 +882,9 @@
           </div>
           <div>
             <div class="header-title">Employee Credentials</div>
-            <div class="header-subtitle">View and manage employee login credentials</div>
+            <div class="header-subtitle">
+              View and manage employee login credentials
+            </div>
           </div>
         </div>
         <v-divider></v-divider>
@@ -969,10 +981,7 @@
             Generate New Password
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn 
-            class="primary-action-btn" 
-            @click="closeCredentialsDialog"
-          >
+          <v-btn class="primary-action-btn" @click="closeCredentialsDialog">
             <v-icon start>mdi-check</v-icon>
             Close
           </v-btn>
@@ -1094,8 +1103,8 @@
             Clear Custom Rate
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn 
-            variant="outlined" 
+          <v-btn
+            variant="outlined"
             class="cancel-btn"
             @click="closePayRateDialog"
           >
@@ -1897,13 +1906,12 @@ function formatSalaryDisplay(employee) {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   margin-bottom: 24px;
-    padding: 24px;
+  padding: 24px;
 }
 
 .filters-section {
   background: rgba(0, 31, 61, 0.01);
-    margin-bottom: 24px;
-
+  margin-bottom: 24px;
 }
 
 .table-section {

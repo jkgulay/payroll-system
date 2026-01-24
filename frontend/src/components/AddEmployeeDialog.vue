@@ -355,7 +355,7 @@
             class="mr-2"
           ></v-progress-circular>
           <v-icon v-else size="18" class="mr-1">mdi-content-save</v-icon>
-          {{ saving ? 'Creating...' : 'Create Employee' }}
+          {{ saving ? "Creating..." : "Create Employee" }}
         </button>
       </v-card-actions>
     </v-card>
@@ -520,7 +520,7 @@ watch(
         employeeForm.value.resetValidation();
       }
     }
-  }
+  },
 );
 </script>
 
@@ -534,7 +534,11 @@ watch(
   align-items: center;
   gap: 16px;
   padding: 24px;
-  background: linear-gradient(135deg, rgba(0, 31, 61, 0.02) 0%, rgba(237, 152, 95, 0.02) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
   border-bottom: 1px solid rgba(0, 31, 61, 0.08);
 }
 
@@ -546,7 +550,7 @@ watch(
   align-items: center;
   justify-content: center;
   color: white;
-  
+
   &.primary {
     background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
     box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
@@ -575,7 +579,11 @@ watch(
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, rgba(0, 31, 61, 0.02) 0%, rgba(237, 152, 95, 0.02) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
   border-radius: 12px;
   border: 1px solid rgba(0, 31, 61, 0.08);
   margin-bottom: 20px;
@@ -617,7 +625,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -627,7 +635,7 @@ watch(
 .dialog-btn-cancel {
   background: transparent;
   color: #64748b;
-  
+
   &:hover:not(:disabled) {
     background: rgba(0, 31, 61, 0.04);
   }
@@ -638,7 +646,7 @@ watch(
   color: white;
   box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
   margin-left: 12px;
-  
+
   &:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);

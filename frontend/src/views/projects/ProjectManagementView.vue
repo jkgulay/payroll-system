@@ -379,8 +379,12 @@
               <v-icon size="24">mdi-folder-open</v-icon>
             </div>
             <div class="flex-grow-1">
-              <div class="text-h5 font-weight-bold">{{ selectedProject.name }}</div>
-              <div class="text-subtitle-2 text-white-70">{{ selectedProject.code }}</div>
+              <div class="text-h5 font-weight-bold">
+                {{ selectedProject.name }}
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ selectedProject.code }}
+              </div>
             </div>
             <v-chip
               :color="selectedProject.is_active ? 'success' : 'grey'"
@@ -404,21 +408,31 @@
 
         <v-card-text class="pa-6">
           <div class="mb-4">
-            <div class="text-subtitle-2 font-weight-bold mb-2" style="color: #001f3d;">
-              <v-icon size="small" color="#ED985F" class="mr-1">mdi-text-box</v-icon>
+            <div
+              class="text-subtitle-2 font-weight-bold mb-2"
+              style="color: #001f3d"
+            >
+              <v-icon size="small" color="#ED985F" class="mr-1"
+                >mdi-text-box</v-icon
+              >
               Description
             </div>
-            <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8);">
+            <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8)">
               {{ selectedProject.description || "No description" }}
             </div>
           </div>
 
           <div class="mb-4">
-            <div class="text-subtitle-2 font-weight-bold mb-2" style="color: #001f3d;">
-              <v-icon size="small" color="#ED985F" class="mr-1">mdi-account-tie</v-icon>
+            <div
+              class="text-subtitle-2 font-weight-bold mb-2"
+              style="color: #001f3d"
+            >
+              <v-icon size="small" color="#ED985F" class="mr-1"
+                >mdi-account-tie</v-icon
+              >
               Project Head
             </div>
-            <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8);">
+            <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8)">
               {{
                 selectedProject.head_employee
                   ? `${selectedProject.head_employee.first_name} ${selectedProject.head_employee.last_name} (${selectedProject.head_employee.position})`
@@ -429,8 +443,10 @@
 
           <v-divider class="my-4"></v-divider>
 
-          <div class="text-h6 font-weight-bold mb-4" style="color: #001f3d;">
-            <v-icon size="20" color="#ED985F" class="mr-2">mdi-account-group</v-icon>
+          <div class="text-h6 font-weight-bold mb-4" style="color: #001f3d">
+            <v-icon size="20" color="#ED985F" class="mr-2"
+              >mdi-account-group</v-icon
+            >
             Assigned Employees ({{ projectEmployees.length }})
           </div>
 

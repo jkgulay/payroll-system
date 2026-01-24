@@ -69,7 +69,6 @@
         </v-row>
       </div>
 
-
       <div class="table-section">
         <v-data-table
           :headers="headers"
@@ -143,14 +142,20 @@
         <v-card-title class="modern-dialog-header">
           <div class="d-flex align-center w-100">
             <div class="dialog-icon-badge">
-              <v-icon size="24">{{ isEditing ? "mdi-pencil" : "mdi-plus" }}</v-icon>
+              <v-icon size="24">{{
+                isEditing ? "mdi-pencil" : "mdi-plus"
+              }}</v-icon>
             </div>
             <div class="flex-grow-1">
               <div class="text-h5 font-weight-bold">
                 {{ isEditing ? "Edit Position Rate" : "Add New Position Rate" }}
               </div>
               <div class="text-subtitle-2 text-white-70">
-                {{ isEditing ? "Update position rate details" : "Create new position rate" }}
+                {{
+                  isEditing
+                    ? "Update position rate details"
+                    : "Create new position rate"
+                }}
               </div>
             </div>
             <v-btn
@@ -202,7 +207,9 @@
                 color="primary"
                 hint="Optional short code for the position"
                 persistent-hint
-                :rules="[(v) => !v || v.length <= 20 || 'Maximum 20 characters']"
+                :rules="[
+                  (v) => !v || v.length <= 20 || 'Maximum 20 characters',
+                ]"
                 counter="20"
               ></v-text-field>
             </div>
@@ -334,7 +341,9 @@
             class="px-6"
             elevation="2"
           >
-            <span class="font-weight-bold">{{ isEditing ? "Update" : "Create" }}</span>
+            <span class="font-weight-bold">{{
+              isEditing ? "Update" : "Create"
+            }}</span>
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -689,7 +698,6 @@ function formatCategory(category) {
 }
 
 .filters-section {
-  
   background: rgba(0, 31, 61, 0.01);
 }
 

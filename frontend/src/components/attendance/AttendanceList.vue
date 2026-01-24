@@ -43,7 +43,6 @@
       </v-row>
     </v-card-text>
 
-
     <!-- Data Table -->
     <v-data-table
       :headers="headers"
@@ -217,7 +216,7 @@ const attendance = ref([]);
 const user = JSON.parse(localStorage.getItem("user") || "{}");
 const canEditRole = computed(() => ["admin", "accountant"].includes(user.role));
 const canApproveRole = computed(() =>
-  ["admin", "accountant", "manager"].includes(user.role)
+  ["admin", "accountant", "manager"].includes(user.role),
 );
 
 const filters = reactive({
