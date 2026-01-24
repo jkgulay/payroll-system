@@ -1,42 +1,33 @@
 <template>
-  <v-card class="modern-card calendar-card" elevation="0">
-    <v-card-title class="d-flex justify-space-between align-center pa-4">
-      <div class="calendar-header">
-        <v-icon size="20" class="mr-2">mdi-calendar-month</v-icon>
-        {{ currentMonthYear }}
+  <div class="calendar-widget">
+    <div class="widget-header">
+      <div class="widget-title-wrapper">
+        <div class="widget-icon-badge">
+          <v-icon size="18">mdi-calendar-month</v-icon>
+        </div>
+        <h2 class="widget-title">{{ currentMonthYear }}</h2>
       </div>
-      <div class="d-flex align-center gap-2">
-        <v-btn 
-          size="small" 
-          color="primary" 
-          variant="flat"
-          prepend-icon="mdi-plus"
-          @click="openEventDialog"
-        >
-          Add Event
-        </v-btn>
-        <v-btn icon size="small" variant="text" @click="previousMonth">
-          <v-icon>mdi-chevron-left</v-icon>
-        </v-btn>
-        <v-btn icon size="small" variant="text" @click="nextMonth">
-          <v-icon>mdi-chevron-right</v-icon>
-        </v-btn>
+      <div class="calendar-nav">
+        <button class="add-event-btn" @click="openEventDialog">
+          <v-icon size="16">mdi-plus</v-icon>
+          <span>Add Event</span>
+        </button>
+        <button class="nav-btn" @click="previousMonth">
+          <v-icon size="16">mdi-chevron-left</v-icon>
+        </button>
+        <button class="nav-btn" @click="nextMonth">
+          <v-icon size="16">mdi-chevron-right</v-icon>
+        </button>
       </div>
-    </v-card-title>
-    
-    <v-divider></v-divider>
-    
-    <v-card-text class="pa-3">
+    </div>
+
+    <div class="widget-content">
       <div class="calendar-grid">
         <!-- Days of week header -->
-        <div
-          v-for="day in daysOfWeek"
-          :key="day"
-          class="calendar-day-header"
-        >
+        <div v-for="day in daysOfWeek" :key="day" class="calendar-day-header">
           {{ day }}
         </div>
-        
+
         <!-- Calendar dates -->
         <div
           v-for="(date, index) in calendarDates"
@@ -48,8 +39,8 @@
               'calendar-date--selected': date.isSelected,
               'calendar-date--other-month': date.isOtherMonth,
               'calendar-date--has-event': date.hasEvent,
-              'calendar-date--holiday': date.isHoliday
-            }
+              'calendar-date--holiday': date.isHoliday,
+            },
           ]"
           @click="selectDate(date)"
         >
@@ -58,31 +49,34 @@
           <div v-if="date.isHoliday" class="holiday-indicator"></div>
         </div>
       </div>
-      
+
       <!-- Events for selected date -->
-      <div v-if="selectedDateEvents.length > 0" class="mt-4">
-        <v-divider class="mb-3"></v-divider>
-        <div class="text-subtitle-2 mb-2">Events on {{ formatDate(selectedDate) }}</div>
-        <div v-for="event in selectedDateEvents" :key="event.id" class="event-item mb-2">
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center">
-              <v-icon size="16" :color="event.color" class="mr-2">{{ event.icon }}</v-icon>
-              <span class="text-body-2">{{ event.title }}</span>
-            </div>
-            <v-btn 
-              icon 
-              size="x-small" 
-              variant="text" 
-              color="error"
-              @click="deleteEvent(event.id)"
+      <div v-if="selectedDateEvents.length > 0" class="selected-events">
+        <div class="selected-events-divider"></div>
+        <div class="selected-events-title">
+          Events on {{ formatDate(selectedDate) }}
+        </div>
+        <div
+          v-for="event in selectedDateEvents"
+          :key="event.id"
+          class="selected-event-item"
+        >
+          <div class="selected-event-left">
+            <div
+              class="selected-event-icon"
+              :style="{ background: getColorValue(event.color) }"
             >
-              <v-icon size="16">mdi-delete</v-icon>
-            </v-btn>
+              <v-icon size="14">{{ event.icon }}</v-icon>
+            </div>
+            <span class="selected-event-title">{{ event.title }}</span>
           </div>
+          <button class="delete-event-btn" @click="deleteEvent(event.id)">
+            <v-icon size="14">mdi-delete</v-icon>
+          </button>
         </div>
       </div>
-    </v-card-text>
-    
+    </div>
+
     <!-- Event Creation Dialog -->
     <v-dialog v-model="eventDialog" max-width="500">
       <v-card>
@@ -94,9 +88,9 @@
             </v-btn>
           </div>
         </v-card-title>
-        
+
         <v-divider></v-divider>
-        
+
         <v-card-text class="pa-4">
           <v-form ref="eventFormRef" @submit.prevent="saveEvent">
             <v-text-field
@@ -107,7 +101,7 @@
               density="comfortable"
               class="mb-3"
             ></v-text-field>
-            
+
             <v-text-field
               v-model="eventForm.date"
               label="Event Date"
@@ -117,7 +111,7 @@
               density="comfortable"
               class="mb-3"
             ></v-text-field>
-            
+
             <v-select
               v-model="eventForm.icon"
               label="Icon"
@@ -142,7 +136,7 @@
                 </v-list-item>
               </template>
             </v-select>
-            
+
             <v-select
               v-model="eventForm.color"
               label="Color"
@@ -155,12 +149,12 @@
             >
               <template v-slot:selection="{ item }">
                 <div class="d-flex align-center">
-                  <div 
-                    :style="{ 
-                      width: '20px', 
-                      height: '20px', 
+                  <div
+                    :style="{
+                      width: '20px',
+                      height: '20px',
                       borderRadius: '4px',
-                      backgroundColor: getColorValue(item.raw.value)
+                      backgroundColor: getColorValue(item.raw.value),
                     }"
                     class="mr-2"
                   ></div>
@@ -170,12 +164,12 @@
               <template v-slot:item="{ item, props }">
                 <v-list-item v-bind="props">
                   <template v-slot:prepend>
-                    <div 
-                      :style="{ 
-                        width: '20px', 
-                        height: '20px', 
+                    <div
+                      :style="{
+                        width: '20px',
+                        height: '20px',
                         borderRadius: '4px',
-                        backgroundColor: getColorValue(item.raw.value)
+                        backgroundColor: getColorValue(item.raw.value),
                       }"
                     ></div>
                   </template>
@@ -184,107 +178,121 @@
             </v-select>
           </v-form>
         </v-card-text>
-        
+
         <v-divider></v-divider>
-        
+
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="closeEventDialog">Cancel</v-btn>
-          <v-btn color="primary" variant="flat" @click="saveEvent">Save Event</v-btn>
+          <v-btn color="primary" variant="flat" @click="saveEvent"
+            >Save Event</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-card>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from "vue";
 
-const currentDate = ref(new Date())
-const selectedDate = ref(new Date())
-const eventDialog = ref(false)
-const eventFormRef = ref(null)
+const currentDate = ref(new Date());
+const selectedDate = ref(new Date());
+const eventDialog = ref(false);
+const eventFormRef = ref(null);
 const eventForm = ref({
-  title: '',
-  date: '',
-  icon: 'mdi-calendar-star',
-  color: 'primary'
-})
+  title: "",
+  date: "",
+  icon: "mdi-calendar-star",
+  color: "primary",
+});
 
 // Sample events - can be replaced with props or API data
 const events = ref([
-  { id: 1, date: new Date(), title: 'Payroll Processing', icon: 'mdi-currency-php', color: 'success' },
-  { id: 2, date: new Date(new Date().setDate(new Date().getDate() + 2)), title: 'Team Meeting', icon: 'mdi-account-group', color: 'primary' }
-])
+  {
+    id: 1,
+    date: new Date(),
+    title: "Payroll Processing",
+    icon: "mdi-currency-php",
+    color: "success",
+  },
+  {
+    id: 2,
+    date: new Date(new Date().setDate(new Date().getDate() + 2)),
+    title: "Team Meeting",
+    icon: "mdi-account-group",
+    color: "primary",
+  },
+]);
 
 // Philippine Holidays for 2025 - can be replaced with API data
 const holidays = ref([
-  { date: new Date(2025, 0, 1), name: 'New Year\'s Day' },
-  { date: new Date(2025, 1, 25), name: 'EDSA Revolution Anniversary' },
-  { date: new Date(2025, 3, 9), name: 'Araw ng Kagitingan' },
-  { date: new Date(2025, 3, 17), name: 'Maundy Thursday' },
-  { date: new Date(2025, 3, 18), name: 'Good Friday' },
-  { date: new Date(2025, 4, 1), name: 'Labor Day' },
-  { date: new Date(2025, 5, 12), name: 'Independence Day' },
-  { date: new Date(2025, 7, 25), name: 'Ninoy Aquino Day' },
-  { date: new Date(2025, 7, 26), name: 'National Heroes Day' },
-  { date: new Date(2025, 10, 1), name: 'All Saints\' Day' },
-  { date: new Date(2025, 10, 30), name: 'Bonifacio Day' },
-  { date: new Date(2025, 11, 8), name: 'Feast of the Immaculate Conception' },
-  { date: new Date(2025, 11, 25), name: 'Christmas Day' },
-  { date: new Date(2025, 11, 30), name: 'Rizal Day' },
-  { date: new Date(2025, 11, 31), name: 'New Year\'s Eve' }
-])
+  { date: new Date(2025, 0, 1), name: "New Year's Day" },
+  { date: new Date(2025, 1, 25), name: "EDSA Revolution Anniversary" },
+  { date: new Date(2025, 3, 9), name: "Araw ng Kagitingan" },
+  { date: new Date(2025, 3, 17), name: "Maundy Thursday" },
+  { date: new Date(2025, 3, 18), name: "Good Friday" },
+  { date: new Date(2025, 4, 1), name: "Labor Day" },
+  { date: new Date(2025, 5, 12), name: "Independence Day" },
+  { date: new Date(2025, 7, 25), name: "Ninoy Aquino Day" },
+  { date: new Date(2025, 7, 26), name: "National Heroes Day" },
+  { date: new Date(2025, 10, 1), name: "All Saints' Day" },
+  { date: new Date(2025, 10, 30), name: "Bonifacio Day" },
+  { date: new Date(2025, 11, 8), name: "Feast of the Immaculate Conception" },
+  { date: new Date(2025, 11, 25), name: "Christmas Day" },
+  { date: new Date(2025, 11, 30), name: "Rizal Day" },
+  { date: new Date(2025, 11, 31), name: "New Year's Eve" },
+]);
 
-const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const iconOptions = [
-  { label: 'Calendar Star', value: 'mdi-calendar-star' },
-  { label: 'Currency PHP', value: 'mdi-currency-php' },
-  { label: 'Account Group', value: 'mdi-account-group' },
-  { label: 'Briefcase', value: 'mdi-briefcase' },
-  { label: 'School', value: 'mdi-school' },
-  { label: 'Heart', value: 'mdi-heart' },
-  { label: 'Party Popper', value: 'mdi-party-popper' },
-  { label: 'Cake', value: 'mdi-cake-variant' },
-  { label: 'Gift', value: 'mdi-gift' },
-  { label: 'Alert', value: 'mdi-alert-circle' }
-]
+  { label: "Calendar Star", value: "mdi-calendar-star" },
+  { label: "Currency PHP", value: "mdi-currency-php" },
+  { label: "Account Group", value: "mdi-account-group" },
+  { label: "Briefcase", value: "mdi-briefcase" },
+  { label: "School", value: "mdi-school" },
+  { label: "Heart", value: "mdi-heart" },
+  { label: "Party Popper", value: "mdi-party-popper" },
+  { label: "Cake", value: "mdi-cake-variant" },
+  { label: "Gift", value: "mdi-gift" },
+  { label: "Alert", value: "mdi-alert-circle" },
+];
 
 const colorOptions = [
-  { label: 'Primary', value: 'primary' },
-  { label: 'Success', value: 'success' },
-  { label: 'Warning', value: 'warning' },
-  { label: 'Error', value: 'error' },
-  { label: 'Info', value: 'info' },
-  { label: 'Purple', value: 'purple' }
-]
+  { label: "Primary", value: "primary" },
+  { label: "Success", value: "success" },
+  { label: "Warning", value: "warning" },
+  { label: "Error", value: "error" },
+  { label: "Info", value: "info" },
+  { label: "Purple", value: "purple" },
+];
 
 const rules = {
-  required: (value) => !!value || 'This field is required'
-}
+  required: (value) => !!value || "This field is required",
+};
 
 const currentMonthYear = computed(() => {
-  return currentDate.value.toLocaleDateString('en-US', { 
-    month: 'long', 
-    year: 'numeric' 
-  })
-})
+  return currentDate.value.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+});
 
 const calendarDates = computed(() => {
-  const year = currentDate.value.getFullYear()
-  const month = currentDate.value.getMonth()
-  
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
-  const prevLastDay = new Date(year, month, 0)
-  
-  const firstDayOfWeek = firstDay.getDay()
-  const lastDate = lastDay.getDate()
-  const prevLastDate = prevLastDay.getDate()
-  
-  const dates = []
-  
+  const year = currentDate.value.getFullYear();
+  const month = currentDate.value.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const prevLastDay = new Date(year, month, 0);
+
+  const firstDayOfWeek = firstDay.getDay();
+  const lastDate = lastDay.getDate();
+  const prevLastDate = prevLastDay.getDate();
+
+  const dates = [];
+
   // Previous month dates
   for (let i = firstDayOfWeek - 1; i >= 0; i--) {
     dates.push({
@@ -293,19 +301,23 @@ const calendarDates = computed(() => {
       isToday: false,
       isSelected: false,
       hasEvent: false,
-      date: new Date(year, month - 1, prevLastDate - i)
-    })
+      date: new Date(year, month - 1, prevLastDate - i),
+    });
   }
-  
+
   // Current month dates
-  const today = new Date()
+  const today = new Date();
   for (let i = 1; i <= lastDate; i++) {
-    const date = new Date(year, month, i)
-    const isToday = isSameDay(date, today)
-    const isSelected = isSameDay(date, selectedDate.value)
-    const hasEvent = events.value.some(event => isSameDay(new Date(event.date), date))
-    const isHoliday = holidays.value.some(holiday => isSameDay(new Date(holiday.date), date))
-    
+    const date = new Date(year, month, i);
+    const isToday = isSameDay(date, today);
+    const isSelected = isSameDay(date, selectedDate.value);
+    const hasEvent = events.value.some((event) =>
+      isSameDay(new Date(event.date), date),
+    );
+    const isHoliday = holidays.value.some((holiday) =>
+      isSameDay(new Date(holiday.date), date),
+    );
+
     dates.push({
       day: i,
       isOtherMonth: false,
@@ -313,12 +325,12 @@ const calendarDates = computed(() => {
       isSelected,
       hasEvent,
       isHoliday,
-      date
-    })
+      date,
+    });
   }
-  
+
   // Next month dates
-  const remainingDays = 42 - dates.length // 6 rows × 7 days
+  const remainingDays = 42 - dates.length; // 6 rows × 7 days
   for (let i = 1; i <= remainingDays; i++) {
     dates.push({
       day: i,
@@ -326,28 +338,30 @@ const calendarDates = computed(() => {
       isToday: false,
       isSelected: false,
       hasEvent: false,
-      date: new Date(year, month + 1, i)
-    })
+      date: new Date(year, month + 1, i),
+    });
   }
-  
-  return dates
-})
+
+  return dates;
+});
 
 const selectedDateEvents = computed(() => {
-  return events.value.filter(event => 
-    isSameDay(new Date(event.date), selectedDate.value)
-  )
-})
+  return events.value.filter((event) =>
+    isSameDay(new Date(event.date), selectedDate.value),
+  );
+});
 
 function isSameDay(date1, date2) {
-  return date1.getDate() === date2.getDate() &&
-         date1.getMonth() === date2.getMonth() &&
-         date1.getFullYear() === date2.getFullYear()
+  return (
+    date1.getDate() === date2.getDate() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getFullYear() === date2.getFullYear()
+  );
 }
 
 function selectDate(date) {
   if (!date.isOtherMonth) {
-    selectedDate.value = date.date
+    selectedDate.value = date.date;
   }
 }
 
@@ -355,115 +369,214 @@ function previousMonth() {
   currentDate.value = new Date(
     currentDate.value.getFullYear(),
     currentDate.value.getMonth() - 1,
-    1
-  )
+    1,
+  );
 }
 
 function nextMonth() {
   currentDate.value = new Date(
     currentDate.value.getFullYear(),
     currentDate.value.getMonth() + 1,
-    1
-  )
+    1,
+  );
 }
 
 function openEventDialog() {
   // Set default date to selected date
-  const year = selectedDate.value.getFullYear()
-  const month = String(selectedDate.value.getMonth() + 1).padStart(2, '0')
-  const day = String(selectedDate.value.getDate()).padStart(2, '0')
-  eventForm.value.date = `${year}-${month}-${day}`
-  eventDialog.value = true
+  const year = selectedDate.value.getFullYear();
+  const month = String(selectedDate.value.getMonth() + 1).padStart(2, "0");
+  const day = String(selectedDate.value.getDate()).padStart(2, "0");
+  eventForm.value.date = `${year}-${month}-${day}`;
+  eventDialog.value = true;
 }
 
 function closeEventDialog() {
-  eventDialog.value = false
+  eventDialog.value = false;
   eventForm.value = {
-    title: '',
-    date: '',
-    icon: 'mdi-calendar-star',
-    color: 'primary'
-  }
+    title: "",
+    date: "",
+    icon: "mdi-calendar-star",
+    color: "primary",
+  };
   if (eventFormRef.value) {
-    eventFormRef.value.reset()
+    eventFormRef.value.reset();
   }
 }
 
 async function saveEvent() {
-  if (!eventFormRef.value) return
-  
-  const { valid } = await eventFormRef.value.validate()
-  if (!valid) return
-  
+  if (!eventFormRef.value) return;
+
+  const { valid } = await eventFormRef.value.validate();
+  if (!valid) return;
+
   const newEvent = {
     id: Date.now(), // Simple ID generation
     title: eventForm.value.title,
     date: new Date(eventForm.value.date),
     icon: eventForm.value.icon,
-    color: eventForm.value.color
-  }
-  
-  events.value.push(newEvent)
-  
+    color: eventForm.value.color,
+  };
+
+  events.value.push(newEvent);
+
   // Save to localStorage
-  localStorage.setItem('calendar_events', JSON.stringify(events.value))
-  
-  closeEventDialog()
+  localStorage.setItem("calendar_events", JSON.stringify(events.value));
+
+  closeEventDialog();
 }
 
 function deleteEvent(eventId) {
-  const index = events.value.findIndex(e => e.id === eventId)
+  const index = events.value.findIndex((e) => e.id === eventId);
   if (index !== -1) {
-    events.value.splice(index, 1)
+    events.value.splice(index, 1);
     // Update localStorage
-    localStorage.setItem('calendar_events', JSON.stringify(events.value))
+    localStorage.setItem("calendar_events", JSON.stringify(events.value));
   }
 }
 
 function formatDate(date) {
-  return date.toLocaleDateString('en-US', { 
-    month: 'long', 
-    day: 'numeric',
-    year: 'numeric'
-  })
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function getColorValue(colorName) {
   const colorMap = {
-    primary: '#6366f1',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-    info: '#3b82f6',
-    purple: '#8b5cf6'
-  }
-  return colorMap[colorName] || '#6366f1'
+    primary: "#6366f1",
+    success: "#10b981",
+    warning: "#f59e0b",
+    error: "#ef4444",
+    info: "#3b82f6",
+    purple: "#8b5cf6",
+  };
+  return colorMap[colorName] || "#6366f1";
 }
 
 // Load events from localStorage on mount
 onMounted(() => {
-  const savedEvents = localStorage.getItem('calendar_events')
+  const savedEvents = localStorage.getItem("calendar_events");
   if (savedEvents) {
     try {
-      const parsed = JSON.parse(savedEvents)
+      const parsed = JSON.parse(savedEvents);
       // Convert date strings back to Date objects
-      events.value = parsed.map(event => ({
+      events.value = parsed.map((event) => ({
         ...event,
-        date: new Date(event.date)
-      }))
+        date: new Date(event.date),
+      }));
     } catch (e) {
-      console.error('Error loading events:', e)
+      console.error("Error loading events:", e);
     }
   }
-})
+});
 </script>
 
 <style scoped lang="scss">
-.calendar-header {
-  font-weight: 600;
-  font-size: 0.95rem;
+.calendar-widget {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.widget-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.widget-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.widget-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.widget-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-event-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+  }
+}
+
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(237, 152, 95, 0.1);
+  border: 1px solid rgba(237, 152, 95, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+
+  &:hover {
+    background: rgba(237, 152, 95, 0.15);
+    border-color: rgba(237, 152, 95, 0.3);
+  }
+}
+
+.widget-content {
+  padding: 16px 24px;
 }
 
 .calendar-grid {
@@ -491,57 +604,58 @@ onMounted(() => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover:not(.calendar-date--other-month) {
-    background-color: rgba(99, 102, 241, 0.1);
+    background-color: rgba(237, 152, 95, 0.1);
   }
-  
+
   .date-number {
     font-size: 0.875rem;
     font-weight: 500;
+    color: #001f3d;
   }
-  
+
   &.calendar-date--other-month {
     opacity: 0.3;
     cursor: default;
-    
+
     &:hover {
       background-color: transparent;
     }
   }
-  
+
   &.calendar-date--today {
-    background-color: rgba(99, 102, 241, 0.15);
+    background-color: rgba(237, 152, 95, 0.15);
     font-weight: 700;
-    
+
     .date-number {
-      color: rgb(99, 102, 241);
+      color: #ed985f;
     }
   }
-  
+
   &.calendar-date--selected {
-    background-color: rgb(99, 102, 241);
-    
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+
     .date-number {
       color: white;
     }
-    
+
     .event-indicator {
       background-color: white;
     }
   }
-  
+
   .event-indicator {
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background-color: rgb(99, 102, 241);
+    background-color: #ed985f;
     position: absolute;
     bottom: 4px;
     left: 50%;
     transform: translateX(-50%);
   }
-  
+
   .holiday-indicator {
     width: 5px;
     height: 5px;
@@ -551,7 +665,7 @@ onMounted(() => {
     top: 4px;
     right: 4px;
   }
-  
+
   &.calendar-date--holiday {
     .date-number {
       color: #ef4444;
@@ -559,10 +673,85 @@ onMounted(() => {
   }
 }
 
-.event-item {
-  padding: 8px;
-  background-color: rgba(99, 102, 241, 0.05);
+.selected-events {
+  margin-top: 16px;
+}
+
+.selected-events-divider {
+  height: 1px;
+  background: rgba(0, 31, 61, 0.08);
+  margin-bottom: 16px;
+}
+
+.selected-events-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #001f3d;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.selected-event-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(237, 152, 95, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #ed985f;
+  margin-bottom: 8px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.selected-event-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.selected-event-icon {
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
-  border-left: 3px solid rgb(99, 102, 241);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.selected-event-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #001f3d;
+}
+
+.delete-event-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  .v-icon {
+    color: #f44336 !important;
+  }
+
+  &:hover {
+    background: rgba(244, 67, 54, 0.15);
+    border-color: rgba(244, 67, 54, 0.3);
+  }
 }
 </style>
