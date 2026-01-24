@@ -1,31 +1,41 @@
 <template>
-  <div>
-    <v-row class="mb-4">
-      <v-col cols="12" md="6">
-        <h1 class="text-h4 font-weight-bold">Employees</h1>
-      </v-col>
-      <v-col cols="12" md="6" class="text-right">
-        <v-btn
-          color="success"
-          prepend-icon="mdi-file-upload"
-          class="mr-2"
-          :to="{ name: 'employees-import' }"
-        >
-          Import Employees
-        </v-btn>
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-account-plus"
-          @click="showAddEmployeeDialog = true"
-        >
-          Add Employee
-        </v-btn>
-      </v-col>
-    </v-row>
+  <div class="employees-page">
+    <!-- Modern Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="page-title-section">
+          <div class="page-icon-badge">
+            <v-icon size="22">mdi-account-group</v-icon>
+          </div>
+          <div>
+            <h1 class="page-title">Employee Management</h1>
+            <p class="page-subtitle">
+              Manage and track all employee information
+            </p>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button
+            class="action-btn action-btn-secondary"
+            @click="$router.push({ name: 'employees-import' })"
+          >
+            <v-icon size="20">mdi-file-upload</v-icon>
+            <span>Import Employees</span>
+          </button>
+          <button
+            class="action-btn action-btn-primary"
+            @click="showAddEmployeeDialog = true"
+          >
+            <v-icon size="20">mdi-account-plus</v-icon>
+            <span>Add Employee</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
-    <v-card>
-      <v-card-text>
-        <v-row class="mb-4" align="center" dense>
+    <div class="modern-card">
+      <div class="filters-section">
+        <v-row class="mb-0" align="center" dense>
           <v-col cols="12" md="3">
             <v-text-field
               v-model="search"
@@ -88,7 +98,7 @@
           </v-col>
           <v-col cols="auto" class="d-flex align-center">
             <v-btn
-              color="primary"
+              color="#ED985F"
               variant="tonal"
               icon="mdi-refresh"
               @click="refreshEmployees"
@@ -106,7 +116,10 @@
             ></v-btn>
           </v-col>
         </v-row>
+      </div>
 
+
+      <div class="table-section">
         <v-data-table
           :headers="headers"
           :items="employeeStore.employees"
@@ -117,6 +130,7 @@
           @update:page="onPageChange"
           @update:items-per-page="onItemsPerPageChange"
           hover
+          class="elevation-0"
         >
           <template v-slot:item.employee_number="{ item }">
             <strong>{{ item.employee_number }}</strong>
@@ -147,16 +161,6 @@
                 @{{ item.username }}
               </div>
             </div>
-          </template>
-
-          <template v-slot:item.email="{ item }">
-            <span v-if="item.email">{{ item.email }}</span>
-            <span v-else class="text-medium-emphasis">--</span>
-          </template>
-
-          <template v-slot:item.mobile_number="{ item }">
-            <span v-if="item.mobile_number">{{ item.mobile_number }}</span>
-            <span v-else class="text-medium-emphasis">--</span>
           </template>
 
           <template v-slot:item.department="{ item }">
@@ -324,16 +328,21 @@
             </v-menu>
           </template>
         </v-data-table>
-      </v-card-text>
-    </v-card>
+      </div>
+    </div>
 
     <!-- Process Resignation Dialog -->
     <v-dialog v-model="showResignDialog" max-width="600">
       <v-card>
-        <v-card-title class="pa-6">
-          <v-icon left color="warning">mdi-briefcase-remove-outline</v-icon>
-          Process Employee Resignation
-        </v-card-title>
+        <div class="dialog-header">
+          <div class="header-icon-badge">
+            <v-icon size="24">mdi-briefcase-remove-outline</v-icon>
+          </div>
+          <div>
+            <div class="header-title">Process Employee Resignation</div>
+            <div class="header-subtitle">Submit resignation request on behalf of employee</div>
+          </div>
+        </div>
 
         <v-divider></v-divider>
 
@@ -380,13 +389,20 @@
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="showResignDialog = false">Cancel</v-btn>
+          <v-btn 
+            variant="outlined" 
+            class="cancel-btn"
+            @click="showResignDialog = false"
+          >
+            Cancel
+          </v-btn>
           <v-btn
-            color="warning"
+            class="primary-action-btn"
             @click="submitResignation"
             :loading="processing"
             :disabled="!resignFormValid"
           >
+            <v-icon start>mdi-check</v-icon>
             Submit Resignation
           </v-btn>
         </v-card-actions>
@@ -401,13 +417,15 @@
       persistent
     >
       <v-card>
-        <v-card-title
-          class="text-h5 py-4"
-          :class="isEditing ? 'bg-primary' : 'bg-info'"
-        >
-          <v-icon start>{{ isEditing ? "mdi-pencil" : "mdi-eye" }}</v-icon>
-          {{ isEditing ? "Edit Employee" : "Employee Details" }}
-        </v-card-title>
+        <div class="dialog-header">
+          <div class="header-icon-badge">
+            <v-icon size="24">{{ isEditing ? "mdi-pencil" : "mdi-eye" }}</v-icon>
+          </div>
+          <div>
+            <div class="header-title">{{ isEditing ? "Edit Employee" : "Employee Details" }}</div>
+            <div class="header-subtitle">{{ isEditing ? "Update employee information" : "View complete employee information" }}</div>
+          </div>
+        </div>
         <v-divider></v-divider>
 
         <v-card-text class="pt-4" style="max-height: 70vh">
@@ -722,29 +740,32 @@
         <v-divider></v-divider>
 
         <v-card-actions class="pa-4">
-          <v-btn
-            v-if="!isEditing"
-            color="primary"
-            variant="elevated"
-            size="large"
-            @click="isEditing = true"
-            prepend-icon="mdi-pencil"
-          >
-            Edit
-          </v-btn>
           <v-spacer></v-spacer>
-          <v-btn variant="text" size="large" @click="closeDialog">
+          <v-btn 
+            variant="outlined" 
+            class="cancel-btn"
+            size="large" 
+            @click="closeDialog"
+          >
             {{ isEditing ? "Cancel" : "Close" }}
           </v-btn>
           <v-btn
+            v-if="!isEditing"
+            class="primary-action-btn"
+            size="large"
+            @click="toggleEditMode"
+          >
+            <v-icon start>mdi-pencil</v-icon>
+            Edit
+          </v-btn>
+          <v-btn
             v-if="isEditing"
-            color="primary"
-            variant="elevated"
+            class="primary-action-btn"
             size="large"
             @click="saveEmployee"
             :loading="saving"
-            prepend-icon="mdi-content-save"
           >
+            <v-icon start>mdi-content-save</v-icon>
             Save Changes
           </v-btn>
         </v-card-actions>
@@ -761,10 +782,15 @@
     <!-- Temporary Password Dialog -->
     <v-dialog v-model="showPasswordDialog" max-width="600px" persistent>
       <v-card>
-        <v-card-title class="text-h5 py-4 bg-success">
-          <v-icon start>mdi-shield-check</v-icon>
-          Employee Account Created
-        </v-card-title>
+        <div class="dialog-header">
+          <div class="header-icon-badge">
+            <v-icon size="24">mdi-shield-check</v-icon>
+          </div>
+          <div>
+            <div class="header-title">Employee Account Created</div>
+            <div class="header-subtitle">Save these credentials - they will not be shown again</div>
+          </div>
+        </div>
         <v-divider></v-divider>
 
         <v-card-text class="pt-6">
@@ -818,14 +844,19 @@
 
         <v-card-actions class="pa-4">
           <v-btn
-            variant="text"
+            variant="outlined"
+            class="cancel-btn"
             prepend-icon="mdi-content-copy"
             @click="copyCredentials"
           >
-            Copy
+            Copy Credentials
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn color="primary" @click="showPasswordDialog = false">
+          <v-btn 
+            class="primary-action-btn" 
+            @click="showPasswordDialog = false"
+          >
+            <v-icon start>mdi-check</v-icon>
             Done
           </v-btn>
         </v-card-actions>
@@ -835,10 +866,15 @@
     <!-- View Credentials Dialog -->
     <v-dialog v-model="showCredentialsDialog" max-width="600px">
       <v-card>
-        <v-card-title class="text-h5 py-4 bg-info">
-          <v-icon start>mdi-account-key</v-icon>
-          Employee Credentials
-        </v-card-title>
+        <div class="dialog-header">
+          <div class="header-icon-badge">
+            <v-icon size="24">mdi-account-key</v-icon>
+          </div>
+          <div>
+            <div class="header-title">Employee Credentials</div>
+            <div class="header-subtitle">View and manage employee login credentials</div>
+          </div>
+        </div>
         <v-divider></v-divider>
 
         <v-card-text class="pt-6">
@@ -915,7 +951,8 @@
 
         <v-card-actions class="pa-4">
           <v-btn
-            variant="text"
+            variant="outlined"
+            class="cancel-btn"
             prepend-icon="mdi-content-copy"
             @click="copyEmployeeCredentials"
             :disabled="loadingCredentials"
@@ -923,16 +960,22 @@
             Copy
           </v-btn>
           <v-btn
-            variant="text"
+            variant="outlined"
+            class="secondary-action-btn"
             prepend-icon="mdi-lock-reset"
-            color="warning"
             @click="resetEmployeePassword"
             :loading="resettingPassword"
           >
             Generate New Password
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn color="primary" @click="closeCredentialsDialog"> Close </v-btn>
+          <v-btn 
+            class="primary-action-btn" 
+            @click="closeCredentialsDialog"
+          >
+            <v-icon start>mdi-check</v-icon>
+            Close
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -940,10 +983,15 @@
     <!-- Pay Rate Update Dialog -->
     <v-dialog v-model="showPayRateDialog" max-width="600px">
       <v-card>
-        <v-card-title class="text-h5 py-4 bg-success">
-          <v-icon start>mdi-cash</v-icon>
-          Update Employee Pay Rate
-        </v-card-title>
+        <div class="dialog-header">
+          <div class="header-icon-badge">
+            <v-icon size="24">mdi-cash</v-icon>
+          </div>
+          <div>
+            <div class="header-title">Update Employee Pay Rate</div>
+            <div class="header-subtitle">Set custom pay rate for employee</div>
+          </div>
+        </div>
         <v-divider></v-divider>
 
         <v-card-text class="pt-6">
@@ -1037,18 +1085,24 @@
         <v-card-actions class="pa-4">
           <v-btn
             v-if="payRateEmployee?.custom_pay_rate"
-            variant="text"
+            variant="outlined"
+            class="secondary-action-btn"
             prepend-icon="mdi-restore"
-            color="warning"
             @click="clearCustomPayRate"
             :loading="clearingPayRate"
           >
             Clear Custom Rate
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closePayRateDialog"> Cancel </v-btn>
+          <v-btn 
+            variant="outlined" 
+            class="cancel-btn"
+            @click="closePayRateDialog"
+          >
+            Cancel
+          </v-btn>
           <v-btn
-            color="success"
+            class="primary-action-btn"
             @click="updatePayRate"
             :loading="updatingPayRate"
             :disabled="!payRateFormValid"
@@ -1145,8 +1199,6 @@ const headers = [
   { title: "Biometric ID", key: "biometric_id", sortable: false },
   { title: "Name", key: "full_name", sortable: true },
   { title: "Gender", key: "gender", sortable: true },
-  { title: "Email", key: "email", sortable: false },
-  { title: "Mobile", key: "mobile_number", sortable: false },
   { title: "Department", key: "department", sortable: true },
   { title: "Position", key: "position", sortable: true },
   { title: "Pay Rate", key: "pay_rate", sortable: false },
@@ -1719,3 +1771,244 @@ function formatSalaryDisplay(employee) {
   return "0.00";
 }
 </script>
+
+<style scoped lang="scss">
+.employees-page {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+
+  @media (max-width: 960px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.page-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.page-icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  flex-shrink: 0;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: rgba(0, 31, 61, 0.6);
+  margin: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  @media (max-width: 960px) {
+    width: 100%;
+  }
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+
+  .v-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
+  }
+
+  &.action-btn-primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+  }
+
+  &.action-btn-secondary {
+    background: rgba(237, 152, 95, 0.1);
+    color: #ed985f;
+    border: 1px solid rgba(237, 152, 95, 0.2);
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+
+    &:hover {
+      background: rgba(237, 152, 95, 0.15);
+      border-color: rgba(237, 152, 95, 0.3);
+    }
+  }
+}
+
+.modern-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-bottom: 24px;
+    padding: 24px;
+}
+
+.filters-section {
+  background: rgba(0, 31, 61, 0.01);
+    margin-bottom: 24px;
+
+}
+
+.table-section {
+  background: #ffffff;
+}
+
+.v-data-table {
+  ::v-deep .v-data-table__wrapper {
+    border-radius: 0;
+  }
+
+  ::v-deep .v-data-table-header {
+    background-color: rgba(0, 31, 61, 0.02);
+  }
+
+  ::v-deep .v-data-table__th {
+    font-weight: 600;
+    color: #001f3d;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  ::v-deep tbody tr {
+    transition: background-color 0.2s ease;
+  }
+
+  ::v-deep tbody tr:hover {
+    background-color: rgba(237, 152, 95, 0.04) !important;
+  }
+
+  ::v-deep .v-data-table__td {
+    border-bottom: 1px solid rgba(0, 31, 61, 0.06);
+  }
+}
+
+/* Dialog Styles */
+.dialog-header {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #001f3d 0%, #003d5c 100%);
+}
+
+.header-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  flex-shrink: 0;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 4px 0 0 0;
+  line-height: 1.3;
+}
+
+.primary-action-btn {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  border-radius: 10px;
+  padding: 0 24px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  transition: all 0.2s ease;
+}
+
+.primary-action-btn:hover {
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+  transform: translateY(-1px);
+}
+
+.cancel-btn,
+.secondary-action-btn {
+  border-radius: 10px;
+  padding: 0 24px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+  border: 1.5px solid rgba(0, 31, 61, 0.15);
+  color: #001f3d;
+}
+
+.cancel-btn:hover,
+.secondary-action-btn:hover {
+  background: rgba(0, 31, 61, 0.04);
+  border-color: rgba(0, 31, 61, 0.25);
+}
+</style>

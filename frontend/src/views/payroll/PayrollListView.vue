@@ -1,95 +1,99 @@
 <template>
-  <v-container fluid class="pa-6">
-    <!-- Header -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <div class="d-flex justify-space-between align-center">
+  <div class="payroll-page">
+    <!-- Modern Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="page-title-section">
+          <div class="page-icon-badge">
+            <v-icon size="22">mdi-cash-multiple</v-icon>
+          </div>
           <div>
-            <h1 class="text-h4 font-weight-bold mb-2">
-              <v-icon
-                icon="mdi-cash-multiple"
-                size="large"
-                class="mr-2"
-              ></v-icon>
-              Payroll Management
-            </h1>
-            <p class="text-subtitle-1 text-medium-emphasis">
+            <h1 class="page-title">Payroll Management</h1>
+            <p class="page-subtitle">
               Create, manage and process payroll for all employees
             </p>
           </div>
-          <v-btn
-            color="primary"
-            size="large"
-            prepend-icon="mdi-plus"
-            @click="openCreateDialog"
-          >
-            Create Payroll
-          </v-btn>
         </div>
-      </v-col>
-    </v-row>
+        <div class="action-buttons">
+          <button class="action-btn action-btn-primary" @click="openCreateDialog">
+            <v-icon size="20">mdi-plus</v-icon>
+            <span>Create Payroll</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
-    <!-- Stats Cards -->
-    <v-row class="mb-4">
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="text-overline mb-1">Total Payrolls</div>
-            <div class="text-h5 font-weight-bold">{{ stats.total }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="text-overline mb-1">Draft</div>
-            <div class="text-h5 font-weight-bold text-warning">
-              {{ stats.draft }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="text-overline mb-1">Finalized</div>
-            <div class="text-h5 font-weight-bold text-info">
-              {{ stats.finalized }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="text-overline mb-1">Paid</div>
-            <div class="text-h5 font-weight-bold text-success">
-              {{ stats.paid }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- Modern Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <v-icon size="24">mdi-cash-multiple</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Payrolls</div>
+          <div class="stat-value">{{ stats.total }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon draft">
+          <v-icon size="24">mdi-file-edit-outline</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Draft</div>
+          <div class="stat-value warning">{{ stats.draft }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon finalized">
+          <v-icon size="24">mdi-file-check-outline</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Finalized</div>
+          <div class="stat-value info">{{ stats.finalized }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon paid">
+          <v-icon size="24">mdi-check-circle</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Paid</div>
+          <div class="stat-value success">{{ stats.paid }}</div>
+        </div>
+      </div>
+    </div>
 
     <!-- Payroll List -->
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        <v-icon icon="mdi-format-list-bulleted" class="mr-2"></v-icon>
-        Payroll Records
-        <v-spacer></v-spacer>
-        <v-text-field
-          v-model="search"
-          prepend-inner-icon="mdi-magnify"
-          label="Search payroll..."
-          single-line
-          hide-details
-          density="compact"
-          class="mr-4"
-          style="max-width: 300px"
-        ></v-text-field>
-      </v-card-title>
+    <div class="modern-card">
+      <div class="filters-section">
+        <v-row align="center" class="mb-0">
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="search"
+              prepend-inner-icon="mdi-magnify"
+              label="Search payroll..."
+              clearable
+              variant="outlined"
+              density="comfortable"
+              hide-details
+            ></v-text-field>
+          </v-col>
+          <v-col cols="auto">
+            <v-btn
+              color="#ED985F"
+              variant="tonal"
+              icon="mdi-refresh"
+              @click="loadPayrolls"
+              :loading="loading"
+              title="Refresh"
+            ></v-btn>
+          </v-col>
+        </v-row>
+      </div>
 
-      <v-data-table
+
+      <div class="table-section">
+        <v-data-table
         :headers="headers"
         :items="payrolls"
         :search="search"
@@ -166,21 +170,22 @@
           >
           </v-btn>
         </template>
-      </v-data-table>
-    </v-card>
+        </v-data-table>
+      </div>
+    </div>
 
     <!-- Create/Edit Dialog - Modern UI -->
     <v-dialog v-model="dialog" max-width="800" persistent>
       <v-card class="modern-dialog-card" elevation="24">
         <!-- Enhanced Header -->
-        <v-card-title class="modern-dialog-header modern-dialog-header-success">
+        <v-card-title class="modern-dialog-header">
           <div class="d-flex align-center w-100">
-            <v-avatar color="white" size="48" class="mr-4">
-              <v-icon color="success" size="32">{{
+            <div class="dialog-icon-badge">
+              <v-icon size="24">{{
                 editMode ? "mdi-pencil" : "mdi-cash-multiple"
               }}</v-icon>
-            </v-avatar>
-            <div>
+            </div>
+            <div class="flex-grow-1">
               <div class="text-h5 font-weight-bold">
                 {{ editMode ? "Edit" : "Create" }} Payroll
               </div>
@@ -192,7 +197,6 @@
                 }}
               </div>
             </div>
-            <v-spacer></v-spacer>
             <v-btn
               icon
               variant="text"
@@ -621,7 +625,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -939,8 +943,250 @@ function formatCurrency(amount) {
 }
 </script>
 
-<style scoped>
-.v-card {
+<style scoped lang="scss">
+.payroll-page {
+    max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+
+  @media (max-width: 960px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.page-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.page-icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  flex-shrink: 0;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: rgba(0, 31, 61, 0.6);
+  margin: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  @media (max-width: 960px) {
+    width: 100%;
+  }
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+
+  .v-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
+  }
+
+  &.action-btn-primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.stat-icon.total {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+}
+
+.stat-icon.draft {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.stat-icon.finalized {
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+}
+
+.stat-icon.paid {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1;
+}
+
+.stat-value.warning {
+  color: #f59e0b;
+}
+
+.stat-value.info {
+  color: #3b82f6;
+}
+
+.stat-value.success {
+  color: #10b981;
+}
+
+.modern-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  padding: 24px;
+}
+
+.filters-section {
+  background: rgba(0, 31, 61, 0.01);
+}
+
+.table-section {
+  background: #ffffff;
+}
+
+.modern-dialog-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.modern-dialog-header {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  padding: 24px;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.dialog-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 16px;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+}
+
+.form-field-wrapper {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
 }
 </style>

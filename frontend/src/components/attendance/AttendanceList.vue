@@ -35,7 +35,7 @@
           ></v-select>
         </v-col>
         <v-col cols="12" md="3">
-          <v-btn color="primary" block @click="loadAttendance">
+          <v-btn color="#ED985F" block @click="loadAttendance">
             <v-icon start>mdi-magnify</v-icon>
             Search
           </v-btn>
@@ -43,7 +43,6 @@
       </v-row>
     </v-card-text>
 
-    <v-divider></v-divider>
 
     <!-- Data Table -->
     <v-data-table

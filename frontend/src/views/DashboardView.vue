@@ -7,7 +7,7 @@
           <v-icon size="16" class="welcome-icon">mdi-chart-box</v-icon>
           <span>Dashboard Overview</span>
         </div>
-        <h1 class="dashboard-title">Welcome back, {{ first_name || "Admin" }}</h1>
+        <h1 class="dashboard-title">Welcome back, {{ fullName }}</h1>
         <p class="dashboard-subtitle">{{ currentDateRange }}</p>
       </div>
       <div class="header-actions">
@@ -671,6 +671,7 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
@@ -684,6 +685,7 @@ import RecentActivityWidget from "@/components/audit/RecentActivityWidget.vue";
 
 const toast = useToast();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const stats = ref({
   totalEmployees: 0,
@@ -734,6 +736,10 @@ const currentDateRange = computed(() => {
     day: "numeric",
     year: "numeric",
   })}`;
+});
+
+const fullName = computed(() => {
+  return authStore.user?.name || authStore.user?.username || "Admin";
 });
 
 // Circular progress for community growth

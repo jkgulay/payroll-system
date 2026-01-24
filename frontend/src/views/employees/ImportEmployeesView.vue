@@ -1,23 +1,32 @@
 <template>
-  <v-container fluid class="pa-6">
-    <v-card>
-      <v-card-title class="d-flex align-center justify-space-between">
-        <div class="d-flex align-center">
-          <v-icon class="mr-2">mdi-file-upload</v-icon>
-          <span>Import Employees</span>
+  <div class="import-page">
+    <!-- Modern Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="page-title-section">
+          <div class="page-icon-badge">
+            <v-icon size="20">mdi-file-upload</v-icon>
+          </div>
+          <div>
+            <h1 class="page-title">Import Employees</h1>
+            <p class="page-subtitle">
+              Bulk import employee data from Excel files
+            </p>
+          </div>
         </div>
-        <v-btn
-          color="primary"
-          variant="text"
-          @click="downloadTemplate"
-          prepend-icon="mdi-download"
-        >
-          Download Template
-        </v-btn>
-      </v-card-title>
+        <div class="action-buttons">
+          <button
+            class="action-btn action-btn-secondary"
+            @click="downloadTemplate"
+          >
+            <v-icon size="20">mdi-download</v-icon>
+            <span>Download Template</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
-      <v-divider></v-divider>
-
+    <v-card class="modern-card">
       <v-card-text>
         <v-alert type="info" variant="tonal" class="mb-4">
           <p class="font-weight-bold mb-2">Import Process:</p>
@@ -230,7 +239,7 @@
         </v-card>
       </v-card-text>
     </v-card>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -430,24 +439,107 @@ const resetImport = () => {
 };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.import-page {
+  padding: 24px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  color: white;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn-secondary {
+  background: white;
+  color: #001f3d;
+  border: 1.5px solid rgba(0, 31, 61, 0.15);
+}
+
+.action-btn-secondary:hover {
+  background: rgba(0, 31, 61, 0.04);
+  border-color: rgba(0, 31, 61, 0.25);
+}
+
+.modern-card {
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 31, 61, 0.08);
+}
+
 .drop-zone {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
+  border: 2px dashed rgba(237, 152, 95, 0.3);
+  border-radius: 16px;
   padding: 60px 20px;
   text-align: center;
   transition: all 0.3s ease;
-  background-color: #fafafa;
+  background-color: rgba(237, 152, 95, 0.02);
 }
 
 .drop-zone-active {
-  border-color: #1976d2;
-  background-color: #e3f2fd;
+  border-color: #ed985f;
+  background-color: rgba(237, 152, 95, 0.08);
 }
 
 .drop-zone:hover {
-  border-color: #1976d2;
-  background-color: #f5f5f5;
+  border-color: #ed985f;
+  background-color: rgba(237, 152, 95, 0.05);
 }
 
 .error-field {

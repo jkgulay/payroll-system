@@ -1,22 +1,31 @@
 <template>
-  <div>
-    <v-row class="mb-4">
-      <v-col cols="12" md="6">
-        <h1 class="text-h4 font-weight-bold">Position Rates Management</h1>
-        <p class="text-body-2 text-medium-emphasis">
-          Manage pay rates for different positions
-        </p>
-      </v-col>
-      <v-col cols="12" md="6" class="text-right">
-        <v-btn color="primary" prepend-icon="mdi-plus" @click="openAddDialog">
-          Add Position Rate
-        </v-btn>
-      </v-col>
-    </v-row>
+  <div class="position-rates-page">
+    <!-- Modern Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="page-title-section">
+          <div class="page-icon-badge">
+            <v-icon size="22">mdi-badge-account</v-icon>
+          </div>
+          <div>
+            <h1 class="page-title">Position Rates Management</h1>
+            <p class="page-subtitle">
+              Manage pay rates for different positions
+            </p>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="action-btn action-btn-primary" @click="openAddDialog">
+            <v-icon size="20">mdi-plus</v-icon>
+            <span>Add Position Rate</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
-    <v-card>
-      <v-card-text>
-        <v-row class="mb-4" align="center">
+    <div class="modern-card">
+      <div class="filters-section">
+        <v-row class="mb-0" align="center">
           <v-col cols="12" md="4">
             <v-text-field
               v-model="search"
@@ -49,7 +58,7 @@
           </v-col>
           <v-col cols="auto">
             <v-btn
-              color="primary"
+              color="#ED985F"
               variant="tonal"
               icon="mdi-refresh"
               @click="loadPositionRates"
@@ -58,7 +67,10 @@
             ></v-btn>
           </v-col>
         </v-row>
+      </div>
 
+
+      <div class="table-section">
         <v-data-table
           :headers="headers"
           :items="filteredPositions"
@@ -122,64 +134,102 @@
             ></v-btn>
           </template>
         </v-data-table>
-      </v-card-text>
-    </v-card>
+      </div>
+    </div>
 
     <!-- Add/Edit Position Rate Dialog -->
     <v-dialog v-model="showDialog" max-width="600px" persistent>
-      <v-card>
-        <v-card-title
-          class="text-h5 py-4"
-          :class="isEditing ? 'bg-primary' : 'bg-success'"
-        >
-          <v-icon start>{{ isEditing ? "mdi-pencil" : "mdi-plus" }}</v-icon>
-          {{ isEditing ? "Edit Position Rate" : "Add New Position Rate" }}
+      <v-card class="modern-dialog-card" elevation="24">
+        <v-card-title class="modern-dialog-header">
+          <div class="d-flex align-center w-100">
+            <div class="dialog-icon-badge">
+              <v-icon size="24">{{ isEditing ? "mdi-pencil" : "mdi-plus" }}</v-icon>
+            </div>
+            <div class="flex-grow-1">
+              <div class="text-h5 font-weight-bold">
+                {{ isEditing ? "Edit Position Rate" : "Add New Position Rate" }}
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ isEditing ? "Update position rate details" : "Create new position rate" }}
+              </div>
+            </div>
+            <v-btn
+              icon
+              variant="text"
+              color="white"
+              @click="closeDialog"
+              size="small"
+            >
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6">
+        <v-card-text class="pa-6">
           <v-form ref="form" v-model="formValid">
-            <v-text-field
-              v-model="formData.position_name"
-              label="Position Name *"
-              prepend-inner-icon="mdi-badge-account"
-              variant="outlined"
-              :rules="[
-                (v) => !!v || 'Position name is required',
-                (v) => (v && v.length <= 100) || 'Maximum 100 characters',
-              ]"
-              counter="100"
-              class="mb-4"
-            ></v-text-field>
+            <div class="form-field-wrapper">
+              <label class="form-label">
+                <v-icon size="small" color="#ED985F">mdi-badge-account</v-icon>
+                Position Name <span class="text-error">*</span>
+              </label>
+              <v-text-field
+                v-model="formData.position_name"
+                placeholder="Enter position name"
+                prepend-inner-icon="mdi-badge-account"
+                variant="outlined"
+                density="comfortable"
+                color="primary"
+                :rules="[
+                  (v) => !!v || 'Position name is required',
+                  (v) => (v && v.length <= 100) || 'Maximum 100 characters',
+                ]"
+                counter="100"
+              ></v-text-field>
+            </div>
 
-            <v-text-field
-              v-model="formData.code"
-              label="Position Code"
-              prepend-inner-icon="mdi-barcode"
-              variant="outlined"
-              hint="Optional short code for the position"
-              persistent-hint
-              :rules="[(v) => !v || v.length <= 20 || 'Maximum 20 characters']"
-              counter="20"
-              class="mb-4"
-            ></v-text-field>
+            <div class="form-field-wrapper">
+              <label class="form-label">
+                <v-icon size="small" color="#ED985F">mdi-barcode</v-icon>
+                Position Code
+              </label>
+              <v-text-field
+                v-model="formData.code"
+                placeholder="Optional short code"
+                prepend-inner-icon="mdi-barcode"
+                variant="outlined"
+                density="comfortable"
+                color="primary"
+                hint="Optional short code for the position"
+                persistent-hint
+                :rules="[(v) => !v || v.length <= 20 || 'Maximum 20 characters']"
+                counter="20"
+              ></v-text-field>
+            </div>
 
-            <v-text-field
-              v-model.number="formData.daily_rate"
-              label="Daily Rate (₱) *"
-              type="number"
-              prepend-inner-icon="mdi-cash"
-              variant="outlined"
-              prefix="₱"
-              :rules="[
-                (v) =>
-                  (v !== null && v !== undefined && v !== '') ||
-                  'Daily rate is required',
-                (v) => v >= 0 || 'Rate must be positive',
-                (v) => v <= 999999.99 || 'Rate is too large',
-              ]"
-              class="mb-2"
-            ></v-text-field>
+            <div class="form-field-wrapper">
+              <label class="form-label">
+                <v-icon size="small" color="#ED985F">mdi-cash</v-icon>
+                Daily Rate <span class="text-error">*</span>
+              </label>
+              <v-text-field
+                v-model.number="formData.daily_rate"
+                type="number"
+                placeholder="0.00"
+                prepend-inner-icon="mdi-cash"
+                variant="outlined"
+                density="comfortable"
+                color="primary"
+                prefix="₱"
+                :rules="[
+                  (v) =>
+                    (v !== null && v !== undefined && v !== '') ||
+                    'Daily rate is required',
+                  (v) => v >= 0 || 'Rate must be positive',
+                  (v) => v <= 999999.99 || 'Rate is too large',
+                ]"
+              ></v-text-field>
+            </div>
 
             <!-- Rate Change Comparison (only when editing) -->
             <v-alert
@@ -210,32 +260,46 @@
               </div>
             </v-alert>
 
-            <v-select
-              v-model="formData.category"
-              :items="categoryOptions"
-              label="Category"
-              prepend-inner-icon="mdi-tag"
-              variant="outlined"
-              hint="Optional classification for the position"
-              persistent-hint
-              clearable
-              class="mb-4"
-            ></v-select>
+            <div class="form-field-wrapper">
+              <label class="form-label">
+                <v-icon size="small" color="#ED985F">mdi-tag</v-icon>
+                Category
+              </label>
+              <v-select
+                v-model="formData.category"
+                :items="categoryOptions"
+                placeholder="Select category"
+                prepend-inner-icon="mdi-tag"
+                variant="outlined"
+                density="comfortable"
+                color="primary"
+                hint="Optional classification for the position"
+                persistent-hint
+                clearable
+              ></v-select>
+            </div>
 
-            <v-textarea
-              v-model="formData.description"
-              label="Description"
-              prepend-inner-icon="mdi-text"
-              variant="outlined"
-              rows="3"
-              hint="Optional description of the position"
-              persistent-hint
-              counter="500"
-              :rules="[
-                (v) => !v || v.length <= 500 || 'Maximum 500 characters',
-              ]"
-              class="mb-4"
-            ></v-textarea>
+            <div class="form-field-wrapper">
+              <label class="form-label">
+                <v-icon size="small" color="#ED985F">mdi-text</v-icon>
+                Description
+              </label>
+              <v-textarea
+                v-model="formData.description"
+                placeholder="Enter description"
+                prepend-inner-icon="mdi-text"
+                variant="outlined"
+                density="comfortable"
+                color="primary"
+                rows="3"
+                hint="Optional description of the position"
+                persistent-hint
+                counter="500"
+                :rules="[
+                  (v) => !v || v.length <= 500 || 'Maximum 500 characters',
+                ]"
+              ></v-textarea>
+            </div>
 
             <v-switch
               v-model="formData.is_active"
@@ -251,14 +315,26 @@
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeDialog">Cancel</v-btn>
           <v-btn
-            :color="isEditing ? 'primary' : 'success'"
-            @click="savePosition"
+            variant="text"
+            color="grey-darken-1"
+            size="large"
+            @click="closeDialog"
+            prepend-icon="mdi-close"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            size="large"
             :loading="saving"
             :disabled="!formValid"
+            @click="savePosition"
+            prepend-icon="mdi-check"
+            class="px-6"
+            elevation="2"
           >
-            {{ isEditing ? "Update" : "Create" }}
+            <span class="font-weight-bold">{{ isEditing ? "Update" : "Create" }}</span>
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -510,3 +586,186 @@ function formatCategory(category) {
     .join("-");
 }
 </script>
+
+<style scoped lang="scss">
+.position-rates-page {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  flex-shrink: 0;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+
+  .v-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
+  }
+
+  &.action-btn-primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+  }
+}
+
+.modern-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  padding: 24px;
+}
+
+.filters-section {
+  
+  background: rgba(0, 31, 61, 0.01);
+}
+
+.table-section {
+  background: #ffffff;
+}
+
+.modern-dialog-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.modern-dialog-header {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  padding: 24px;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.dialog-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 16px;
+}
+
+.form-field-wrapper {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
+}
+
+.modern-dialog-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.modern-dialog-header {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  padding: 24px;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.dialog-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 16px;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+}
+</style>
