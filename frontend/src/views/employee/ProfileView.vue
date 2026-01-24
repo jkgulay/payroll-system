@@ -269,7 +269,7 @@
         </div>
 
         <!-- Change Password Card -->
-        <div class="profile-password-card">
+        <div class="profile-password-card mb-4">
           <div class="card-header">
             <div class="card-header-icon">
               <v-icon size="18">mdi-lock-reset</v-icon>
@@ -376,6 +376,9 @@
             </button>
           </v-form>
         </div>
+
+        <!-- Two-Factor Authentication Card -->
+        <TwoFactorSetup />
       </v-col>
     </v-row>
 
@@ -449,9 +452,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <!-- 2FA Setup Dialog -->
-    <TwoFactorSetup v-model="show2FASetup" @enabled="handle2FAEnabled" />
   </div>
 </template>
 

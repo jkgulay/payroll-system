@@ -7,7 +7,7 @@
           <v-icon size="16" class="welcome-icon">mdi-chart-box</v-icon>
           <span>Dashboard Overview</span>
         </div>
-        <h1 class="dashboard-title">Welcome back, {{ userName || "Admin" }}</h1>
+        <h1 class="dashboard-title">Welcome back, {{ first_name || "Admin" }}</h1>
         <p class="dashboard-subtitle">{{ currentDateRange }}</p>
       </div>
       <div class="header-actions">
