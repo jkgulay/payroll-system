@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Models\Holiday;
 use Carbon\Carbon;
 
@@ -14,7 +15,7 @@ class HolidaySeeder extends Seeder
     public function run(): void
     {
         // First, update any existing holidays with 'special_non_working' to 'special'
-        \DB::table('holidays')
+        DB::table('holidays')
             ->where('type', 'special_non_working')
             ->update(['type' => 'special']);
         
