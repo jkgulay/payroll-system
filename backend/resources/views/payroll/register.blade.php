@@ -259,17 +259,18 @@
         </div>
     </div>
 
-    <div style="margin-top: 20px;">
-        <div class="signature-box" style="display: inline-block; width: 48%;">
-            <div class="signature-title">PAICA CRISTEL MAE SUGABO</div>
+    <div class="signature-section" style="margin-top: 40px;">
+        <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-name">PAICA CRISTEL MAE SUGABO</div>
         </div>
-        <div class="signature-box" style="display: inline-block; width: 48%;">
-            <div class="signature-title">ENG. ELISA MAY PARCON</div>
+        <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-name">ENGR. OSTRIC C. RIVERA, III</div>
         </div>
-    </div>
-    <div style="margin-top: 5px;">
-        <div class="signature-box" style="display: inline-block; width: 100%; text-align: center;">
-            <div class="signature-title">ENGR. OSTRIC C. RIVERA, III</div>
+        <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-name">ENG. ELISA MAY PARCON</div>
         </div>
     </div>
 </body>
