@@ -138,43 +138,42 @@
     </div>
 
     <!-- Add/Edit Position Rate Dialog -->
-    <v-dialog v-model="showDialog" max-width="600px" persistent>
-      <v-card class="modern-dialog-card" elevation="24">
-        <v-card-title class="modern-dialog-header">
-          <div class="d-flex align-center w-100">
-            <div class="dialog-icon-badge">
-              <v-icon size="24">{{
-                isEditing ? "mdi-pencil" : "mdi-plus"
-              }}</v-icon>
+    <v-dialog v-model="showDialog" max-width="800px" persistent scrollable>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">{{
+              isEditing ? "mdi-pencil" : "mdi-plus"
+            }}</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">
+              {{ isEditing ? "Edit Position Rate" : "Add New Position Rate" }}
             </div>
-            <div class="flex-grow-1">
-              <div class="text-h5 font-weight-bold">
-                {{ isEditing ? "Edit Position Rate" : "Add New Position Rate" }}
-              </div>
-              <div class="text-subtitle-2 text-white-70">
-                {{
-                  isEditing
-                    ? "Update position rate details"
-                    : "Create new position rate"
-                }}
-              </div>
+            <div class="dialog-subtitle">
+              {{
+                isEditing
+                  ? "Update position rate details"
+                  : "Create new position rate"
+              }}
             </div>
-            <v-btn
-              icon
-              variant="text"
-              color="white"
-              @click="closeDialog"
-              size="small"
-            >
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
           </div>
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pa-6">
+        <v-card-text class="dialog-content" style="max-height: 70vh">
           <v-form ref="form" v-model="formValid">
-            <div class="form-field-wrapper">
+            <!-- Section: Basic Information -->
+            <v-col cols="12" class="px-0">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-information</v-icon>
+                </div>
+                <h3 class="section-title">Basic Information</h3>
+              </div>
+            </v-col>
+
+            <div class="form-field-wrapper mt-3">
               <label class="form-label">
                 <v-icon size="small" color="#ED985F">mdi-badge-account</v-icon>
                 Position Name <span class="text-error">*</span>
@@ -215,7 +214,17 @@
               ></v-text-field>
             </div>
 
-            <div class="form-field-wrapper">
+            <!-- Section: Rate Details -->
+            <v-col cols="12" class="px-0 mt-4">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-cash</v-icon>
+                </div>
+                <h3 class="section-title">Rate Details</h3>
+              </div>
+            </v-col>
+
+            <div class="form-field-wrapper mt-3">
               <label class="form-label">
                 <v-icon size="small" color="#ED985F">mdi-cash</v-icon>
                 Daily Rate <span class="text-error">*</span>
@@ -321,31 +330,40 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="pa-4">
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            color="grey-darken-1"
-            size="large"
+          <button
+            class="dialog-btn dialog-btn-cancel"
             @click="closeDialog"
-            prepend-icon="mdi-close"
+            :disabled="saving"
           >
             Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            size="large"
-            :loading="saving"
-            :disabled="!formValid"
+          </button>
+          <button
+            class="dialog-btn dialog-btn-primary"
             @click="savePosition"
-            prepend-icon="mdi-check"
-            class="px-6"
-            elevation="2"
+            :disabled="!formValid || saving"
           >
-            <span class="font-weight-bold">{{
-              isEditing ? "Update" : "Create"
-            }}</span>
-          </v-btn>
+            <v-progress-circular
+              v-if="saving"
+              indeterminate
+              size="16"
+              width="2"
+              class="mr-2"
+            ></v-progress-circular>
+            <v-icon v-else size="18" class="mr-1">{{
+              isEditing ? "mdi-pencil" : "mdi-check"
+            }}</v-icon>
+            {{
+              saving
+                ? isEditing
+                  ? "Updating..."
+                  : "Creating..."
+                : isEditing
+                  ? "Update"
+                  : "Create"
+            }}
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -706,31 +724,128 @@ function formatCategory(category) {
   background: #ffffff;
 }
 
-.modern-dialog-card {
+.modern-dialog {
   border-radius: 16px;
   overflow: hidden;
 }
 
-.modern-dialog-header {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
+.dialog-header {
+  background: white;
   padding: 24px;
-
-  .v-icon {
-    color: #ffffff !important;
-  }
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.dialog-icon-badge {
+.dialog-icon-wrapper {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  margin-right: 16px;
+  color: white;
+
+  &.primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  }
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1.2;
+}
+
+.dialog-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
+}
+
+.dialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.dialog-btn-cancel {
+  background: transparent;
+  color: #64748b;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 31, 61, 0.04);
+  }
+}
+
+.dialog-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  margin-left: 12px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+  }
 }
 
 .form-field-wrapper {
@@ -745,36 +860,5 @@ function formatCategory(category) {
   font-weight: 600;
   color: #001f3d;
   margin-bottom: 8px;
-}
-
-.modern-dialog-card {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.modern-dialog-header {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
-  padding: 24px;
-
-  .v-icon {
-    color: #ffffff !important;
-  }
-}
-
-.dialog-icon-badge {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-right: 16px;
-
-  .v-icon {
-    color: #ed985f !important;
-  }
 }
 </style>

@@ -177,46 +177,46 @@
     </div>
 
     <!-- Create/Edit Dialog - Modern UI -->
-    <v-dialog v-model="dialog" max-width="800" persistent>
-      <v-card class="modern-dialog-card" elevation="24">
+    <v-dialog v-model="dialog" max-width="800px" persistent scrollable>
+      <v-card class="modern-dialog">
         <!-- Enhanced Header -->
-        <v-card-title class="modern-dialog-header">
-          <div class="d-flex align-center w-100">
-            <div class="dialog-icon-badge">
-              <v-icon size="24">{{
-                editMode ? "mdi-pencil" : "mdi-cash-multiple"
-              }}</v-icon>
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">{{
+              editMode ? "mdi-pencil" : "mdi-cash-multiple"
+            }}</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">
+              {{ editMode ? "Edit Payroll" : "Create Payroll" }}
             </div>
-            <div class="flex-grow-1">
-              <div class="text-h5 font-weight-bold">
-                {{ editMode ? "Edit" : "Create" }} Payroll
-              </div>
-              <div class="text-subtitle-2 text-white-70">
-                {{
-                  editMode
-                    ? "Update payroll period details"
-                    : "Generate new payroll period"
-                }}
-              </div>
+            <div class="dialog-subtitle">
+              {{
+                editMode
+                  ? "Update payroll period details"
+                  : "Generate new payroll period"
+              }}
             </div>
-            <v-btn
-              icon
-              variant="text"
-              color="white"
-              @click="closeDialog"
-              size="small"
-            >
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
           </div>
         </v-card-title>
+        <v-divider></v-divider>
 
-        <v-card-text class="pa-6">
+        <v-card-text class="dialog-content" style="max-height: 70vh">
           <v-form ref="form" v-model="valid">
+            <!-- Section 1: Basic Information -->
+            <v-col cols="12" class="px-0">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-information</v-icon>
+                </div>
+                <h3 class="section-title">Basic Information</h3>
+              </div>
+            </v-col>
+
             <!-- Period Name -->
-            <div class="form-field-wrapper">
+            <div class="form-field-wrapper mt-3">
               <label class="form-label">
-                <v-icon size="small" color="primary">mdi-label</v-icon>
+                <v-icon size="small" color="#ed985f">mdi-label</v-icon>
                 Period Name <span class="text-error">*</span>
               </label>
               <v-text-field
@@ -227,7 +227,7 @@
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-label"
-                color="primary"
+                color="#ed985f"
               ></v-text-field>
             </div>
 
@@ -236,7 +236,7 @@
               <v-col cols="6">
                 <div class="form-field-wrapper">
                   <label class="form-label">
-                    <v-icon size="small" color="primary"
+                    <v-icon size="small" color="#ed985f"
                       >mdi-calendar-start</v-icon
                     >
                     Period Start <span class="text-error">*</span>
@@ -250,7 +250,7 @@
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-calendar-start"
-                    color="primary"
+                    color="#ed985f"
                   ></v-text-field>
                 </div>
               </v-col>
@@ -259,7 +259,7 @@
               <v-col cols="6">
                 <div class="form-field-wrapper">
                   <label class="form-label">
-                    <v-icon size="small" color="primary"
+                    <v-icon size="small" color="#ed985f"
                       >mdi-calendar-end</v-icon
                     >
                     Period End <span class="text-error">*</span>
@@ -273,7 +273,7 @@
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-calendar-end"
-                    color="primary"
+                    color="#ed985f"
                   ></v-text-field>
                 </div>
               </v-col>
@@ -282,7 +282,7 @@
             <!-- Payment Date -->
             <div class="form-field-wrapper">
               <label class="form-label">
-                <v-icon size="small" color="primary">mdi-calendar-check</v-icon>
+                <v-icon size="small" color="#ed985f">mdi-calendar-check</v-icon>
                 Payment Date <span class="text-error">*</span>
               </label>
               <v-text-field
@@ -294,17 +294,19 @@
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-calendar-check"
-                color="primary"
+                color="#ed985f"
               ></v-text-field>
             </div>
 
-            <v-divider class="my-4"></v-divider>
-
-            <!-- Employee Filter Section -->
-            <h3 class="text-subtitle-1 mb-3">
-              <v-icon icon="mdi-filter" size="small" class="mr-2"></v-icon>
-              Employee Filter
-            </h3>
+            <!-- Section 2: Employee Filter -->
+            <v-col cols="12" class="px-0 mt-5">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-filter</v-icon>
+                </div>
+                <h3 class="section-title">Employee Filter</h3>
+              </div>
+            </v-col>
 
             <v-radio-group
               v-model="formData.filter_type"
@@ -337,7 +339,7 @@
                       v-bind="props"
                       icon="mdi-information"
                       size="small"
-                      color="primary"
+                      color="#ed985f"
                     ></v-icon>
                   </template>
                   <div style="max-width: 300px">
@@ -480,7 +482,7 @@
               prepend-icon="mdi-calendar-check"
               hint="Exclude employees who have no attendance records in this payroll period"
               persistent-hint
-              color="primary"
+              color="#ed985f"
             ></v-checkbox>
 
             <!-- Info Alert -->
@@ -523,12 +525,43 @@
             ></v-textarea>
           </v-form>
         </v-card-text>
-        <v-card-actions>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn text @click="closeDialog">Cancel</v-btn>
-          <v-btn color="primary" :loading="saving" @click="savePayroll">
-            {{ editMode ? "Update" : "Create" }}
-          </v-btn>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="closeDialog"
+            :disabled="saving"
+          >
+            Cancel
+          </button>
+          <button
+            class="dialog-btn dialog-btn-primary"
+            @click="savePayroll"
+            :disabled="saving"
+          >
+            <v-progress-circular
+              v-if="saving"
+              indeterminate
+              size="16"
+              width="2"
+              class="mr-2"
+            ></v-progress-circular>
+            <v-icon v-else size="18" class="mr-1">{{
+              editMode ? "mdi-pencil" : "mdi-content-save"
+            }}</v-icon>
+            {{
+              saving
+                ? editMode
+                  ? "Updating..."
+                  : "Creating..."
+                : editMode
+                  ? "Update"
+                  : "Create"
+            }}
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1164,45 +1197,127 @@ function formatCurrency(amount) {
   background: #ffffff;
 }
 
-.modern-dialog-card {
+.modern-dialog {
   border-radius: 16px;
   overflow: hidden;
 }
 
-.modern-dialog-header {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
+.dialog-header {
+  background: white;
   padding: 24px;
-
-  .v-icon {
-    color: #ffffff !important;
-  }
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-/* Hide scrollbar in v-card-title */
-:deep(.v-card-title) {
-  overflow: hidden !important;
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* IE and Edge */
-
-  &::-webkit-scrollbar {
-    display: none !important; /* Chrome, Safari, Opera */
-  }
-}
-
-.dialog-icon-badge {
+.dialog-icon-wrapper {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  margin-right: 16px;
+  color: white;
 
-  .v-icon {
-    color: #ed985f !important;
+  &.primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  }
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1.2;
+}
+
+.dialog-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
+}
+
+.dialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.dialog-btn-cancel {
+  background: transparent;
+  color: #64748b;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 31, 61, 0.04);
+  }
+}
+
+.dialog-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  margin-left: 12px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
   }
 }
 
