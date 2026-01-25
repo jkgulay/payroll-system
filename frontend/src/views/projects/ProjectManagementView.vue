@@ -1,18 +1,58 @@
 <template>
-  <v-container fluid class="pa-6">
-    <div class="d-flex align-center justify-space-between mb-6">
-      <h1 class="text-h4 font-weight-bold">Project Management</h1>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreateDialog">
-        New Project
-      </v-btn>
+  <div class="projects-page">
+    <!-- Modern Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="page-title-section">
+          <div class="page-icon-badge">
+            <v-icon size="20">mdi-office-building</v-icon>
+          </div>
+          <div>
+            <h1 class="page-title">Project Management</h1>
+            <p class="page-subtitle">
+              Manage projects and track employee assignments
+            </p>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button
+            class="action-btn action-btn-primary"
+            @click="openCreateDialog"
+          >
+            <v-icon size="20">mdi-plus</v-icon>
+            <span>New Project</span>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Filter Tabs -->
-    <v-tabs v-model="filterTab" color="primary" class="mb-4">
-      <v-tab value="all">All Projects</v-tab>
-      <v-tab value="active">Active</v-tab>
-      <v-tab value="completed">Completed</v-tab>
-    </v-tabs>
+    <!-- Modern Filter Tabs -->
+    <div class="filter-tabs">
+      <button
+        class="filter-tab"
+        :class="{ active: filterTab === 'all' }"
+        @click="filterTab = 'all'"
+      >
+        <v-icon size="18">mdi-folder-multiple</v-icon>
+        <span>All Projects</span>
+      </button>
+      <button
+        class="filter-tab"
+        :class="{ active: filterTab === 'active' }"
+        @click="filterTab = 'active'"
+      >
+        <v-icon size="18">mdi-folder-open</v-icon>
+        <span>Active</span>
+      </button>
+      <button
+        class="filter-tab"
+        :class="{ active: filterTab === 'completed' }"
+        @click="filterTab = 'completed'"
+      >
+        <v-icon size="18">mdi-folder-check</v-icon>
+        <span>Completed</span>
+      </button>
+    </div>
 
     <!-- Search Bar -->
     <v-text-field
@@ -22,14 +62,14 @@
       variant="outlined"
       density="compact"
       clearable
-      class="mb-4"
+      class="search-field"
     ></v-text-field>
 
     <!-- Loading State -->
     <v-progress-linear
       v-if="loading"
       indeterminate
-      color="primary"
+      color="#ED985F"
       class="mb-4"
     ></v-progress-linear>
 
@@ -42,72 +82,82 @@
         md="6"
         lg="4"
       >
-        <v-card class="project-card" elevation="2">
-          <v-card-title class="d-flex align-center">
-            <div class="flex-grow-1">
-              <div class="text-h6">{{ project.name }}</div>
-              <div class="text-caption text-grey">{{ project.code }}</div>
+        <v-card class="project-card" elevation="0">
+          <div class="project-card-header">
+            <div class="project-icon-wrapper">
+              <v-icon size="18" color="white">mdi-folder-open</v-icon>
             </div>
             <v-chip
               :color="project.is_active ? 'success' : 'grey'"
               size="small"
               variant="flat"
+              class="status-chip"
             >
               {{ project.is_active ? "Active" : "Completed" }}
             </v-chip>
+          </div>
+
+          <v-card-title class="project-card-title">
+            <div class="project-name">{{ project.name }}</div>
+            <div class="project-code">{{ project.code }}</div>
           </v-card-title>
 
-          <v-card-text>
-            <div class="mb-2">
-              <div class="text-caption text-grey">Description</div>
-              <div class="text-body-2">
-                {{ project.description || "No description" }}
+          <v-card-text class="project-card-content">
+            <div class="description-section">
+              <div class="section-label">
+                <v-icon size="14">mdi-text</v-icon>
+                Description
+              </div>
+              <div class="section-value">
+                {{ project.description || "No description provided" }}
               </div>
             </div>
 
-            <v-divider class="my-3"></v-divider>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-icon">
+                  <v-icon size="18">mdi-account-hard-hat</v-icon>
+                </div>
+                <div>
+                  <div class="info-label">Project Head</div>
+                  <div class="info-value">
+                    {{
+                      project.head_employee
+                        ? `${project.head_employee.first_name} ${project.head_employee.last_name}`
+                        : "Not assigned"
+                    }}
+                  </div>
+                </div>
+              </div>
 
-            <div class="d-flex align-center mb-2">
-              <v-icon size="small" class="mr-2">mdi-account-hard-hat</v-icon>
-              <span class="text-body-2">
-                <strong>Head:</strong>
-                {{
-                  project.head_employee
-                    ? `${project.head_employee.first_name} ${project.head_employee.last_name}`
-                    : "Not assigned"
-                }}
-              </span>
-            </div>
-
-            <div class="d-flex align-center">
-              <v-icon size="small" class="mr-2">mdi-account-group</v-icon>
-              <span class="text-body-2">
-                <strong>{{ project.employees_count || 0 }}</strong> employee(s)
-                assigned
-              </span>
+              <div class="info-item">
+                <div class="info-icon">
+                  <v-icon size="18">mdi-account-group</v-icon>
+                </div>
+                <div>
+                  <div class="info-label">Team Size</div>
+                  <div class="info-value">
+                    {{ project.employees_count || 0 }} employee(s)
+                  </div>
+                </div>
+              </div>
             </div>
           </v-card-text>
 
-          <v-card-actions>
-            <v-btn
-              size="small"
-              variant="text"
-              color="primary"
+          <v-card-actions class="project-card-actions">
+            <button
+              class="card-action-btn card-action-primary"
               @click="viewProject(project)"
             >
-              View Details
-            </v-btn>
-
-            <v-spacer></v-spacer>
+              <v-icon size="16">mdi-eye</v-icon>
+              <span>View Details</span>
+            </button>
 
             <v-menu>
               <template v-slot:activator="{ props }">
-                <v-btn
-                  icon="mdi-dots-vertical"
-                  size="small"
-                  variant="text"
-                  v-bind="props"
-                ></v-btn>
+                <button class="card-action-btn card-action-menu" v-bind="props">
+                  <v-icon size="18">mdi-dots-vertical</v-icon>
+                </button>
               </template>
 
               <v-list density="compact">
@@ -175,21 +225,32 @@
     <v-dialog v-model="dialog" max-width="700px" persistent>
       <v-card class="modern-dialog-card" elevation="24">
         <!-- Enhanced Header -->
-        <v-card-title class="modern-dialog-header modern-dialog-header-primary">
+        <v-card-title class="modern-dialog-header">
           <div class="d-flex align-center w-100">
-            <v-avatar color="white" size="48" class="mr-4">
-              <v-icon color="primary" size="32">{{ editMode ? 'mdi-pencil' : 'mdi-folder-plus' }}</v-icon>
-            </v-avatar>
-            <div>
+            <div class="dialog-icon-badge">
+              <v-icon size="24">{{
+                editMode ? "mdi-pencil" : "mdi-folder-plus"
+              }}</v-icon>
+            </div>
+            <div class="flex-grow-1">
               <div class="text-h5 font-weight-bold">
                 {{ editMode ? "Edit Project" : "New Project" }}
               </div>
               <div class="text-subtitle-2 text-white-70">
-                {{ editMode ? 'Update project information' : 'Create a new project' }}
+                {{
+                  editMode
+                    ? "Update project information"
+                    : "Create a new project"
+                }}
               </div>
             </div>
-            <v-spacer></v-spacer>
-            <v-btn icon variant="text" color="white" @click="closeDialog" size="small">
+            <v-btn
+              icon
+              variant="text"
+              color="white"
+              @click="closeDialog"
+              size="small"
+            >
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </div>
@@ -204,7 +265,9 @@
                   <label class="form-label">
                     <v-icon size="small" color="primary">mdi-barcode</v-icon>
                     Project Code
-                    <v-chip size="x-small" color="info" class="ml-2">Auto-generated</v-chip>
+                    <v-chip size="x-small" color="info" class="ml-2"
+                      >Auto-generated</v-chip
+                    >
                   </label>
                   <v-text-field
                     v-model="formData.code"
@@ -262,7 +325,9 @@
               <v-col cols="12">
                 <div class="form-field-wrapper">
                   <label class="form-label">
-                    <v-icon size="small" color="primary">mdi-account-tie</v-icon>
+                    <v-icon size="small" color="primary"
+                      >mdi-account-tie</v-icon
+                    >
                     Project Head
                   </label>
                   <v-autocomplete
@@ -307,37 +372,77 @@
             class="px-6"
             elevation="2"
           >
-            <span class="font-weight-bold">{{ editMode ? "Update" : "Create" }}</span>
+            <span class="font-weight-bold">{{
+              editMode ? "Update" : "Create"
+            }}</span>
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Project Details Dialog -->
-    <v-dialog v-model="detailsDialog" max-width="900px">
-      <v-card v-if="selectedProject">
-        <v-card-title class="d-flex align-center">
-          <div class="flex-grow-1">
-            <div class="text-h5">{{ selectedProject.name }}</div>
-            <div class="text-caption text-grey">{{ selectedProject.code }}</div>
+    <v-dialog v-model="detailsDialog" max-width="900px" persistent>
+      <v-card v-if="selectedProject" class="modern-dialog-card" elevation="24">
+        <v-card-title class="modern-dialog-header">
+          <div class="d-flex align-center w-100">
+            <div class="dialog-icon-badge">
+              <v-icon size="24">mdi-folder-open</v-icon>
+            </div>
+            <div class="flex-grow-1">
+              <div class="text-h5 font-weight-bold">
+                {{ selectedProject.name }}
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                {{ selectedProject.code }}
+              </div>
+            </div>
+            <v-chip
+              :color="selectedProject.is_active ? 'success' : 'grey'"
+              variant="flat"
+              size="default"
+            >
+              {{ selectedProject.is_active ? "Active" : "Completed" }}
+            </v-chip>
+            <v-btn
+              icon
+              variant="text"
+              color="white"
+              @click="detailsDialog = false"
+              size="small"
+              class="ml-2"
+            >
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
           </div>
-          <v-chip
-            :color="selectedProject.is_active ? 'success' : 'grey'"
-            variant="flat"
-          >
-            {{ selectedProject.is_active ? "Active" : "Completed" }}
-          </v-chip>
         </v-card-title>
 
-        <v-card-text>
+        <v-card-text class="pa-6">
           <div class="mb-4">
-            <div class="text-subtitle-2 text-grey mb-1">Description</div>
-            <div>{{ selectedProject.description || "No description" }}</div>
+            <div
+              class="text-subtitle-2 font-weight-bold mb-2"
+              style="color: #001f3d"
+            >
+              <v-icon size="small" color="#ED985F" class="mr-1"
+                >mdi-text-box</v-icon
+              >
+              Description
+            </div>
+            <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8)">
+              {{ selectedProject.description || "No description" }}
+            </div>
           </div>
 
           <div class="mb-4">
-            <div class="text-subtitle-2 text-grey mb-1">Project Head</div>
-            <div>
+            <div
+              class="text-subtitle-2 font-weight-bold mb-2"
+              style="color: #001f3d"
+            >
+              <v-icon size="small" color="#ED985F" class="mr-1"
+                >mdi-account-tie</v-icon
+              >
+              Project Head
+            </div>
+            <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8)">
               {{
                 selectedProject.head_employee
                   ? `${selectedProject.head_employee.first_name} ${selectedProject.head_employee.last_name} (${selectedProject.head_employee.position})`
@@ -348,14 +453,17 @@
 
           <v-divider class="my-4"></v-divider>
 
-          <div class="text-h6 mb-3">
+          <div class="text-h6 font-weight-bold mb-4" style="color: #001f3d">
+            <v-icon size="20" color="#ED985F" class="mr-2"
+              >mdi-account-group</v-icon
+            >
             Assigned Employees ({{ projectEmployees.length }})
           </div>
 
           <v-progress-linear
             v-if="loadingDetails"
             indeterminate
-            color="primary"
+            color="#ED985F"
           ></v-progress-linear>
 
           <v-data-table
@@ -364,6 +472,7 @@
             :items="projectEmployees"
             :items-per-page="10"
             density="comfortable"
+            class="elevation-0"
           >
             <template v-slot:item.full_name="{ item }">
               <div>{{ item.full_name }}</div>
@@ -392,9 +501,19 @@
           </v-data-table>
         </v-card-text>
 
-        <v-card-actions>
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="detailsDialog = false">Close</v-btn>
+          <v-btn
+            variant="text"
+            color="grey-darken-1"
+            size="large"
+            @click="detailsDialog = false"
+            prepend-icon="mdi-close"
+          >
+            Close
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -403,7 +522,7 @@
     <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
       {{ snackbarText }}
     </v-snackbar>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -466,7 +585,7 @@ const filteredProjects = computed(() => {
       (p) =>
         p.name.toLowerCase().includes(searchLower) ||
         p.code.toLowerCase().includes(searchLower) ||
-        (p.description && p.description.toLowerCase().includes(searchLower))
+        (p.description && p.description.toLowerCase().includes(searchLower)),
     );
   }
 
@@ -640,14 +759,377 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.projects-page {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  color: white;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+}
+
+.action-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0, 31, 61, 0.15);
+  background: white;
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tab:hover {
+  background: rgba(0, 31, 61, 0.04);
+  border-color: rgba(0, 31, 61, 0.25);
+}
+
+.filter-tab.active {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+}
+
+.search-field {
+  margin-bottom: 24px;
+}
+
 .project-card {
   height: 100%;
   display: flex;
   flex-direction: column;
+  border-radius: 16px !important;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: white;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 31, 61, 0.12) !important;
+    border-color: rgba(237, 152, 95, 0.3);
+  }
 }
 
-.project-card .v-card-text {
+.project-card-header {
+  background: linear-gradient(135deg, #001f3d 0%, #1a3a5a 100%);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.project-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.status-chip {
+  position: relative;
+  z-index: 1;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.project-card-title {
+  padding: 20px 20px 16px !important;
+}
+
+.project-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  margin-bottom: 4px;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+}
+
+.project-code {
+  font-size: 13px;
+  color: #ed985f;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.project-card-content {
   flex-grow: 1;
+  padding: 0 20px 20px !important;
+}
+
+.description-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: rgba(0, 31, 61, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 31, 61, 0.06);
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0, 31, 61, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+}
+
+.section-value {
+  font-size: 14px;
+  color: #001f3d;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(237, 152, 95, 0.04);
+    border-color: rgba(237, 152, 95, 0.2);
+  }
+}
+
+.info-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(237, 152, 95, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+}
+
+.info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0, 31, 61, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+}
+
+.project-card-actions {
+  padding: 16px 20px !important;
+  border-top: 1px solid rgba(0, 31, 61, 0.06);
+  background: rgba(0, 31, 61, 0.01);
+  display: flex;
+  gap: 8px;
+}
+
+.card-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card-action-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.35);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.card-action-menu {
+  background: white;
+  border: 1.5px solid rgba(0, 31, 61, 0.15);
+  color: #001f3d;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(0, 31, 61, 0.04);
+    border-color: rgba(0, 31, 61, 0.25);
+  }
+}
+
+.modern-dialog-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.modern-dialog-header {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  padding: 24px;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.dialog-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 16px;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+}
+
+.form-field-wrapper {
+  margin-bottom: 8px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
 }
 </style>

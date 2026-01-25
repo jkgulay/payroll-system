@@ -1,216 +1,222 @@
 <template>
-  <v-container fluid class="pa-6">
-    <!-- Header -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <div class="d-flex justify-space-between align-center">
+  <div class="payroll-page">
+    <!-- Modern Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="page-title-section">
+          <div class="page-icon-badge">
+            <v-icon size="22">mdi-cash-multiple</v-icon>
+          </div>
           <div>
-            <h1 class="text-h4 font-weight-bold mb-2">
-              <v-icon
-                icon="mdi-cash-multiple"
-                size="large"
-                class="mr-2"
-              ></v-icon>
-              Payroll Management
-            </h1>
-            <p class="text-subtitle-1 text-medium-emphasis">
+            <h1 class="page-title">Payroll Management</h1>
+            <p class="page-subtitle">
               Create, manage and process payroll for all employees
             </p>
           </div>
-          <v-btn
-            color="primary"
-            size="large"
-            prepend-icon="mdi-plus"
+        </div>
+        <div class="action-buttons">
+          <button
+            class="action-btn action-btn-primary"
             @click="openCreateDialog"
           >
-            Create Payroll
-          </v-btn>
+            <v-icon size="20">mdi-plus</v-icon>
+            <span>Create Payroll</span>
+          </button>
         </div>
-      </v-col>
-    </v-row>
+      </div>
+    </div>
 
-    <!-- Stats Cards -->
-    <v-row class="mb-4">
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="text-overline mb-1">Total Payrolls</div>
-            <div class="text-h5 font-weight-bold">{{ stats.total }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="text-overline mb-1">Draft</div>
-            <div class="text-h5 font-weight-bold text-warning">
-              {{ stats.draft }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="text-overline mb-1">Finalized</div>
-            <div class="text-h5 font-weight-bold text-info">
-              {{ stats.finalized }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card>
-          <v-card-text>
-            <div class="text-overline mb-1">Paid</div>
-            <div class="text-h5 font-weight-bold text-success">
-              {{ stats.paid }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- Modern Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <v-icon size="20">mdi-cash-multiple</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Payrolls</div>
+          <div class="stat-value">{{ stats.total }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon draft">
+          <v-icon size="20">mdi-file-edit-outline</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Draft</div>
+          <div class="stat-value warning">{{ stats.draft }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon finalized">
+          <v-icon size="20">mdi-file-check-outline</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Finalized</div>
+          <div class="stat-value info">{{ stats.finalized }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon paid">
+          <v-icon size="20">mdi-check-circle</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Paid</div>
+          <div class="stat-value success">{{ stats.paid }}</div>
+        </div>
+      </div>
+    </div>
 
     <!-- Payroll List -->
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        <v-icon icon="mdi-format-list-bulleted" class="mr-2"></v-icon>
-        Payroll Records
-        <v-spacer></v-spacer>
-        <v-text-field
-          v-model="search"
-          prepend-inner-icon="mdi-magnify"
-          label="Search payroll..."
-          single-line
-          hide-details
-          density="compact"
-          class="mr-4"
-          style="max-width: 300px"
-        ></v-text-field>
-      </v-card-title>
+    <div class="modern-card">
+      <div class="filters-section">
+        <v-row align="center" class="mb-0">
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="search"
+              prepend-inner-icon="mdi-magnify"
+              label="Search payroll..."
+              clearable
+              variant="outlined"
+              density="comfortable"
+              hide-details
+            ></v-text-field>
+          </v-col>
+          <v-col cols="auto">
+            <v-btn
+              color="#ED985F"
+              variant="tonal"
+              icon="mdi-refresh"
+              @click="loadPayrolls"
+              :loading="loading"
+              title="Refresh"
+            ></v-btn>
+          </v-col>
+        </v-row>
+      </div>
 
-      <v-data-table
-        :headers="headers"
-        :items="payrolls"
-        :search="search"
-        :loading="loading"
-        :items-per-page="15"
-        class="elevation-1"
-      >
-        <!-- Status -->
-        <template v-slot:item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.status)"
-            size="small"
-            variant="flat"
-          >
-            {{ item.status.toUpperCase() }}
-          </v-chip>
-        </template>
+      <div class="table-section">
+        <v-data-table
+          :headers="headers"
+          :items="payrolls"
+          :search="search"
+          :loading="loading"
+          :items-per-page="15"
+          class="elevation-1"
+        >
+          <!-- Status -->
+          <template v-slot:item.status="{ item }">
+            <v-chip
+              :color="getStatusColor(item.status)"
+              size="small"
+              variant="flat"
+            >
+              {{ item.status.toUpperCase() }}
+            </v-chip>
+          </template>
 
-        <!-- Period -->
-        <template v-slot:item.period="{ item }">
-          <div>
-            <div class="font-weight-medium">{{ item.period_name }}</div>
-            <div class="text-caption text-medium-emphasis">
-              {{ formatDate(item.period_start) }} -
-              {{ formatDate(item.period_end) }}
+          <!-- Period -->
+          <template v-slot:item.period="{ item }">
+            <div>
+              <div class="font-weight-medium">{{ item.period_name }}</div>
+              <div class="text-caption text-medium-emphasis">
+                {{ formatDate(item.period_start) }} -
+                {{ formatDate(item.period_end) }}
+              </div>
             </div>
-          </div>
-        </template>
+          </template>
 
-        <!-- Payment Date -->
-        <template v-slot:item.payment_date="{ item }">
-          {{ formatDate(item.payment_date) }}
-        </template>
+          <!-- Payment Date -->
+          <template v-slot:item.payment_date="{ item }">
+            {{ formatDate(item.payment_date) }}
+          </template>
 
-        <!-- Employees Count -->
-        <template v-slot:item.items_count="{ item }">
-          <v-chip size="small" variant="outlined">
-            {{ item.items_count }} employees
-          </v-chip>
-        </template>
+          <!-- Employees Count -->
+          <template v-slot:item.items_count="{ item }">
+            <v-chip size="small" variant="outlined">
+              {{ item.items_count }} employees
+            </v-chip>
+          </template>
 
-        <!-- Total Net -->
-        <template v-slot:item.total_net="{ item }">
-          <div class="text-right font-weight-bold">
-            ₱{{ formatCurrency(item.total_net) }}
-          </div>
-        </template>
+          <!-- Total Net -->
+          <template v-slot:item.total_net="{ item }">
+            <div class="text-right font-weight-bold">
+              ₱{{ formatCurrency(item.total_net) }}
+            </div>
+          </template>
 
-        <!-- Actions -->
-        <template v-slot:item.actions="{ item }">
-          <v-btn
-            icon="mdi-eye"
-            size="small"
-            variant="text"
-            color="primary"
-            @click="viewPayroll(item)"
-          >
-          </v-btn>
-          <v-btn
-            v-if="item.status === 'draft'"
-            icon="mdi-pencil"
-            size="small"
-            variant="text"
-            color="warning"
-            @click="editPayroll(item)"
-          >
-          </v-btn>
-          <v-btn
-            icon="mdi-delete"
-            size="small"
-            variant="text"
-            color="error"
-            @click="confirmDelete(item)"
-          >
-          </v-btn>
-        </template>
-      </v-data-table>
-    </v-card>
+          <!-- Actions -->
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              icon="mdi-eye"
+              size="small"
+              variant="text"
+              color="primary"
+              @click="viewPayroll(item)"
+            >
+            </v-btn>
+            <v-btn
+              v-if="item.status === 'draft'"
+              icon="mdi-pencil"
+              size="small"
+              variant="text"
+              color="warning"
+              @click="editPayroll(item)"
+            >
+            </v-btn>
+            <v-btn
+              icon="mdi-delete"
+              size="small"
+              variant="text"
+              color="error"
+              @click="confirmDelete(item)"
+            >
+            </v-btn>
+          </template>
+        </v-data-table>
+      </div>
+    </div>
 
     <!-- Create/Edit Dialog - Modern UI -->
-    <v-dialog v-model="dialog" max-width="800" persistent>
-      <v-card class="modern-dialog-card" elevation="24">
+    <v-dialog v-model="dialog" max-width="800px" persistent scrollable>
+      <v-card class="modern-dialog">
         <!-- Enhanced Header -->
-        <v-card-title class="modern-dialog-header modern-dialog-header-success">
-          <div class="d-flex align-center w-100">
-            <v-avatar color="white" size="48" class="mr-4">
-              <v-icon color="success" size="32">{{
-                editMode ? "mdi-pencil" : "mdi-cash-multiple"
-              }}</v-icon>
-            </v-avatar>
-            <div>
-              <div class="text-h5 font-weight-bold">
-                {{ editMode ? "Edit" : "Create" }} Payroll
-              </div>
-              <div class="text-subtitle-2 text-white-70">
-                {{
-                  editMode
-                    ? "Update payroll period details"
-                    : "Generate new payroll period"
-                }}
-              </div>
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">{{
+              editMode ? "mdi-pencil" : "mdi-cash-multiple"
+            }}</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">
+              {{ editMode ? "Edit Payroll" : "Create Payroll" }}
             </div>
-            <v-spacer></v-spacer>
-            <v-btn
-              icon
-              variant="text"
-              color="white"
-              @click="closeDialog"
-              size="small"
-            >
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
+            <div class="dialog-subtitle">
+              {{
+                editMode
+                  ? "Update payroll period details"
+                  : "Generate new payroll period"
+              }}
+            </div>
           </div>
         </v-card-title>
+        <v-divider></v-divider>
 
-        <v-card-text class="pa-6">
+        <v-card-text class="dialog-content" style="max-height: 70vh">
           <v-form ref="form" v-model="valid">
+            <!-- Section 1: Basic Information -->
+            <v-col cols="12" class="px-0">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-information</v-icon>
+                </div>
+                <h3 class="section-title">Basic Information</h3>
+              </div>
+            </v-col>
+
             <!-- Period Name -->
-            <div class="form-field-wrapper">
+            <div class="form-field-wrapper mt-3">
               <label class="form-label">
-                <v-icon size="small" color="primary">mdi-label</v-icon>
+                <v-icon size="small" color="#ed985f">mdi-label</v-icon>
                 Period Name <span class="text-error">*</span>
               </label>
               <v-text-field
@@ -221,7 +227,7 @@
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-label"
-                color="primary"
+                color="#ed985f"
               ></v-text-field>
             </div>
 
@@ -230,7 +236,7 @@
               <v-col cols="6">
                 <div class="form-field-wrapper">
                   <label class="form-label">
-                    <v-icon size="small" color="primary"
+                    <v-icon size="small" color="#ed985f"
                       >mdi-calendar-start</v-icon
                     >
                     Period Start <span class="text-error">*</span>
@@ -244,7 +250,7 @@
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-calendar-start"
-                    color="primary"
+                    color="#ed985f"
                   ></v-text-field>
                 </div>
               </v-col>
@@ -253,7 +259,7 @@
               <v-col cols="6">
                 <div class="form-field-wrapper">
                   <label class="form-label">
-                    <v-icon size="small" color="primary"
+                    <v-icon size="small" color="#ed985f"
                       >mdi-calendar-end</v-icon
                     >
                     Period End <span class="text-error">*</span>
@@ -267,7 +273,7 @@
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-calendar-end"
-                    color="primary"
+                    color="#ed985f"
                   ></v-text-field>
                 </div>
               </v-col>
@@ -276,7 +282,7 @@
             <!-- Payment Date -->
             <div class="form-field-wrapper">
               <label class="form-label">
-                <v-icon size="small" color="primary">mdi-calendar-check</v-icon>
+                <v-icon size="small" color="#ed985f">mdi-calendar-check</v-icon>
                 Payment Date <span class="text-error">*</span>
               </label>
               <v-text-field
@@ -288,17 +294,19 @@
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-calendar-check"
-                color="primary"
+                color="#ed985f"
               ></v-text-field>
             </div>
 
-            <v-divider class="my-4"></v-divider>
-
-            <!-- Employee Filter Section -->
-            <h3 class="text-subtitle-1 mb-3">
-              <v-icon icon="mdi-filter" size="small" class="mr-2"></v-icon>
-              Employee Filter
-            </h3>
+            <!-- Section 2: Employee Filter -->
+            <v-col cols="12" class="px-0 mt-5">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-filter</v-icon>
+                </div>
+                <h3 class="section-title">Employee Filter</h3>
+              </div>
+            </v-col>
 
             <v-radio-group
               v-model="formData.filter_type"
@@ -331,7 +339,7 @@
                       v-bind="props"
                       icon="mdi-information"
                       size="small"
-                      color="primary"
+                      color="#ed985f"
                     ></v-icon>
                   </template>
                   <div style="max-width: 300px">
@@ -474,7 +482,7 @@
               prepend-icon="mdi-calendar-check"
               hint="Exclude employees who have no attendance records in this payroll period"
               persistent-hint
-              color="primary"
+              color="#ed985f"
             ></v-checkbox>
 
             <!-- Info Alert -->
@@ -517,12 +525,43 @@
             ></v-textarea>
           </v-form>
         </v-card-text>
-        <v-card-actions>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn text @click="closeDialog">Cancel</v-btn>
-          <v-btn color="primary" :loading="saving" @click="savePayroll">
-            {{ editMode ? "Update" : "Create" }}
-          </v-btn>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="closeDialog"
+            :disabled="saving"
+          >
+            Cancel
+          </button>
+          <button
+            class="dialog-btn dialog-btn-primary"
+            @click="savePayroll"
+            :disabled="saving"
+          >
+            <v-progress-circular
+              v-if="saving"
+              indeterminate
+              size="16"
+              width="2"
+              class="mr-2"
+            ></v-progress-circular>
+            <v-icon v-else size="18" class="mr-1">{{
+              editMode ? "mdi-pencil" : "mdi-content-save"
+            }}</v-icon>
+            {{
+              saving
+                ? editMode
+                  ? "Updating..."
+                  : "Creating..."
+                : editMode
+                  ? "Update"
+                  : "Create"
+            }}
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -621,7 +660,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -861,10 +900,10 @@ async function savePayroll() {
     closeDialog();
   } catch (error) {
     console.error("Error saving payroll:", error);
-    
+
     // Extract detailed error message from response
     let errorMessage = "Failed to save payroll";
-    
+
     if (error.response?.data) {
       const data = error.response.data;
       // Check for detailed error field first, then fall back to message
@@ -873,13 +912,13 @@ async function savePayroll() {
       } else if (data.message && data.message !== "Validation failed") {
         errorMessage = data.message;
       }
-      
+
       // Add employee count info if available
       if (data.employee_count) {
         console.log("Employee count breakdown:", data.employee_count);
       }
     }
-    
+
     toast.error(errorMessage, {
       duration: 8000, // Show longer for detailed messages
     });
@@ -939,8 +978,360 @@ function formatCurrency(amount) {
 }
 </script>
 
-<style scoped>
-.v-card {
+<style scoped lang="scss">
+.payroll-page {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+
+  @media (max-width: 960px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.page-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.page-icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  flex-shrink: 0;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: rgba(0, 31, 61, 0.6);
+  margin: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  @media (max-width: 960px) {
+    width: 100%;
+  }
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+
+  .v-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
+  }
+
+  &.action-btn-primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
   border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 31, 61, 0.08);
+  border-color: rgba(237, 152, 95, 0.2);
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon.total {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+
+  .v-icon {
+    color: white;
+  }
+}
+
+.stat-icon.draft {
+  background: rgba(237, 152, 95, 0.1);
+
+  .v-icon {
+    color: #ed985f;
+  }
+}
+
+.stat-icon.finalized {
+  background: rgba(0, 31, 61, 0.1);
+
+  .v-icon {
+    color: #001f3d;
+  }
+}
+
+.stat-icon.paid {
+  background: rgba(16, 185, 129, 0.1);
+
+  .v-icon {
+    color: #10b981;
+  }
+}
+
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: rgba(0, 31, 61, 0.6);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1;
+}
+
+.stat-value.warning {
+  color: #f59e0b;
+}
+
+.stat-value.info {
+  color: #3b82f6;
+}
+
+.stat-value.success {
+  color: #10b981;
+}
+
+.modern-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  padding: 24px;
+}
+
+.filters-section {
+  background: rgba(0, 31, 61, 0.01);
+}
+
+.table-section {
+  background: #ffffff;
+}
+
+.modern-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.dialog-header {
+  background: white;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dialog-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+
+  &.primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  }
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1.2;
+}
+
+.dialog-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
+}
+
+.dialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.dialog-btn-cancel {
+  background: transparent;
+  color: #64748b;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 31, 61, 0.04);
+  }
+}
+
+.dialog-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  margin-left: 12px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+  }
+}
+
+.form-field-wrapper {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
 }
 </style>

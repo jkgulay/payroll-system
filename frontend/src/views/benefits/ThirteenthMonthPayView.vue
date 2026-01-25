@@ -1,27 +1,38 @@
 <template>
-  <v-container fluid>
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        <v-icon left color="primary">mdi-cash-multiple</v-icon>
-        <span>13th Month Pay Management</span>
-        <v-spacer></v-spacer>
-        <v-btn color="primary" @click="openCalculateDialog">
-          <v-icon left>mdi-calculator</v-icon>
-          Calculate 13th Month Pay
-        </v-btn>
-      </v-card-title>
+  <div class="thirteenth-month-page">
+    <div class="modern-card">
+      <!-- Modern Page Header -->
+      <div class="page-header">
+        <div class="page-icon-badge">
+          <v-icon icon="mdi-gift" size="24" color="white"></v-icon>
+        </div>
+        <div class="page-header-content">
+          <h1 class="page-title">13th Month Pay Management</h1>
+          <p class="page-subtitle">
+            Calculate and manage employee 13th month pay distribution
+          </p>
+        </div>
+        <button
+          class="action-btn action-btn-primary"
+          @click="openCalculateDialog"
+        >
+          <v-icon size="20">mdi-calculator</v-icon>
+          <span>Calculate 13th Month Pay</span>
+        </button>
+      </div>
 
-      <!-- Filters -->
-      <v-card-text>
+      <!-- Filters Section -->
+      <div class="filters-section">
         <v-row>
           <v-col cols="12" md="3">
             <v-select
               v-model="filters.year"
               :items="yearOptions"
               label="Year"
+              variant="outlined"
+              density="comfortable"
               clearable
-              dense
-              outlined
+              hide-details
               @update:model-value="fetchThirteenthMonth"
             ></v-select>
           </v-col>
@@ -30,21 +41,22 @@
               v-model="filters.status"
               :items="statusOptions"
               label="Status"
+              variant="outlined"
+              density="comfortable"
               clearable
-              dense
-              outlined
+              hide-details
               @update:model-value="fetchThirteenthMonth"
             ></v-select>
           </v-col>
         </v-row>
-      </v-card-text>
+      </div>
 
       <!-- Data Table -->
       <v-data-table
         :headers="headers"
         :items="thirteenthMonthList"
         :loading="loading"
-        class="elevation-1"
+        class="modern-table"
       >
         <template #[`item.batch_number`]="{ item }">
           <div>
@@ -63,7 +75,7 @@
         </template>
 
         <template #[`item.department`]="{ item }">
-          {{ item.department || 'All Departments' }}
+          {{ item.department || "All Departments" }}
         </template>
 
         <template #[`item.employee_count`]="{ item }">
@@ -155,219 +167,171 @@
           </v-tooltip>
         </template>
       </v-data-table>
-    </v-card>
+    </div>
 
     <!-- Calculate Dialog - Modern UI -->
-    <v-dialog v-model="calculateDialog" max-width="750px" persistent>
-      <v-card class="calculate-dialog-card" elevation="24">
-        <!-- Enhanced Header with Gradient -->
-        <v-card-title class="calculate-dialog-header">
-          <div class="d-flex align-center w-100">
-            <v-avatar color="white" size="48" class="mr-4">
-              <v-icon color="primary" size="32">mdi-calculator-variant</v-icon>
-            </v-avatar>
-            <div>
-              <div class="text-h5 font-weight-bold">Calculate 13th Month Pay</div>
-              <div class="text-subtitle-2 text-white-70">Generate 13th month pay for your employees</div>
+    <v-dialog v-model="calculateDialog" max-width="800px" persistent scrollable>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">mdi-calculator-variant</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Calculate 13th Month Pay</div>
+            <div class="dialog-subtitle">
+              Generate 13th month pay for your employees
             </div>
-            <v-spacer></v-spacer>
-            <v-btn
-              icon
-              variant="text"
-              color="white"
-              @click="calculateDialog = false"
-              size="small"
-            >
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
           </div>
         </v-card-title>
+        <v-divider></v-divider>
 
-        <v-card-text class="pa-6">
+        <v-card-text class="dialog-content" style="max-height: 70vh">
           <v-form ref="calculateForm" v-model="formValid">
-            <!-- Step Indicator -->
-            <div class="text-center mb-6">
-              <v-chip-group class="justify-center">
-                <v-chip :color="currentStep >= 1 ? 'primary' : 'grey-lighten-2'" size="small">
-                  <v-icon start size="small">mdi-calendar</v-icon>
-                  Period
-                </v-chip>
-                <v-icon>mdi-chevron-right</v-icon>
-                <v-chip :color="currentStep >= 2 ? 'primary' : 'grey-lighten-2'" size="small">
-                  <v-icon start size="small">mdi-office-building</v-icon>
-                  Department
-                </v-chip>
-                <v-icon>mdi-chevron-right</v-icon>
-                <v-chip :color="currentStep >= 3 ? 'primary' : 'grey-lighten-2'" size="small">
-                  <v-icon start size="small">mdi-cash-check</v-icon>
-                  Payment
-                </v-chip>
-              </v-chip-group>
-            </div>
-
-            <!-- Form Fields with Modern Styling -->
             <v-row>
+              <!-- Section 1: Period Details -->
+              <v-col cols="12">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-calendar-range</v-icon>
+                  </div>
+                  <h3 class="section-title">Period Details</h3>
+                </div>
+              </v-col>
+
               <!-- Year Selection -->
               <v-col cols="12" md="6">
-                <div class="form-field-wrapper">
-                  <label class="form-label">
-                    <v-icon size="small" color="primary">mdi-calendar-clock</v-icon>
-                    Year <span class="text-error">*</span>
-                  </label>
-                  <v-select
-                    v-model="calculateForm.year"
-                    :items="yearOptions"
-                    placeholder="Select year"
-                    :rules="[v => !!v || 'Year is required']"
-                    variant="outlined"
-                    density="comfortable"
-                    prepend-inner-icon="mdi-calendar"
-                    color="primary"
-                    @update:model-value="currentStep = Math.max(currentStep, 1)"
-                  >
-                    <template v-slot:item="{ props, item }">
-                      <v-list-item v-bind="props" :title="item.value">
-                        <template v-slot:prepend>
-                          <v-icon v-if="item.value === new Date().getFullYear()" color="success">
-                            mdi-star
-                          </v-icon>
-                        </template>
-                      </v-list-item>
-                    </template>
-                  </v-select>
-                </div>
+                <v-select
+                  v-model="calculateForm.year"
+                  :items="yearOptions"
+                  label="Year"
+                  placeholder="Select year"
+                  prepend-inner-icon="mdi-calendar-clock"
+                  :rules="[(v) => !!v || 'Year is required']"
+                  variant="outlined"
+                  density="comfortable"
+                >
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props" :title="item.value">
+                      <template v-slot:prepend>
+                        <v-icon
+                          v-if="item.value === new Date().getFullYear()"
+                          color="success"
+                        >
+                          mdi-star
+                        </v-icon>
+                      </template>
+                    </v-list-item>
+                  </template>
+                </v-select>
               </v-col>
 
               <!-- Period Selection -->
               <v-col cols="12" md="6">
-                <div class="form-field-wrapper">
-                  <label class="form-label">
-                    <v-icon size="small" color="primary">mdi-calendar-range</v-icon>
-                    Period <span class="text-error">*</span>
-                  </label>
-                  <v-select
-                    v-model="calculateForm.period"
-                    :items="periodOptions"
-                    placeholder="Select period"
-                    :rules="[v => !!v || 'Period is required']"
-                    variant="outlined"
-                    density="comfortable"
-                    prepend-inner-icon="mdi-calendar-month"
-                    color="primary"
-                    @update:model-value="currentStep = Math.max(currentStep, 1)"
-                  >
-                    <template v-slot:item="{ props, item }">
-                      <v-list-item v-bind="props">
-                        <template v-slot:prepend>
-                          <v-icon>{{ getPeriodIcon(item.value) }}</v-icon>
-                        </template>
-                      </v-list-item>
-                    </template>
-                  </v-select>
+                <v-select
+                  v-model="calculateForm.period"
+                  :items="periodOptions"
+                  label="Period"
+                  placeholder="Select period"
+                  prepend-inner-icon="mdi-calendar-range"
+                  :rules="[(v) => !!v || 'Period is required']"
+                  variant="outlined"
+                  density="comfortable"
+                >
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props">
+                      <template v-slot:prepend>
+                        <v-icon>{{ getPeriodIcon(item.value) }}</v-icon>
+                      </template>
+                    </v-list-item>
+                  </template>
+                </v-select>
+              </v-col>
+
+              <!-- Section 2: Department Filter -->
+              <v-col cols="12" class="mt-4">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-office-building</v-icon>
+                  </div>
+                  <h3 class="section-title">Department Filter</h3>
                 </div>
               </v-col>
 
               <!-- Department Selection -->
               <v-col cols="12">
-                <div class="form-field-wrapper">
-                  <label class="form-label">
-                    <v-icon size="small" color="primary">mdi-office-building</v-icon>
-                    Department
-                    <v-chip size="x-small" color="info" class="ml-2">Optional</v-chip>
-                  </label>
-                  <v-select
-                    v-model="calculateForm.department"
-                    :items="departments"
-                    placeholder="All Departments"
-                    clearable
-                    variant="outlined"
-                    density="comfortable"
-                    prepend-inner-icon="mdi-account-group"
-                    color="primary"
-                    hint="Leave empty to calculate for all departments"
-                    persistent-hint
-                    @update:model-value="currentStep = Math.max(currentStep, 2)"
-                  >
-                    <template v-slot:prepend-item>
-                      <v-list-item
-                        title="All Departments"
-                        @click="calculateForm.department = null"
-                      >
-                        <template v-slot:prepend>
-                          <v-icon color="primary">mdi-office-building-outline</v-icon>
-                        </template>
-                      </v-list-item>
-                      <v-divider class="my-2"></v-divider>
-                    </template>
-                  </v-select>
+                <v-select
+                  v-model="calculateForm.department"
+                  :items="departments"
+                  label="Department"
+                  placeholder="All Departments"
+                  prepend-inner-icon="mdi-office-building"
+                  clearable
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Leave empty to calculate for all departments"
+                  persistent-hint
+                >
+                  <template v-slot:prepend-item>
+                    <v-list-item
+                      title="All Departments"
+                      @click="calculateForm.department = null"
+                    >
+                      <template v-slot:prepend>
+                        <v-icon color="primary"
+                          >mdi-office-building-outline</v-icon
+                        >
+                      </template>
+                    </v-list-item>
+                    <v-divider class="my-2"></v-divider>
+                  </template>
+                </v-select>
+              </v-col>
+
+              <!-- Section 3: Payment Details -->
+              <v-col cols="12" class="mt-4">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-cash-check</v-icon>
+                  </div>
+                  <h3 class="section-title">Payment Details</h3>
                 </div>
               </v-col>
 
               <!-- Payment Date -->
               <v-col cols="12">
-                <div class="form-field-wrapper">
-                  <label class="form-label">
-                    <v-icon size="small" color="primary">mdi-calendar-check</v-icon>
-                    Payment Date <span class="text-error">*</span>
-                  </label>
-                  <v-text-field
-                    v-model="calculateForm.payment_date"
-                    type="date"
-                    placeholder="Select payment date"
-                    :rules="[v => !!v || 'Payment date is required']"
-                    variant="outlined"
-                    density="comfortable"
-                    prepend-inner-icon="mdi-cash-multiple"
-                    color="primary"
-                    hint="Date when the 13th month pay will be released"
-                    persistent-hint
-                    @update:model-value="currentStep = Math.max(currentStep, 3)"
-                  ></v-text-field>
-                </div>
+                <v-text-field
+                  v-model="calculateForm.payment_date"
+                  label="Payment Date"
+                  type="date"
+                  placeholder="Select payment date"
+                  prepend-inner-icon="mdi-calendar-check"
+                  :rules="[(v) => !!v || 'Payment date is required']"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Date when the 13th month pay will be released"
+                  persistent-hint
+                ></v-text-field>
               </v-col>
             </v-row>
-
-            <!-- Info Banner -->
-            <v-alert
-              type="info"
-              variant="tonal"
-              density="compact"
-              class="mt-4"
-              icon="mdi-information"
-            >
-              <div class="text-caption">
-                The 13th month pay will be calculated based on the basic salary earned during the selected period.
-              </div>
-            </v-alert>
           </v-form>
         </v-card-text>
-
         <v-divider></v-divider>
-
-        <!-- Enhanced Actions -->
-        <v-card-actions class="pa-4">
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            color="grey-darken-1"
-            size="large"
+          <button
+            class="dialog-btn dialog-btn-cancel"
             @click="calculateDialog = false"
-            prepend-icon="mdi-close"
           >
             Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            size="large"
-            :loading="calculating"
-            :disabled="!formValid"
+          </button>
+          <button
+            class="dialog-btn dialog-btn-primary"
             @click="calculate"
-            prepend-icon="mdi-calculator"
-            class="px-6"
-            elevation="2"
+            :disabled="!formValid"
           >
-            <span class="font-weight-bold">Calculate Now</span>
-          </v-btn>
+            <v-icon size="20" class="mr-1">mdi-calculator-variant</v-icon>
+            Calculate Now
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -384,15 +348,21 @@
               <v-list dense>
                 <v-list-item>
                   <v-list-item-title>Year:</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedItem.year }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    selectedItem.year
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Period:</v-list-item-title>
-                  <v-list-item-subtitle>{{ formatPeriod(selectedItem.period) }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    formatPeriod(selectedItem.period)
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Department:</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedItem.department || 'All Departments' }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    selectedItem.department || "All Departments"
+                  }}</v-list-item-subtitle>
                 </v-list-item>
               </v-list>
             </v-col>
@@ -400,16 +370,25 @@
               <v-list dense>
                 <v-list-item>
                   <v-list-item-title>Payment Date:</v-list-item-title>
-                  <v-list-item-subtitle>{{ formatDate(selectedItem.payment_date) }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{
+                    formatDate(selectedItem.payment_date)
+                  }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Total Amount:</v-list-item-title>
-                  <v-list-item-subtitle>₱{{ formatNumber(selectedItem.total_amount) }}</v-list-item-subtitle>
+                  <v-list-item-subtitle
+                    >₱{{
+                      formatNumber(selectedItem.total_amount)
+                    }}</v-list-item-subtitle
+                  >
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Status:</v-list-item-title>
                   <v-list-item-subtitle>
-                    <v-chip :color="getStatusColor(selectedItem.status)" size="small">
+                    <v-chip
+                      :color="getStatusColor(selectedItem.status)"
+                      size="small"
+                    >
                       {{ selectedItem.status.toUpperCase() }}
                     </v-chip>
                   </v-list-item-subtitle>
@@ -427,10 +406,10 @@
             class="elevation-1"
           >
             <template #[`item.employee`]="{ item }">
-              {{ item.employee?.full_name || 'N/A' }}
+              {{ item.employee?.full_name || "N/A" }}
             </template>
             <template #[`item.department`]="{ item }">
-              {{ item.employee?.department || 'N/A' }}
+              {{ item.employee?.department || "N/A" }}
             </template>
             <template #[`item.total_basic_salary`]="{ item }">
               ₱{{ formatNumber(item.total_basic_salary) }}
@@ -451,328 +430,526 @@
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
       {{ snackbar.message }}
     </v-snackbar>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import api from '@/services/api'
+import { ref, onMounted, computed } from "vue";
+import api from "@/services/api";
 
 const formatDate = (date) => {
-  if (!date) return 'N/A'
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
-}
+  if (!date) return "N/A";
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 const formatNumber = (value) => {
-  if (!value) return '0.00'
-  return new Intl.NumberFormat('en-PH', {
+  if (!value) return "0.00";
+  return new Intl.NumberFormat("en-PH", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value)
-}
+    maximumFractionDigits: 2,
+  }).format(value);
+};
 
-const loading = ref(false)
-const calculating = ref(false)
-const calculateDialog = ref(false)
-const detailsDialog = ref(false)
-const formValid = ref(false)
-const currentStep = ref(0)
-const thirteenthMonthList = ref([])
-const selectedItem = ref(null)
-const departments = ref([])
+const loading = ref(false);
+const calculating = ref(false);
+const calculateDialog = ref(false);
+const detailsDialog = ref(false);
+const formValid = ref(false);
+const currentStep = ref(0);
+const thirteenthMonthList = ref([]);
+const selectedItem = ref(null);
+const departments = ref([]);
 
 const filters = ref({
   year: null,
-  status: null
-})
+  status: null,
+});
 
 const calculateForm = ref({
   year: new Date().getFullYear(),
-  period: 'full_year',
+  period: "full_year",
   department: null,
-  payment_date: null
-})
+  payment_date: null,
+});
 
 const snackbar = ref({
   show: false,
-  message: '',
-  color: 'success'
-})
+  message: "",
+  color: "success",
+});
 
 const headers = [
-  { title: 'Batch Number', key: 'batch_number', sortable: true },
-  { title: 'Year/Period', key: 'year_period', sortable: false },
-  { title: 'Department', key: 'department', sortable: true },
-  { title: 'Employees', key: 'employee_count', sortable: false },
-  { title: 'Total Amount', key: 'total_amount', sortable: true },
-  { title: 'Payment Date', key: 'payment_date', sortable: true },
-  { title: 'Status', key: 'status', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center' }
-]
+  { title: "Batch Number", key: "batch_number", sortable: true },
+  { title: "Year/Period", key: "year_period", sortable: false },
+  { title: "Department", key: "department", sortable: true },
+  { title: "Employees", key: "employee_count", sortable: false },
+  { title: "Total Amount", key: "total_amount", sortable: true },
+  { title: "Payment Date", key: "payment_date", sortable: true },
+  { title: "Status", key: "status", sortable: true },
+  { title: "Actions", key: "actions", sortable: false, align: "center" },
+];
 
 const detailHeaders = [
-  { title: 'Employee', key: 'employee', sortable: true },
-  { title: 'Department', key: 'department', sortable: true },
-  { title: 'Total Basic Salary', key: 'total_basic_salary', sortable: true },
-  { title: 'Net Pay', key: 'net_pay', sortable: true }
-]
+  { title: "Employee", key: "employee", sortable: true },
+  { title: "Department", key: "department", sortable: true },
+  { title: "Total Basic Salary", key: "total_basic_salary", sortable: true },
+  { title: "Net Pay", key: "net_pay", sortable: true },
+];
 
 const statusOptions = [
-  { title: 'All', value: null },
-  { title: 'Draft', value: 'draft' },
-  { title: 'Computed', value: 'computed' },
-  { title: 'Approved', value: 'approved' },
-  { title: 'Paid', value: 'paid' }
-]
+  { title: "All", value: null },
+  { title: "Draft", value: "draft" },
+  { title: "Computed", value: "computed" },
+  { title: "Approved", value: "approved" },
+  { title: "Paid", value: "paid" },
+];
 
 const periodOptions = [
-  { title: 'Full Year', value: 'full_year' },
-  { title: 'First Half (Jan-Jun)', value: 'first_half' },
-  { title: 'Second Half (Jul-Dec)', value: 'second_half' }
-]
+  { title: "Full Year", value: "full_year" },
+  { title: "First Half (Jan-Jun)", value: "first_half" },
+  { title: "Second Half (Jul-Dec)", value: "second_half" },
+];
 
 const yearOptions = computed(() => {
-  const currentYear = new Date().getFullYear()
-  const years = []
+  const currentYear = new Date().getFullYear();
+  const years = [];
   for (let i = currentYear; i >= currentYear - 5; i--) {
-    years.push(i)
+    years.push(i);
   }
-  return years
-})
+  return years;
+});
 
 const getStatusColor = (status) => {
   const colors = {
-    draft: 'grey',
-    computed: 'info',
-    approved: 'success',
-    paid: 'primary'
-  }
-  return colors[status] || 'grey'
-}
+    draft: "grey",
+    computed: "info",
+    approved: "success",
+    paid: "primary",
+  };
+  return colors[status] || "grey";
+};
 
 const formatPeriod = (period) => {
   const periods = {
-    full_year: 'Full Year',
-    first_half: 'First Half',
-    second_half: 'Second Half'
-  }
-  return periods[period] || period
-}
+    full_year: "Full Year",
+    first_half: "First Half",
+    second_half: "Second Half",
+  };
+  return periods[period] || period;
+};
 
 const getPeriodIcon = (period) => {
   const icons = {
-    full_year: 'mdi-calendar',
-    first_half: 'mdi-calendar-start',
-    second_half: 'mdi-calendar-end'
-  }
-  return icons[period] || 'mdi-calendar'
-}
+    full_year: "mdi-calendar",
+    first_half: "mdi-calendar-start",
+    second_half: "mdi-calendar-end",
+  };
+  return icons[period] || "mdi-calendar";
+};
 
 const fetchThirteenthMonth = async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    const params = {}
-    if (filters.value.year) params.year = filters.value.year
-    if (filters.value.status) params.status = filters.value.status
+    const params = {};
+    if (filters.value.year) params.year = filters.value.year;
+    if (filters.value.status) params.status = filters.value.status;
 
-    const response = await api.get('/thirteenth-month', { params })
-    thirteenthMonthList.value = response.data.data || response.data
+    const response = await api.get("/thirteenth-month", { params });
+    thirteenthMonthList.value = response.data.data || response.data;
   } catch (error) {
-    console.error('Error fetching 13th month pay:', error)
-    showSnackbar('Failed to fetch 13th month pay records', 'error')
+    console.error("Error fetching 13th month pay:", error);
+    showSnackbar("Failed to fetch 13th month pay records", "error");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const fetchDepartments = async () => {
   try {
-    const response = await api.get('/thirteenth-month/departments')
-    departments.value = ['All Departments', ...response.data]
+    const response = await api.get("/thirteenth-month/departments");
+    departments.value = ["All Departments", ...response.data];
   } catch (error) {
-    console.error('Error fetching departments:', error)
+    console.error("Error fetching departments:", error);
   }
-}
+};
 
 const openCalculateDialog = () => {
   calculateForm.value = {
     year: new Date().getFullYear(),
-    period: 'full_year',
+    period: "full_year",
     department: null,
-    payment_date: null
-  }
-  currentStep.value = 0
-  calculateDialog.value = true
-}
+    payment_date: null,
+  };
+  currentStep.value = 0;
+  calculateDialog.value = true;
+};
 
 const calculate = async () => {
-  calculating.value = true
+  calculating.value = true;
   try {
     const payload = {
       year: calculateForm.value.year,
       period: calculateForm.value.period,
-      payment_date: calculateForm.value.payment_date
-    }
-    
-    if (calculateForm.value.department && calculateForm.value.department !== 'All Departments') {
-      payload.department = calculateForm.value.department
+      payment_date: calculateForm.value.payment_date,
+    };
+
+    if (
+      calculateForm.value.department &&
+      calculateForm.value.department !== "All Departments"
+    ) {
+      payload.department = calculateForm.value.department;
     }
 
-    const response = await api.post('/thirteenth-month/calculate', payload)
-    showSnackbar(response.data.message || '13th month pay calculated successfully', 'success')
-    calculateDialog.value = false
-    fetchThirteenthMonth()
+    const response = await api.post("/thirteenth-month/calculate", payload);
+    showSnackbar(
+      response.data.message || "13th month pay calculated successfully",
+      "success",
+    );
+    calculateDialog.value = false;
+    fetchThirteenthMonth();
   } catch (error) {
-    console.error('Error calculating 13th month pay:', error)
-    showSnackbar(error.response?.data?.message || 'Failed to calculate 13th month pay', 'error')
+    console.error("Error calculating 13th month pay:", error);
+    showSnackbar(
+      error.response?.data?.message || "Failed to calculate 13th month pay",
+      "error",
+    );
   } finally {
-    calculating.value = false
+    calculating.value = false;
   }
-}
+};
 
 const viewDetails = async (item) => {
-  loading.value = true
+  loading.value = true;
   try {
-    const response = await api.get(`/thirteenth-month/${item.id}`)
-    selectedItem.value = response.data
-    detailsDialog.value = true
+    const response = await api.get(`/thirteenth-month/${item.id}`);
+    selectedItem.value = response.data;
+    detailsDialog.value = true;
   } catch (error) {
-    console.error('Error fetching details:', error)
-    showSnackbar('Failed to fetch details', 'error')
+    console.error("Error fetching details:", error);
+    showSnackbar("Failed to fetch details", "error");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const downloadPdf = async (item) => {
   try {
     const response = await api.get(`/thirteenth-month/${item.id}/export-pdf`, {
-      responseType: 'blob'
-    })
-    
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `13th-month-pay-${item.batch_number}.pdf`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    
-    showSnackbar('PDF downloaded successfully', 'success')
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `13th-month-pay-${item.batch_number}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    showSnackbar("PDF downloaded successfully", "success");
   } catch (error) {
-    console.error('Error downloading PDF:', error)
-    showSnackbar('Failed to download PDF', 'error')
+    console.error("Error downloading PDF:", error);
+    showSnackbar("Failed to download PDF", "error");
   }
-}
+};
 
 const approve = async (item) => {
-  if (!confirm('Are you sure you want to approve this 13th month pay?')) return
-  
+  if (!confirm("Are you sure you want to approve this 13th month pay?")) return;
+
   try {
-    const response = await api.post(`/thirteenth-month/${item.id}/approve`)
-    showSnackbar(response.data.message || 'Approved successfully', 'success')
-    fetchThirteenthMonth()
+    const response = await api.post(`/thirteenth-month/${item.id}/approve`);
+    showSnackbar(response.data.message || "Approved successfully", "success");
+    fetchThirteenthMonth();
   } catch (error) {
-    console.error('Error approving:', error)
-    showSnackbar(error.response?.data?.message || 'Failed to approve', 'error')
+    console.error("Error approving:", error);
+    showSnackbar(error.response?.data?.message || "Failed to approve", "error");
   }
-}
+};
 
 const markPaid = async (item) => {
-  if (!confirm('Are you sure you want to mark this as paid?')) return
-  
+  if (!confirm("Are you sure you want to mark this as paid?")) return;
+
   try {
-    const response = await api.post(`/thirteenth-month/${item.id}/mark-paid`)
-    showSnackbar(response.data.message || 'Marked as paid successfully', 'success')
-    fetchThirteenthMonth()
+    const response = await api.post(`/thirteenth-month/${item.id}/mark-paid`);
+    showSnackbar(
+      response.data.message || "Marked as paid successfully",
+      "success",
+    );
+    fetchThirteenthMonth();
   } catch (error) {
-    console.error('Error marking as paid:', error)
-    showSnackbar(error.response?.data?.message || 'Failed to mark as paid', 'error')
+    console.error("Error marking as paid:", error);
+    showSnackbar(
+      error.response?.data?.message || "Failed to mark as paid",
+      "error",
+    );
   }
-}
+};
 
 const deleteItem = async (item) => {
-  if (!confirm(`Are you sure you want to delete batch ${item.batch_number}? This action cannot be undone.`)) return
-  
-  try {
-    const response = await api.delete(`/thirteenth-month/${item.id}`)
-    showSnackbar(response.data.message || 'Deleted successfully', 'success')
-    fetchThirteenthMonth()
-  } catch (error) {
-    console.error('Error deleting:', error)
-    showSnackbar(error.response?.data?.message || 'Failed to delete', 'error')
-  }
-}
+  if (
+    !confirm(
+      `Are you sure you want to delete batch ${item.batch_number}? This action cannot be undone.`,
+    )
+  )
+    return;
 
-const showSnackbar = (message, color = 'success') => {
+  try {
+    const response = await api.delete(`/thirteenth-month/${item.id}`);
+    showSnackbar(response.data.message || "Deleted successfully", "success");
+    fetchThirteenthMonth();
+  } catch (error) {
+    console.error("Error deleting:", error);
+    showSnackbar(error.response?.data?.message || "Failed to delete", "error");
+  }
+};
+
+const showSnackbar = (message, color = "success") => {
   snackbar.value = {
     show: true,
     message,
-    color
+    color,
+  };
+};
+
+onMounted(() => {
+  fetchThirteenthMonth();
+  fetchDepartments();
+});
+</script>
+
+<style lang="scss" scoped>
+.thirteenth-month-page {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.modern-card {
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.page-icon-badge {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.page-header-content {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.action-button {
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.2);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+    transform: translateY(-1px);
   }
 }
 
-onMounted(() => {
-  fetchThirteenthMonth()
-  fetchDepartments()
-})
-</script>
+.filters-section {
+  margin-bottom: 24px;
+}
 
-<style scoped>
+.modern-table {
+  border-radius: 12px;
+  overflow: hidden;
+
+  :deep(th) {
+    background-color: #f8f9fa !important;
+    color: #001f3d !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  :deep(.v-data-table__tr:hover) {
+    background-color: rgba(237, 152, 95, 0.04) !important;
+  }
+}
+
 .v-card-title {
   background: linear-gradient(90deg, #1976d2 0%, #1565c0 100%);
   color: white;
 }
 
-/* Modern Calculate Dialog Styles */
-.calculate-dialog-card {
+/* Modern Dialog Styles */
+.modern-dialog {
   border-radius: 16px !important;
   overflow: hidden;
 }
 
-.calculate-dialog-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.dialog-header {
+  background: white;
   padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dialog-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dialog-icon-wrapper.primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
   color: white;
 }
 
-.text-white-70 {
-  opacity: 0.9;
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1.2;
 }
 
-.form-field-wrapper {
-  position: relative;
+.dialog-subtitle {
+  font-size: 14px;
+  color: #6c757d;
+  margin-top: 4px;
 }
 
-.form-label {
+.dialog-content {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 10px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  margin-bottom: 0;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
+}
+
+.dialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  color: #424242;
-  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
-.v-select :deep(.v-field) {
-  border-radius: 12px;
-  transition: all 0.3s ease;
+.dialog-btn-cancel {
+  background: transparent;
+  color: #64748b;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 31, 61, 0.04);
+  }
 }
 
-.v-select:hover :deep(.v-field) {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.dialog-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  margin-left: 12px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+  }
 }
 
+.v-select :deep(.v-field),
 .v-text-field :deep(.v-field) {
   border-radius: 12px;
   transition: all 0.3s ease;
 }
 
+.v-select:hover :deep(.v-field),
 .v-text-field:hover :deep(.v-field) {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -782,22 +959,6 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-}
-
-/* Animation for form fields */
-.form-field-wrapper {
-  animation: fadeInUp 0.4s ease;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* Enhance button styling */
@@ -814,5 +975,53 @@ onMounted(() => {
 /* Alert styling */
 .v-alert {
   border-radius: 12px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+
+  .v-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
+  }
+
+  &.action-btn-primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+  }
+
+  &.action-btn-secondary {
+    background: rgba(237, 152, 95, 0.1);
+    color: #ed985f;
+    border: 1px solid rgba(237, 152, 95, 0.2);
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+
+    &:hover {
+      background: rgba(237, 152, 95, 0.15);
+      border-color: rgba(237, 152, 95, 0.3);
+    }
+  }
 }
 </style>

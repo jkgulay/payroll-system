@@ -88,28 +88,29 @@ import {
 
 import { Intersect, Ripple, Touch } from "vuetify/directives";
 
-// Modern Professional Theme
-// Inspired by contemporary SaaS applications with vibrant gradients
+// Custom Professional Theme
+// Using custom color palette: Navy, Orange, Peach, Light Gray
 const customTheme = {
   dark: false,
   colors: {
-    primary: "#6366f1", // Modern Indigo - Primary brand color
-    secondary: "#8b5cf6", // Purple - Complementary accent
-    accent: "#ec4899", // Pink - Call-to-action highlights
+    primary: "#ED985F", // Orange - Primary brand color
+    secondary: "#F7B980", // Peach - Complementary accent
+    accent: "#ED985F", // Orange - Call-to-action highlights
     error: "#ef4444", // Red - Error states
-    info: "#3b82f6", // Blue - Information
+    info: "#ED985F", // Orange - Information (changed from purple/blue)
     success: "#10b981", // Emerald - Success states
-    warning: "#f59e0b", // Amber - Warnings
-    background: "#f8fafc", // Slate 50 - Background
+    warning: "#F7B980", // Peach - Warnings
+    background: "#f8fafc", // Light background
     surface: "#ffffff", // White - Surface elements
     slate: "#64748b", // Slate - Secondary text
-    navy: "#1e293b", // Navy - Dark elements
-    indigo: "#6366f1", // Indigo - Primary highlights
-    violet: "#8b5cf6", // Violet - Secondary highlights
+    navy: "#001F3D", // Custom Navy - Dark elements
+    orange: "#ED985F", // Custom Orange - Primary highlights
+    peach: "#F7B980", // Custom Peach - Secondary highlights
+    lightGray: "#E6E6E6", // Custom Light Gray
     // Legacy color aliases for backward compatibility
     steel: "#64748b", // Maps to slate
-    hardhat: "#ec4899", // Maps to accent/pink
-    concrete: "#94a3b8", // Light slate
+    hardhat: "#ED985F", // Maps to orange
+    concrete: "#E6E6E6", // Light gray
   },
 };
 
@@ -117,23 +118,24 @@ const customTheme = {
 const constructionDark = {
   dark: true,
   colors: {
-    primary: "#818cf8", // Lighter indigo for dark mode
-    secondary: "#a78bfa", // Lighter purple
-    accent: "#f472b6", // Lighter pink
+    primary: "#F7B980", // Lighter peach for dark mode
+    secondary: "#ED985F", // Orange
+    accent: "#F7B980", // Peach
     error: "#f87171",
-    info: "#60a5fa",
+    info: "#F7B980",
     success: "#34d399",
-    warning: "#fbbf24",
+    warning: "#ED985F",
     background: "#0f172a", // Slate 900
     surface: "#1e293b", // Slate 800
     slate: "#94a3b8",
-    navy: "#0f172a",
-    indigo: "#818cf8",
-    violet: "#a78bfa",
+    navy: "#001F3D", // Custom Navy
+    orange: "#ED985F",
+    peach: "#F7B980",
+    lightGray: "#E6E6E6",
     // Legacy color aliases for backward compatibility
     steel: "#94a3b8", // Light slate for dark mode
-    hardhat: "#f472b6", // Maps to accent/pink
-    concrete: "#cbd5e1", // Lighter slate
+    hardhat: "#ED985F", // Maps to orange
+    concrete: "#E6E6E6", // Light gray
   },
 };
 
@@ -239,9 +241,9 @@ export default createVuetify({
       style: "text-transform: none; font-weight: 600;",
     },
     VCard: {
-      elevation: 2,
+      elevation: 0,
       rounded: "lg",
-      style: "border-left: 4px solid;",
+      style: "border: 1px solid rgba(0, 31, 61, 0.08); background: #ffffff;",
     },
     VTextField: {
       variant: "outlined",

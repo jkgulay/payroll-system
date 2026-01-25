@@ -1,238 +1,236 @@
 <template>
   <div class="modern-dashboard">
-    <!-- Modern Header -->
-    <div class="dashboard-header mb-6">
-      <div>
-        <h1 class="text-h4 font-weight-bold mb-1">Dashboard</h1>
-        <p class="text-subtitle-1 text-medium-emphasis">
-          Welcome back! Here's what's happening today
-        </p>
+    <!-- Compact Header with Actions -->
+    <div class="dashboard-header-compact">
+      <div class="header-left">
+        <div class="welcome-badge">
+          <v-icon size="16" class="welcome-icon">mdi-chart-box</v-icon>
+          <span>Dashboard Overview</span>
+        </div>
+        <h1 class="dashboard-title">Welcome back, {{ fullName }}</h1>
+        <p class="dashboard-subtitle">{{ currentDateRange }}</p>
       </div>
-      <div class="d-flex align-center gap-3">
-        <!-- Date Range Selector -->
-        <v-chip
-          prepend-icon="mdi-calendar-range"
-          variant="outlined"
-          class="px-4"
-        >
-          {{ currentDateRange }}
-        </v-chip>
+      <div class="header-actions">
         <v-btn
-          color="primary"
+          variant="text"
           prepend-icon="mdi-refresh"
-          variant="flat"
           @click="refreshData"
           :loading="refreshing"
-          elevation="0"
+          class="refresh-btn"
         >
           Refresh
         </v-btn>
       </div>
     </div>
 
-    <!-- Statistics Cards Row -->
-    <v-row class="mb-6">
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="modern-card stat-card" elevation="0">
-          <v-card-text class="pa-5">
-            <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Active Employees</span>
-              <v-icon size="20" color="primary">mdi-account-group</v-icon>
+    <!-- Redesigned Statistics Cards with Icons on Left -->
+    <v-row class="stats-row">
+      <v-col cols="12" sm="6" lg="3">
+        <div
+          class="stat-card-new stat-card-employees"
+          @click="$router.push('/employees')"
+        >
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon-circle">
+              <v-icon size="28">mdi-account-group</v-icon>
             </div>
-            <div class="text-h4 font-weight-bold mb-2">
-              {{ stats.activeEmployees }}
-            </div>
-            <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">of {{ stats.totalEmployees }} total</span>
-            </div>
-          </v-card-text>
-        </v-card>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Active Employees</div>
+            <div class="stat-value">{{ stats.activeEmployees }}</div>
+            <div class="stat-meta">of {{ stats.totalEmployees }} total</div>
+          </div>
+          <div class="stat-arrow">
+            <v-icon size="20">mdi-chevron-right</v-icon>
+          </div>
+        </div>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card
-          class="modern-card stat-card"
-          elevation="0"
-          style="cursor: pointer"
+      <v-col cols="12" sm="6" lg="3">
+        <div
+          class="stat-card-new stat-card-attendance"
           @click="goToAttendanceToday"
         >
-          <v-card-text class="pa-5">
-            <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Present Today</span>
-              <v-icon size="20" color="info">mdi-clock-check</v-icon>
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon-circle">
+              <v-icon size="28">mdi-clock-check</v-icon>
             </div>
-            <div class="text-h4 font-weight-bold mb-2">
-              {{ stats.presentToday }}
-            </div>
-            <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Click to view details</span>
-            </div>
-          </v-card-text>
-        </v-card>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Present Today</div>
+            <div class="stat-value">{{ stats.presentToday }}</div>
+            <div class="stat-meta">Click to view details</div>
+          </div>
+          <div class="stat-arrow">
+            <v-icon size="20">mdi-chevron-right</v-icon>
+          </div>
+        </div>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="modern-card stat-card" elevation="0">
-          <v-card-text class="pa-5">
-            <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Period Payroll</span>
-              <v-icon size="20" color="success">mdi-currency-usd</v-icon>
+      <v-col cols="12" sm="6" lg="3">
+        <div
+          class="stat-card-new stat-card-payroll"
+          @click="$router.push('/payroll')"
+        >
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon-circle">
+              <v-icon size="28">mdi-currency-usd</v-icon>
             </div>
-            <div class="text-h4 font-weight-bold mb-2">
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Period Payroll</div>
+            <div class="stat-value">
               ₱{{ formatNumber(stats.periodPayroll) }}
             </div>
-            <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Current month</span>
-            </div>
-          </v-card-text>
-        </v-card>
+            <div class="stat-meta">Current month</div>
+          </div>
+          <div class="stat-arrow">
+            <v-icon size="20">mdi-chevron-right</v-icon>
+          </div>
+        </div>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card 
-          class="modern-card stat-card" 
-          elevation="0"
-          style="cursor: pointer"
+      <v-col cols="12" sm="6" lg="3">
+        <div
+          class="stat-card-new stat-card-pending"
           @click="$router.push('/resume-review')"
         >
-          <v-card-text class="pa-5">
-            <div class="d-flex justify-space-between align-center mb-3">
-              <span class="text-subtitle-2 text-medium-emphasis">Pending Actions</span>
-              <v-icon size="20" color="warning">mdi-alert-circle</v-icon>
+          <div class="stat-icon-wrapper">
+            <div class="stat-icon-circle stat-icon-pulse">
+              <v-icon size="28">mdi-alert-circle</v-icon>
             </div>
-            <div class="text-h4 font-weight-bold mb-2">
-              {{ totalPendingActions }}
-            </div>
-            <div class="d-flex align-center">
-              <span class="text-caption text-medium-emphasis">Requires attention</span>
-            </div>
-          </v-card-text>
-        </v-card>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Pending Actions</div>
+            <div class="stat-value">{{ totalPendingActions }}</div>
+            <div class="stat-meta">Requires attention</div>
+          </div>
+          <div class="stat-arrow">
+            <v-icon size="20">mdi-chevron-right</v-icon>
+          </div>
+        </div>
       </v-col>
     </v-row>
 
-    <!-- Main Content Section -->
-    <v-row class="mb-6">
-      <!-- Left Column - Pending Actions & Charts -->
+    <!-- Main Content Section with New Layout -->
+    <v-row class="content-row">
+      <!-- Left Column - 2/3 Width -->
       <v-col cols="12" lg="8">
-        <!-- Pending Actions -->
-        <v-card class="modern-card mb-6" elevation="0">
-          <v-card-title class="pa-5">
-            <v-icon color="warning" size="small" class="mr-2">mdi-bell-alert</v-icon>
-            <div class="text-subtitle-1 font-weight-bold">Items Requiring Attention</div>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-0">
-            <v-list class="py-0">
-              <!-- Pending Applications -->
-              <v-list-item
-                v-if="stats.pendingApplications > 0"
-                @click="$router.push('/resume-review')"
-                class="px-5 py-4"
-              >
-                <template v-slot:prepend>
-                  <v-avatar color="warning" size="40">
-                    <v-icon>mdi-account-clock</v-icon>
-                  </v-avatar>
-                </template>
-                <v-list-item-title class="font-weight-medium">
-                  Job Applications
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  {{ stats.pendingApplications }} applications awaiting review
-                </v-list-item-subtitle>
-                <template v-slot:append>
-                  <v-chip color="warning" size="small" variant="flat">
-                    {{ stats.pendingApplications }}
-                  </v-chip>
-                </template>
-              </v-list-item>
-              <v-divider v-if="stats.pendingApplications > 0 && (stats.pendingLeaves > 0 || stats.pendingAttendanceCorrections > 0 || stats.draftPayrolls > 0)"></v-divider>
+        <!-- Pending Actions with Modern Design -->
+        <div class="action-section mb-6">
+          <div class="section-header">
+            <div class="section-title-wrapper">
+              <div class="section-icon-badge">
+                <v-icon size="18">mdi-bell-ring</v-icon>
+              </div>
+              <h2 class="section-title">Action Items</h2>
+              <v-chip size="small" class="ml-2" v-if="totalPendingActions > 0">
+                {{ totalPendingActions }}
+              </v-chip>
+            </div>
+          </div>
 
-              <!-- Pending Leaves -->
-              <v-list-item
-                v-if="stats.pendingLeaves > 0"
-                @click="$router.push('/hr/leave-approval')"
-                class="px-5 py-4"
-              >
-                <template v-slot:prepend>
-                  <v-avatar color="info" size="40">
-                    <v-icon>mdi-calendar-clock</v-icon>
-                  </v-avatar>
-                </template>
-                <v-list-item-title class="font-weight-medium">
-                  Leave Requests
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  {{ stats.pendingLeaves }} leave requests need approval
-                </v-list-item-subtitle>
-                <template v-slot:append>
-                  <v-chip color="info" size="small" variant="flat">
-                    {{ stats.pendingLeaves }}
-                  </v-chip>
-                </template>
-              </v-list-item>
-              <v-divider v-if="stats.pendingLeaves > 0 && (stats.pendingAttendanceCorrections > 0 || stats.draftPayrolls > 0)"></v-divider>
+          <!-- Action Cards in Grid -->
+          <div class="action-grid" v-if="totalPendingActions > 0">
+            <!-- Pending Applications -->
+            <div
+              v-if="stats.pendingApplications > 0"
+              class="action-item"
+              @click="$router.push('/resume-review')"
+            >
+              <div class="action-item-icon action-icon-warning">
+                <v-icon size="24">mdi-account-clock</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Job Applications</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingApplications }} awaiting review
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingApplications }}
+              </div>
+            </div>
 
-              <!-- Pending Attendance Corrections -->
-              <v-list-item
-                v-if="stats.pendingAttendanceCorrections > 0"
-                @click="$router.push({ path: '/attendance', query: { tab: 'approvals' } })"
-                class="px-5 py-4"
-              >
-                <template v-slot:prepend>
-                  <v-avatar color="primary" size="40">
-                    <v-icon>mdi-clock-alert</v-icon>
-                  </v-avatar>
-                </template>
-                <v-list-item-title class="font-weight-medium">
-                  Attendance Corrections
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  {{ stats.pendingAttendanceCorrections }} corrections pending
-                </v-list-item-subtitle>
-                <template v-slot:append>
-                  <v-chip color="primary" size="small" variant="flat">
-                    {{ stats.pendingAttendanceCorrections }}
-                  </v-chip>
-                </template>
-              </v-list-item>
-              <v-divider v-if="stats.pendingAttendanceCorrections > 0 && stats.draftPayrolls > 0"></v-divider>
+            <!-- Pending Leaves -->
+            <div
+              v-if="stats.pendingLeaves > 0"
+              class="action-item"
+              @click="$router.push('/hr/leave-approval')"
+            >
+              <div class="action-item-icon action-icon-info">
+                <v-icon size="24">mdi-calendar-clock</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Leave Requests</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingLeaves }} need approval
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingLeaves }}
+              </div>
+            </div>
 
-              <!-- Draft Payrolls -->
-              <v-list-item
-                v-if="stats.draftPayrolls > 0"
-                @click="$router.push('/payroll')"
-                class="px-5 py-4"
-              >
-                <template v-slot:prepend>
-                  <v-avatar color="success" size="40">
-                    <v-icon>mdi-file-document-edit</v-icon>
-                  </v-avatar>
-                </template>
-                <v-list-item-title class="font-weight-medium">
-                  Draft Payrolls
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  {{ stats.draftPayrolls }} payrolls ready to finalize
-                </v-list-item-subtitle>
-                <template v-slot:append>
-                  <v-chip color="success" size="small" variant="flat">
-                    {{ stats.draftPayrolls }}
-                  </v-chip>
-                </template>
-              </v-list-item>
+            <!-- Pending Attendance Corrections -->
+            <div
+              v-if="stats.pendingAttendanceCorrections > 0"
+              class="action-item"
+              @click="
+                $router.push({
+                  path: '/attendance',
+                  query: { tab: 'approvals' },
+                })
+              "
+            >
+              <div class="action-item-icon action-icon-primary">
+                <v-icon size="24">mdi-clock-alert</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Attendance Corrections</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingAttendanceCorrections }} pending
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingAttendanceCorrections }}
+              </div>
+            </div>
 
-              <!-- No Pending Actions -->
-              <v-list-item v-if="totalPendingActions === 0" class="px-5 py-8">
-                <v-list-item-title class="text-center text-medium-emphasis">
-                  <v-icon size="48" color="success" class="mb-2">mdi-check-circle</v-icon>
-                  <div>All caught up! No pending actions.</div>
-                </v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
+            <!-- Draft Payrolls -->
+            <div
+              v-if="stats.draftPayrolls > 0"
+              class="action-item"
+              @click="$router.push('/payroll')"
+            >
+              <div class="action-item-icon action-icon-success">
+                <v-icon size="24">mdi-file-document-edit</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Draft Payrolls</div>
+                <div class="action-item-desc">
+                  {{ stats.draftPayrolls }} ready to finalize
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.draftPayrolls }}
+              </div>
+            </div>
+          </div>
+
+          <!-- No Pending Actions -->
+          <div v-else class="no-actions-state">
+            <div class="no-actions-icon">
+              <v-icon size="64" color="success"
+                >mdi-check-circle-outline</v-icon
+              >
+            </div>
+            <div class="no-actions-title">All Caught Up!</div>
+            <div class="no-actions-desc">
+              No pending actions require your attention
+            </div>
+          </div>
+        </div>
 
         <!-- Recent Activity Widget -->
         <RecentActivityWidget :limit="10" class="mb-6" />
@@ -241,101 +239,98 @@
         <UpcomingEvents class="mb-6" />
       </v-col>
 
-      <!-- Right Column - Quick Actions & Widgets -->
+      <!-- Right Column - 1/3 Width -->
       <v-col cols="12" lg="4">
-        <!-- Quick Actions -->
-        <v-card class="modern-card mb-4" elevation="0">
-          <v-card-title class="pa-5">
-            <v-icon color="primary" size="small" class="mr-2">mdi-lightning-bolt</v-icon>
-            <div class="text-subtitle-1 font-weight-bold">Quick Actions</div>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-3">
-            <v-btn
-              block
-              variant="tonal"
-              color="primary"
-              prepend-icon="mdi-account-plus"
-              class="mb-2 justify-start"
+        <!-- Quick Actions Redesigned -->
+        <div class="quick-actions-section mb-6">
+          <div class="section-header-compact">
+            <div class="section-icon-badge">
+              <v-icon size="16">mdi-lightning-bolt</v-icon>
+            </div>
+            <h3 class="section-title-compact">Quick Actions</h3>
+          </div>
+          <div class="quick-action-buttons">
+            <button
+              class="quick-action-btn"
               @click="showAddEmployeeDialog = true"
             >
-              Add Employee
-            </v-btn>
-            <v-btn
-              block
-              variant="tonal"
-              color="success"
-              prepend-icon="mdi-currency-usd"
-              class="mb-2 justify-start"
+              <div class="quick-action-icon">
+                <v-icon>mdi-account-plus</v-icon>
+              </div>
+              <span>Add Employee</span>
+            </button>
+            <button
+              class="quick-action-btn"
               @click="$router.push('/payroll/create')"
             >
-              Create Payroll
-            </v-btn>
-            <v-btn
-              block
-              variant="tonal"
-              color="info"
-              prepend-icon="mdi-file-upload"
-              class="mb-2 justify-start"
+              <div class="quick-action-icon">
+                <v-icon>mdi-currency-usd</v-icon>
+              </div>
+              <span>Create Payroll</span>
+            </button>
+            <button
+              class="quick-action-btn"
               @click="$router.push('/biometric-import')"
             >
-              Import Attendance
-            </v-btn>
-          </v-card-text>
-        </v-card>
+              <div class="quick-action-icon">
+                <v-icon>mdi-file-upload</v-icon>
+              </div>
+              <span>Import Attendance</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- System Health -->
-        <v-card class="modern-card mb-4" elevation="0">
-          <v-card-title class="pa-5">
-            <v-icon color="success" size="small" class="mr-2">mdi-shield-check</v-icon>
-            <div class="text-subtitle-1 font-weight-bold">System Health</div>
-          </v-card-title>
-          <v-divider></v-divider>
-          <v-card-text class="pa-5">
-            <v-list class="py-0" density="compact">
-              <v-list-item class="px-0 mb-3">
-                <v-list-item-title class="text-caption text-medium-emphasis mb-1">
-                  Employee Data Completion
-                </v-list-item-title>
-                <template v-slot:append>
-                  <div class="d-flex align-center">
-                    <span class="font-weight-bold mr-2 text-body-2">{{ employeeDataCompletion }}%</span>
-                    <v-progress-circular
-                      :model-value="employeeDataCompletion"
-                      size="28"
-                      width="3"
-                      :color="employeeDataCompletion > 90 ? 'success' : 'warning'"
-                    ></v-progress-circular>
-                  </div>
-                </template>
-              </v-list-item>
-              
-              <v-list-item class="px-0 mb-3">
-                <v-list-item-title class="text-caption text-medium-emphasis">
-                  Monthly Attendance Rate
-                </v-list-item-title>
-                <template v-slot:append>
-                  <v-chip 
-                    size="small" 
-                    :color="stats.monthlyAttendanceRate > 95 ? 'success' : 'warning'"
-                    variant="flat"
+        <!-- System Health Redesigned -->
+        <div class="system-health-section mb-6">
+          <div class="section-header-compact">
+            <div class="section-icon-badge success">
+              <v-icon size="16">mdi-pulse</v-icon>
+            </div>
+            <h3 class="section-title-compact">System Status</h3>
+          </div>
+          <div class="health-metrics">
+            <div class="health-metric">
+              <div class="metric-header">
+                <span class="metric-label">Employee Data Completion</span>
+                <span class="metric-value">{{ employeeDataCompletion }}%</span>
+              </div>
+              <div class="metric-progress">
+                <div
+                  class="metric-progress-bar"
+                  :style="{ width: employeeDataCompletion + '%' }"
+                ></div>
+              </div>
+            </div>
+
+            <div class="health-metric">
+              <div class="metric-info">
+                <div class="metric-info-left">
+                  <v-icon size="20" class="metric-icon"
+                    >mdi-calendar-check</v-icon
                   >
-                    {{ stats.monthlyAttendanceRate || 0 }}%
-                  </v-chip>
-                </template>
-              </v-list-item>
+                  <span class="metric-info-label">Monthly Attendance</span>
+                </div>
+                <div class="metric-badge">
+                  {{ stats.monthlyAttendanceRate || 0 }}%
+                </div>
+              </div>
+            </div>
 
-              <v-list-item class="px-0">
-                <v-list-item-title class="text-caption text-medium-emphasis">
-                  Last Biometric Import
-                </v-list-item-title>
-                <template v-slot:append>
-                  <span class="text-caption font-weight-medium">{{ lastBiometricImport }}</span>
-                </template>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
+            <div class="health-metric">
+              <div class="metric-info">
+                <div class="metric-info-left">
+                  <v-icon size="20" class="metric-icon"
+                    >mdi-clock-outline</v-icon
+                  >
+                  <span class="metric-info-label">Last Biometric Import</span>
+                </div>
+                <div class="metric-text">
+                  {{ lastBiometricImport }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Calendar Widget -->
         <DashboardCalendar />
@@ -676,6 +671,7 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
@@ -689,6 +685,7 @@ import RecentActivityWidget from "@/components/audit/RecentActivityWidget.vue";
 
 const toast = useToast();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const stats = ref({
   totalEmployees: 0,
@@ -741,13 +738,17 @@ const currentDateRange = computed(() => {
   })}`;
 });
 
+const fullName = computed(() => {
+  return authStore.user?.name || authStore.user?.username || "Admin";
+});
+
 // Circular progress for community growth
 const circumference = 2 * Math.PI * 50;
 
 const employeeGrowthPercentage = computed(() => {
   if (stats.value.totalEmployees === 0) return 0;
   return Math.round(
-    (stats.value.activeEmployees / stats.value.totalEmployees) * 100
+    (stats.value.activeEmployees / stats.value.totalEmployees) * 100,
   );
 });
 
@@ -768,20 +769,20 @@ const totalPendingActions = computed(() => {
 const employeeDataCompletion = computed(() => {
   if (stats.value.totalEmployees === 0) return 0;
   return Math.round(
-    (stats.value.employeesCompleteData / stats.value.totalEmployees) * 100
+    (stats.value.employeesCompleteData / stats.value.totalEmployees) * 100,
   );
 });
 
 const lastBiometricImport = computed(() => {
-  if (!stats.value.lastBiometricImportDate) return 'Never';
+  if (!stats.value.lastBiometricImportDate) return "Never";
   const date = new Date(stats.value.lastBiometricImportDate);
   const now = new Date();
   const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-  
-  if (diffInDays === 0) return 'Today';
-  if (diffInDays === 1) return 'Yesterday';
+
+  if (diffInDays === 0) return "Today";
+  if (diffInDays === 1) return "Yesterday";
   if (diffInDays < 7) return `${diffInDays} days ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 });
 
 let unsubscribeAttendance = null;
@@ -946,7 +947,7 @@ async function approveApplication() {
   try {
     const response = await api.post(
       `/employee-applications/${selectedApplication.value.id}/approve`,
-      { date_hired: approvalHireDate.value }
+      { date_hired: approvalHireDate.value },
     );
     approvedEmployeeData.value = response.data.employee;
     approvedEmployeePassword.value = response.data.temporary_password;
@@ -958,7 +959,7 @@ async function approveApplication() {
   } catch (error) {
     console.error("Error approving application:", error);
     toast.error(
-      error.response?.data?.message || "Failed to approve application"
+      error.response?.data?.message || "Failed to approve application",
     );
   } finally {
     processing.value = false;
@@ -974,7 +975,7 @@ async function rejectApplication() {
   try {
     await api.post(
       `/employee-applications/${selectedApplication.value.id}/reject`,
-      { rejection_reason: rejectionReason.value }
+      { rejection_reason: rejectionReason.value },
     );
     toast.success("Application rejected");
     closeApplicationDialog();
@@ -1021,187 +1022,569 @@ Role: Employee
 .modern-dashboard {
   max-width: 1600px;
   margin: 0 auto;
-  animation: fadeInUp 0.6s ease-out;
+  padding: 0 8px;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dashboard-header {
+// Compact Modern Header
+.dashboard-header-compact {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 24px 32px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 20px;
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-  position: relative;
-  overflow: hidden;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-  }
+  align-items: flex-start;
+  margin-bottom: 32px;
+  padding: 0 8px;
 
   @media (max-width: 960px) {
     flex-direction: column;
-    align-items: flex-start;
     gap: 16px;
-    padding: 20px;
   }
 }
 
-.modern-card {
-  border-radius: 20px !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border: 1px solid rgba(99, 102, 241, 0.1) !important;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+.header-left {
+  flex: 1;
+}
+
+.welcome-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  border-radius: 20px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+  .welcome-icon {
+    color: #ffffff !important;
+  }
+}
+
+.dashboard-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0 0 8px 0;
+  letter-spacing: -1px;
+}
+
+.dashboard-subtitle {
+  font-size: 15px;
+  color: rgba(0, 31, 61, 0.6);
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.refresh-btn {
+  text-transform: none;
+  font-weight: 600;
+  color: #ed985f !important;
+
+  :deep(.v-icon) {
+    color: #ed985f !important;
+  }
+}
+
+// Modern Stat Cards with Icon on Left
+.stats-row {
+  margin-bottom: 32px;
+}
+
+.stat-card-new {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  
-  &::after {
-    content: '';
+  height: 100%;
+
+  &::before {
+    content: "";
     position: absolute;
-    top: 0;
     left: 0;
-    right: 0;
+    top: 0;
     bottom: 0;
-    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 60%);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.4s ease;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
   }
 
   &:hover {
-    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15), 
-                0 8px 16px rgba(0, 0, 0, 0.08),
-                0 0 0 1px rgba(99, 102, 241, 0.1) inset !important;
-    transform: translateY(-4px) scale(1.01);
-    border-color: rgba(99, 102, 241, 0.25) !important;
-    
-    &::after {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+    border-color: rgba(237, 152, 95, 0.3);
+
+    &::before {
+      transform: scaleY(1);
+    }
+
+    .stat-arrow {
+      transform: translateX(4px);
       opacity: 1;
     }
   }
 }
 
-.stat-card {
-  position: relative;
-  overflow: hidden;
+.stat-icon-wrapper {
+  flex-shrink: 0;
+}
 
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-  }
-  
-  :deep(.v-icon) {
-    background: linear-gradient(135deg, currentColor 0%, currentColor 100%);
-    padding: 10px;
-    border-radius: 12px;
-    opacity: 0.15;
-    transition: all 0.3s ease;
-  }
-  
-  &:hover {
-    :deep(.v-icon) {
-      opacity: 0.25;
-      transform: scale(1.1) rotate(-5deg);
-    }
+.stat-icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(237, 152, 95, 0.12) 0%,
+    rgba(247, 185, 128, 0.08) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+
+  .v-icon {
+    color: #ed985f !important;
   }
 }
 
-.circular-progress {
-  .progress-circle {
-    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
-    filter: drop-shadow(0 2px 8px currentColor);
+.stat-icon-pulse {
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(237, 152, 95, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(237, 152, 95, 0);
   }
 }
 
-.progress-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 31, 61, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 32px;
   font-weight: 700;
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #001f3d;
+  line-height: 1;
+  margin-bottom: 6px;
+  letter-spacing: -1px;
 }
 
-.modern-table {
-  :deep(thead) {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    
-    th {
-      font-weight: 600;
-      color: #475569;
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 0.5px;
-    }
-  }
+.stat-meta {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.5);
+}
 
-  :deep(tbody tr) {
-    transition: all 0.3s ease;
-    
-    &:hover {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(139, 92, 246, 0.03) 100%) !important;
-      transform: scale(1.01);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
+.stat-arrow {
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+
+  .v-icon {
+    color: #ed985f !important;
   }
 }
 
-// Enhanced list items
-:deep(.v-list-item) {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+// Action Section
+.action-section {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.section-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.success {
+    background: linear-gradient(135deg, #f7b980 0%, #ed985f 100%);
+  }
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+}
+
+// Action Grid
+.action-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  background: #fafafa;
   border-radius: 12px;
-  margin: 4px 8px;
-  
+  border: 1px solid rgba(0, 31, 61, 0.06);
+  cursor: pointer;
+  transition: all 0.3s ease;
+
   &:hover {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%) !important;
+    background: #ffffff;
+    border-color: rgba(237, 152, 95, 0.3);
     transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 4px 16px rgba(237, 152, 95, 0.15);
   }
 }
 
-// Modern chips
+.action-item-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.action-icon-warning {
+    background: linear-gradient(
+      135deg,
+      rgba(247, 185, 128, 0.2) 0%,
+      rgba(237, 152, 95, 0.15) 100%
+    );
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+  }
+
+  &.action-icon-info {
+    background: linear-gradient(
+      135deg,
+      rgba(237, 152, 95, 0.15) 0%,
+      rgba(247, 185, 128, 0.1) 100%
+    );
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+  }
+
+  &.action-icon-primary {
+    background: linear-gradient(
+      135deg,
+      rgba(237, 152, 95, 0.2) 0%,
+      rgba(237, 152, 95, 0.1) 100%
+    );
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+  }
+
+  &.action-icon-success {
+    background: linear-gradient(
+      135deg,
+      rgba(247, 185, 128, 0.15) 0%,
+      rgba(237, 152, 95, 0.1) 100%
+    );
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+  }
+}
+
+.action-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.action-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 4px;
+}
+
+.action-item-desc {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.6);
+}
+
+.action-item-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+}
+
+// No Actions State
+.no-actions-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.no-actions-icon {
+  margin-bottom: 16px;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+}
+
+.no-actions-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  margin-bottom: 8px;
+}
+
+.no-actions-desc {
+  font-size: 14px;
+  color: rgba(0, 31, 61, 0.6);
+}
+
+// Quick Actions Section
+.quick-actions-section {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.section-header-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.section-title-compact {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+}
+
+.quick-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(237, 152, 95, 0.08) 0%,
+    rgba(247, 185, 128, 0.04) 100%
+  );
+  border: 1px solid rgba(237, 152, 95, 0.15);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 15px;
+  font-weight: 600;
+  color: #001f3d;
+  text-align: left;
+  width: 100%;
+
+  &:hover {
+    background: linear-gradient(
+      135deg,
+      rgba(237, 152, 95, 0.15) 0%,
+      rgba(247, 185, 128, 0.08) 100%
+    );
+    border-color: rgba(237, 152, 95, 0.3);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.2);
+  }
+}
+
+.quick-action-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+// System Health Section
+.system-health-section {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.health-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.health-metric {
+  // Metric with progress bar
+  .metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .metric-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 31, 61, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #001f3d;
+  }
+
+  .metric-progress {
+    height: 8px;
+    background: rgba(0, 31, 61, 0.06);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .metric-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #ed985f 0%, #f7b980 100%);
+    border-radius: 20px;
+    transition: width 0.6s ease;
+    box-shadow: 0 0 8px rgba(237, 152, 95, 0.4);
+  }
+
+  // Metric info
+  .metric-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: rgba(0, 31, 61, 0.03);
+    border-radius: 10px;
+  }
+
+  .metric-info-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .metric-icon {
+    color: #ed985f !important;
+  }
+
+  .metric-info-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(0, 31, 61, 0.7);
+  }
+
+  .metric-badge {
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 0 2px 6px rgba(237, 152, 95, 0.3);
+  }
+
+  .metric-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #001f3d;
+  }
+}
+
+// Additional overrides for widgets
 :deep(.v-chip) {
   font-weight: 600;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+
+  &.bg-warning,
+  &.bg-info,
+  &.bg-primary,
+  &.bg-success {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%) !important;
+    color: #ffffff !important;
   }
 }
 </style>

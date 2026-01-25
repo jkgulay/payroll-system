@@ -79,15 +79,6 @@ const router = createRouter({
           meta: { title: "Employees", roles: ["admin"] },
         },
         {
-          path: "employees/import",
-          name: "employees-import",
-          component: () =>
-            import(
-              /* webpackChunkName: "employees" */ "@/views/employees/ImportEmployeesView.vue"
-            ),
-          meta: { title: "Import Employees", roles: ["admin", "accountant"] },
-        },
-        {
           path: "resignations",
           name: "resignations",
           component: () =>

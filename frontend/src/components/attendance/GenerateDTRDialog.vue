@@ -5,11 +5,16 @@
     max-width="600"
     persistent
   >
-    <v-card>
-      <v-card-title class="text-h5 bg-success">
-        <v-icon start>mdi-file-document</v-icon>
-        Generate Daily Time Record (DTR)
-      </v-card-title>
+    <v-card class="modern-dialog">
+      <div class="dialog-header">
+        <div class="dialog-icon-wrapper">
+          <v-icon size="20">mdi-file-document</v-icon>
+        </div>
+        <div>
+          <div class="dialog-title">Generate Daily Time Record</div>
+          <div class="dialog-subtitle">Export attendance records as PDF</div>
+        </div>
+      </div>
 
       <v-card-text class="pt-6">
         <v-alert type="info" variant="tonal" class="mb-4">
@@ -74,8 +79,11 @@
                 <template v-slot:item="{ props, item }">
                   <v-list-item v-bind="props">
                     <template v-slot:subtitle>
-                      {{ item.raw.employee_number }} - {{ item.raw.position || 'N/A' }}
-                      <span v-if="item.raw.department"> | {{ item.raw.department }}</span>
+                      {{ item.raw.employee_number }} -
+                      {{ item.raw.position || "N/A" }}
+                      <span v-if="item.raw.department">
+                        | {{ item.raw.department }}</span
+                      >
                     </template>
                   </v-list-item>
                 </template>
@@ -161,28 +169,36 @@
         </v-alert>
       </v-card-text>
 
-      <v-card-actions>
-        <v-btn
-          text
-          @click="loadPreview"
-          :loading="previewing"
-          :disabled="!valid || reportType === 'daily'"
+      <div class="dialog-divider"></div>
+      <div class="dialog-actions">
+        <button
           v-if="reportType === 'range'"
+          class="dialog-btn dialog-btn-secondary"
+          @click="loadPreview"
+          :disabled="!valid || reportType === 'daily' || previewing"
         >
-          Preview
-        </v-btn>
-        <v-spacer></v-spacer>
-        <v-btn text @click="close">Cancel</v-btn>
-        <v-btn
-          color="success"
+          <v-icon v-if="previewing" size="16" class="rotating"
+            >mdi-loading</v-icon
+          >
+          <v-icon v-else size="16">mdi-eye</v-icon>
+          <span>{{ previewing ? "Loading..." : "Preview" }}</span>
+        </button>
+        <div style="flex: 1"></div>
+        <button class="dialog-btn dialog-btn-cancel" @click="close">
+          Cancel
+        </button>
+        <button
+          class="dialog-btn dialog-btn-primary"
           @click="generate"
-          :loading="generating"
-          :disabled="!valid"
-          prepend-icon="mdi-download"
+          :disabled="!valid || generating"
         >
-          Generate PDF
-        </v-btn>
-      </v-card-actions>
+          <v-icon v-if="generating" size="16" class="rotating"
+            >mdi-loading</v-icon
+          >
+          <v-icon v-else size="16">mdi-download</v-icon>
+          <span>{{ generating ? "Generating..." : "Generate PDF" }}</span>
+        </button>
+      </div>
     </v-card>
   </v-dialog>
 </template>
@@ -245,7 +261,7 @@ const loadEmployees = async () => {
       ...new Set(
         employees.value
           .map((e) => e.department)
-          .filter((d) => d && d !== "N/A")
+          .filter((d) => d && d !== "N/A"),
       ),
     ].sort();
     departments.value = uniqueDepartments;
@@ -254,7 +270,7 @@ const loadEmployees = async () => {
       ...new Set(
         employees.value
           .map((e) => e.staff_type)
-          .filter((s) => s && s !== "N/A")
+          .filter((s) => s && s !== "N/A"),
       ),
     ].sort();
     staffTypes.value = uniqueStaffTypes;
@@ -277,7 +293,7 @@ const filterEmployees = () => {
         emp.employee_number?.toLowerCase().includes(query) ||
         emp.first_name?.toLowerCase().includes(query) ||
         emp.last_name?.toLowerCase().includes(query) ||
-        emp.position?.toLowerCase().includes(query)
+        emp.position?.toLowerCase().includes(query),
     );
   }
 
@@ -324,7 +340,7 @@ const formatPreviewPeriod = () => {
   return reportType.value === "daily"
     ? new Date(formData.date).toLocaleDateString()
     : `${new Date(formData.date_from).toLocaleDateString()} - ${new Date(
-        formData.date_to
+        formData.date_to,
       ).toLocaleDateString()}`;
 };
 
@@ -400,10 +416,145 @@ watch(
       filterStaffType.value = null;
       filteredEmployees.value = employees.value;
     }
-  }
+  },
 );
 
 onMounted(() => {
   loadEmployees();
 });
 </script>
+
+<style scoped lang="scss">
+.modern-dialog {
+  border-radius: 16px !important;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.dialog-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  margin-bottom: 4px;
+}
+
+.dialog-subtitle {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.6);
+}
+
+.dialog-divider {
+  height: 1px;
+  background: rgba(0, 31, 61, 0.08);
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+  display: flex;
+  gap: 12px;
+}
+
+.dialog-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+
+  &.dialog-btn-cancel {
+    background: rgba(0, 31, 61, 0.06);
+    color: rgba(0, 31, 61, 0.8);
+    border: 1px solid rgba(0, 31, 61, 0.1);
+
+    &:hover {
+      background: rgba(0, 31, 61, 0.1);
+    }
+  }
+
+  &.dialog-btn-secondary {
+    background: rgba(237, 152, 95, 0.1);
+    color: #ed985f;
+    border: 1px solid rgba(237, 152, 95, 0.2);
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+
+    &:not(:disabled):hover {
+      background: rgba(237, 152, 95, 0.15);
+      border-color: rgba(237, 152, 95, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &.dialog-btn-primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+
+    &:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+</style>

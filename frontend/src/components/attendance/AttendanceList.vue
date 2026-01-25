@@ -35,15 +35,13 @@
           ></v-select>
         </v-col>
         <v-col cols="12" md="3">
-          <v-btn color="primary" block @click="loadAttendance">
+          <v-btn color="#ED985F" block @click="loadAttendance">
             <v-icon start>mdi-magnify</v-icon>
             Search
           </v-btn>
         </v-col>
       </v-row>
     </v-card-text>
-
-    <v-divider></v-divider>
 
     <!-- Data Table -->
     <v-data-table
@@ -218,7 +216,7 @@ const attendance = ref([]);
 const user = JSON.parse(localStorage.getItem("user") || "{}");
 const canEditRole = computed(() => ["admin", "accountant"].includes(user.role));
 const canApproveRole = computed(() =>
-  ["admin", "accountant", "manager"].includes(user.role)
+  ["admin", "accountant", "manager"].includes(user.role),
 );
 
 const filters = reactive({

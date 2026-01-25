@@ -1,27 +1,39 @@
 <template>
-  <v-container fluid>
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        <v-icon left color="primary">mdi-food</v-icon>
-        <span>Meal Allowance Management</span>
-        <v-spacer></v-spacer>
-        <v-btn v-if="canCreate" color="primary" @click="openCreateDialog">
-          <v-icon left>mdi-plus</v-icon>
-          Create New Meal Allowance
-        </v-btn>
-      </v-card-title>
+  <div class="meal-allowance-page">
+    <div class="modern-card">
+      <!-- Modern Page Header -->
+      <div class="page-header">
+        <div class="page-icon-badge">
+          <v-icon icon="mdi-food" size="24" color="white"></v-icon>
+        </div>
+        <div class="page-header-content">
+          <h1 class="page-title">Meal Allowance Management</h1>
+          <p class="page-subtitle">
+            Create and manage employee meal allowance distributions
+          </p>
+        </div>
+        <button
+          v-if="canCreate"
+          class="action-btn action-btn-primary"
+          @click="openCreateDialog"
+        >
+          <v-icon size="20">mdi-plus</v-icon>
+          <span>Create New Meal Allowance</span>
+        </button>
+      </div>
 
-      <!-- Filters -->
-      <v-card-text>
+      <!-- Filters Section -->
+      <div class="filters-section">
         <v-row>
           <v-col cols="12" md="3">
             <v-select
               v-model="filters.status"
               :items="statusOptions"
               label="Status"
+              variant="outlined"
+              density="comfortable"
               clearable
-              dense
-              outlined
+              hide-details
               @update:model-value="fetchMealAllowances"
             ></v-select>
           </v-col>
@@ -32,9 +44,10 @@
               item-title="position_name"
               item-value="id"
               label="Position"
+              variant="outlined"
+              density="comfortable"
               clearable
-              dense
-              outlined
+              hide-details
               @update:model-value="fetchMealAllowances"
             ></v-select>
           </v-col>
@@ -42,22 +55,23 @@
             <v-text-field
               v-model="filters.search"
               label="Search by reference or title"
-              append-inner-icon="mdi-magnify"
-              dense
-              outlined
+              prepend-inner-icon="mdi-magnify"
+              variant="outlined"
+              density="comfortable"
               clearable
+              hide-details
               @update:model-value="fetchMealAllowances"
             ></v-text-field>
           </v-col>
         </v-row>
-      </v-card-text>
+      </div>
 
       <!-- Data Table -->
       <v-data-table
         :headers="headers"
         :items="mealAllowances"
         :loading="loading"
-        class="elevation-1"
+        class="modern-table"
       >
         <template #[`item.reference_number`]="{ item }">
           <div>
@@ -198,7 +212,7 @@
           </v-tooltip>
         </template>
       </v-data-table>
-    </v-card>
+    </div>
 
     <!-- Create/Edit Dialog -->
     <MealAllowanceForm
@@ -220,7 +234,7 @@
       :meal-allowance="selectedMealAllowance"
       @approved="onApproved"
     />
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -270,17 +284,17 @@ const headers = [
 ];
 
 const canCreate = computed(() =>
-  ["admin", "accountant", "hr"].includes(authStore.user?.role)
+  ["admin", "accountant", "hr"].includes(authStore.user?.role),
 );
 const canEdit = computed(() =>
-  ["admin", "accountant", "hr"].includes(authStore.user?.role)
+  ["admin", "accountant", "hr"].includes(authStore.user?.role),
 );
 const canSubmit = computed(() =>
-  ["admin", "accountant", "hr"].includes(authStore.user?.role)
+  ["admin", "accountant", "hr"].includes(authStore.user?.role),
 );
 const canApprove = computed(() => authStore.user?.role === "admin");
 const canDelete = computed(() =>
-  ["admin", "accountant", "hr"].includes(authStore.user?.role)
+  ["admin", "accountant", "hr"].includes(authStore.user?.role),
 );
 const isAdmin = computed(() => authStore.user?.role === "admin");
 
@@ -442,3 +456,140 @@ function getStatusColor(status) {
   return colors[status] || "grey";
 }
 </script>
+<style lang="scss" scoped>
+.meal-allowance-page {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.modern-card {
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.page-icon-badge {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.page-header-content {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.action-button {
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.2);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+    transform: translateY(-1px);
+  }
+}
+
+.filters-section {
+  margin-bottom: 24px;
+}
+
+.modern-table {
+  border-radius: 12px;
+  overflow: hidden;
+
+  :deep(th) {
+    background-color: #f8f9fa !important;
+    color: #001f3d !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  :deep(.v-data-table__tr:hover) {
+    background-color: rgba(237, 152, 95, 0.04) !important;
+  }
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+
+  .v-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
+  }
+
+  &.action-btn-primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+  }
+
+  &.action-btn-secondary {
+    background: rgba(237, 152, 95, 0.1);
+    color: #ed985f;
+    border: 1px solid rgba(237, 152, 95, 0.2);
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+
+    &:hover {
+      background: rgba(237, 152, 95, 0.15);
+      border-color: rgba(237, 152, 95, 0.3);
+    }
+  }
+}
+</style>

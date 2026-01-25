@@ -1,7 +1,8 @@
 // Modern Professional Login Page with Construction Background
 
 .login-main {
-  background: linear-gradient(rgba(30, 30, 30, 0.7), rgba(30, 30, 30, 0.7)),
+  background:
+    linear-gradient(rgba(30, 30, 30, 0.7), rgba(30, 30, 30, 0.7)),
     url("@/images/construction-bg.jpg");
   background-size: cover;
   background-position: center;
@@ -20,9 +21,9 @@
   bottom: 0;
   background: linear-gradient(
     135deg,
-    rgba(55, 71, 79, 0.4) 0%,
-    rgba(255, 111, 0, 0.25) 50%,
-    rgba(69, 90, 100, 0.4) 100%
+    rgba(0, 31, 61, 0.5) 0%,
+    rgba(237, 152, 95, 0.3) 50%,
+    rgba(0, 31, 61, 0.5) 100%
   );
   animation: pulse-overlay 8s ease-in-out infinite;
 }
@@ -43,19 +44,20 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: radial-gradient(
+  background-image:
+    radial-gradient(
       circle at 20% 50%,
-      rgba(255, 152, 0, 0.08) 0%,
+      rgba(237, 152, 95, 0.08) 0%,
       transparent 50%
     ),
     radial-gradient(
       circle at 80% 80%,
-      rgba(84, 110, 122, 0.1) 0%,
+      rgba(0, 31, 61, 0.12) 0%,
       transparent 50%
     ),
     radial-gradient(
       circle at 40% 20%,
-      rgba(255, 111, 0, 0.06) 0%,
+      rgba(247, 185, 128, 0.06) 0%,
       transparent 50%
     );
   animation: float 30s ease-in-out infinite;
@@ -85,18 +87,18 @@
 
 .brand-icon-wrapper {
   display: inline-block;
-  background: rgba(255, 152, 0, 0.15);
+  background: rgba(237, 152, 95, 0.15);
   padding: 2rem;
   border-radius: 50%;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(216, 67, 21, 0.3);
-  border: 2px solid rgba(255, 152, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(237, 152, 95, 0.3);
+  border: 2px solid rgba(237, 152, 95, 0.3);
 }
 
 .brand-icon {
-  color: #ff9800;
-  filter: drop-shadow(0 4px 12px rgba(216, 67, 21, 0.4));
+  color: #ed985f;
+  filter: drop-shadow(0 4px 12px rgba(237, 152, 95, 0.4));
   animation: pulse 3s ease-in-out infinite;
 }
 
@@ -132,16 +134,16 @@
   color: white;
   font-size: 1rem;
   padding: 0.75rem 1.5rem;
-  background: rgba(216, 67, 21, 0.2);
+  background: rgba(237, 152, 95, 0.2);
   border-radius: 12px;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 152, 0, 0.3);
+  border: 1px solid rgba(237, 152, 95, 0.3);
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(216, 67, 21, 0.3);
-    border-color: rgba(255, 152, 0, 0.5);
+    background: rgba(237, 152, 95, 0.3);
+    border-color: rgba(247, 185, 128, 0.5);
     transform: translateX(5px);
   }
 }
@@ -162,9 +164,10 @@
   background: rgba(255, 255, 255, 0.98) !important;
   border-radius: 20px !important;
   overflow: hidden;
-  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.4),
-    0 20px 40px -20px rgba(255, 111, 0, 0.15),
-    0 0 0 1px rgba(255, 152, 0, 0.1) inset !important;
+  box-shadow:
+    0 40px 80px -20px rgba(0, 0, 0, 0.4),
+    0 20px 40px -20px rgba(237, 152, 95, 0.15),
+    0 0 0 1px rgba(237, 152, 95, 0.1) inset !important;
   border: none !important;
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
@@ -189,7 +192,7 @@
 // Modern Header
 .login-header-modern {
   padding: 2rem 1.5rem 1.5rem;
-  background: linear-gradient(135deg, #37474f 0%, #ff6f00 100%);
+  background: linear-gradient(135deg, #001f3d 0%, #ed985f 100%);
   position: relative;
   text-align: center;
 
@@ -200,7 +203,7 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, transparent, #ff9800, transparent);
+    background: linear-gradient(90deg, transparent, #f7b980, transparent);
   }
 }
 
@@ -261,7 +264,7 @@
   margin-bottom: 0.5rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #37474f;
+  color: #001f3d;
   letter-spacing: 0.3px;
 }
 
@@ -274,15 +277,15 @@
     transition: all 0.3s ease;
 
     &:hover {
-      border-color: rgba(255, 152, 0, 0.3);
-      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.1);
+      border-color: rgba(237, 152, 95, 0.3);
+      box-shadow: 0 4px 12px rgba(237, 152, 95, 0.1);
       transform: translateY(-1px);
     }
   }
 
   :deep(.v-field--focused) {
-    border-color: #ff6f00 !important;
-    box-shadow: 0 4px 16px rgba(255, 111, 0, 0.2) !important;
+    border-color: #ed985f !important;
+    box-shadow: 0 4px 16px rgba(237, 152, 95, 0.2) !important;
   }
 
   :deep(.v-field__prepend-inner) {
@@ -300,7 +303,7 @@
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(255, 152, 0, 0.08);
+    background: rgba(237, 152, 95, 0.08);
   }
 }
 
@@ -313,7 +316,7 @@
 
   .remember-text {
     font-size: 0.875rem;
-    color: #546e7a;
+    color: #001f3d;
     font-weight: 500;
   }
 }
@@ -331,14 +334,16 @@
   display: block !important;
   margin-left: auto !important;
   margin-right: auto !important;
-  background: linear-gradient(135deg, #ff6f00 0%, #ff9800 100%) !important;
-  box-shadow: 0 8px 20px rgba(255, 111, 0, 0.3),
-    0 4px 10px rgba(255, 111, 0, 0.2) !important;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%) !important;
+  box-shadow:
+    0 8px 20px rgba(237, 152, 95, 0.3),
+    0 4px 10px rgba(237, 152, 95, 0.2) !important;
   transition: all 0.3s ease !important;
 
   &:hover {
-    box-shadow: 0 12px 28px rgba(255, 111, 0, 0.4),
-      0 6px 14px rgba(255, 111, 0, 0.3) !important;
+    box-shadow:
+      0 12px 28px rgba(237, 152, 95, 0.4),
+      0 6px 14px rgba(237, 152, 95, 0.3) !important;
     transform: translateY(-2px);
   }
 
@@ -354,12 +359,12 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: rgba(84, 110, 122, 0.06);
+  background: rgba(0, 31, 61, 0.06);
   border-radius: 10px;
   font-size: 0.75rem;
-  color: #546e7a;
+  color: #001f3d;
   font-weight: 500;
-  border: 1px solid rgba(84, 110, 122, 0.1);
+  border: 1px solid rgba(0, 31, 61, 0.1);
   max-width: 280px;
   margin-left: auto;
   margin-right: auto;
@@ -367,9 +372,9 @@
 
 // Legacy Styles (kept for compatibility)
 .login-header {
-  background: linear-gradient(135deg, #37474f 0%, #ff6f00 50%, #546e7a 100%);
+  background: linear-gradient(135deg, #001f3d 0%, #ed985f 50%, #001f3d 100%);
   position: relative;
-  box-shadow: 0 4px 12px rgba(255, 111, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.2);
   border-radius: 24px 24px 0 0;
 
   &::after {
@@ -382,7 +387,7 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 152, 0, 0.6) 50%,
+      rgba(247, 185, 128, 0.6) 50%,
       transparent 100%
     );
   }
@@ -401,7 +406,7 @@
   align-items: center;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #37474f;
+  color: #001f3d;
   margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -413,24 +418,30 @@
     background: #ffffff;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 2px solid rgba(120, 120, 120, 0.12);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02),
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.04),
+      0 1px 2px rgba(0, 0, 0, 0.02),
       0 0 0 1px rgba(255, 255, 255, 0.9) inset;
 
     &:hover {
       background: #ffffff;
-      border-color: rgba(255, 152, 0, 0.3);
+      border-color: rgba(237, 152, 95, 0.3);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.08),
-        0 2px 4px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(255, 255, 255, 1) inset;
+      box-shadow:
+        0 4px 12px rgba(237, 152, 95, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        0 0 0 1px rgba(255, 255, 255, 1) inset;
     }
   }
 
   :deep(.v-field--focused) {
     background: #ffffff;
-    box-shadow: 0 6px 20px rgba(255, 111, 0, 0.2),
-      0 3px 8px rgba(255, 111, 0, 0.15), 0 0 0 3px rgba(255, 152, 0, 0.15);
+    box-shadow:
+      0 6px 20px rgba(237, 152, 95, 0.2),
+      0 3px 8px rgba(237, 152, 95, 0.15),
+      0 0 0 3px rgba(237, 152, 95, 0.15);
     transform: translateY(-1px);
-    border-color: rgba(255, 111, 0, 0.5);
+    border-color: rgba(237, 152, 95, 0.5);
   }
 
   :deep(.v-field__outline) {
@@ -448,7 +459,7 @@
   :deep(.v-field--focused .v-field__prepend-inner .v-icon) {
     opacity: 1;
     transform: scale(1.15);
-    color: #ff6f00;
+    color: #ed985f;
   }
 }
 
@@ -456,21 +467,21 @@
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(255, 152, 0, 0.08);
+    background: rgba(237, 152, 95, 0.08);
   }
 }
 
 .remember-checkbox {
   :deep(.v-label) {
     font-size: 0.875rem;
-    color: #546e7a;
+    color: #001f3d;
     font-weight: 500;
   }
 }
 
 .remember-label {
   font-size: 0.875rem;
-  color: #546e7a;
+  color: #001f3d;
   font-weight: 500;
 }
 
@@ -482,21 +493,21 @@
   padding: 0.875rem 1rem;
   background: linear-gradient(
     135deg,
-    rgba(255, 152, 0, 0.06),
-    rgba(84, 110, 122, 0.08)
+    rgba(237, 152, 95, 0.06),
+    rgba(0, 31, 61, 0.08)
   );
   border-radius: 12px;
-  border: 1px solid rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(237, 152, 95, 0.15);
   font-size: 0.75rem;
-  color: #546e7a;
+  color: #001f3d;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(255, 152, 0, 0.06);
+  box-shadow: 0 2px 4px rgba(237, 152, 95, 0.06);
 
   .v-icon {
-    color: #ff9800 !important;
-    filter: drop-shadow(0 1px 2px rgba(255, 152, 0, 0.3));
+    color: #ed985f !important;
+    filter: drop-shadow(0 1px 2px rgba(237, 152, 95, 0.3));
   }
 }
 
@@ -510,12 +521,14 @@
   margin: 0 auto !important;
   background: linear-gradient(
     135deg,
-    #37474f 0%,
-    #ff6f00 50%,
-    #546e7a 100%
+    #001f3d 0%,
+    #ed985f 50%,
+    #001f3d 100%
   ) !important;
-  box-shadow: 0 10px 30px rgba(255, 111, 0, 0.3),
-    0 5px 15px rgba(55, 71, 79, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+  box-shadow:
+    0 10px 30px rgba(237, 152, 95, 0.3),
+    0 5px 15px rgba(0, 31, 61, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -538,8 +551,10 @@
   }
 
   &:hover {
-    box-shadow: 0 15px 45px rgba(255, 111, 0, 0.4),
-      0 8px 20px rgba(55, 71, 79, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
+    box-shadow:
+      0 15px 45px rgba(237, 152, 95, 0.4),
+      0 8px 20px rgba(0, 31, 61, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
     transform: translateY(-2px) translateZ(0);
 
     &::before {
@@ -579,5 +594,7 @@
 
 // Smooth Transitions
 * {
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }

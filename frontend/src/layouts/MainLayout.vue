@@ -12,34 +12,34 @@
       :width="256"
       :rail-width="72"
       app
+      @click="rail = false"
     >
-      <!-- User Profile Section -->
-      <v-list-item nav class="user-profile-item pa-3">
-        <template v-slot:prepend>
-          <v-tooltip location="right" :disabled="!rail || isMobile">
-            <template v-slot:activator="{ props }">
-              <v-avatar v-bind="props" size="40" color="primary">
-                <v-img v-if="userAvatar" :src="userAvatar" cover></v-img>
-                <v-icon v-else color="white">mdi-account</v-icon>
-              </v-avatar>
-            </template>
-            <span>{{ userName }} - {{ userRole }}</span>
-          </v-tooltip>
-        </template>
-        <v-list-item-title v-if="!rail">{{ userName }}</v-list-item-title>
-        <v-list-item-subtitle v-if="!rail">{{ userRole }}</v-list-item-subtitle>
-        <template v-slot:append v-if="!isMobile">
-          <v-btn
-            variant="text"
-            :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
-            @click.stop="rail = !rail"
-            size="small"
-            color="white"
-          ></v-btn>
-        </template>
-      </v-list-item>
+      <!-- Logo Header -->
+      <div class="sidebar-header" v-if="!isMobile" @click.stop="rail = !rail">
+        <transition name="logo-fade" mode="out-in">
+          <div v-if="!rail" class="sidebar-logo-expanded" key="expanded">
+            <div class="logo-icon-wrapper">
+              <v-icon icon="mdi-hard-hat" size="24"></v-icon>
+            </div>
+            <div class="logo-text-wrapper">
+              <span class="logo-text">GC Payroll</span>
+              <span class="logo-subtext">Management System</span>
+            </div>
+            <v-icon
+              icon="mdi-chevron-left"
+              size="20"
+              class="collapse-icon"
+            ></v-icon>
+          </div>
+          <div v-else class="sidebar-logo-collapsed" key="collapsed">
+            <div class="logo-icon-wrapper-rail">
+              <v-icon icon="mdi-hard-hat" size="22"></v-icon>
+            </div>
+          </div>
+        </transition>
+      </div>
 
-      <v-divider class="steel-divider mx-3"></v-divider>
+      <v-divider class="steel-divider mx-3" v-if="!isMobile"></v-divider>
 
       <!-- Navigation Menu -->
       <v-list density="compact" nav class="pa-2">
@@ -133,30 +133,22 @@
       </template>
     </v-navigation-drawer>
 
-    <!-- Construction-themed App Bar -->
-    <v-app-bar elevation="4" class="construction-appbar" color="surface" app>
+    <!-- App Bar -->
+    <v-app-bar elevation="0" class="construction-appbar" app>
       <!-- Hamburger Menu Button (Mobile Only) -->
       <v-app-bar-nav-icon
         v-if="isMobile"
         @click="drawer = !drawer"
-        color="hardhat"
+        class="appbar-menu-btn"
       ></v-app-bar-nav-icon>
 
-      <!-- Construction-themed Title with Icon -->
+      <!-- Page Title -->
       <div class="d-flex align-center">
-        <v-icon
-          v-if="!isMobile"
-          icon="mdi-hard-hat"
-          color="hardhat"
-          size="32"
-          class="mr-3 rotating-hardhat"
-        ></v-icon>
+        <div class="appbar-icon-wrapper" v-if="!isMobile">
+          <v-icon icon="mdi-hard-hat" size="24"></v-icon>
+        </div>
         <div>
-          <v-app-bar-title
-            :class="
-              isMobile ? 'text-subtitle-1' : 'construction-header text-h6'
-            "
-          >
+          <v-app-bar-title class="appbar-title">
             {{
               isMobile
                 ? pageTitle.length > 20
@@ -165,7 +157,7 @@
                 : pageTitle
             }}
           </v-app-bar-title>
-          <div v-if="!isMobile" class="text-caption text-medium-emphasis">
+          <div v-if="!isMobile" class="appbar-subtitle">
             Giovanni Construction
           </div>
         </div>
@@ -173,13 +165,17 @@
 
       <v-spacer></v-spacer>
 
-      <!-- Notification Bell -->
-      <v-btn
-        icon="mdi-bell-outline"
-        variant="text"
-        color="steel"
-        :size="isMobile ? 'small' : 'default'"
-      ></v-btn>
+      <!-- User Info Badge -->
+      <div class="appbar-user-badge" v-if="!isMobile">
+        <v-avatar size="32">
+          <v-img v-if="userAvatar" :src="userAvatar" cover></v-img>
+          <v-icon v-else size="20">mdi-account</v-icon>
+        </v-avatar>
+        <div class="ml-2">
+          <div class="appbar-user-name">{{ userName }}</div>
+          <div class="appbar-user-role">{{ userRole }}</div>
+        </div>
+      </div>
     </v-app-bar>
 
     <!-- Main Content Area -->
@@ -218,7 +214,7 @@
 
     <!-- Logout Confirmation Dialog -->
     <v-dialog v-model="logoutDialog" max-width="480" persistent>
-      <v-card class="logout-dialog-card" elevation="24">
+      <v-card class="modern-dialog-card logout-dialog-card">
         <!-- Modern Header with Gradient -->
         <div class="logout-dialog-header">
           <div class="logout-icon-circle">
@@ -235,7 +231,7 @@
             <v-icon
               icon="mdi-alert-circle-outline"
               size="24"
-              color="#ff6f00"
+              color="#ed985f"
             ></v-icon>
             <div class="ml-3">
               <div class="logout-message-title">
@@ -253,7 +249,6 @@
             <span>Any unsaved changes will be lost</span>
           </div>
         </v-card-text>
-
         <!-- Action Buttons -->
         <v-card-actions class="logout-dialog-actions pa-6 pt-0">
           <v-btn
@@ -531,7 +526,7 @@ const menuItems = computed(() => {
     },
     {
       title: "Position Rates",
-      icon: "mdi-cash-multiple",
+      icon: "mdi-badge-account",
       value: "position-rates",
       to: "/position-rates",
       roles: ["admin", "accountant"],
@@ -644,7 +639,7 @@ const menuSections = computed(() => {
     },
     {
       title: "Position Rates",
-      icon: "mdi-cash-multiple",
+      icon: "mdi-badge-account",
       value: "position-rates",
       to: "/position-rates",
       roles: ["admin", "accountant"],
@@ -848,15 +843,9 @@ async function downloadCurrentPayslip() {
 </script>
 
 <style scoped lang="scss">
-// Modern Navigation Drawer with glassmorphism
+// Professional Navigation Drawer - Clean Design
 .construction-drawer {
-  background: linear-gradient(
-    180deg,
-    rgba(30, 41, 59, 0.95) 0%,
-    rgba(15, 23, 42, 0.98) 100%
-  ) !important;
-  backdrop-filter: blur(40px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  background: #001f3d !important;
   position: fixed !important;
   top: 0 !important;
   bottom: 0 !important;
@@ -864,130 +853,126 @@ async function downloadCurrentPayslip() {
   overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
-  border-right: 1px solid rgba(139, 92, 246, 0.2);
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+  border-right: 1px solid rgba(230, 230, 230, 0.1);
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
 
   :deep(.v-navigation-drawer__content) {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     overflow-y: auto !important;
-    position: relative;
+    background: transparent;
 
-    &::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(
-        circle at top left,
-        rgba(99, 102, 241, 0.1),
-        transparent 50%
-      );
-      pointer-events: none;
+    /* Hide scrollbar but keep scrolling functionality */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 
   :deep(.v-list) {
     flex: 1 !important;
     overflow-y: auto !important;
+    background: transparent !important;
+    padding: 8px !important;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   :deep(.v-list-item) {
-    color: rgba(255, 255, 255, 0.9) !important;
-    margin: 6px 12px;
-    border-radius: 14px;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.1),
-        rgba(139, 92, 246, 0.05)
-      );
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
+    color: #e6e6e6 !important;
+    margin: 4px 8px !important;
+    border-radius: 8px !important;
+    min-height: 44px !important;
+    transition: all 0.2s ease !important;
+    background: transparent !important;
 
     .v-list-item-title {
-      color: rgba(255, 255, 255, 0.95) !important;
+      color: #e6e6e6 !important;
       font-weight: 500;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.2px;
     }
 
     .v-icon {
-      color: rgba(255, 255, 255, 0.75) !important;
-      transition: all 0.3s ease;
+      color: #e6e6e6 !important;
+      opacity: 0.8;
+      font-size: 20px !important;
+      transition: all 0.2s ease;
     }
 
     &:hover {
-      background: rgba(99, 102, 241, 0.15) !important;
-      transform: translateX(6px) scale(1.02);
-      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
-
-      &::before {
-        opacity: 1;
-      }
+      background: rgba(237, 152, 95, 0.12) !important;
 
       .v-list-item-title {
-        color: white !important;
+        color: #f7b980 !important;
       }
 
       .v-icon {
-        color: white !important;
-        transform: scale(1.1);
+        color: #f7b980 !important;
+        opacity: 1;
       }
     }
   }
 
   :deep(.v-list-item--active) {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-    color: white !important;
-    box-shadow:
-      0 8px 20px rgba(99, 102, 241, 0.35),
-      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-
-    &::before {
-      opacity: 1;
-      background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.1),
-        transparent
-      );
-    }
+    background: #ed985f !important;
 
     .v-list-item-title {
-      color: white !important;
+      color: #001f3d !important;
       font-weight: 600;
-      letter-spacing: 0.2px;
     }
 
     .v-icon {
-      color: white !important;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+      color: #001f3d !important;
+      opacity: 1;
+    }
+
+    &:hover {
+      background: #f7b980 !important;
+
+      .v-list-item-title {
+        color: #001f3d !important;
+      }
+
+      .v-icon {
+        color: #001f3d !important;
+      }
     }
   }
 
   // List group styling for submenus
   :deep(.v-list-group) {
     .v-list-item {
-      color: rgba(255, 255, 255, 0.85) !important;
+      color: #e6e6e6 !important;
     }
 
     .v-list-group__items {
       .v-list-item {
         padding-left: 48px;
+
+        &::before {
+          content: "";
+          position: absolute;
+          left: 28px;
+          top: 50%;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(230, 230, 230, 0.3);
+          transform: translateY(-50%);
+        }
+
+        &.v-list-item--active::before {
+          background: #001f3d;
+        }
       }
     }
   }
@@ -996,24 +981,34 @@ async function downloadCurrentPayslip() {
   &.v-navigation-drawer--rail {
     :deep(.v-list-item) {
       padding: 0 !important;
-      margin: 6px auto !important;
-      justify-content: center !important;
-      align-items: center !important;
-      min-height: 48px !important;
-      height: 48px !important;
-      width: 48px !important;
-      border-radius: 12px !important;
+      padding-inline-start: 0 !important;
+      padding-inline-end: 0 !important;
+      margin: 4px auto !important;
+      margin-inline-start: auto !important;
+      margin-inline-end: auto !important;
+      min-height: 44px !important;
+      height: 44px !important;
+      width: 44px !important;
+      min-width: 44px !important;
+      max-width: 44px !important;
+      border-radius: 8px !important;
       display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
       flex-shrink: 0 !important;
       position: relative !important;
 
       .v-list-item__overlay {
-        border-radius: 12px !important;
+        border-radius: 8px !important;
       }
 
       .v-list-item__prepend {
         margin: 0 !important;
+        margin-inline-start: 0 !important;
+        margin-inline-end: 0 !important;
         padding: 0 !important;
+        padding-inline-start: 0 !important;
+        padding-inline-end: 0 !important;
         width: 100% !important;
         height: 100% !important;
         display: flex !important;
@@ -1022,15 +1017,15 @@ async function downloadCurrentPayslip() {
         opacity: 1 !important;
         position: absolute !important;
         left: 0 !important;
+        right: 0 !important;
         top: 0 !important;
+        bottom: 0 !important;
 
         .v-icon {
-          font-size: 22px !important;
+          font-size: 20px !important;
           margin: 0 !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          position: relative !important;
+          margin-inline-start: 0 !important;
+          margin-inline-end: 0 !important;
         }
       }
 
@@ -1046,91 +1041,20 @@ async function downloadCurrentPayslip() {
       }
 
       &:hover {
-        transform: scale(1.05);
-        background: rgba(99, 102, 241, 0.25) !important;
-      }
-
-      &::before {
-        border-radius: 12px !important;
+        background: rgba(237, 152, 95, 0.15) !important;
       }
     }
 
     :deep(.v-list-item--active) {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+      background: #ed985f !important;
 
       .v-icon {
-        color: white !important;
-      }
-
-      &::before {
-        opacity: 0 !important;
+        color: #001f3d !important;
       }
     }
 
     :deep(.v-list-group) {
       display: none;
-    }
-
-    .user-profile-item {
-      padding: 0 !important;
-      margin: 8px auto !important;
-      justify-content: center !important;
-      align-items: center !important;
-      height: 56px !important;
-      width: 56px !important;
-      position: relative;
-      border-radius: 50% !important;
-      display: flex !important;
-
-      :deep(.v-list-item__prepend) {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-      }
-
-      :deep(.v-list-item__content) {
-        display: none !important;
-      }
-
-      :deep(.v-list-item__append) {
-        display: flex !important;
-        position: absolute;
-        right: -8px;
-        top: -4px;
-        opacity: 1 !important;
-        z-index: 100 !important;
-        width: auto !important;
-
-        .v-btn {
-          width: 24px !important;
-          height: 24px !important;
-          min-width: 24px !important;
-          padding: 0 !important;
-          background: rgba(0, 0, 0, 0.3) !important;
-          opacity: 1 !important;
-
-          &:hover {
-            background: rgba(0, 0, 0, 0.5) !important;
-          }
-        }
-      }
-
-      :deep(.v-avatar) {
-        margin: 0 !important;
-        position: relative !important;
-      }
-
-      &:hover {
-        transform: none !important;
-        background: rgba(0, 0, 0, 0.3) !important;
-      }
     }
 
     .steel-divider {
@@ -1139,377 +1063,339 @@ async function downloadCurrentPayslip() {
   }
 }
 
-.user-profile-item {
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.15) 0%,
-    rgba(139, 92, 246, 0.1) 100%
-  );
-  backdrop-filter: blur(10px);
-  margin: 12px;
-  border-radius: 16px;
+// Sidebar Header
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 16px 12px;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 72px;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(
-      circle at top right,
-      rgba(236, 72, 153, 0.1),
-      transparent 70%
-    );
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
+  cursor: pointer;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: linear-gradient(
-      135deg,
-      rgba(99, 102, 241, 0.25) 0%,
-      rgba(139, 92, 246, 0.2) 100%
-    );
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
-    border-color: rgba(139, 92, 246, 0.4);
-
-    &::before {
-      opacity: 1;
-    }
-  }
-
-  :deep(.v-list-item-title) {
-    color: white !important;
-    font-weight: 600;
-    font-size: 1rem;
-    letter-spacing: 0.2px;
-  }
-
-  :deep(.v-list-item-subtitle) {
-    color: rgba(255, 255, 255, 0.8) !important;
-    font-size: 0.75rem;
-    letter-spacing: 1px;
-    font-weight: 500;
-    margin-top: 4px;
-    text-transform: uppercase;
-  }
-
-  :deep(.v-avatar) {
-    border: 3px solid rgba(139, 92, 246, 0.4);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-
-    &:hover {
-      border-color: rgba(139, 92, 246, 0.8);
-      transform: scale(1.05);
-    }
-  }
-
-  :deep(.v-btn) {
-    color: rgba(255, 255, 255, 0.85) !important;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: white !important;
-      background: rgba(255, 255, 255, 0.1) !important;
-    }
+    background: rgba(237, 152, 95, 0.08);
   }
 }
 
-.menu-item {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.sidebar-logo-expanded {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
 
+.logo-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+
+  .v-icon {
+    color: #001f3d !important;
+  }
+}
+
+.logo-text-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.logo-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.logo-subtext {
+  font-size: 0.65rem;
+  color: #f7b980;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.collapse-icon {
+  color: #e6e6e6 !important;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+
+  .sidebar-header:hover & {
+    opacity: 1;
+    color: #f7b980 !important;
+  }
+}
+
+.sidebar-logo-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.logo-icon-wrapper-rail {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  transition: all 0.2s ease;
+
+  .v-icon {
+    color: #001f3d !important;
+  }
+
+  .sidebar-header:hover & {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.4);
+  }
+}
+
+// Logo transition
+.logo-fade-enter-active,
+.logo-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.logo-fade-enter-from,
+.logo-fade-leave-to {
+  opacity: 0;
+}
+
+// Menu item styling
+.menu-item {
   :deep(.v-list-item__prepend) {
     .v-icon {
       font-size: 20px;
-      color: rgba(255, 255, 255, 0.7) !important;
+      color: #e6e6e6 !important;
+      opacity: 0.8;
     }
   }
 
   :deep(.v-list-item-title) {
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: #e6e6e6 !important;
     font-weight: 500;
   }
 
   &:hover {
     :deep(.v-list-item__prepend) {
       .v-icon {
-        color: rgba(255, 255, 255, 0.95) !important;
+        color: #f7b980 !important;
+        opacity: 1;
       }
     }
 
     :deep(.v-list-item-title) {
-      color: white !important;
+      color: #f7b980 !important;
     }
   }
 }
 
-// Modern divider effect
+// Clean divider
 :deep(.steel-divider) {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(139, 92, 246, 0.4) 50%,
-    transparent 100%
-  ) !important;
-  height: 2px;
-  margin: 16px 20px;
-  border-radius: 999px;
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.3);
+  background: rgba(230, 230, 230, 0.15) !important;
+  height: 1px !important;
+  margin: 12px 16px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 // Menu section headers
 .menu-section-header {
-  color: rgba(255, 255, 255, 0.5) !important;
-  font-size: 0.75rem !important;
-  letter-spacing: 0.5px !important;
+  color: #f7b980 !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 1px !important;
   text-transform: uppercase !important;
-  font-weight: 700 !important;
-  margin-top: 16px !important;
+  font-weight: 600 !important;
+  margin-top: 20px !important;
   margin-bottom: 8px !important;
-  padding-left: 16px !important;
+  padding-left: 20px !important;
   padding-right: 16px !important;
   user-select: none;
-  position: relative;
-
-  &::after {
-    content: "";
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: -4px;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      rgba(139, 92, 246, 0.3) 0%,
-      transparent 100%
-    );
-  }
 
   &:first-of-type {
     margin-top: 4px !important;
   }
 }
 
-// Modern logout button styling in drawer
+// Logout button - clean style
 .logout-btn,
 .logout-btn-rail {
-  background: linear-gradient(
-    135deg,
-    rgba(239, 68, 68, 0.15) 0%,
-    rgba(220, 38, 38, 0.2) 100%
-  ) !important;
-  color: #fca5a5 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
   font-weight: 600;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(8px);
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: linear-gradient(
-      135deg,
-      rgba(239, 68, 68, 0.3) 0%,
-      rgba(220, 38, 38, 0.35) 100%
-    ) !important;
-    color: #fef2f2 !important;
-    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
-    transform: translateY(-2px);
-    border-color: rgba(239, 68, 68, 0.5);
-
-    .v-icon {
-      color: #fef2f2 !important;
-      transform: rotate(-10deg) scale(1.1);
-    }
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
   }
 
   .v-icon {
-    color: #fca5a5 !important;
-    font-size: 24px !important;
-    transition: all 0.3s ease;
+    color: #ef4444 !important;
+    font-size: 20px !important;
   }
 }
 
 .logout-btn-rail {
-  width: 52px !important;
-  height: 52px !important;
-  min-width: 52px !important;
-  border-radius: 14px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  border-radius: 8px !important;
 }
 
-// Modern breadcrumbs styling
+// Breadcrumbs - clean style
 .breadcrumbs-construction {
   :deep(.v-breadcrumbs-item) {
     color: #64748b;
     font-weight: 500;
-    transition: all 0.3s ease;
-    padding: 6px 12px;
-    border-radius: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
 
     &:hover {
-      color: #6366f1;
-      background: rgba(99, 102, 241, 0.08);
-      transform: translateY(-1px);
+      color: #ed985f;
+      background: rgba(237, 152, 95, 0.08);
     }
   }
 
   :deep(.v-breadcrumbs-item--disabled) {
-    color: #6366f1;
+    color: #001f3d;
     font-weight: 600;
-    background: linear-gradient(
-      135deg,
-      rgba(99, 102, 241, 0.1) 0%,
-      rgba(139, 92, 246, 0.08) 100%
-    );
-    padding: 6px 12px;
-    border-radius: 8px;
+    background: rgba(237, 152, 95, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
   }
 
   :deep(.v-breadcrumbs-divider) {
     color: #cbd5e1;
-    font-size: 1.1rem;
   }
 }
 
-// Modern App Bar styling with glassmorphism
+// Clean App Bar styling
 .construction-appbar {
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(248, 250, 252, 0.95) 100%
-  ) !important;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.15) !important;
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.05),
-    0 0 0 1px rgba(99, 102, 241, 0.05) inset !important;
-  position: relative;
+  background: #fff !important;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  padding: 0 16px !important;
+}
 
-  &::before {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(99, 102, 241, 0.3) 25%,
-      rgba(139, 92, 246, 0.4) 50%,
-      rgba(236, 72, 153, 0.3) 75%,
-      transparent 100%
-    );
-    opacity: 0.6;
+.appbar-menu-btn {
+  color: #001f3d !important;
+}
+
+.appbar-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(237, 152, 95, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+
+  .v-icon {
+    color: #ed985f !important;
   }
+}
+
+.appbar-title {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: #001f3d !important;
+  letter-spacing: -0.2px;
+}
+
+.appbar-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: -2px;
+}
+
+.appbar-user-badge {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(0, 31, 61, 0.04);
+  border: 1px solid rgba(0, 31, 61, 0.08);
+
+  .v-avatar {
+    border: 2px solid #ed985f;
+    background: rgba(237, 152, 95, 0.1);
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+  }
+}
+
+.appbar-user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #001f3d;
+  line-height: 1.2;
+}
+
+.appbar-user-role {
+  font-size: 0.7rem;
+  color: #ed985f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .construction-chip {
   font-weight: 600;
   font-size: 12px;
-  letter-spacing: 0.5px;
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.1) 0%,
-    rgba(139, 92, 246, 0.08) 100%
-  );
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  backdrop-filter: blur(8px);
-  transition: all 0.3s ease;
+  letter-spacing: 0.3px;
+  background: rgba(237, 152, 95, 0.1) !important;
+  border: 1px solid rgba(237, 152, 95, 0.2) !important;
+  color: #001f3d !important;
 
   &:hover {
-    background: linear-gradient(
-      135deg,
-      rgba(99, 102, 241, 0.15) 0%,
-      rgba(139, 92, 246, 0.12) 100%
-    );
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    background: rgba(237, 152, 95, 0.15) !important;
   }
 }
 
-// Modern icon animation
-.rotating-hardhat {
-  animation: modernBounce 3s ease-in-out infinite;
-  filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
-}
-
-@keyframes modernBounce {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  25% {
-    transform: translateY(-3px) rotate(-5deg);
-  }
-  50% {
-    transform: translateY(0) rotate(0deg);
-  }
-  75% {
-    transform: translateY(-3px) rotate(5deg);
-  }
-}
-
-// Main content area with modern gradient background
+// Clean main content area
 .main-content {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+  background: #f5f5f5;
   min-height: 100vh;
   overflow-y: auto;
-  position: relative;
-
-  &::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background:
-      radial-gradient(
-        circle at 20% 20%,
-        rgba(99, 102, 241, 0.03),
-        transparent 40%
-      ),
-      radial-gradient(
-        circle at 80% 80%,
-        rgba(139, 92, 246, 0.03),
-        transparent 40%
-      );
-    pointer-events: none;
-    z-index: 0;
-  }
 }
 
 .main-container {
   min-height: 100vh;
   padding-bottom: 32px;
-  position: relative;
-  z-index: 1;
 }
 
 // Page transitions
 .fade-enter-active,
 .fade-leave-active {
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
+.fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
 }
 
 // ========================================
@@ -1522,8 +1408,8 @@ async function downloadCurrentPayslip() {
   background: rgba(255, 255, 255, 0.98) !important;
   box-shadow:
     0 40px 80px -20px rgba(0, 0, 0, 0.4),
-    0 20px 40px -20px rgba(255, 111, 0, 0.15),
-    0 0 0 1px rgba(255, 152, 0, 0.1) inset !important;
+    0 20px 40px -20px rgba(237, 152, 95, 0.15),
+    0 0 0 1px rgba(247, 185, 128, 0.1) inset !important;
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   animation: dialogFadeIn 0.3s ease-out;
@@ -1542,7 +1428,7 @@ async function downloadCurrentPayslip() {
 
 .logout-dialog-header {
   padding: 2.5rem 2rem 2rem;
-  background: linear-gradient(135deg, #37474f 0%, #ff6f00 100%);
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   position: relative;
   text-align: center;
 
@@ -1553,7 +1439,7 @@ async function downloadCurrentPayslip() {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, transparent, #ff9800, transparent);
+    background: linear-gradient(90deg, transparent, #f7b980, transparent);
   }
 }
 
@@ -1608,23 +1494,23 @@ async function downloadCurrentPayslip() {
   display: flex;
   align-items: flex-start;
   padding: 1.5rem;
-  background: rgba(255, 111, 0, 0.08);
+  background: rgba(237, 152, 95, 0.08);
   border-radius: 12px;
-  border: 1px solid rgba(255, 111, 0, 0.2);
-  box-shadow: 0 2px 8px rgba(255, 111, 0, 0.08);
+  border: 1px solid rgba(237, 152, 95, 0.2);
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.08);
   margin-bottom: 1rem;
 }
 
 .logout-message-title {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #37474f;
+  color: #001f3d;
   margin-bottom: 0.25rem;
 }
 
 .logout-message-subtitle {
   font-size: 0.875rem;
-  color: #546e7a;
+  color: rgba(0, 31, 61, 0.7);
   line-height: 1.5;
 }
 
@@ -1633,12 +1519,12 @@ async function downloadCurrentPayslip() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1rem;
-  background: rgba(84, 110, 122, 0.06);
+  background: rgba(0, 31, 61, 0.04);
   border-radius: 10px;
   font-size: 0.8125rem;
-  color: #546e7a;
+  color: rgba(0, 31, 61, 0.7);
   font-weight: 500;
-  border: 1px solid rgba(84, 110, 122, 0.1);
+  border: 1px solid rgba(0, 31, 61, 0.08);
 }
 
 .logout-dialog-actions {
@@ -1652,13 +1538,13 @@ async function downloadCurrentPayslip() {
   height: 48px !important;
   border-radius: 12px !important;
   font-weight: 600 !important;
-  border: 2px solid rgba(84, 110, 122, 0.3) !important;
-  color: #546e7a !important;
+  border: 2px solid rgba(0, 31, 61, 0.2) !important;
+  color: #001f3d !important;
   transition: all 0.3s ease !important;
 
   &:hover {
-    border-color: #546e7a !important;
-    background: rgba(84, 110, 122, 0.08) !important;
+    border-color: #001f3d !important;
+    background: rgba(0, 31, 61, 0.04) !important;
     transform: translateY(-2px);
   }
 }
@@ -1667,17 +1553,17 @@ async function downloadCurrentPayslip() {
   height: 48px !important;
   border-radius: 12px !important;
   font-weight: 600 !important;
-  background: linear-gradient(135deg, #ff6f00 0%, #ff9800 100%) !important;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%) !important;
   color: white !important;
   box-shadow:
-    0 8px 20px rgba(255, 111, 0, 0.3),
-    0 4px 10px rgba(255, 111, 0, 0.2) !important;
+    0 8px 20px rgba(237, 152, 95, 0.3),
+    0 4px 10px rgba(237, 152, 95, 0.2) !important;
   transition: all 0.3s ease !important;
 
   &:hover {
     box-shadow:
-      0 12px 28px rgba(255, 111, 0, 0.4),
-      0 6px 14px rgba(255, 111, 0, 0.3) !important;
+      0 12px 28px rgba(237, 152, 95, 0.4),
+      0 6px 14px rgba(237, 152, 95, 0.3) !important;
     transform: translateY(-2px);
   }
 
