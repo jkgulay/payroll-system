@@ -26,15 +26,15 @@ class DeductionController extends Controller
         // Search functionality
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('deduction_name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('reference_number', 'like', "%{$search}%")
-                  ->orWhereHas('employee', function($empQuery) use ($search) {
-                      $empQuery->where('first_name', 'like', "%{$search}%")
-                               ->orWhere('last_name', 'like', "%{$search}%")
-                               ->orWhere('employee_number', 'like', "%{$search}%");
-                  });
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('reference_number', 'like', "%{$search}%")
+                    ->orWhereHas('employee', function ($empQuery) use ($search) {
+                        $empQuery->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('employee_number', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -91,6 +91,11 @@ class DeductionController extends Controller
             $validated['deduction_name'] = ucwords(str_replace('_', ' ', $validated['deduction_type'])) . ' Deduction';
         }
 
+        // Auto-generate reference_number if not provided
+        if (empty($validated['reference_number'])) {
+            $validated['reference_number'] = 'DED-' . date('Y') . '-' . strtoupper(uniqid());
+        }
+
         // Calculate installments if not provided
         if (!isset($validated['installments']) && isset($validated['end_date'])) {
             $start = Carbon::parse($validated['start_date']);
@@ -126,7 +131,7 @@ class DeductionController extends Controller
             $deduction->load('employee');
 
             // Get employee name safely
-            $employeeName = $deduction->employee 
+            $employeeName = $deduction->employee
                 ? ($deduction->employee->full_name ?? ($deduction->employee->first_name . ' ' . $deduction->employee->last_name))
                 : 'Unknown Employee';
 
@@ -397,6 +402,11 @@ class DeductionController extends Controller
             $validated['installments'] = ceil($validated['total_amount'] / $validated['amount_per_cutoff']);
         }
 
+        // Auto-generate reference_number if not provided
+        if (empty($validated['reference_number'])) {
+            $validated['reference_number'] = 'CB-' . date('Y') . '-' . strtoupper(uniqid());
+        }
+
         // Calculate end date (semi-monthly)
         $installmentsInMonths = ceil($validated['installments'] / 2);
         $endDate = Carbon::parse($validated['start_date'])
@@ -480,8 +490,8 @@ class DeductionController extends Controller
             $deduction->update([
                 'balance' => max(0, $oldBalance - $validated['refund_amount']),
                 'status' => 'completed',
-                'notes' => ($deduction->notes ? $deduction->notes . "\n\n" : '') . 
-                    "Refunded on " . Carbon::parse($validated['refund_date'])->format('Y-m-d') . 
+                'notes' => ($deduction->notes ? $deduction->notes . "\n\n" : '') .
+                    "Refunded on " . Carbon::parse($validated['refund_date'])->format('Y-m-d') .
                     ": ₱" . number_format($validated['refund_amount'], 2) .
                     ($validated['refund_reason'] ? " - {$validated['refund_reason']}" : ''),
             ]);

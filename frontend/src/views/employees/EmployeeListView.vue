@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="page-title-section">
           <div class="page-icon-badge">
-            <v-icon size="22">mdi-account-group</v-icon>
+            <v-icon size="22">mdi-hard-hat</v-icon>
           </div>
           <div>
             <h1 class="page-title">Employee Management</h1>
@@ -17,7 +17,7 @@
         <div class="action-buttons">
           <button
             class="action-btn action-btn-secondary"
-            @click="$router.push({ name: 'employees-import' })"
+            @click="$router.push({ name: 'biometric-import' })"
           >
             <v-icon size="20">mdi-file-upload</v-icon>
             <span>Import Employees</span>

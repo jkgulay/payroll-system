@@ -60,7 +60,7 @@
                   <!-- Username Field -->
                   <div class="field-wrapper">
                     <div class="field-label">
-                      <v-icon size="18" color="#546e7a"
+                      <v-icon size="18" color="#001f3d"
                         >mdi-account-outline</v-icon
                       >
                       <span>Username or Email</span>
@@ -70,7 +70,7 @@
                       placeholder="Enter your username or email"
                       variant="solo"
                       flat
-                      color="#ff6f00"
+                      color="#ed985f"
                       bg-color="#f8f9fa"
                       :rules="[rules.required]"
                       :error-messages="errors.email"
@@ -80,7 +80,7 @@
                       hide-details="auto"
                     >
                       <template v-slot:prepend-inner>
-                        <v-icon color="#546e7a" size="20"
+                        <v-icon color="#001f3d" size="20"
                           >mdi-account-circle</v-icon
                         >
                       </template>
@@ -90,7 +90,7 @@
                   <!-- Password Field -->
                   <div class="field-wrapper">
                     <div class="field-label">
-                      <v-icon size="18" color="#546e7a"
+                      <v-icon size="18" color="#001f3d"
                         >mdi-lock-outline</v-icon
                       >
                       <span>Password</span>
@@ -101,7 +101,7 @@
                       :type="showPassword ? 'text' : 'password'"
                       variant="solo"
                       flat
-                      color="#ff6f00"
+                      color="#ed985f"
                       bg-color="#f8f9fa"
                       :rules="[rules.required, rules.minLength(8)]"
                       :error-messages="errors.password"
@@ -111,12 +111,12 @@
                       hide-details="auto"
                     >
                       <template v-slot:prepend-inner>
-                        <v-icon color="#546e7a" size="20">mdi-lock</v-icon>
+                        <v-icon color="#001f3d" size="20">mdi-lock</v-icon>
                       </template>
                       <template v-slot:append-inner>
                         <v-icon
                           @click="showPassword = !showPassword"
-                          color="#546e7a"
+                          color="#001f3d"
                           size="20"
                           style="cursor: pointer"
                         >
@@ -129,7 +129,7 @@
                   <!-- Role Select -->
                   <div class="field-wrapper">
                     <div class="field-label">
-                      <v-icon size="18" color="#546e7a"
+                      <v-icon size="18" color="#001f3d"
                         >mdi-shield-account-outline</v-icon
                       >
                       <span>Select Role</span>
@@ -140,7 +140,7 @@
                       :items="roles"
                       variant="solo"
                       flat
-                      color="#ff6f00"
+                      color="#ed985f"
                       bg-color="#f8f9fa"
                       :rules="[rules.required]"
                       :error-messages="errors.role"
@@ -150,7 +150,7 @@
                       hide-details="auto"
                     >
                       <template v-slot:prepend-inner>
-                        <v-icon color="#546e7a" size="20"
+                        <v-icon color="#001f3d" size="20"
                           >mdi-shield-account</v-icon
                         >
                       </template>
@@ -160,10 +160,10 @@
                             <v-icon
                               :color="
                                 item.value === 'admin'
-                                  ? '#ff6f00'
+                                  ? '#ed985f'
                                   : item.value === 'accountant'
-                                  ? '#ff9800'
-                                  : '#546e7a'
+                                    ? '#f7b980'
+                                    : '#001f3d'
                               "
                               size="20"
                             >
@@ -171,8 +171,8 @@
                                 item.value === "admin"
                                   ? "mdi-shield-crown"
                                   : item.value === "accountant"
-                                  ? "mdi-calculator"
-                                  : "mdi-account-hard-hat"
+                                    ? "mdi-calculator"
+                                    : "mdi-account-hard-hat"
                               }}
                             </v-icon>
                           </template>
@@ -185,7 +185,7 @@
                   <div class="remember-section">
                     <v-checkbox
                       v-model="form.remember"
-                      color="#ff6f00"
+                      color="#ed985f"
                       hide-details
                       density="compact"
                     >
@@ -198,7 +198,7 @@
                   <!-- Sign In Button -->
                   <v-btn
                     type="submit"
-                    color="#ff6f00"
+                    color="#ed985f"
                     size="x-large"
                     :loading="authStore.loading"
                     class="signin-btn"
@@ -210,7 +210,7 @@
 
                   <!-- Security Info -->
                   <div class="security-info">
-                    <v-icon size="16" color="#546e7a">mdi-shield-check</v-icon>
+                    <v-icon size="16" color="#001f3d">mdi-shield-check</v-icon>
                     <span>Protected by 2FA & SSL Encryption</span>
                   </div>
 
@@ -383,9 +383,8 @@ async function handleTwoFactorVerified({ userId, code }) {
       }
 
       // Set default Authorization header for future requests
-      api.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${response.data.token}`;
+      api.defaults.headers.common["Authorization"] =
+        `Bearer ${response.data.token}`;
 
       showTwoFactorDialog.value = false;
       toast.success("Login successful");
@@ -410,11 +409,11 @@ async function handleTwoFactorVerified({ userId, code }) {
 
     if (error.response?.status === 401) {
       twoFactorVerifyRef.value.setError(
-        error.response?.data?.message || "Invalid verification code"
+        error.response?.data?.message || "Invalid verification code",
       );
     } else {
       twoFactorVerifyRef.value.setError(
-        "Verification failed. Please try again."
+        "Verification failed. Please try again.",
       );
     }
   }

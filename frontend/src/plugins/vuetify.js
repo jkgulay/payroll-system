@@ -239,9 +239,9 @@ export default createVuetify({
       style: "text-transform: none; font-weight: 600;",
     },
     VCard: {
-      elevation: 2,
+      elevation: 0,
       rounded: "lg",
-      style: "border-left: 4px solid;",
+      style: "border: 1px solid rgba(0, 31, 61, 0.08); background: #ffffff;",
     },
     VTextField: {
       variant: "outlined",

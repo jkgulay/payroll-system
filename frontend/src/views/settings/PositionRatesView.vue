@@ -56,6 +56,7 @@
               hide-details
             ></v-switch>
           </v-col>
+          <v-spacer></v-spacer>
           <v-col cols="auto">
             <v-btn
               color="#ED985F"

@@ -30,7 +30,7 @@
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon total">
-          <v-icon size="24">mdi-cash-multiple</v-icon>
+          <v-icon size="20">mdi-cash-multiple</v-icon>
         </div>
         <div class="stat-content">
           <div class="stat-label">Total Payrolls</div>
@@ -39,7 +39,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon draft">
-          <v-icon size="24">mdi-file-edit-outline</v-icon>
+          <v-icon size="20">mdi-file-edit-outline</v-icon>
         </div>
         <div class="stat-content">
           <div class="stat-label">Draft</div>
@@ -48,7 +48,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon finalized">
-          <v-icon size="24">mdi-file-check-outline</v-icon>
+          <v-icon size="20">mdi-file-check-outline</v-icon>
         </div>
         <div class="stat-content">
           <div class="stat-label">Finalized</div>
@@ -57,7 +57,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon paid">
-          <v-icon size="24">mdi-check-circle</v-icon>
+          <v-icon size="20">mdi-check-circle</v-icon>
         </div>
         <div class="stat-content">
           <div class="stat-label">Paid</div>
@@ -1050,69 +1050,86 @@ function formatCurrency(amount) {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .stat-card {
   background: white;
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 14px 16px;
   border: 1px solid rgba(0, 31, 61, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   transition: all 0.2s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 31, 61, 0.08);
+  border-color: rgba(237, 152, 95, 0.2);
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  flex-shrink: 0;
 }
 
 .stat-icon.total {
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+
+  .v-icon {
+    color: white;
+  }
 }
 
 .stat-icon.draft {
-  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  background: rgba(237, 152, 95, 0.1);
+
+  .v-icon {
+    color: #ed985f;
+  }
 }
 
 .stat-icon.finalized {
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  background: rgba(0, 31, 61, 0.1);
+
+  .v-icon {
+    color: #001f3d;
+  }
 }
 
 .stat-icon.paid {
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  background: rgba(16, 185, 129, 0.1);
+
+  .v-icon {
+    color: #10b981;
+  }
 }
 
 .stat-content {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-label {
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 500;
+  font-size: 11px;
+  color: rgba(0, 31, 61, 0.6);
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: #001f3d;
   line-height: 1;
@@ -1159,6 +1176,17 @@ function formatCurrency(amount) {
 
   .v-icon {
     color: #ffffff !important;
+  }
+}
+
+/* Hide scrollbar in v-card-title */
+:deep(.v-card-title) {
+  overflow: hidden !important;
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+
+  &::-webkit-scrollbar {
+    display: none !important; /* Chrome, Safari, Opera */
   }
 }
 

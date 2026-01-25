@@ -214,7 +214,7 @@
 
     <!-- Logout Confirmation Dialog -->
     <v-dialog v-model="logoutDialog" max-width="480" persistent>
-      <v-card class="logout-dialog-card" elevation="24">
+      <v-card class="modern-dialog-card logout-dialog-card">
         <!-- Modern Header with Gradient -->
         <div class="logout-dialog-header">
           <div class="logout-icon-circle">
@@ -231,7 +231,7 @@
             <v-icon
               icon="mdi-alert-circle-outline"
               size="24"
-              color="#ff6f00"
+              color="#ed985f"
             ></v-icon>
             <div class="ml-3">
               <div class="logout-message-title">
@@ -249,7 +249,6 @@
             <span>Any unsaved changes will be lost</span>
           </div>
         </v-card-text>
-
         <!-- Action Buttons -->
         <v-card-actions class="logout-dialog-actions pa-6 pt-0">
           <v-btn
@@ -527,7 +526,7 @@ const menuItems = computed(() => {
     },
     {
       title: "Position Rates",
-      icon: "mdi-cash-multiple",
+      icon: "mdi-badge-account",
       value: "position-rates",
       to: "/position-rates",
       roles: ["admin", "accountant"],
@@ -640,7 +639,7 @@ const menuSections = computed(() => {
     },
     {
       title: "Position Rates",
-      icon: "mdi-cash-multiple",
+      icon: "mdi-badge-account",
       value: "position-rates",
       to: "/position-rates",
       roles: ["admin", "accountant"],
@@ -1409,8 +1408,8 @@ async function downloadCurrentPayslip() {
   background: rgba(255, 255, 255, 0.98) !important;
   box-shadow:
     0 40px 80px -20px rgba(0, 0, 0, 0.4),
-    0 20px 40px -20px rgba(255, 111, 0, 0.15),
-    0 0 0 1px rgba(255, 152, 0, 0.1) inset !important;
+    0 20px 40px -20px rgba(237, 152, 95, 0.15),
+    0 0 0 1px rgba(247, 185, 128, 0.1) inset !important;
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   animation: dialogFadeIn 0.3s ease-out;
@@ -1429,7 +1428,7 @@ async function downloadCurrentPayslip() {
 
 .logout-dialog-header {
   padding: 2.5rem 2rem 2rem;
-  background: linear-gradient(135deg, #37474f 0%, #ff6f00 100%);
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   position: relative;
   text-align: center;
 
@@ -1440,7 +1439,7 @@ async function downloadCurrentPayslip() {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, transparent, #ff9800, transparent);
+    background: linear-gradient(90deg, transparent, #f7b980, transparent);
   }
 }
 
@@ -1495,23 +1494,23 @@ async function downloadCurrentPayslip() {
   display: flex;
   align-items: flex-start;
   padding: 1.5rem;
-  background: rgba(255, 111, 0, 0.08);
+  background: rgba(237, 152, 95, 0.08);
   border-radius: 12px;
-  border: 1px solid rgba(255, 111, 0, 0.2);
-  box-shadow: 0 2px 8px rgba(255, 111, 0, 0.08);
+  border: 1px solid rgba(237, 152, 95, 0.2);
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.08);
   margin-bottom: 1rem;
 }
 
 .logout-message-title {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #37474f;
+  color: #001f3d;
   margin-bottom: 0.25rem;
 }
 
 .logout-message-subtitle {
   font-size: 0.875rem;
-  color: #546e7a;
+  color: rgba(0, 31, 61, 0.7);
   line-height: 1.5;
 }
 
@@ -1520,12 +1519,12 @@ async function downloadCurrentPayslip() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1rem;
-  background: rgba(84, 110, 122, 0.06);
+  background: rgba(0, 31, 61, 0.04);
   border-radius: 10px;
   font-size: 0.8125rem;
-  color: #546e7a;
+  color: rgba(0, 31, 61, 0.7);
   font-weight: 500;
-  border: 1px solid rgba(84, 110, 122, 0.1);
+  border: 1px solid rgba(0, 31, 61, 0.08);
 }
 
 .logout-dialog-actions {
@@ -1539,13 +1538,13 @@ async function downloadCurrentPayslip() {
   height: 48px !important;
   border-radius: 12px !important;
   font-weight: 600 !important;
-  border: 2px solid rgba(84, 110, 122, 0.3) !important;
-  color: #546e7a !important;
+  border: 2px solid rgba(0, 31, 61, 0.2) !important;
+  color: #001f3d !important;
   transition: all 0.3s ease !important;
 
   &:hover {
-    border-color: #546e7a !important;
-    background: rgba(84, 110, 122, 0.08) !important;
+    border-color: #001f3d !important;
+    background: rgba(0, 31, 61, 0.04) !important;
     transform: translateY(-2px);
   }
 }
@@ -1554,17 +1553,17 @@ async function downloadCurrentPayslip() {
   height: 48px !important;
   border-radius: 12px !important;
   font-weight: 600 !important;
-  background: linear-gradient(135deg, #ff6f00 0%, #ff9800 100%) !important;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%) !important;
   color: white !important;
   box-shadow:
-    0 8px 20px rgba(255, 111, 0, 0.3),
-    0 4px 10px rgba(255, 111, 0, 0.2) !important;
+    0 8px 20px rgba(237, 152, 95, 0.3),
+    0 4px 10px rgba(237, 152, 95, 0.2) !important;
   transition: all 0.3s ease !important;
 
   &:hover {
     box-shadow:
-      0 12px 28px rgba(255, 111, 0, 0.4),
-      0 6px 14px rgba(255, 111, 0, 0.3) !important;
+      0 12px 28px rgba(237, 152, 95, 0.4),
+      0 6px 14px rgba(237, 152, 95, 0.3) !important;
     transform: translateY(-2px);
   }
 

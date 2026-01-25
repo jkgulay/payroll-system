@@ -1,187 +1,200 @@
 <template>
-  <v-container fluid>
-    <v-row>
-      <v-col cols="12">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            <v-icon class="mr-2">mdi-file-check-outline</v-icon>
-            <span>Resume Review (Admin)</span>
-            <v-spacer></v-spacer>
+  <div class="resume-review-page">
+    <!-- Modern Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="page-title-section">
+          <div class="page-icon-badge">
+            <v-icon size="22">mdi-file-certificate-outline</v-icon>
+          </div>
+          <div>
+            <h1 class="page-title">Resume Review</h1>
+            <p class="page-subtitle">
+              Review and approve resume submissions from accountants
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modern Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon pending">
+          <v-icon size="20">mdi-clock-outline</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Pending Review</div>
+          <div class="stat-value">{{ stats.pending }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon approved">
+          <v-icon size="20">mdi-check-circle</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Approved</div>
+          <div class="stat-value">{{ stats.approved }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon rejected">
+          <v-icon size="20">mdi-close-circle</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Rejected</div>
+          <div class="stat-value">{{ stats.rejected }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <v-icon size="20">mdi-file-document-multiple</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total</div>
+          <div class="stat-value">{{ stats.total }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resume List -->
+    <div class="modern-card">
+      <div class="filters-section mb-3">
+        <v-row align="center">
+          <v-col cols="12" md="4">
+            <v-select
+              v-model="statusFilter"
+              :items="statusOptions"
+              label="Filter by Status"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+              @update:modelValue="fetchResumes"
+            ></v-select>
+          </v-col>
+          <v-spacer></v-spacer>
+          <v-col cols="auto">
             <v-btn
-              icon
+              color="#ED985F"
+              variant="tonal"
+              icon="mdi-refresh"
               @click="fetchResumes"
               :loading="loading"
               title="Refresh"
+            ></v-btn>
+          </v-col>
+        </v-row>
+      </div>
+
+      <div class="table-section">
+        <v-data-table
+          :headers="headers"
+          :items="resumes"
+          :loading="loading"
+          class="elevation-1"
+        >
+          <template v-slot:item.full_name="{ item }">
+            <div v-if="item.is_application && item.first_name">
+              {{ item.first_name }} {{ item.last_name }}
+            </div>
+            <div v-else>
+              <span class="text-grey">N/A</span>
+            </div>
+          </template>
+
+          <template v-slot:item.user="{ item }">
+            <div>
+              <strong>{{ item.user?.username }}</strong
+              ><br />
+              <small>{{ item.user?.email }}</small>
+            </div>
+          </template>
+
+          <template v-slot:item.original_filename="{ item }">
+            <div class="d-flex align-center">
+              <v-icon :color="getFileIcon(item.file_type).color" class="mr-2">
+                {{ getFileIcon(item.file_type).icon }}
+              </v-icon>
+              <span>{{ item.original_filename }}</span>
+            </div>
+          </template>
+
+          <template v-slot:item.file_size="{ item }">
+            {{ formatFileSize(item.file_size) }}
+          </template>
+
+          <template v-slot:item.status="{ item }">
+            <v-chip :color="getStatusColor(item.status)" size="small" dark>
+              {{ item.status.toUpperCase() }}
+            </v-chip>
+          </template>
+
+          <template v-slot:item.created_at="{ item }">
+            {{ formatDate(item.created_at) }}
+          </template>
+
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              icon
+              size="small"
+              @click="viewResume(item)"
+              title="View Details"
             >
-              <v-icon>mdi-refresh</v-icon>
+              <v-icon>mdi-eye</v-icon>
             </v-btn>
-          </v-card-title>
-
-          <v-card-text>
-            <!-- Statistics Cards -->
-            <v-row class="mb-4">
-              <v-col cols="12" sm="3">
-                <v-card color="warning" dark>
-                  <v-card-text>
-                    <div class="text-h5">{{ stats.pending }}</div>
-                    <div>Pending Review</div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" sm="3">
-                <v-card color="success" dark>
-                  <v-card-text>
-                    <div class="text-h5">{{ stats.approved }}</div>
-                    <div>Approved</div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" sm="3">
-                <v-card color="error" dark>
-                  <v-card-text>
-                    <div class="text-h5">{{ stats.rejected }}</div>
-                    <div>Rejected</div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" sm="3">
-                <v-card color="primary" dark>
-                  <v-card-text>
-                    <div class="text-h5">{{ stats.total }}</div>
-                    <div>Total</div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-
-            <!-- Filters -->
-            <v-row class="mb-4">
-              <v-col cols="12" sm="6" md="4">
-                <v-select
-                  v-model="statusFilter"
-                  :items="statusOptions"
-                  label="Filter by Status"
-                  dense
-                  outlined
-                  @update:modelValue="fetchResumes"
-                ></v-select>
-              </v-col>
-            </v-row>
-
-            <!-- Data Table -->
-            <v-data-table
-              :headers="headers"
-              :items="resumes"
-              :loading="loading"
-              class="elevation-1"
+            <v-btn
+              v-if="!item.is_application"
+              icon
+              size="small"
+              @click="downloadResume(item)"
+              title="Download"
             >
-              <template v-slot:item.full_name="{ item }">
-                <div v-if="item.is_application && item.first_name">
-                  {{ item.first_name }} {{ item.last_name }}
-                </div>
-                <div v-else>
-                  <span class="text-grey">N/A</span>
-                </div>
-              </template>
-
-              <template v-slot:item.user="{ item }">
-                <div>
-                  <strong>{{ item.user?.username }}</strong
-                  ><br />
-                  <small>{{ item.user?.email }}</small>
-                </div>
-              </template>
-
-              <template v-slot:item.original_filename="{ item }">
-                <div class="d-flex align-center">
-                  <v-icon
-                    :color="getFileIcon(item.file_type).color"
-                    class="mr-2"
-                  >
-                    {{ getFileIcon(item.file_type).icon }}
-                  </v-icon>
-                  <span>{{ item.original_filename }}</span>
-                </div>
-              </template>
-
-              <template v-slot:item.file_size="{ item }">
-                {{ formatFileSize(item.file_size) }}
-              </template>
-
-              <template v-slot:item.status="{ item }">
-                <v-chip :color="getStatusColor(item.status)" size="small" dark>
-                  {{ item.status.toUpperCase() }}
-                </v-chip>
-              </template>
-
-              <template v-slot:item.created_at="{ item }">
-                {{ formatDate(item.created_at) }}
-              </template>
-
-              <template v-slot:item.actions="{ item }">
-                <v-btn
-                  icon
-                  size="small"
-                  @click="viewResume(item)"
-                  title="View Details"
-                >
-                  <v-icon>mdi-eye</v-icon>
-                </v-btn>
-                <v-btn
-                  v-if="!item.is_application"
-                  icon
-                  size="small"
-                  @click="downloadResume(item)"
-                  title="Download"
-                >
-                  <v-icon>mdi-download</v-icon>
-                </v-btn>
-                <v-btn
-                  v-if="item.status === 'pending' && !item.is_application"
-                  icon
-                  size="small"
-                  color="success"
-                  @click="openApproveDialog(item)"
-                  title="Approve"
-                >
-                  <v-icon>mdi-check</v-icon>
-                </v-btn>
-                <v-btn
-                  v-if="item.status === 'pending' && !item.is_application"
-                  icon
-                  size="small"
-                  color="error"
-                  @click="openRejectDialog(item)"
-                  title="Reject"
-                >
-                  <v-icon>mdi-close</v-icon>
-                </v-btn>
-                <v-btn
-                  v-if="item.status === 'pending' && item.is_application"
-                  icon
-                  size="small"
-                  color="success"
-                  @click="openApproveApplicationDialog(item)"
-                  title="Approve Application"
-                >
-                  <v-icon>mdi-check-circle</v-icon>
-                </v-btn>
-                <v-btn
-                  v-if="item.status === 'pending' && item.is_application"
-                  icon
-                  size="small"
-                  color="error"
-                  @click="openRejectApplicationDialog(item)"
-                  title="Reject Application"
-                >
-                  <v-icon>mdi-close-circle</v-icon>
-                </v-btn>
-              </template>
-            </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+              <v-icon>mdi-download</v-icon>
+            </v-btn>
+            <v-btn
+              v-if="item.status === 'pending' && !item.is_application"
+              icon
+              size="small"
+              color="success"
+              @click="openApproveDialog(item)"
+              title="Approve"
+            >
+              <v-icon>mdi-check</v-icon>
+            </v-btn>
+            <v-btn
+              v-if="item.status === 'pending' && !item.is_application"
+              icon
+              size="small"
+              color="error"
+              @click="openRejectDialog(item)"
+              title="Reject"
+            >
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+            <v-btn
+              v-if="item.status === 'pending' && item.is_application"
+              icon
+              size="small"
+              color="success"
+              @click="openApproveApplicationDialog(item)"
+              title="Approve Application"
+            >
+              <v-icon>mdi-check-circle</v-icon>
+            </v-btn>
+            <v-btn
+              v-if="item.status === 'pending' && item.is_application"
+              icon
+              size="small"
+              color="error"
+              @click="openRejectApplicationDialog(item)"
+              title="Reject Application"
+            >
+              <v-icon>mdi-close-circle</v-icon>
+            </v-btn>
+          </template>
+        </v-data-table>
+      </div>
+    </div>
 
     <!-- View Dialog -->
     <v-dialog v-model="viewDialog" max-width="900">
@@ -261,7 +274,7 @@
           <div
             v-if="
               ['jpg', 'jpeg', 'png'].includes(
-                selectedResume.file_type.toLowerCase()
+                selectedResume.file_type.toLowerCase(),
               )
             "
             class="mt-4"
@@ -562,7 +575,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -686,7 +699,7 @@ async function approveResume() {
   try {
     const response = await resumeService.approveResume(
       resumeToReview.value.id,
-      adminNotes.value
+      adminNotes.value,
     );
 
     if (response.success) {
@@ -711,7 +724,7 @@ async function rejectResume() {
   try {
     const response = await resumeService.rejectResume(
       resumeToReview.value.id,
-      adminNotes.value
+      adminNotes.value,
     );
 
     if (response.success) {
@@ -770,7 +783,7 @@ async function approveApplication() {
   try {
     const response = await api.post(
       `/employee-applications/${applicationToReview.value.id}/approve`,
-      { date_hired: applicationHireDate.value }
+      { date_hired: applicationHireDate.value },
     );
 
     approvedEmployeeData.value = response.data.employee;
@@ -783,7 +796,7 @@ async function approveApplication() {
     fetchResumes();
   } catch (error) {
     toast.error(
-      error.response?.data?.message || "Failed to approve application"
+      error.response?.data?.message || "Failed to approve application",
     );
     console.error(error);
   } finally {
@@ -798,7 +811,7 @@ async function rejectApplication() {
   try {
     const response = await api.post(
       `/employee-applications/${applicationToReview.value.id}/reject`,
-      { rejection_reason: applicationRejectionReason.value }
+      { rejection_reason: applicationRejectionReason.value },
     );
 
     toast.success("Application rejected successfully");
@@ -809,7 +822,7 @@ async function rejectApplication() {
     fetchResumes();
   } catch (error) {
     toast.error(
-      error.response?.data?.message || "Failed to reject application"
+      error.response?.data?.message || "Failed to reject application",
     );
     console.error(error);
   } finally {
@@ -858,3 +871,149 @@ function formatDate(dateString) {
   return format(new Date(dateString), "MMM dd, yyyy hh:mm a");
 }
 </script>
+
+<style scoped lang="scss">
+.resume-review-page {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.25);
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: rgba(0, 31, 61, 0.6);
+  margin: 4px 0 0 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 31, 61, 0.08);
+  border-color: rgba(237, 152, 95, 0.2);
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon.pending {
+  background: rgba(237, 152, 95, 0.1);
+
+  .v-icon {
+    color: #ed985f;
+  }
+}
+
+.stat-icon.approved {
+  background: rgba(16, 185, 129, 0.1);
+
+  .v-icon {
+    color: #10b981;
+  }
+}
+
+.stat-icon.rejected {
+  background: rgba(239, 68, 68, 0.1);
+
+  .v-icon {
+    color: #ef4444;
+  }
+}
+
+.stat-icon.total {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+
+  .v-icon {
+    color: white;
+  }
+}
+
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: rgba(0, 31, 61, 0.6);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1;
+}
+
+.modern-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  padding: 24px;
+}
+
+</style>

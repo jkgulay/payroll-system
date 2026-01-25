@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="page-title-section">
           <div class="page-icon-badge">
-            <v-icon size="20">mdi-folder-multiple</v-icon>
+            <v-icon size="20">mdi-office-building</v-icon>
           </div>
           <div>
             <h1 class="page-title">Project Management</h1>
@@ -82,72 +82,82 @@
         md="6"
         lg="4"
       >
-        <v-card class="project-card" elevation="2">
-          <v-card-title class="d-flex align-center">
-            <div class="flex-grow-1">
-              <div class="text-h6">{{ project.name }}</div>
-              <div class="text-caption text-grey">{{ project.code }}</div>
+        <v-card class="project-card" elevation="0">
+          <div class="project-card-header">
+            <div class="project-icon-wrapper">
+              <v-icon size="18" color="white">mdi-folder-open</v-icon>
             </div>
             <v-chip
               :color="project.is_active ? 'success' : 'grey'"
               size="small"
               variant="flat"
+              class="status-chip"
             >
               {{ project.is_active ? "Active" : "Completed" }}
             </v-chip>
+          </div>
+
+          <v-card-title class="project-card-title">
+            <div class="project-name">{{ project.name }}</div>
+            <div class="project-code">{{ project.code }}</div>
           </v-card-title>
 
-          <v-card-text>
-            <div class="mb-2">
-              <div class="text-caption text-grey">Description</div>
-              <div class="text-body-2">
-                {{ project.description || "No description" }}
+          <v-card-text class="project-card-content">
+            <div class="description-section">
+              <div class="section-label">
+                <v-icon size="14">mdi-text</v-icon>
+                Description
+              </div>
+              <div class="section-value">
+                {{ project.description || "No description provided" }}
               </div>
             </div>
 
-            <v-divider class="my-3"></v-divider>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-icon">
+                  <v-icon size="18">mdi-account-hard-hat</v-icon>
+                </div>
+                <div>
+                  <div class="info-label">Project Head</div>
+                  <div class="info-value">
+                    {{
+                      project.head_employee
+                        ? `${project.head_employee.first_name} ${project.head_employee.last_name}`
+                        : "Not assigned"
+                    }}
+                  </div>
+                </div>
+              </div>
 
-            <div class="d-flex align-center mb-2">
-              <v-icon size="small" class="mr-2">mdi-account-hard-hat</v-icon>
-              <span class="text-body-2">
-                <strong>Head:</strong>
-                {{
-                  project.head_employee
-                    ? `${project.head_employee.first_name} ${project.head_employee.last_name}`
-                    : "Not assigned"
-                }}
-              </span>
-            </div>
-
-            <div class="d-flex align-center">
-              <v-icon size="small" class="mr-2">mdi-account-group</v-icon>
-              <span class="text-body-2">
-                <strong>{{ project.employees_count || 0 }}</strong> employee(s)
-                assigned
-              </span>
+              <div class="info-item">
+                <div class="info-icon">
+                  <v-icon size="18">mdi-account-group</v-icon>
+                </div>
+                <div>
+                  <div class="info-label">Team Size</div>
+                  <div class="info-value">
+                    {{ project.employees_count || 0 }} employee(s)
+                  </div>
+                </div>
+              </div>
             </div>
           </v-card-text>
 
-          <v-card-actions>
-            <v-btn
-              size="small"
-              variant="text"
-              color="primary"
+          <v-card-actions class="project-card-actions">
+            <button
+              class="card-action-btn card-action-primary"
               @click="viewProject(project)"
             >
-              View Details
-            </v-btn>
-
-            <v-spacer></v-spacer>
+              <v-icon size="16">mdi-eye</v-icon>
+              <span>View Details</span>
+            </button>
 
             <v-menu>
               <template v-slot:activator="{ props }">
-                <v-btn
-                  icon="mdi-dots-vertical"
-                  size="small"
-                  variant="text"
-                  v-bind="props"
-                ></v-btn>
+                <button class="card-action-btn card-action-menu" v-bind="props">
+                  <v-icon size="18">mdi-dots-vertical</v-icon>
+                </button>
               </template>
 
               <v-list density="compact">
@@ -871,18 +881,211 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   border-radius: 16px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
   border: 1px solid rgba(0, 31, 61, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: white;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 31, 61, 0.12) !important;
+    border-color: rgba(237, 152, 95, 0.3);
+  }
+}
+
+.project-card-header {
+  background: linear-gradient(135deg, #001f3d 0%, #1a3a5a 100%);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.project-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.status-chip {
+  position: relative;
+  z-index: 1;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.project-card-title {
+  padding: 20px 20px 16px !important;
+}
+
+.project-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  margin-bottom: 4px;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+}
+
+.project-code {
+  font-size: 13px;
+  color: #ed985f;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.project-card-content {
+  flex-grow: 1;
+  padding: 0 20px 20px !important;
+}
+
+.description-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: rgba(0, 31, 61, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 31, 61, 0.06);
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0, 31, 61, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+}
+
+.section-value {
+  font-size: 14px;
+  color: #001f3d;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(237, 152, 95, 0.04);
+    border-color: rgba(237, 152, 95, 0.2);
+  }
+}
+
+.info-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(237, 152, 95, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+}
+
+.info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0, 31, 61, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+}
+
+.project-card-actions {
+  padding: 16px 20px !important;
+  border-top: 1px solid rgba(0, 31, 61, 0.06);
+  background: rgba(0, 31, 61, 0.01);
+  display: flex;
+  gap: 8px;
+}
+
+.card-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.project-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+.card-action-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.35);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
-.project-card .v-card-text {
-  flex-grow: 1;
+.card-action-menu {
+  background: white;
+  border: 1.5px solid rgba(0, 31, 61, 0.15);
+  color: #001f3d;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(0, 31, 61, 0.04);
+    border-color: rgba(0, 31, 61, 0.25);
+  }
 }
 
 .modern-dialog-card {

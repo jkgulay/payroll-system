@@ -586,7 +586,7 @@ watch(
   );
   border-radius: 12px;
   border: 1px solid rgba(0, 31, 61, 0.08);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .section-icon {
