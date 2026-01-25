@@ -133,6 +133,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Payroll - specific routes MUST come before apiResource
     Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize']);
+    Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess']);
     Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister']);
     Route::get('/payrolls/{payroll}/export-excel', [App\Http\Controllers\PayrollController::class, 'exportToExcel']);
     Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip']);
@@ -224,9 +225,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/leaves/{leave}/reject', [App\Http\Controllers\Api\LeaveController::class, 'reject']);
     Route::get('/leaves/employee/{employee}/credits', [App\Http\Controllers\Api\LeaveController::class, 'employeeCredits']);
 
-    // Holidays
-    Route::apiResource('holidays', App\Http\Controllers\Api\HolidayController::class);
-    Route::get('/holidays/year/{year}', [App\Http\Controllers\Api\HolidayController::class, 'byYear']);
+    // Holidays - specific routes MUST come before apiResource
+    Route::get('/holidays/year/{year}', [App\Http\Controllers\HolidayController::class, 'getYearHolidays']);
+    Route::post('/holidays/check-date', [App\Http\Controllers\HolidayController::class, 'checkDate']);
+    Route::post('/holidays/bulk', [App\Http\Controllers\HolidayController::class, 'bulkStore']);
+    Route::apiResource('holidays', App\Http\Controllers\HolidayController::class);
 
     // Government Contributions
     Route::get('/government/sss-table', [App\Http\Controllers\Api\GovernmentController::class, 'sssTable']);

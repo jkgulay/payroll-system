@@ -268,6 +268,15 @@ const router = createRouter({
           meta: { title: "Position Rates", roles: ["admin", "accountant"] },
         },
         {
+          path: "holidays",
+          name: "holidays",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/HolidayManagementView.vue"
+            ),
+          meta: { title: "Holiday Management", roles: ["admin", "accountant"] },
+        },
+        {
           path: "audit-trail",
           name: "audit-trail",
           component: () =>

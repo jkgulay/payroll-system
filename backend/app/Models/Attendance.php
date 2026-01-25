@@ -237,4 +237,40 @@ class Attendance extends Model
     {
         return $this->is_holiday;
     }
+
+    /**
+     * Automatically check and mark if attendance date is a holiday
+     */
+    public function checkAndMarkHoliday(): void
+    {
+        $holiday = Holiday::getHolidayForDate($this->attendance_date);
+        
+        if ($holiday) {
+            $this->is_holiday = true;
+            $this->holiday_type = $holiday->type;
+            
+            // If no status is set yet, mark as holiday
+            if (!$this->status || $this->status === 'present') {
+                // Keep present status if already marked, otherwise set as holiday
+                $this->status = $this->time_in ? 'present' : 'holiday';
+            }
+        } else {
+            $this->is_holiday = false;
+            $this->holiday_type = null;
+        }
+    }
+
+    /**
+     * Boot method to automatically check holidays when creating/updating attendance
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($attendance) {
+            if ($attendance->attendance_date) {
+                $attendance->checkAndMarkHoliday();
+            }
+        });
+    }
 }

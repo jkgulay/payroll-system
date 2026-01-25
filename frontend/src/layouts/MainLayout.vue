@@ -532,6 +532,13 @@ const menuItems = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
+      title: "Holidays",
+      icon: "mdi-calendar-star",
+      value: "holidays",
+      to: "/holidays",
+      roles: ["admin", "accountant"],
+    },
+    {
       title: "Settings",
       icon: "mdi-cog-outline",
       value: "settings",
@@ -642,6 +649,13 @@ const menuSections = computed(() => {
       icon: "mdi-badge-account",
       value: "position-rates",
       to: "/position-rates",
+      roles: ["admin", "accountant"],
+    },
+    {
+      title: "Holidays",
+      icon: "mdi-calendar-star",
+      value: "holidays",
+      to: "/holidays",
       roles: ["admin", "accountant"],
     },
     {

@@ -11,6 +11,7 @@ use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
 use App\Models\User;
 use App\Exports\PayrollExport;
+use App\Services\PayrollService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,12 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class PayrollController extends Controller
 {
+    protected $payrollService;
+
+    public function __construct(PayrollService $payrollService)
+    {
+        $this->payrollService = $payrollService;
+    }
     public function index()
     {
         $payrolls = Payroll::with(['creator', 'finalizer'])
@@ -166,6 +173,33 @@ class PayrollController extends Controller
         ]);
     }
 
+    public function reprocess($id)
+    {
+        $payroll = Payroll::findOrFail($id);
+
+        if ($payroll->status === 'paid') {
+            return response()->json([
+                'message' => 'Cannot reprocess paid payrolls'
+            ], 422);
+        }
+
+        try {
+            $payrollService = new \App\Services\PayrollService();
+            $payrollService->reprocessPayroll($payroll);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payroll reprocessed successfully',
+                'data' => $payroll->fresh()->load(['items.employee', 'creator'])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reprocess payroll: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function downloadPayslip($payrollId, $employeeId)
     {
         // Increase memory limit for PDF generation
@@ -308,7 +342,8 @@ class PayrollController extends Controller
         $totalNet = 0;
 
         foreach ($employees as $employee) {
-            $item = $this->calculatePayrollItem($payroll, $employee);
+            // Use PayrollService for holiday-aware calculation
+            $item = $this->payrollService->calculatePayrollItem($payroll, $employee);
 
             $payrollItem = PayrollItem::create($item);
 
@@ -325,150 +360,6 @@ class PayrollController extends Controller
             'total_deductions' => $totalDeductions,
             'total_net' => $totalNet,
         ]);
-    }
-
-    private function calculatePayrollItem(Payroll $payroll, Employee $employee)
-    {
-        // Get attendance records for the period
-        $attendances = Attendance::where('employee_id', $employee->id)
-            ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-            ->where('status', '!=', 'absent')
-            ->get();
-
-        // Calculate days worked and hours
-        $daysWorked = $attendances->where('status', 'present')->count();
-        $regularOtHours = $attendances->sum('overtime_hours') ?? 0;
-
-        // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
-        $rate = $employee->getBasicSalary();
-
-        // Calculate basic pay
-        $basicPay = $rate * $daysWorked;
-
-        // Calculate overtime pay (1.25x for regular OT)
-        $hourlyRate = $rate / 8; // Assuming 8-hour workday
-        $regularOtPay = $regularOtHours * $hourlyRate * 1.25;
-
-        // Get allowances - get all active allowances for detailed breakdown
-        $employeeAllowances = EmployeeAllowance::where('employee_id', $employee->id)
-            ->where('is_active', true)
-            ->where('effective_date', '<=', $payroll->period_end)
-            ->where(function ($query) use ($payroll) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', $payroll->period_start);
-            })
-            ->get();
-
-        // Create allowances breakdown array
-        $allowancesBreakdown = [];
-        $allowances = 0;
-        foreach ($employeeAllowances as $allowance) {
-            $allowancesBreakdown[] = [
-                'type' => $allowance->allowance_type,
-                'name' => $allowance->allowance_name,
-                'amount' => (float) $allowance->amount,
-                'is_taxable' => $allowance->is_taxable,
-            ];
-            $allowances += $allowance->amount;
-        }
-
-        // Get approved meal allowances for this period
-        $mealAllowanceItems = \App\Models\MealAllowanceItem::where('employee_id', $employee->id)
-            ->whereHas('mealAllowance', function ($query) use ($payroll) {
-                $query->where('status', 'approved')
-                    ->where(function ($q) use ($payroll) {
-                        // Meal allowance period overlaps with payroll period
-                        $q->whereBetween('period_start', [$payroll->period_start, $payroll->period_end])
-                            ->orWhereBetween('period_end', [$payroll->period_start, $payroll->period_end])
-                            ->orWhere(function ($q2) use ($payroll) {
-                                $q2->where('period_start', '<=', $payroll->period_start)
-                                    ->where('period_end', '>=', $payroll->period_end);
-                            });
-                    });
-            })
-            ->get();
-
-        foreach ($mealAllowanceItems as $mealItem) {
-            $mealAllowance = $mealItem->mealAllowance;
-            $allowancesBreakdown[] = [
-                'type' => 'meal',
-                'name' => $mealAllowance->title ?? 'Meal Allowance',
-                'amount' => (float) $mealItem->total_amount,
-                'is_taxable' => false,
-            ];
-            $allowances += $mealItem->total_amount;
-        }
-
-        // Calculate COLA (Cost of Living Allowance) - typically per day
-        $cola = $daysWorked * 0; // Set to 0, can be configured
-
-        // Calculate gross pay
-        $grossPay = $basicPay + $regularOtPay + $cola + $allowances;
-
-        // Calculate government deductions
-        $sss = $this->calculateSSS($grossPay);
-        $philhealth = $this->calculatePhilHealth($grossPay);
-        $pagibig = $this->calculatePagibig($grossPay);
-
-        // Get loans deduction for this period
-        $loanDeduction = EmployeeLoan::where('employee_id', $employee->id)
-            ->where('status', 'active')
-            ->sum('monthly_amortization') ?? 0;
-
-        // Get active employee deductions for this period
-        $employeeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
-            ->where('status', 'active')
-            ->where('start_date', '<=', $payroll->period_end)
-            ->where(function ($query) use ($payroll) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', $payroll->period_start);
-            })
-            ->get();
-
-        // Sum up all active deductions
-        $totalEmployeeDeductions = $employeeDeductions->sum('amount_per_cutoff');
-
-        // Employee savings
-        $employeeSavings = 0; // Can be configured
-
-        // Cash advance
-        $cashAdvance = 0; // Can be configured
-
-        // Other deductions (legacy, now using employee_deductions table)
-        $otherDeductions = 0;
-
-        // Total deductions
-        $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
-            $employeeSavings + $cashAdvance + $otherDeductions + $totalEmployeeDeductions;
-
-        // Net pay
-        $netPay = $grossPay - $totalDeductions;
-
-        return [
-            'payroll_id' => $payroll->id,
-            'employee_id' => $employee->id,
-            'rate' => $rate,
-            'days_worked' => $daysWorked,
-            'basic_pay' => $basicPay,
-            'regular_ot_hours' => $regularOtHours,
-            'regular_ot_pay' => $regularOtPay,
-            'special_ot_hours' => 0,
-            'special_ot_pay' => 0,
-            'cola' => $cola,
-            'other_allowances' => $allowances,
-            'allowances_breakdown' => $allowancesBreakdown,
-            'gross_pay' => $grossPay,
-            'sss' => $sss,
-            'philhealth' => $philhealth,
-            'pagibig' => $pagibig,
-            'withholding_tax' => 0,
-            'employee_savings' => $employeeSavings,
-            'cash_advance' => $cashAdvance,
-            'loans' => $loanDeduction,
-            'other_deductions' => $otherDeductions + $totalEmployeeDeductions,
-            'total_deductions' => $totalDeductions,
-            'net_pay' => $netPay,
-        ];
     }
 
     /**
@@ -508,75 +399,5 @@ class PayrollController extends Controller
                 $deduction->update($updateData);
             }
         }
-    }
-
-    private function calculateSSS($grossPay)
-    {
-        // SSS calculation - 2024 rates (semi-monthly deduction)
-        // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
-        $monthlySalary = $grossPay * 2;
-
-        if ($monthlySalary < 4250) return 180;
-        if ($monthlySalary < 4750) return 202.50;
-        if ($monthlySalary < 5250) return 225;
-        if ($monthlySalary < 5750) return 247.50;
-        if ($monthlySalary < 6250) return 270;
-        if ($monthlySalary < 6750) return 292.50;
-        if ($monthlySalary < 7250) return 315;
-        if ($monthlySalary < 7750) return 337.50;
-        if ($monthlySalary < 8250) return 360;
-        if ($monthlySalary < 8750) return 382.50;
-        if ($monthlySalary < 9250) return 405;
-        if ($monthlySalary < 9750) return 427.50;
-        if ($monthlySalary < 10250) return 450;
-        if ($monthlySalary < 10750) return 472.50;
-        if ($monthlySalary < 11250) return 495;
-        if ($monthlySalary < 11750) return 517.50;
-        if ($monthlySalary < 12250) return 540;
-        if ($monthlySalary < 12750) return 562.50;
-        if ($monthlySalary < 13250) return 585;
-        if ($monthlySalary < 13750) return 607.50;
-        if ($monthlySalary < 14250) return 630;
-        if ($monthlySalary < 14750) return 652.50;
-        if ($monthlySalary < 15250) return 675;
-        if ($monthlySalary < 15750) return 697.50;
-        if ($monthlySalary < 16250) return 720;
-        if ($monthlySalary < 16750) return 742.50;
-        if ($monthlySalary < 17250) return 765;
-        if ($monthlySalary < 17750) return 787.50;
-        if ($monthlySalary < 18250) return 810;
-        if ($monthlySalary < 18750) return 832.50;
-        if ($monthlySalary < 19250) return 855;
-        if ($monthlySalary < 19750) return 877.50;
-        return 900; // Maximum
-    }
-
-    private function calculatePhilHealth($grossPay)
-    {
-        // PhilHealth 2024: 5% of basic salary (2.5% employee share)
-        // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
-        $monthlySalary = $grossPay * 2;
-        $contribution = $monthlySalary * 0.05;
-        $employeeShare = $contribution / 2;
-
-        // Minimum: PHP 450, Maximum: PHP 1,800 per month (semi-monthly: 225-900)
-        $monthlyEmployeeShare = min(max($employeeShare, 450), 1800);
-
-        // Return semi-monthly amount
-        return $monthlyEmployeeShare / 2;
-    }
-
-    private function calculatePagibig($grossPay)
-    {
-        // Pag-IBIG: 2% of monthly salary
-        // Estimate monthly salary by doubling the gross pay for semi-monthly payroll
-        $monthlySalary = $grossPay * 2;
-        $monthlyContribution = $monthlySalary * 0.02;
-
-        // Maximum of PHP 100 per month
-        $monthlyContribution = min($monthlyContribution, 100);
-
-        // Return semi-monthly amount
-        return $monthlyContribution / 2;
     }
 }

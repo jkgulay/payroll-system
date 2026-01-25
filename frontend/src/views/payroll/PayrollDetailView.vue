@@ -175,14 +175,23 @@
                 <div>
                   ₱{{ formatCurrency(item.effective_rate || item.rate || 0) }}
                 </div>
-                <div class="text-caption">{{ item.days_worked }} days</div>
+                <div class="text-caption">
+                  <span v-if="item.regular_days > 0 || item.holiday_days > 0">
+                    {{ item.regular_days }} reg
+                    <span v-if="item.holiday_days > 0"> + {{ item.holiday_days }} hol</span>
+                  </span>
+                  <span v-else>{{ item.days_worked }} days</span>
+                </div>
               </div>
             </template>
 
             <!-- Basic Pay -->
             <template v-slot:item.basic_pay="{ item }">
               <div class="text-right">
-                ₱{{ formatCurrency(item.basic_pay) }}
+                <div>₱{{ formatCurrency(item.basic_pay) }}</div>
+                <div v-if="item.holiday_pay > 0" class="text-caption text-success">
+                  +₱{{ formatCurrency(item.holiday_pay) }} hol
+                </div>
               </div>
             </template>
 
