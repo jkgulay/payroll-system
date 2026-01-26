@@ -188,225 +188,315 @@
 
     <!-- View Leave Dialog -->
     <v-dialog v-model="showViewDialog" max-width="700px">
-      <v-card v-if="selectedLeave">
-        <v-card-title class="bg-primary">
-          <v-icon icon="mdi-calendar-clock" start></v-icon>
-          Leave Request Details
+      <v-card v-if="selectedLeave" class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper info">
+            <v-icon size="24">mdi-calendar-clock</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Leave Request Details</div>
+            <div class="dialog-subtitle">Review employee leave request</div>
+          </div>
         </v-card-title>
-        <v-divider></v-divider>
 
-        <v-card-text class="pt-4">
-          <v-row>
-            <v-col cols="12">
+        <v-card-text class="dialog-content">
+          <div class="detail-row">
+            <div class="detail-label">Status</div>
+            <div class="detail-value">
               <v-chip
                 :color="getStatusColor(selectedLeave.status)"
-                class="mb-3"
+                variant="flat"
+                size="small"
               >
                 {{ selectedLeave.status.toUpperCase() }}
               </v-chip>
-            </v-col>
+            </div>
+          </div>
 
-            <v-col cols="6">
-              <div class="text-caption text-grey">Employee</div>
-              <div class="text-body-1 font-weight-bold">
-                {{ selectedLeave.employee?.first_name }}
-                {{ selectedLeave.employee?.last_name }}
-              </div>
-              <div class="text-caption">
-                {{ selectedLeave.employee?.employee_number }}
-              </div>
-            </v-col>
-
-            <v-col cols="6">
-              <div class="text-caption text-grey">Position</div>
-              <div class="text-body-1">
-                {{ selectedLeave.employee?.position || "N/A" }}
-              </div>
-            </v-col>
-
-            <v-col cols="6">
-              <div class="text-caption text-grey">Leave Type</div>
-              <div class="text-body-1">
-                {{ selectedLeave.leave_type?.name }}
-              </div>
-            </v-col>
-
-            <v-col cols="6">
-              <div class="text-caption text-grey">Number of Days</div>
-              <div class="text-body-1">
-                {{ selectedLeave.number_of_days }} day(s)
-              </div>
-            </v-col>
-
-            <v-col cols="6">
-              <div class="text-caption text-grey">From Date</div>
-              <div class="text-body-1">
-                {{ formatDate(selectedLeave.leave_date_from) }}
-              </div>
-            </v-col>
-
-            <v-col cols="6">
-              <div class="text-caption text-grey">To Date</div>
-              <div class="text-body-1">
-                {{ formatDate(selectedLeave.leave_date_to) }}
-              </div>
-            </v-col>
-
-            <v-col cols="12">
-              <div class="text-caption text-grey">Reason</div>
-              <v-card variant="tonal" class="mt-1">
-                <v-card-text>{{ selectedLeave.reason }}</v-card-text>
-              </v-card>
-            </v-col>
-
-            <v-col v-if="selectedLeave.approved_by" cols="12">
-              <div class="text-caption text-grey">
-                {{
-                  selectedLeave.status === "approved" ? "Approved" : "Rejected"
-                }}
-                By
-              </div>
-              <div class="text-body-1">
-                {{ selectedLeave.approved_by?.name || "N/A" }} on
-                {{ formatDateTime(selectedLeave.approved_at) }}
-              </div>
-            </v-col>
-
-            <v-col
-              v-if="
-                selectedLeave.rejection_reason &&
-                selectedLeave.status === 'rejected'
-              "
-              cols="12"
-            >
-              <v-alert type="error" variant="tonal">
-                <div class="text-caption font-weight-bold">
-                  Rejection Reason
+          <div class="detail-row">
+            <div class="detail-label">Employee</div>
+            <div class="detail-value">
+              <div class="employee-info">
+                <div class="employee-name">
+                  {{ selectedLeave.employee?.first_name }}
+                  {{ selectedLeave.employee?.last_name }}
                 </div>
-                <div>{{ selectedLeave.rejection_reason }}</div>
-              </v-alert>
-            </v-col>
-          </v-row>
+                <div class="employee-number">
+                  {{ selectedLeave.employee?.employee_number }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Position</div>
+            <div class="detail-value">
+              {{ selectedLeave.employee?.position || "N/A" }}
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Leave Type</div>
+            <div class="detail-value">{{ selectedLeave.leave_type?.name }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Number of Days</div>
+            <div class="detail-value">
+              {{ selectedLeave.number_of_days }} day{{
+                selectedLeave.number_of_days > 1 ? "s" : ""
+              }}
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">From Date</div>
+            <div class="detail-value">
+              {{ formatDate(selectedLeave.leave_date_from) }}
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">To Date</div>
+            <div class="detail-value">
+              {{ formatDate(selectedLeave.leave_date_to) }}
+            </div>
+          </div>
+
+          <div class="detail-row full-width">
+            <div class="detail-label">Reason</div>
+            <div class="detail-value">{{ selectedLeave.reason }}</div>
+          </div>
+
+          <div v-if="selectedLeave.approved_by" class="detail-row full-width">
+            <div class="detail-label">
+              {{
+                selectedLeave.status === "approved" ? "Approved" : "Rejected"
+              }}
+              By
+            </div>
+            <div class="detail-value">
+              {{ selectedLeave.approved_by?.name || "N/A" }} on
+              {{ formatDateTime(selectedLeave.approved_at) }}
+            </div>
+          </div>
+
+          <v-alert
+            v-if="
+              selectedLeave.rejection_reason &&
+              selectedLeave.status === 'rejected'
+            "
+            type="error"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <div class="alert-title">Rejection Reason</div>
+            <div>{{ selectedLeave.rejection_reason }}</div>
+          </v-alert>
         </v-card-text>
 
-        <v-divider></v-divider>
-
-        <v-card-actions>
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn
+          <button
             v-if="selectedLeave.status === 'pending'"
-            color="success"
-            prepend-icon="mdi-check"
+            class="dialog-btn dialog-btn-success"
             @click="openApproveDialog(selectedLeave)"
           >
+            <v-icon size="18">mdi-check</v-icon>
             Approve
-          </v-btn>
-          <v-btn
+          </button>
+          <button
             v-if="selectedLeave.status === 'pending'"
-            color="error"
-            prepend-icon="mdi-close"
+            class="dialog-btn dialog-btn-danger"
             @click="openRejectDialog(selectedLeave)"
           >
+            <v-icon size="18">mdi-close</v-icon>
             Reject
-          </v-btn>
-          <v-btn @click="showViewDialog = false">Close</v-btn>
+          </button>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="showViewDialog = false"
+          >
+            Close
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Approve Dialog -->
-    <v-dialog v-model="showApproveDialog" max-width="500px" persistent>
-      <v-card>
-        <v-card-title class="bg-success">
-          <v-icon icon="mdi-check-circle" start></v-icon>
-          Approve Leave Request
+    <v-dialog v-model="showApproveDialog" max-width="550px" persistent>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper success">
+            <v-icon size="24">mdi-check-circle</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Approve Leave Request</div>
+            <div class="dialog-subtitle">Confirm leave approval</div>
+          </div>
+          <v-spacer></v-spacer>
+          <button class="close-btn" @click="closeApproveDialog">
+            <v-icon size="20">mdi-close</v-icon>
+          </button>
         </v-card-title>
-        <v-divider></v-divider>
 
-        <v-card-text class="pt-4">
-          <p class="mb-4">
+        <v-card-text class="dialog-content">
+          <div class="confirmation-message">
             Are you sure you want to approve this leave request for
-            <strong
-              >{{ selectedLeave?.employee?.first_name }}
-              {{ selectedLeave?.employee?.last_name }}</strong
+            <strong class="employee-highlight">
+              {{ selectedLeave?.employee?.first_name }}
+              {{ selectedLeave?.employee?.last_name }} </strong
             >?
-          </p>
+          </div>
 
-          <v-alert type="info" variant="tonal" class="mb-4">
-            <div>
-              <strong>Leave Type:</strong> {{ selectedLeave?.leave_type?.name }}
+          <div class="info-box success-box">
+            <div class="info-row">
+              <v-icon size="16" color="#10b981">mdi-calendar-text</v-icon>
+              <span class="info-label">Leave Type:</span>
+              <span class="info-value">{{
+                selectedLeave?.leave_type?.name
+              }}</span>
             </div>
-            <div>
-              <strong>Duration:</strong>
-              {{ selectedLeave?.number_of_days }} day(s)
+            <div class="info-row">
+              <v-icon size="16" color="#10b981">mdi-calendar-range</v-icon>
+              <span class="info-label">Duration:</span>
+              <span class="info-value"
+                >{{ selectedLeave?.number_of_days }} day{{
+                  selectedLeave?.number_of_days > 1 ? "s" : ""
+                }}</span
+              >
             </div>
-            <div>
-              <strong>Dates:</strong>
-              {{ formatDate(selectedLeave?.leave_date_from) }} to
-              {{ formatDate(selectedLeave?.leave_date_to) }}
+            <div class="info-row">
+              <v-icon size="16" color="#10b981">mdi-calendar-clock</v-icon>
+              <span class="info-label">Dates:</span>
+              <span class="info-value">
+                {{ formatDate(selectedLeave?.leave_date_from) }} to
+                {{ formatDate(selectedLeave?.leave_date_to) }}
+              </span>
             </div>
-          </v-alert>
+          </div>
 
+          <div class="form-field-label">
+            <v-icon size="16" color="#10b981">mdi-note-text</v-icon>
+            <span>Remarks (Optional)</span>
+          </div>
           <v-textarea
             v-model="approveData.remarks"
-            label="Remarks (Optional)"
+            placeholder="Add any remarks or notes (optional)"
             rows="3"
-            outlined
+            variant="outlined"
+            density="comfortable"
+            color="#10b981"
+            hide-details
           ></v-textarea>
         </v-card-text>
 
-        <v-divider></v-divider>
-
-        <v-card-actions>
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn @click="closeApproveDialog">Cancel</v-btn>
-          <v-btn color="success" :loading="approving" @click="confirmApprove">
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="closeApproveDialog"
+          >
+            <v-icon size="18">mdi-close</v-icon>
+            Cancel
+          </button>
+          <button
+            class="dialog-btn dialog-btn-success"
+            :disabled="approving"
+            @click="confirmApprove"
+          >
+            <v-progress-circular
+              v-if="approving"
+              size="18"
+              width="2"
+              indeterminate
+              color="white"
+            ></v-progress-circular>
+            <v-icon v-else size="18">mdi-check</v-icon>
             Approve
-          </v-btn>
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Reject Dialog -->
-    <v-dialog v-model="showRejectDialog" max-width="500px" persistent>
-      <v-card>
-        <v-card-title class="bg-error">
-          <v-icon icon="mdi-close-circle" start></v-icon>
-          Reject Leave Request
+    <v-dialog v-model="showRejectDialog" max-width="550px" persistent>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper danger">
+            <v-icon size="24">mdi-close-circle</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Reject Leave Request</div>
+            <div class="dialog-subtitle">Provide rejection reason</div>
+          </div>
+          <v-spacer></v-spacer>
+          <button class="close-btn" @click="closeRejectDialog">
+            <v-icon size="20">mdi-close</v-icon>
+          </button>
         </v-card-title>
-        <v-divider></v-divider>
 
-        <v-card-text class="pt-4">
-          <p class="mb-4">
+        <v-card-text class="dialog-content">
+          <div class="confirmation-message">
             Are you sure you want to reject this leave request for
-            <strong
-              >{{ selectedLeave?.employee?.first_name }}
-              {{ selectedLeave?.employee?.last_name }}</strong
+            <strong class="employee-highlight">
+              {{ selectedLeave?.employee?.first_name }}
+              {{ selectedLeave?.employee?.last_name }} </strong
             >?
-          </p>
+          </div>
 
+          <v-alert
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="rejection-warning"
+          >
+            <div class="d-flex align-center">
+              <v-icon size="18" class="mr-2">mdi-alert</v-icon>
+              <span>Please provide a clear reason for rejection</span>
+            </div>
+          </v-alert>
+
+          <div class="form-field-label">
+            <v-icon size="16" color="#ef4444">mdi-text-box</v-icon>
+            <span>Rejection Reason <span class="required">*</span></span>
+          </div>
           <v-textarea
             v-model="rejectData.rejection_reason"
-            label="Rejection Reason *"
+            placeholder="Explain why this leave request is being rejected"
             rows="3"
-            :rules="[rules.required]"
-            outlined
+            variant="outlined"
+            density="comfortable"
+            color="#ef4444"
+            hide-details
           ></v-textarea>
         </v-card-text>
 
-        <v-divider></v-divider>
-
-        <v-card-actions>
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn @click="closeRejectDialog">Cancel</v-btn>
-          <v-btn
-            color="error"
-            :loading="rejecting"
-            :disabled="!rejectData.rejection_reason"
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="closeRejectDialog"
+          >
+            <v-icon size="18">mdi-close</v-icon>
+            Cancel
+          </button>
+          <button
+            class="dialog-btn dialog-btn-danger"
+            :disabled="rejecting || !rejectData.rejection_reason"
             @click="confirmReject"
           >
+            <v-progress-circular
+              v-if="rejecting"
+              size="18"
+              width="2"
+              indeterminate
+              color="white"
+            ></v-progress-circular>
+            <v-icon v-else size="18">mdi-close-circle</v-icon>
             Reject
-          </v-btn>
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -698,13 +788,31 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+  }
 }
 
 .stat-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 31, 61, 0.08);
-  border-color: rgba(237, 152, 95, 0.2);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+  border-color: rgba(237, 152, 95, 0.3);
+
+  &::before {
+    transform: scaleY(1);
+  }
 }
 
 .stat-icon {
@@ -776,5 +884,306 @@ onMounted(() => {
   overflow: hidden;
   border: 1px solid rgba(0, 31, 61, 0.08);
   padding: 24px;
+}
+
+// Modern Dialog Styling
+.modern-dialog {
+  border-radius: 16px !important;
+  overflow: hidden;
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px !important;
+    background: linear-gradient(
+      135deg,
+      rgba(0, 31, 61, 0.02) 0%,
+      rgba(237, 152, 95, 0.02) 100%
+    );
+    border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+    position: relative;
+  }
+
+  .dialog-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.info {
+      background: linear-gradient(
+        135deg,
+        rgba(33, 150, 243, 0.15) 0%,
+        rgba(33, 150, 243, 0.1) 100%
+      );
+
+      .v-icon {
+        color: #2196f3 !important;
+      }
+    }
+
+    &.success {
+      background: linear-gradient(
+        135deg,
+        rgba(16, 185, 129, 0.15) 0%,
+        rgba(16, 185, 129, 0.1) 100%
+      );
+
+      .v-icon {
+        color: #10b981 !important;
+      }
+    }
+
+    &.danger {
+      background: linear-gradient(
+        135deg,
+        rgba(239, 68, 68, 0.15) 0%,
+        rgba(239, 68, 68, 0.1) 100%
+      );
+
+      .v-icon {
+        color: #ef4444 !important;
+      }
+    }
+  }
+
+  .close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(0, 31, 61, 0.06);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    .v-icon {
+      color: rgba(0, 31, 61, 0.7) !important;
+    }
+
+    &:hover {
+      background: rgba(0, 31, 61, 0.1);
+      transform: scale(1.05);
+    }
+  }
+
+  .dialog-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #001f3d;
+    margin-bottom: 4px;
+  }
+
+  .dialog-subtitle {
+    font-size: 13px;
+    color: rgba(0, 31, 61, 0.6);
+  }
+
+  .dialog-content {
+    padding: 24px !important;
+  }
+
+  .dialog-actions {
+    padding: 16px 24px !important;
+    background: rgba(0, 31, 61, 0.02);
+    border-top: 1px solid rgba(0, 31, 61, 0.08);
+    gap: 10px;
+  }
+}
+
+// Detail Row (View Dialog)
+.detail-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.06);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.full-width {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(0, 31, 61, 0.6);
+  }
+
+  .detail-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: #001f3d;
+  }
+}
+
+.employee-info {
+  .employee-name {
+    font-weight: 600;
+    color: #001f3d;
+    margin-bottom: 2px;
+  }
+
+  .employee-number {
+    font-size: 12px;
+    color: rgba(0, 31, 61, 0.6);
+  }
+}
+
+.alert-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+// Dialog Buttons
+.dialog-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+
+  .v-icon {
+    flex-shrink: 0;
+    color: inherit !important;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.dialog-btn-cancel {
+    background: rgba(0, 31, 61, 0.06);
+    color: rgba(0, 31, 61, 0.8);
+
+    &:hover:not(:disabled) {
+      background: rgba(0, 31, 61, 0.1);
+    }
+  }
+
+  &.dialog-btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+  }
+
+  &.dialog-btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+  }
+}
+
+// Confirmation Message
+.confirmation-message {
+  font-size: 15px;
+  color: #001f3d;
+  margin-bottom: 20px;
+  line-height: 1.6;
+
+  .employee-highlight {
+    color: #ed985f;
+    font-weight: 600;
+  }
+}
+
+// Info Box
+.info-box {
+  background: rgba(0, 31, 61, 0.02);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+
+  &.success-box {
+    background: rgba(16, 185, 129, 0.04);
+    border-color: rgba(16, 185, 129, 0.15);
+  }
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(0, 31, 61, 0.06);
+  }
+
+  .info-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 31, 61, 0.7);
+    min-width: 90px;
+  }
+
+  .info-value {
+    font-size: 13px;
+    color: #001f3d;
+    flex: 1;
+  }
+}
+
+// Form Field Label
+.form-field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
+
+  .required {
+    color: #ef4444;
+  }
+}
+
+// Rejection Warning
+.rejection-warning {
+  margin-bottom: 20px;
+  border-radius: 8px !important;
+  font-size: 13px !important;
 }
 </style>

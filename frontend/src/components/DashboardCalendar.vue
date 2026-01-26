@@ -70,7 +70,11 @@
             </div>
             <span class="selected-event-title">{{ event.title }}</span>
           </div>
-          <button class="delete-event-btn" @click="deleteEvent(event.id)">
+          <button
+            v-if="!event.isHoliday"
+            class="delete-event-btn"
+            @click="deleteEvent(event.id)"
+          >
             <v-icon size="14">mdi-delete</v-icon>
           </button>
         </div>
@@ -194,7 +198,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+import api from "@/services/api";
 
 const currentDate = ref(new Date());
 const selectedDate = ref(new Date());
@@ -225,24 +230,8 @@ const events = ref([
   },
 ]);
 
-// Philippine Holidays for 2025 - can be replaced with API data
-const holidays = ref([
-  { date: new Date(2025, 0, 1), name: "New Year's Day" },
-  { date: new Date(2025, 1, 25), name: "EDSA Revolution Anniversary" },
-  { date: new Date(2025, 3, 9), name: "Araw ng Kagitingan" },
-  { date: new Date(2025, 3, 17), name: "Maundy Thursday" },
-  { date: new Date(2025, 3, 18), name: "Good Friday" },
-  { date: new Date(2025, 4, 1), name: "Labor Day" },
-  { date: new Date(2025, 5, 12), name: "Independence Day" },
-  { date: new Date(2025, 7, 25), name: "Ninoy Aquino Day" },
-  { date: new Date(2025, 7, 26), name: "National Heroes Day" },
-  { date: new Date(2025, 10, 1), name: "All Saints' Day" },
-  { date: new Date(2025, 10, 30), name: "Bonifacio Day" },
-  { date: new Date(2025, 11, 8), name: "Feast of the Immaculate Conception" },
-  { date: new Date(2025, 11, 25), name: "Christmas Day" },
-  { date: new Date(2025, 11, 30), name: "Rizal Day" },
-  { date: new Date(2025, 11, 31), name: "New Year's Eve" },
-]);
+// Holidays from API
+const holidays = ref([]);
 
 const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -295,13 +284,21 @@ const calendarDates = computed(() => {
 
   // Previous month dates
   for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+    const date = new Date(year, month - 1, prevLastDate - i);
+    const hasEvent = events.value.some((event) =>
+      isSameDay(new Date(event.date), date),
+    );
+    const isHoliday = holidays.value.some((holiday) =>
+      isSameDay(new Date(holiday.date), date),
+    );
     dates.push({
       day: prevLastDate - i,
       isOtherMonth: true,
       isToday: false,
       isSelected: false,
-      hasEvent: false,
-      date: new Date(year, month - 1, prevLastDate - i),
+      hasEvent,
+      isHoliday,
+      date,
     });
   }
 
@@ -332,13 +329,21 @@ const calendarDates = computed(() => {
   // Next month dates
   const remainingDays = 42 - dates.length; // 6 rows × 7 days
   for (let i = 1; i <= remainingDays; i++) {
+    const date = new Date(year, month + 1, i);
+    const hasEvent = events.value.some((event) =>
+      isSameDay(new Date(event.date), date),
+    );
+    const isHoliday = holidays.value.some((holiday) =>
+      isSameDay(new Date(holiday.date), date),
+    );
     dates.push({
       day: i,
       isOtherMonth: true,
       isToday: false,
       isSelected: false,
-      hasEvent: false,
-      date: new Date(year, month + 1, i),
+      hasEvent,
+      isHoliday,
+      date,
     });
   }
 
@@ -346,9 +351,21 @@ const calendarDates = computed(() => {
 });
 
 const selectedDateEvents = computed(() => {
-  return events.value.filter((event) =>
+  const dayEvents = events.value.filter((event) =>
     isSameDay(new Date(event.date), selectedDate.value),
   );
+
+  const dayHolidays = holidays.value
+    .filter((holiday) => isSameDay(new Date(holiday.date), selectedDate.value))
+    .map((holiday) => ({
+      id: `holiday-${holiday.id}`,
+      title: holiday.name,
+      icon: "mdi-palm-tree",
+      color: holiday.type === "regular" ? "error" : "warning",
+      isHoliday: true,
+    }));
+
+  return [...dayEvents, ...dayHolidays];
 });
 
 function isSameDay(date1, date2) {
@@ -360,8 +377,15 @@ function isSameDay(date1, date2) {
 }
 
 function selectDate(date) {
-  if (!date.isOtherMonth) {
-    selectedDate.value = date.date;
+  selectedDate.value = date.date;
+
+  // If clicking a date from another month, navigate to that month
+  if (date.isOtherMonth) {
+    currentDate.value = new Date(
+      date.date.getFullYear(),
+      date.date.getMonth(),
+      1,
+    );
   }
 }
 
@@ -454,6 +478,50 @@ function getColorValue(colorName) {
   return colorMap[colorName] || "#6366f1";
 }
 
+// Fetch holidays from API
+async function fetchHolidays() {
+  try {
+    const year = currentDate.value.getFullYear();
+    const response = await api.get(`/holidays/year/${year}`);
+    holidays.value = response.data.data.holidays.map((holiday) => ({
+      date: new Date(holiday.date),
+      name: holiday.name,
+      type: holiday.type,
+      id: holiday.id,
+    }));
+  } catch (error) {
+    console.error("Error fetching holidays:", error);
+  }
+}
+
+// Fetch upcoming events from dashboard API
+async function fetchUpcomingEvents() {
+  try {
+    const response = await api.get("/dashboard/upcoming-events");
+    const upcomingEvents = response.data.map((event) => ({
+      id: `event-${event.type}-${new Date(event.date).getTime()}`,
+      date: new Date(event.date),
+      title: event.title,
+      icon: event.icon,
+      color: event.color,
+      type: event.type,
+    }));
+
+    // Merge with existing events (custom events)
+    const customEvents = events.value.filter(
+      (e) => !e.id.toString().startsWith("event-"),
+    );
+    events.value = [...customEvents, ...upcomingEvents];
+  } catch (error) {
+    console.error("Error fetching upcoming events:", error);
+  }
+}
+
+// Watch for month/year changes to refetch holidays
+watch(currentDate, () => {
+  fetchHolidays();
+});
+
 // Load events from localStorage on mount
 onMounted(() => {
   const savedEvents = localStorage.getItem("calendar_events");
@@ -469,6 +537,10 @@ onMounted(() => {
       console.error("Error loading events:", e);
     }
   }
+
+  // Fetch holidays and upcoming events from API
+  fetchHolidays();
+  fetchUpcomingEvents();
 });
 </script>
 
@@ -516,7 +588,7 @@ onMounted(() => {
 }
 
 .widget-title {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   color: #001f3d;
   margin: 0;
@@ -538,7 +610,7 @@ onMounted(() => {
   border: none;
   border-radius: 8px;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;

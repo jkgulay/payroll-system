@@ -93,7 +93,7 @@
       <v-col cols="12" sm="6" lg="3">
         <div
           class="stat-card-new stat-card-pending"
-          @click="$router.push('/resume-review')"
+          @click="goToPendingActions"
         >
           <div class="stat-icon-wrapper">
             <div class="stat-icon-circle stat-icon-pulse">
@@ -156,7 +156,7 @@
             <div
               v-if="stats.pendingLeaves > 0"
               class="action-item"
-              @click="$router.push('/hr/leave-approval')"
+              @click="$router.push('/leave-approval')"
             >
               <div class="action-item-icon action-icon-info">
                 <v-icon size="24">mdi-calendar-clock</v-icon>
@@ -214,6 +214,26 @@
               </div>
               <div class="action-item-badge">
                 {{ stats.draftPayrolls }}
+              </div>
+            </div>
+
+            <!-- Pending Resignations -->
+            <div
+              v-if="stats.pendingResignations > 0"
+              class="action-item"
+              @click="$router.push('/resignations')"
+            >
+              <div class="action-item-icon action-icon-danger">
+                <v-icon size="24">mdi-briefcase-remove</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Resignations</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingResignations }} pending review
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingResignations }}
               </div>
             </div>
           </div>
@@ -762,7 +782,8 @@ const totalPendingActions = computed(() => {
     stats.value.pendingApplications +
     stats.value.pendingLeaves +
     stats.value.pendingAttendanceCorrections +
-    stats.value.draftPayrolls
+    stats.value.draftPayrolls +
+    (stats.value.pendingResignations || 0)
   );
 });
 
@@ -825,6 +846,23 @@ function goToAttendanceToday() {
       tab: "list",
     },
   });
+}
+
+function goToPendingActions() {
+  // Intelligently route to the page with pending actions
+  // Priority order: Applications > Leaves > Attendance Corrections > Payrolls
+  if (stats.value.pendingApplications > 0) {
+    router.push("/resume-review");
+  } else if (stats.value.pendingLeaves > 0) {
+    router.push("/leave-approval");
+  } else if (stats.value.pendingAttendanceCorrections > 0) {
+    router.push({ path: "/attendance", query: { tab: "approvals" } });
+  } else if (stats.value.draftPayrolls > 0) {
+    router.push("/payroll");
+  } else {
+    // Fallback to resume-review if no specific pending actions
+    router.push("/resume-review");
+  }
 }
 
 async function refreshData() {
@@ -1339,6 +1377,18 @@ Role: Employee
 
     .v-icon {
       color: #ed985f !important;
+    }
+  }
+
+  &.action-icon-danger {
+    background: linear-gradient(
+      135deg,
+      rgba(239, 68, 68, 0.15) 0%,
+      rgba(239, 68, 68, 0.1) 100%
+    );
+
+    .v-icon {
+      color: #ef4444 !important;
     }
   }
 }

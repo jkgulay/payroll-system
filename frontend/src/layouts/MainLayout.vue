@@ -298,15 +298,24 @@ const loggingOut = ref(false);
 const isMobile = computed(() => mdAndDown.value);
 
 // Handle initial drawer state for mobile
-onMounted(() => {
+onMounted(async () => {
   if (isMobile.value) {
     drawer.value = false;
     rail.value = false;
   }
+
+  // Fetch fresh user data with employee relationship on mount
+  if (authStore.isAuthenticated) {
+    await authStore.fetchUser();
+  }
 });
 
 const userName = computed(
-  () => authStore.user?.name || authStore.user?.username || "User",
+  () =>
+    authStore.user?.full_name ||
+    authStore.user?.name ||
+    authStore.user?.username ||
+    "User",
 );
 const userRole = computed(() => {
   const role = authStore.user?.role || "Employee";

@@ -12,7 +12,7 @@ class AuditLogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = AuditLog::with('user')->latest();
+        $query = AuditLog::with('user.employee')->latest();
 
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
@@ -39,7 +39,7 @@ class AuditLogController extends Controller
 
     public function byModule($module)
     {
-        $logs = AuditLog::with('user')
+        $logs = AuditLog::with('user.employee')
             ->where('module', $module)
             ->latest()
             ->paginate(50);
@@ -49,7 +49,7 @@ class AuditLogController extends Controller
 
     public function export(Request $request)
     {
-        $query = AuditLog::with('user')->latest();
+        $query = AuditLog::with('user.employee')->latest();
 
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);

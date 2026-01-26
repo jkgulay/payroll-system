@@ -874,6 +874,7 @@ onMounted(() => {
 
 .search-field {
   margin-bottom: 24px;
+  max-width: 450px;
 }
 
 .project-card {

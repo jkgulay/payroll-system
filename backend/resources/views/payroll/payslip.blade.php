@@ -134,7 +134,7 @@
             </tr>
             <tr>
                 <td class="label">POSITION</td>
-                <td>{{ $employee->position->position_name ?? ($employee->staff_type ?? 'N/A') }}</td>
+                <td>{{ $employee->position ?? ($employee->staff_type ?? 'N/A') }}</td>
                 <td class="label">DEPARTMENT</td>
                 <td>{{ $employee->department ?? 'N/A' }}</td>
             </tr>
@@ -157,6 +157,12 @@
                 <td class="label">BASIC PAY (AMOUNT)</td>
                 <td class="value">PHP {{ number_format($item->basic_pay, 2) }}</td>
             </tr>
+            @if($item->holiday_pay > 0)
+            <tr>
+                <td class="label">HOLIDAY PAY</td>
+                <td class="value">PHP {{ number_format($item->holiday_pay, 2) }}</td>
+            </tr>
+            @endif
             @if($item->regular_ot_hours > 0)
             <tr>
                 <td class="label">REGULAR OT (HRS)</td>

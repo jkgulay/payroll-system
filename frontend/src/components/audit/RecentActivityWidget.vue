@@ -41,7 +41,7 @@
                 {{ formatAction(activity.action) }}
               </span>
               <span class="activity-user">{{
-                activity.user?.name || "System"
+                activity.user?.full_name || "System"
               }}</span>
               <span class="activity-time">{{
                 formatTime(activity.created_at)

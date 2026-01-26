@@ -71,10 +71,17 @@ class Holiday extends Model
 
     /**
      * Scope to get holidays for a specific year
+     * Includes both holidays with dates in the specified year
+     * AND recurring holidays from other years (shown with the target year's date)
      */
     public function scopeForYear($query, $year)
     {
-        return $query->whereYear('date', $year);
+        return $query->where(function ($q) use ($year) {
+            // Include holidays with dates in the specified year
+            $q->whereYear('date', $year)
+                // OR include recurring holidays from any year
+                ->orWhere('is_recurring', true);
+        });
     }
 
     /**

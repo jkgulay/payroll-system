@@ -1183,12 +1183,30 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+  }
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 31, 61, 0.08);
-    border-color: rgba(237, 152, 95, 0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+    border-color: rgba(237, 152, 95, 0.3);
+
+    &::before {
+      transform: scaleY(1);
+    }
   }
 }
 

@@ -1,100 +1,146 @@
 <template>
   <div class="loans-page">
-    <div class="modern-card">
-      <!-- Modern Page Header -->
-      <div class="page-header">
+    <!-- Modern Page Header -->
+    <div class="page-header">
+      <div class="page-title-section">
         <div class="page-icon-badge">
-          <v-icon icon="mdi-hand-coin" size="24" color="white"></v-icon>
+          <v-icon size="20">mdi-hand-coin</v-icon>
         </div>
-        <div class="page-header-content">
+        <div>
           <h1 class="page-title">Employee Loans</h1>
           <p class="page-subtitle">
             Manage employee loan requests and payment tracking
           </p>
         </div>
-        <button
-          v-if="userRole !== 'employee'"
-          class="action-btn action-btn-primary"
-          @click="openAddDialog"
-        >
-          <v-icon size="20">mdi-plus</v-icon>
-          <span>Add Loan</span>
-        </button>
       </div>
+      <button
+        v-if="userRole !== 'employee'"
+        class="action-btn action-btn-primary"
+        @click="openAddDialog"
+      >
+        <v-icon size="20">mdi-plus</v-icon>
+        <span>Add Loan</span>
+      </button>
+    </div>
 
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <v-icon size="20">mdi-hand-coin</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Loans</div>
+          <div class="stat-value">{{ loans.length }}</div>
+        </div>
+      </div>
+      <div class="stat-card" v-if="userRole !== 'employee'">
+        <div class="stat-icon pending">
+          <v-icon size="20">mdi-clock-alert</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Pending</div>
+          <div class="stat-value">{{ pendingCount }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon active">
+          <v-icon size="20">mdi-check-circle</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Active</div>
+          <div class="stat-value">{{ activeCount }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon balance">
+          <v-icon size="20">mdi-cash-multiple</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Balance</div>
+          <div class="stat-value">₱{{ formatNumber(totalBalance) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modern-card">
       <!-- Pending Approval Alert (Admin Only) -->
       <v-alert
         v-if="userRole === 'admin' && pendingCount > 0"
         type="info"
         variant="tonal"
+        density="compact"
         class="mb-4"
-        closable
       >
-        <template v-slot:title>
-          {{ pendingCount }} Loan{{ pendingCount > 1 ? "s" : "" }} Pending
-          Approval
-        </template>
-        <v-btn
-          color="primary"
-          size="small"
-          class="mt-2"
-          @click="showPendingOnly"
-        >
-          View Pending Loans
-        </v-btn>
+        <div class="d-flex align-center justify-space-between">
+          <div>
+            <strong
+              >{{ pendingCount }} Loan{{ pendingCount > 1 ? "s" : "" }} Pending
+              Approval</strong
+            >
+          </div>
+          <v-btn
+            color="primary"
+            size="small"
+            variant="tonal"
+            @click="showPendingOnly"
+          >
+            View Pending
+          </v-btn>
+        </div>
       </v-alert>
 
       <!-- Filters -->
       <div class="filters-section">
-        <v-row>
-          <v-col cols="12" md="3" v-if="userRole !== 'employee'">
-            <v-autocomplete
-              v-model="filters.employee_id"
-              :items="employees"
-              item-title="full_name"
-              item-value="id"
-              label="Filter by Employee"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="fetchLoans"
-            ></v-autocomplete>
-          </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 4 : 3">
-            <v-select
-              v-model="filters.loan_type"
-              :items="loanTypes"
-              label="Filter by Type"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="fetchLoans"
-            ></v-select>
-          </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 4 : 3">
-            <v-select
-              v-model="filters.status"
-              :items="statusOptions"
-              label="Filter by Status"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="fetchLoans"
-            ></v-select>
-          </v-col>
-          <v-col cols="auto" class="d-flex align-center">
-            <v-btn
-              color="error"
-              variant="tonal"
-              icon="mdi-filter-remove"
-              @click="clearFilters"
-              title="Clear Filters"
-            ></v-btn>
-          </v-col>
-        </v-row>
+        <div class="filter-group">
+          <v-autocomplete
+            v-if="userRole !== 'employee'"
+            v-model="filters.employee_id"
+            :items="employees"
+            item-title="full_name"
+            item-value="id"
+            label="Filter by Employee"
+            variant="outlined"
+            density="compact"
+            clearable
+            hide-details
+            prepend-inner-icon="mdi-account-search"
+            @update:model-value="fetchLoans"
+            style="min-width: 250px"
+          ></v-autocomplete>
+          <v-select
+            v-model="filters.loan_type"
+            :items="loanTypes"
+            label="Filter by Type"
+            variant="outlined"
+            density="compact"
+            clearable
+            hide-details
+            prepend-inner-icon="mdi-cash"
+            @update:model-value="fetchLoans"
+            style="min-width: 200px"
+          ></v-select>
+          <v-select
+            v-model="filters.status"
+            :items="statusOptions"
+            label="Filter by Status"
+            variant="outlined"
+            density="compact"
+            clearable
+            hide-details
+            prepend-inner-icon="mdi-filter"
+            @update:model-value="fetchLoans"
+            style="min-width: 200px"
+          ></v-select>
+          <v-btn
+            color="error"
+            variant="tonal"
+            icon="mdi-filter-remove"
+            @click="clearFilters"
+            title="Clear Filters"
+            size="small"
+          ></v-btn>
+        </div>
       </div>
 
       <!-- Loans Table -->
@@ -618,145 +664,203 @@
     </v-dialog>
 
     <!-- Details Dialog -->
-    <v-dialog v-model="detailsDialog" max-width="700px">
-      <v-card v-if="selectedLoan">
-        <v-card-title class="text-h5 d-flex align-center">
-          <v-icon class="mr-2">mdi-hand-coin</v-icon>
-          Loan Details
+    <v-dialog v-model="detailsDialog" max-width="800px">
+      <v-card v-if="selectedLoan" class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper info">
+            <v-icon size="24">mdi-hand-coin</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Loan Details</div>
+            <div class="dialog-subtitle">{{ selectedLoan.loan_number }}</div>
+          </div>
+          <v-spacer></v-spacer>
+          <v-chip
+            :color="getStatusColor(selectedLoan.status)"
+            size="small"
+            class="status-chip"
+          >
+            {{ formatStatus(selectedLoan.status) }}
+          </v-chip>
         </v-card-title>
 
         <v-divider></v-divider>
 
-        <v-card-text class="pt-4">
-          <v-row>
-            <v-col cols="12">
-              <div class="text-subtitle-1 font-weight-bold mb-2">
-                Loan Information
+        <v-card-text class="dialog-content">
+          <!-- Employee & Loan Type Card -->
+          <div class="info-card mb-4">
+            <div class="info-card-row">
+              <div class="info-item">
+                <div class="info-icon">
+                  <v-icon size="20">mdi-account</v-icon>
+                </div>
+                <div class="info-content">
+                  <div class="info-label">Employee</div>
+                  <div class="info-value">
+                    {{ selectedLoan.employee?.full_name }}
+                  </div>
+                  <div
+                    class="info-meta"
+                    v-if="selectedLoan.employee?.employee_number"
+                  >
+                    {{ selectedLoan.employee?.employee_number }}
+                  </div>
+                </div>
               </div>
-            </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">Loan Number</div>
-              <div class="font-weight-medium">
-                {{ selectedLoan.loan_number }}
+              <div class="info-item">
+                <div class="info-icon">
+                  <v-icon size="20">mdi-cash</v-icon>
+                </div>
+                <div class="info-content">
+                  <div class="info-label">Loan Type</div>
+                  <v-chip
+                    :color="getLoanTypeColor(selectedLoan.loan_type)"
+                    size="small"
+                    variant="tonal"
+                    class="mt-1"
+                  >
+                    {{ formatLoanType(selectedLoan.loan_type) }}
+                  </v-chip>
+                </div>
               </div>
-            </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">Employee</div>
-              <div class="font-weight-medium">
-                {{ selectedLoan.employee?.full_name }}
-              </div>
-            </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">Loan Type</div>
-              <v-chip
-                :color="getLoanTypeColor(selectedLoan.loan_type)"
-                size="small"
-                variant="tonal"
-              >
-                {{ formatLoanType(selectedLoan.loan_type) }}
-              </v-chip>
-            </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">Status</div>
-              <v-chip
-                :color="getStatusColor(selectedLoan.status)"
-                size="small"
-                variant="flat"
-              >
-                {{ formatStatus(selectedLoan.status) }}
-              </v-chip>
-            </v-col>
+            </div>
+          </div>
 
-            <v-col cols="12">
-              <v-divider class="my-2"></v-divider>
-              <div class="text-subtitle-1 font-weight-bold mb-2">
-                Financial Details
+          <!-- Financial Summary -->
+          <div class="section-header mb-3">
+            <div class="section-icon">
+              <v-icon size="18">mdi-cash-multiple</v-icon>
+            </div>
+            <h3 class="section-title">Financial Summary</h3>
+          </div>
+
+          <v-row dense class="mb-4">
+            <v-col cols="6" md="3">
+              <div class="detail-card">
+                <div class="detail-label">Principal</div>
+                <div class="detail-value">
+                  ₱{{ formatNumber(selectedLoan.principal_amount) }}
+                </div>
               </div>
             </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">
-                Principal Amount
-              </div>
-              <div class="font-weight-medium">
-                ₱{{ formatNumber(selectedLoan.principal_amount) }}
-              </div>
-            </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">Interest Rate</div>
-              <div class="font-weight-medium">
-                {{ selectedLoan.interest_rate }}%
+            <v-col cols="6" md="3">
+              <div class="detail-card">
+                <div class="detail-label">Interest Rate</div>
+                <div class="detail-value">
+                  {{ selectedLoan.interest_rate }}%
+                </div>
               </div>
             </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">Total Amount</div>
-              <div class="font-weight-bold text-primary">
-                ₱{{ formatNumber(selectedLoan.total_amount) }}
+            <v-col cols="6" md="3">
+              <div class="detail-card highlight">
+                <div class="detail-label">Total Amount</div>
+                <div class="detail-value primary">
+                  ₱{{ formatNumber(selectedLoan.total_amount) }}
+                </div>
               </div>
             </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">Balance</div>
+            <v-col cols="6" md="3">
               <div
-                :class="
-                  selectedLoan.balance > 0
-                    ? 'font-weight-bold text-error'
-                    : 'font-weight-bold text-success'
-                "
+                class="detail-card"
+                :class="selectedLoan.balance > 0 ? 'warning' : 'success'"
               >
-                ₱{{ formatNumber(selectedLoan.balance) }}
-              </div>
-            </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">Amount Paid</div>
-              <div class="font-weight-medium">
-                ₱{{ formatNumber(selectedLoan.amount_paid) }}
-              </div>
-            </v-col>
-            <v-col cols="6">
-              <div class="text-caption text-medium-emphasis">
-                Payment Frequency
-              </div>
-              <div class="font-weight-medium">
-                {{ formatFrequency(selectedLoan.payment_frequency) }}
-              </div>
-            </v-col>
-
-            <v-col cols="12" v-if="selectedLoan.purpose">
-              <v-divider class="my-2"></v-divider>
-              <div class="text-subtitle-1 font-weight-bold mb-2">Purpose</div>
-              <div>{{ selectedLoan.purpose }}</div>
-            </v-col>
-
-            <v-col
-              cols="12"
-              v-if="
-                selectedLoan.approval_notes || selectedLoan.rejection_reason
-              "
-            >
-              <v-divider class="my-2"></v-divider>
-              <v-alert
-                :type="selectedLoan.status === 'approved' ? 'success' : 'error'"
-                variant="tonal"
-              >
-                <div class="text-subtitle-2 mb-1">
-                  {{
-                    selectedLoan.status === "approved"
-                      ? "Approval Notes"
-                      : "Rejection Reason"
-                  }}
+                <div class="detail-label">Balance</div>
+                <div class="detail-value">
+                  ₱{{ formatNumber(selectedLoan.balance) }}
                 </div>
-                <div>
-                  {{
-                    selectedLoan.approval_notes || selectedLoan.rejection_reason
-                  }}
-                </div>
-              </v-alert>
+              </div>
             </v-col>
           </v-row>
+
+          <!-- Payment Details -->
+          <div class="section-header mb-3">
+            <div class="section-icon">
+              <v-icon size="18">mdi-calendar-clock</v-icon>
+            </div>
+            <h3 class="section-title">Payment Details</h3>
+          </div>
+
+          <v-row dense class="mb-4">
+            <v-col cols="6">
+              <div class="detail-card">
+                <div class="detail-label">Amount Paid</div>
+                <div class="detail-value success">
+                  ₱{{ formatNumber(selectedLoan.amount_paid) }}
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="6">
+              <div class="detail-card">
+                <div class="detail-label">Payment Frequency</div>
+                <div class="detail-value">
+                  {{ formatFrequency(selectedLoan.payment_frequency) }}
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="6" v-if="selectedLoan.monthly_amortization">
+              <div class="detail-card">
+                <div class="detail-label">Monthly Amortization</div>
+                <div class="detail-value">
+                  ₱{{ formatNumber(selectedLoan.monthly_amortization) }}
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="6" v-if="selectedLoan.loan_term_months">
+              <div class="detail-card">
+                <div class="detail-label">Loan Term</div>
+                <div class="detail-value">
+                  {{ selectedLoan.loan_term_months }} months
+                </div>
+              </div>
+            </v-col>
+          </v-row>
+
+          <!-- Purpose -->
+          <div v-if="selectedLoan.purpose" class="purpose-section mb-4">
+            <div class="section-header mb-2">
+              <div class="section-icon">
+                <v-icon size="18">mdi-text</v-icon>
+              </div>
+              <h3 class="section-title">Purpose</h3>
+            </div>
+            <div class="purpose-text">{{ selectedLoan.purpose }}</div>
+          </div>
+
+          <!-- Approval/Rejection Notes -->
+          <v-alert
+            v-if="selectedLoan.approval_notes || selectedLoan.rejection_reason"
+            :type="
+              selectedLoan.status === 'active' ||
+              selectedLoan.status === 'approved'
+                ? 'success'
+                : 'error'
+            "
+            variant="tonal"
+            density="compact"
+            class="notes-alert"
+          >
+            <div class="notes-title">
+              {{
+                selectedLoan.status === "active" ||
+                selectedLoan.status === "approved"
+                  ? "Approval Notes"
+                  : "Rejection Reason"
+              }}
+            </div>
+            <div class="notes-content">
+              {{ selectedLoan.approval_notes || selectedLoan.rejection_reason }}
+            </div>
+          </v-alert>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="detailsDialog = false">Close</v-btn>
+          <button
+            class="dialog-btn dialog-btn-close"
+            @click="detailsDialog = false"
+          >
+            Close
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -860,6 +964,20 @@ const headers = computed(() => {
   }
 
   return baseHeaders;
+});
+
+// Stats computed properties
+const activeCount = computed(() => {
+  return loans.value.filter(
+    (loan) => loan.status === "active" || loan.status === "approved",
+  ).length;
+});
+
+const totalBalance = computed(() => {
+  return loans.value.reduce((sum, loan) => {
+    const balance = parseFloat(loan.balance) || 0;
+    return sum + balance;
+  }, 0);
 });
 
 // Options
@@ -1174,73 +1292,186 @@ onMounted(() => {
 </script>
 <style lang="scss" scoped>
 .loans-page {
-  background-color: #f8f9fa;
-  min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.modern-card {
-  padding: 24px;
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
+// Page Header
 .page-header {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 24px;
   margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+  flex-wrap: wrap;
 }
 
-.page-icon-badge {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  border-radius: 12px;
+.page-title-section {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.page-header-content {
+  gap: 16px;
   flex: 1;
 }
 
+.page-icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  flex-shrink: 0;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
 .page-title {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: #001f3d;
-  margin: 0;
-  line-height: 1.2;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
 }
 
 .page-subtitle {
   font-size: 14px;
-  color: #64748b;
-  margin: 4px 0 0 0;
+  color: rgba(0, 31, 61, 0.6);
+  margin: 0;
 }
 
-.action-button {
-  text-transform: none;
-  font-weight: 600;
-  letter-spacing: 0;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.2);
-  transition: all 0.2s ease;
+// Stats Grid
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+  }
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-    transform: translateY(-1px);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+    border-color: rgba(237, 152, 95, 0.3);
+
+    &::before {
+      transform: scaleY(1);
+    }
   }
 }
 
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.total {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+
+    .v-icon {
+      color: white !important;
+    }
+  }
+
+  &.pending {
+    background: rgba(237, 152, 95, 0.1);
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+  }
+
+  &.active {
+    background: rgba(16, 185, 129, 0.1);
+
+    .v-icon {
+      color: #10b981 !important;
+    }
+  }
+
+  &.balance {
+    background: rgba(59, 130, 246, 0.1);
+
+    .v-icon {
+      color: #3b82f6 !important;
+    }
+  }
+}
+
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: rgba(0, 31, 61, 0.6);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1;
+}
+
+.modern-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  overflow: hidden;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
 .filters-section {
-  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.filter-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .modern-table {
@@ -1440,6 +1671,233 @@ onMounted(() => {
     &:hover {
       background: rgba(237, 152, 95, 0.15);
       border-color: rgba(237, 152, 95, 0.3);
+    }
+  }
+}
+
+/* Loan Details Dialog Styles */
+.modern-dialog {
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    background: linear-gradient(
+      135deg,
+      rgba(0, 31, 61, 0.02) 0%,
+      rgba(237, 152, 95, 0.02) 100%
+    );
+    border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+
+    .dialog-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      &.info {
+        background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+      }
+    }
+
+    .dialog-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #001f3d;
+      line-height: 1.2;
+    }
+
+    .dialog-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+  }
+
+  .info-card {
+    background: rgba(0, 31, 61, 0.02);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(0, 31, 61, 0.08);
+
+    .info-card-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .info-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(237, 152, 95, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        .v-icon {
+          color: #ed985f;
+        }
+      }
+
+      .info-content {
+        flex: 1;
+        min-width: 0;
+
+        .info-label {
+          font-size: 12px;
+          color: #64748b;
+          margin-bottom: 4px;
+          font-weight: 500;
+        }
+
+        .info-value {
+          font-size: 14px;
+          font-weight: 600;
+          color: #001f3d;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+    }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    .section-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(237, 152, 95, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .v-icon {
+        color: #ed985f;
+      }
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #001f3d;
+      margin: 0;
+    }
+  }
+
+  .detail-card {
+    background: white;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid rgba(0, 31, 61, 0.08);
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: rgba(237, 152, 95, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    &.highlight {
+      background: rgba(237, 152, 95, 0.04);
+      border-color: rgba(237, 152, 95, 0.2);
+    }
+
+    &.warning {
+      background: rgba(245, 158, 11, 0.04);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    &.success {
+      background: rgba(16, 185, 129, 0.04);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .detail-label {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .detail-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #001f3d;
+
+      &.primary {
+        color: #ed985f;
+      }
+    }
+  }
+
+  .payment-section {
+    background: rgba(0, 31, 61, 0.02);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(0, 31, 61, 0.08);
+
+    .payment-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(0, 31, 61, 0.06);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .payment-label {
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .v-icon {
+          font-size: 16px;
+          color: #ed985f;
+        }
+      }
+
+      .payment-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #001f3d;
+      }
+    }
+  }
+
+  .purpose-section {
+    background: rgba(0, 31, 61, 0.02);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(0, 31, 61, 0.08);
+
+    .purpose-text {
+      font-size: 14px;
+      color: #001f3d;
+      line-height: 1.6;
     }
   }
 }

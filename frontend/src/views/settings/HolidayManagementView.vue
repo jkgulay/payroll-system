@@ -1,268 +1,450 @@
 <template>
-  <div class="holiday-management">
+  <div class="holiday-page">
+    <!-- Modern Page Header -->
     <div class="page-header">
-      <div>
-        <h1>Holiday Management</h1>
-        <p class="subtitle">Manage company holidays and holiday pay rates</p>
-      </div>
-      <button class="btn-primary" @click="showAddModal = true">
-        <i class="fas fa-plus"></i> Add Holiday
-      </button>
-    </div>
-
-    <!-- Filters -->
-    <div class="filters-section">
-      <div class="filter-group">
-        <label>Year:</label>
-        <select v-model="selectedYear" @change="loadHolidays">
-          <option v-for="year in years" :key="year" :value="year">
-            {{ year }}
-          </option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label>Type:</label>
-        <div class="btn-group">
-          <button 
-            @click="filterType = null" 
-            :class="{ active: filterType === null }"
-          >
-            All
-          </button>
-          <button 
-            @click="filterType = 'regular'" 
-            :class="{ active: filterType === 'regular' }"
-          >
-            Regular
-          </button>
-          <button 
-            @click="filterType = 'special'" 
-            :class="{ active: filterType === 'special' }"
-          >
-            Special
+      <div class="header-content">
+        <div class="page-title-section">
+          <div class="page-icon-badge">
+            <v-icon size="22">mdi-calendar-star</v-icon>
+          </div>
+          <div>
+            <h1 class="page-title">Holiday Management</h1>
+            <p class="page-subtitle">
+              Manage company holidays and holiday pay rates
+            </p>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="action-btn action-btn-primary" @click="openAddDialog">
+            <v-icon size="20">mdi-plus</v-icon>
+            <span>Add Holiday</span>
           </button>
         </div>
       </div>
+    </div>
 
-      <div class="stats">
-        <div class="stat-card">
-          <div class="stat-value">{{ totalHolidays }}</div>
+    <!-- Modern Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <v-icon size="20">mdi-calendar-multiple</v-icon>
+        </div>
+        <div class="stat-content">
           <div class="stat-label">Total Holidays</div>
+          <div class="stat-value">{{ totalHolidays }}</div>
         </div>
-        <div class="stat-card regular">
-          <div class="stat-value">{{ regularCount }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon regular">
+          <v-icon size="20">mdi-calendar-check</v-icon>
+        </div>
+        <div class="stat-content">
           <div class="stat-label">Regular</div>
+          <div class="stat-value info">{{ regularCount }}</div>
         </div>
-        <div class="stat-card special">
-          <div class="stat-value">{{ specialCount }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon special">
+          <v-icon size="20">mdi-calendar-star</v-icon>
+        </div>
+        <div class="stat-content">
           <div class="stat-label">Special</div>
+          <div class="stat-value primary">{{ specialCount }}</div>
         </div>
       </div>
     </div>
 
-    <!-- Holidays List -->
-    <div v-if="loading" class="loading">
-      <i class="fas fa-spinner fa-spin"></i> Loading holidays...
+    <div class="modern-card">
+      <div class="filters-section">
+        <v-row align="center" class="mb-0">
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="selectedYear"
+              :items="years"
+              label="Year"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+              @update:model-value="loadHolidays"
+            ></v-select>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="filterType"
+              :items="typeFilterOptions"
+              item-title="text"
+              item-value="value"
+              label="Type"
+              clearable
+              variant="outlined"
+              density="comfortable"
+              hide-details
+            ></v-select>
+          </v-col>
+          <v-col cols="auto">
+            <v-btn
+              color="#ED985F"
+              variant="tonal"
+              icon="mdi-refresh"
+              @click="loadHolidays"
+              :loading="loading"
+              title="Refresh"
+            ></v-btn>
+          </v-col>
+        </v-row>
+      </div>
+
+      <div class="table-section">
+        <v-data-table
+          :headers="headers"
+          :items="filteredHolidays"
+          :loading="loading"
+          :items-per-page="15"
+          hover
+          class="elevation-0"
+        >
+          <template v-slot:item.date="{ item }">
+            <div class="date-display">
+              <div class="date-main">
+                <v-icon size="18" color="#ED985F" class="mr-2"
+                  >mdi-calendar</v-icon
+                >
+                <strong>{{ formatDateFull(item.date) }}</strong>
+              </div>
+              <div class="date-weekday">{{ formatWeekday(item.date) }}</div>
+            </div>
+          </template>
+
+          <template v-slot:item.name="{ item }">
+            <div class="font-weight-medium">{{ item.name }}</div>
+            <div
+              class="text-caption text-medium-emphasis"
+              v-if="item.description"
+            >
+              {{ item.description }}
+            </div>
+          </template>
+
+          <template v-slot:item.type="{ item }">
+            <v-chip
+              size="small"
+              :color="item.type === 'regular' ? 'info' : 'primary'"
+              variant="tonal"
+            >
+              <v-icon start size="16">
+                {{
+                  item.type === "regular"
+                    ? "mdi-calendar-check"
+                    : "mdi-calendar-star"
+                }}
+              </v-icon>
+              {{ item.type === "regular" ? "Regular" : "Special" }}
+            </v-chip>
+          </template>
+
+          <template v-slot:item.pay_rate="{ item }">
+            <v-chip size="small" color="success" variant="tonal">
+              <v-icon start size="14">mdi-cash-multiple</v-icon>
+              {{ getPayRateText(item) }}
+            </v-chip>
+          </template>
+
+          <template v-slot:item.is_recurring="{ item }">
+            <v-chip
+              v-if="item.is_recurring"
+              size="small"
+              color="secondary"
+              variant="tonal"
+            >
+              <v-icon start size="14">mdi-sync</v-icon>
+              Recurring
+            </v-chip>
+            <span v-else class="text-medium-emphasis">-</span>
+          </template>
+
+          <template v-slot:item.is_active="{ item }">
+            <v-chip
+              size="small"
+              :color="item.is_active ? 'success' : 'error'"
+              variant="tonal"
+            >
+              {{ item.is_active ? "Active" : "Inactive" }}
+            </v-chip>
+          </template>
+
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              icon="mdi-pencil"
+              size="small"
+              variant="text"
+              color="#ED985F"
+              @click="editHoliday(item)"
+              title="Edit"
+            ></v-btn>
+            <v-btn
+              icon="mdi-delete"
+              size="small"
+              variant="text"
+              color="error"
+              @click="confirmDelete(item)"
+              title="Delete"
+            ></v-btn>
+          </template>
+        </v-data-table>
+      </div>
     </div>
 
-    <div v-else-if="filteredHolidays.length === 0" class="empty-state">
-      <i class="fas fa-calendar-times"></i>
-      <p>No holidays found for {{ selectedYear }}</p>
-      <button class="btn-primary" @click="showAddModal = true">
-        Add First Holiday
-      </button>
-    </div>
-
-    <div v-else class="holidays-grid">
-      <div 
-        v-for="holiday in filteredHolidays" 
-        :key="holiday.id"
-        :class="['holiday-card', holiday.type]"
-      >
-        <div class="holiday-header">
-          <div class="holiday-date">
-            <div class="month">{{ formatMonth(holiday.date) }}</div>
-            <div class="day">{{ formatDay(holiday.date) }}</div>
-            <div class="weekday">{{ formatWeekday(holiday.date) }}</div>
+    <!-- Add/Edit Holiday Dialog -->
+    <v-dialog v-model="showDialog" max-width="800px" persistent scrollable>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">{{
+              showEditModal ? "mdi-pencil" : "mdi-plus"
+            }}</v-icon>
           </div>
-          <div class="holiday-info">
-            <h3>{{ holiday.name }}</h3>
-            <span class="badge" :class="holiday.type">
-              {{ holiday.type === 'regular' ? 'Regular Holiday' : 'Special Holiday' }}
-            </span>
-          </div>
-        </div>
-
-        <div v-if="holiday.description" class="holiday-description">
-          {{ holiday.description }}
-        </div>
-
-        <div class="holiday-pay-info">
-          <div class="pay-rate">
-            <i class="fas fa-money-bill-wave"></i>
-            <div>
-              <strong>Pay Rate:</strong>
-              <span class="rate">{{ getPayRateText(holiday) }}</span>
+          <div>
+            <div class="dialog-title">
+              {{ showEditModal ? "Edit Holiday" : "Add New Holiday" }}
+            </div>
+            <div class="dialog-subtitle">
+              {{
+                showEditModal
+                  ? "Update holiday information"
+                  : "Create a new company holiday"
+              }}
             </div>
           </div>
-          <div class="recurring-badge" v-if="holiday.is_recurring">
-            <i class="fas fa-sync-alt"></i> Recurring
-          </div>
-        </div>
+        </v-card-title>
 
-        <div class="holiday-actions">
-          <button class="btn-edit" @click="editHoliday(holiday)">
-            <i class="fas fa-edit"></i> Edit
-          </button>
-          <button class="btn-delete" @click="confirmDelete(holiday)">
-            <i class="fas fa-trash"></i> Delete
-          </button>
-        </div>
-      </div>
-    </div>
+        <v-card-text class="dialog-content" style="max-height: 70vh">
+          <v-form ref="formRef" v-model="formValid">
+            <!-- Section: Holiday Information -->
+            <v-col cols="12" class="px-0">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-information</v-icon>
+                </div>
+                <h3 class="section-title">Holiday Information</h3>
+              </div>
+            </v-col>
 
-    <!-- Add/Edit Holiday Modal -->
-    <div v-if="showAddModal || showEditModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>{{ showEditModal ? 'Edit' : 'Add' }} Holiday</h2>
-          <button class="btn-close" @click="closeModal">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-
-        <form @submit.prevent="submitForm" class="modal-body">
-          <div class="form-row">
-            <div class="form-group full">
-              <label>Holiday Name <span class="required">*</span></label>
-              <input 
-                v-model="form.name" 
-                type="text" 
-                required 
+            <div class="form-field-wrapper mt-3">
+              <label class="form-label">
+                <v-icon size="small" color="#ED985F">mdi-format-title</v-icon>
+                Holiday Name <span class="text-error">*</span>
+              </label>
+              <v-text-field
+                v-model="form.name"
                 placeholder="e.g., New Year's Day"
-                class="form-control"
-              />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Date <span class="required">*</span></label>
-              <input 
-                v-model="form.date" 
-                type="date" 
-                required 
-                class="form-control"
-              />
+                variant="outlined"
+                density="comfortable"
+                color="primary"
+                :rules="[(v) => !!v || 'Holiday name is required']"
+              ></v-text-field>
             </div>
 
-            <div class="form-group">
-              <label>Type <span class="required">*</span></label>
-              <select v-model="form.type" required class="form-control">
-                <option value="regular">Regular Holiday</option>
-                <option value="special">Special Holiday</option>
-              </select>
-            </div>
-          </div>
+            <v-row>
+              <v-col cols="12" md="6">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="#ED985F">mdi-calendar</v-icon>
+                    Date <span class="text-error">*</span>
+                  </label>
+                  <v-text-field
+                    v-model="form.date"
+                    type="date"
+                    variant="outlined"
+                    density="comfortable"
+                    color="primary"
+                    :rules="[(v) => !!v || 'Date is required']"
+                  ></v-text-field>
+                </div>
+              </v-col>
+              <v-col cols="12" md="6">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="#ED985F">mdi-tag</v-icon>
+                    Type <span class="text-error">*</span>
+                  </label>
+                  <v-select
+                    v-model="form.type"
+                    :items="typeOptions"
+                    item-title="text"
+                    item-value="value"
+                    variant="outlined"
+                    density="comfortable"
+                    color="primary"
+                    :rules="[(v) => !!v || 'Type is required']"
+                  ></v-select>
+                </div>
+              </v-col>
+            </v-row>
 
-          <div class="form-row">
-            <div class="form-group full">
-              <label>Description</label>
-              <textarea 
-                v-model="form.description" 
-                rows="3"
+            <div class="form-field-wrapper">
+              <label class="form-label">
+                <v-icon size="small" color="#ED985F">mdi-text</v-icon>
+                Description
+              </label>
+              <v-textarea
+                v-model="form.description"
                 placeholder="Optional description"
-                class="form-control"
-              ></textarea>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group checkbox">
-              <label>
-                <input v-model="form.is_recurring" type="checkbox" />
-                <span>Recurring annually</span>
-              </label>
+                variant="outlined"
+                density="comfortable"
+                color="primary"
+                rows="3"
+              ></v-textarea>
             </div>
 
-            <div class="form-group checkbox">
-              <label>
-                <input v-model="form.is_active" type="checkbox" />
-                <span>Active</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Pay Rate Preview -->
-          <div class="pay-preview">
-            <h4><i class="fas fa-calculator"></i> Pay Rate Preview</h4>
-            <div class="preview-grid">
-              <div class="preview-item">
-                <strong>Regular Day (Mon-Sat):</strong>
-                <span class="multiplier">{{ form.type === 'regular' ? '2.0x' : '2.6x' }}</span>
+            <!-- Pay Rate Preview -->
+            <v-alert type="info" variant="tonal" class="mb-4">
+              <div class="d-flex align-center">
+                <v-icon start>mdi-calculator</v-icon>
+                <div>
+                  <strong>Pay Rate:</strong>
+                  <span v-if="form.type === 'regular'">
+                    2.0x on regular days, 2.6x on Sundays
+                  </span>
+                  <span v-else> 2.6x pay for 8 hours work </span>
+                </div>
               </div>
-              <div class="preview-item">
-                <strong>Sunday:</strong>
-                <span class="multiplier">2.6x</span>
+            </v-alert>
+
+            <!-- Section: Settings -->
+            <v-col cols="12" class="px-0 mt-4">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-cog</v-icon>
+                </div>
+                <h3 class="section-title">Settings</h3>
               </div>
-            </div>
-            <div class="preview-note">
-              <i class="fas fa-info-circle"></i>
-              <span v-if="form.type === 'regular'">
-                Regular holidays: 2x pay (2.6x on Sunday)
-              </span>
-              <span v-else>
-                Special holidays: 2.6x pay for 8 hours work
-              </span>
-            </div>
-          </div>
+            </v-col>
 
-          <div class="form-actions">
-            <button type="button" class="btn-secondary" @click="closeModal">
-              Cancel
-            </button>
-            <button type="submit" class="btn-primary" :disabled="saving">
-              <i v-if="saving" class="fas fa-spinner fa-spin"></i>
-              <i v-else class="fas fa-save"></i>
-              {{ saving ? 'Saving...' : (showEditModal ? 'Update' : 'Create') }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <v-row class="mt-3">
+              <v-col cols="12" md="6">
+                <v-switch
+                  v-model="form.is_recurring"
+                  label="Recurring annually"
+                  color="#ED985F"
+                  hide-details
+                ></v-switch>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-switch
+                  v-model="form.is_active"
+                  label="Active"
+                  color="success"
+                  hide-details
+                ></v-switch>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
 
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal-content small">
-        <div class="modal-header">
-          <h2>Delete Holiday</h2>
-          <button class="btn-close" @click="showDeleteModal = false">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>Are you sure you want to delete <strong>{{ holidayToDelete?.name }}</strong>?</p>
-          <p class="warning">This action cannot be undone.</p>
-        </div>
-        <div class="form-actions">
-          <button class="btn-secondary" @click="showDeleteModal = false">
+        <v-divider></v-divider>
+
+        <v-card-actions class="dialog-actions">
+          <v-spacer></v-spacer>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="closeModal"
+            :disabled="saving"
+          >
             Cancel
           </button>
-          <button class="btn-danger" @click="deleteHoliday" :disabled="deleting">
-            <i v-if="deleting" class="fas fa-spinner fa-spin"></i>
-            {{ deleting ? 'Deleting...' : 'Delete' }}
+          <button
+            class="dialog-btn dialog-btn-primary"
+            @click="submitForm"
+            :disabled="!formValid || saving"
+          >
+            <v-progress-circular
+              v-if="saving"
+              indeterminate
+              size="16"
+              width="2"
+              class="mr-2"
+            ></v-progress-circular>
+            <v-icon v-else size="18" class="mr-1">{{
+              showEditModal ? "mdi-check" : "mdi-plus"
+            }}</v-icon>
+            {{ saving ? "Saving..." : showEditModal ? "Update" : "Create" }}
           </button>
-        </div>
-      </div>
-    </div>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="showDeleteModal" max-width="500px" persistent>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper danger">
+            <v-icon size="24">mdi-alert-circle</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Delete Holiday</div>
+            <div class="dialog-subtitle">This action cannot be undone</div>
+          </div>
+        </v-card-title>
+
+        <v-card-text class="dialog-content py-6">
+          <div class="mb-4">
+            <p class="text-body-1 mb-2">
+              Are you sure you want to delete this holiday?
+            </p>
+            <v-alert variant="tonal" color="error" class="mt-4">
+              <div class="d-flex align-center">
+                <v-icon start>mdi-calendar-remove</v-icon>
+                <div>
+                  <strong>{{ holidayToDelete?.name }}</strong>
+                  <div class="text-caption">
+                    {{ formatDateFull(holidayToDelete?.date) }}
+                  </div>
+                </div>
+              </div>
+            </v-alert>
+          </div>
+          <v-alert type="warning" variant="tonal" density="compact">
+            <v-icon start size="small">mdi-information</v-icon>
+            This will permanently remove the holiday from the system.
+          </v-alert>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="dialog-actions">
+          <v-spacer></v-spacer>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="showDeleteModal = false"
+            :disabled="deleting"
+          >
+            Cancel
+          </button>
+          <button
+            class="dialog-btn dialog-btn-danger"
+            @click="deleteHoliday"
+            :disabled="deleting"
+          >
+            <v-progress-circular
+              v-if="deleting"
+              indeterminate
+              size="16"
+              width="2"
+              class="mr-2"
+            ></v-progress-circular>
+            <v-icon v-else size="18" class="mr-1">mdi-delete</v-icon>
+            {{ deleting ? "Deleting..." : "Delete Holiday" }}
+          </button>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import api from '@/services/api';
-import { useToast } from 'vue-toastification';
+import { ref, computed, onMounted } from "vue";
+import api from "@/services/api";
+import { useToast } from "vue-toastification";
 
 const toast = useToast();
 
@@ -270,22 +452,45 @@ const toast = useToast();
 const selectedYear = ref(new Date().getFullYear());
 const holidays = ref([]);
 const filterType = ref(null);
-const showAddModal = ref(false);
+const showDialog = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 const holidayToDelete = ref(null);
 const loading = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
+const formValid = ref(false);
+const formRef = ref(null);
 
 const form = ref({
-  name: '',
-  date: '',
-  type: 'regular',
-  description: '',
+  name: "",
+  date: "",
+  type: "regular",
+  description: "",
   is_recurring: false,
-  is_active: true
+  is_active: true,
 });
+
+const typeFilterOptions = [
+  { text: "All Types", value: null },
+  { text: "Regular Holiday", value: "regular" },
+  { text: "Special Holiday", value: "special" },
+];
+
+const typeOptions = [
+  { text: "Regular Holiday", value: "regular" },
+  { text: "Special Holiday", value: "special" },
+];
+
+const headers = [
+  { title: "Date", key: "date", sortable: true },
+  { title: "Holiday Name", key: "name", sortable: true },
+  { title: "Type", key: "type", sortable: true },
+  { title: "Pay Rate", key: "pay_rate", sortable: false },
+  { title: "Recurring", key: "is_recurring", sortable: true },
+  { title: "Status", key: "is_active", sortable: true },
+  { title: "Actions", key: "actions", sortable: false, align: "center" },
+];
 
 // Computed
 const years = computed(() => {
@@ -295,12 +500,16 @@ const years = computed(() => {
 
 const filteredHolidays = computed(() => {
   if (filterType.value === null) return holidays.value;
-  return holidays.value.filter(h => h.type === filterType.value);
+  return holidays.value.filter((h) => h.type === filterType.value);
 });
 
 const totalHolidays = computed(() => holidays.value.length);
-const regularCount = computed(() => holidays.value.filter(h => h.type === 'regular').length);
-const specialCount = computed(() => holidays.value.filter(h => h.type === 'special').length);
+const regularCount = computed(
+  () => holidays.value.filter((h) => h.type === "regular").length,
+);
+const specialCount = computed(
+  () => holidays.value.filter((h) => h.type === "special").length,
+);
 
 // Methods
 const loadHolidays = async () => {
@@ -309,34 +518,47 @@ const loadHolidays = async () => {
     const response = await api.get(`/holidays/year/${selectedYear.value}`);
     holidays.value = response.data.data.holidays;
   } catch (error) {
-    console.error('Failed to load holidays:', error);
-    toast.error('Failed to load holidays');
+    console.error("Failed to load holidays:", error);
+    toast.error("Failed to load holidays");
   } finally {
     loading.value = false;
   }
 };
 
-const formatMonth = (date) => {
-  return new Date(date).toLocaleDateString('en-US', { month: 'short' });
-};
-
-const formatDay = (date) => {
-  return new Date(date).getDate();
+const formatDateFull = (date) => {
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 };
 
 const formatWeekday = (date) => {
-  return new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+  return new Date(date).toLocaleDateString("en-US", { weekday: "long" });
 };
 
 const getPayRateText = (holiday) => {
   const date = new Date(holiday.date);
   const isSunday = date.getDay() === 0;
-  
-  if (holiday.type === 'regular') {
-    return isSunday ? '2.6x (Sunday)' : '2.0x';
+
+  if (holiday.type === "regular") {
+    return isSunday ? "2.6x" : "2.0x";
   } else {
-    return '2.6x (8 hours)';
+    return "2.6x";
   }
+};
+
+const openAddDialog = () => {
+  form.value = {
+    name: "",
+    date: "",
+    type: "regular",
+    description: "",
+    is_recurring: false,
+    is_active: true,
+  };
+  showEditModal.value = false;
+  showDialog.value = true;
 };
 
 const editHoliday = (holiday) => {
@@ -345,11 +567,12 @@ const editHoliday = (holiday) => {
     name: holiday.name,
     date: holiday.date,
     type: holiday.type,
-    description: holiday.description || '',
+    description: holiday.description || "",
     is_recurring: holiday.is_recurring,
-    is_active: holiday.is_active
+    is_active: holiday.is_active,
   };
   showEditModal.value = true;
+  showDialog.value = true;
 };
 
 const confirmDelete = (holiday) => {
@@ -361,49 +584,51 @@ const deleteHoliday = async () => {
   deleting.value = true;
   try {
     await api.delete(`/holidays/${holidayToDelete.value.id}`);
-    toast.success('Holiday deleted successfully');
+    toast.success("Holiday deleted successfully");
     showDeleteModal.value = false;
     holidayToDelete.value = null;
     await loadHolidays();
   } catch (error) {
-    console.error('Failed to delete holiday:', error);
-    toast.error('Failed to delete holiday');
+    console.error("Failed to delete holiday:", error);
+    toast.error("Failed to delete holiday");
   } finally {
     deleting.value = false;
   }
 };
 
 const submitForm = async () => {
+  if (!formValid.value) return;
+
   saving.value = true;
   try {
     if (showEditModal.value) {
       await api.put(`/holidays/${form.value.id}`, form.value);
-      toast.success('Holiday updated successfully');
+      toast.success("Holiday updated successfully");
     } else {
-      await api.post('/holidays', form.value);
-      toast.success('Holiday created successfully');
+      await api.post("/holidays", form.value);
+      toast.success("Holiday created successfully");
     }
-    
+
     closeModal();
     await loadHolidays();
   } catch (error) {
-    console.error('Failed to save holiday:', error);
-    toast.error(error.response?.data?.message || 'Failed to save holiday');
+    console.error("Failed to save holiday:", error);
+    toast.error(error.response?.data?.message || "Failed to save holiday");
   } finally {
     saving.value = false;
   }
 };
 
 const closeModal = () => {
-  showAddModal.value = false;
+  showDialog.value = false;
   showEditModal.value = false;
   form.value = {
-    name: '',
-    date: '',
-    type: 'regular',
-    description: '',
+    name: "",
+    date: "",
+    type: "regular",
+    description: "",
     is_recurring: false,
-    is_active: true
+    is_active: true,
   };
 };
 
@@ -412,527 +637,403 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.holiday-management {
-  padding: 2rem;
-  max-width: 1400px;
+<style scoped lang="scss">
+.holiday-page {
+  max-width: 1600px;
   margin: 0 auto;
 }
 
+/* Page Header */
 .page-header {
+  margin-bottom: 28px;
+}
+
+.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 2rem;
-  color: #2c3e50;
-}
-
-.subtitle {
-  color: #7f8c8d;
-  margin-top: 0.5rem;
-}
-
-.filters-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 2rem;
-  display: flex;
-  gap: 2rem;
-  align-items: center;
+  gap: 24px;
   flex-wrap: wrap;
+
+  @media (max-width: 960px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
-.filter-group {
+.page-title-section {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 16px;
+  flex: 1;
 }
 
-.filter-group label {
+.page-icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  flex-shrink: 0;
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: rgba(0, 31, 61, 0.6);
+  margin: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  @media (max-width: 960px) {
+    width: 100%;
+  }
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 600;
-  color: #2c3e50;
-}
-
-.filter-group select {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.btn-group {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-group button {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+
+  .v-icon {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
+  }
+
+  &.action-btn-primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+  }
 }
 
-.btn-group button.active {
-  background: #3498db;
-  color: white;
-  border-color: #3498db;
-}
-
-.stats {
-  display: flex;
-  gap: 1rem;
-  margin-left: auto;
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 6px;
-  text-align: center;
-  min-width: 100px;
+  background: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(0, 31, 61, 0.06);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+  }
 }
 
-.stat-card.regular {
-  background: #fee;
-  border: 2px solid #e74c3c;
+.stat-card:hover {
+  box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+  transform: translateY(-4px);
+  border-color: rgba(237, 152, 95, 0.3);
+
+  &::before {
+    transform: scaleY(1);
+  }
 }
 
-.stat-card.special {
-  background: #e3f2fd;
-  border: 2px solid #3498db;
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
 }
 
-.stat-value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #2c3e50;
+.stat-icon.total {
+  background: linear-gradient(135deg, #001f3d 0%, #0f3557 100%);
+}
+
+.stat-icon.regular {
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+}
+
+.stat-icon.special {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+}
+
+.stat-content {
+  flex: 1;
 }
 
 .stat-label {
-  font-size: 0.875rem;
-  color: #7f8c8d;
-  margin-top: 0.25rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
 
-.holidays-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #001f3d;
+  letter-spacing: -0.5px;
 }
 
-.holiday-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.stat-value.info {
+  color: #3b82f6;
+}
+
+.stat-value.primary {
+  color: #ed985f;
+}
+
+/* Modern Card */
+.modern-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-  border-left: 6px solid;
+  padding: 24px;
 }
 
-.holiday-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.filters-section {
+  background: rgba(0, 31, 61, 0.01);
+  margin-bottom: 24px;
 }
 
-.holiday-card.regular {
-  border-left-color: #e74c3c;
+.table-section {
+  background: transparent;
 }
 
-.holiday-card.special {
-  border-left-color: #3498db;
-}
-
-.holiday-header {
+.date-display {
   display: flex;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  flex-direction: column;
 }
 
-.holiday-date {
-  text-align: center;
-  min-width: 70px;
+.date-main {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
 }
 
-.holiday-date .month {
-  font-size: 0.875rem;
-  color: #7f8c8d;
-  text-transform: uppercase;
-  font-weight: 600;
+.date-weekday {
+  font-size: 11px;
+  color: #64748b;
+  padding-left: 26px;
 }
 
-.holiday-date .day {
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: #2c3e50;
-  line-height: 1;
+/* Dialog Styles */
+.modern-dialog .dialog-header {
+  padding: 24px;
+  background: white;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.holiday-date .weekday {
-  font-size: 0.875rem;
-  color: #95a5a6;
-  margin-top: 0.25rem;
-}
-
-.holiday-info {
-  flex: 1;
-}
-
-.holiday-info h3 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.25rem;
-  color: #2c3e50;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
+.dialog-icon-wrapper {
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.badge.regular {
-  background: #fee;
-  color: #e74c3c;
-}
-
-.badge.special {
-  background: #e3f2fd;
-  color: #3498db;
-}
-
-.holiday-description {
-  padding: 0 1.5rem;
-  color: #7f8c8d;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-}
-
-.holiday-pay-info {
-  padding: 1rem 1.5rem;
-  background: #f8f9fa;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.pay-rate {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: #27ae60;
-}
-
-.pay-rate i {
-  font-size: 1.5rem;
-}
-
-.pay-rate .rate {
-  margin-left: 0.5rem;
-  font-weight: bold;
-  font-size: 1.125rem;
-}
-
-.recurring-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #9b59b6;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.holiday-actions {
-  padding: 1rem 1.5rem;
-  display: flex;
-  gap: 0.75rem;
-  border-top: 1px solid #e9ecef;
-}
-
-.btn-edit, .btn-delete {
-  flex: 1;
-  padding: 0.625rem 1rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-}
-
-.btn-edit {
-  background: #3498db;
   color: white;
+  flex-shrink: 0;
 }
 
-.btn-edit:hover {
-  background: #2980b9;
+.dialog-icon-wrapper.primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
 }
 
-.btn-delete {
-  background: #e74c3c;
-  color: white;
+.dialog-icon-wrapper.danger {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
-.btn-delete:hover {
-  background: #c0392b;
-}
-
-.loading, .empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: #7f8c8d;
-  background: white;
-  border-radius: 8px;
-}
-
-.empty-state i {
-  font-size: 4rem;
-  color: #bdc3c7;
-  margin-bottom: 1rem;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 2rem;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-}
-
-.modal-content.small {
-  max-width: 400px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.modal-header h2 {
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
   margin: 0;
-  font-size: 1.5rem;
-  color: #2c3e50;
+  line-height: 1.2;
 }
 
-.btn-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #7f8c8d;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
+.dialog-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.btn-close:hover {
-  background: #f8f9fa;
-  color: #2c3e50;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.form-group.full {
-  grid-column: 1 / -1;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.required {
-  color: #e74c3c;
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-}
-
-.form-group.checkbox {
-  grid-column: 1 / -1;
-}
-
-.form-group.checkbox label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: normal;
-  cursor: pointer;
-}
-
-.form-group.checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-}
-
-.pay-preview {
-  grid-column: 1 / -1;
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 2px solid #e9ecef;
-  margin-top: 1rem;
-}
-
-.pay-preview h4 {
-  margin: 0 0 1rem 0;
-  color: #2c3e50;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.preview-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.preview-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.multiplier {
-  background: #27ae60;
   color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 6px;
-  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
 }
 
-.preview-note {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #7f8c8d;
-  font-size: 0.875rem;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e9ecef;
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
 }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e9ecef;
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
 }
 
-.btn-primary, .btn-secondary, .btn-danger {
-  padding: 0.75rem 1.5rem;
+.dialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
   border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
 }
 
-.btn-primary {
-  background: #3498db;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #2980b9;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
+.dialog-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.btn-secondary {
-  background: #95a5a6;
+.dialog-btn-cancel {
+  background: transparent;
+  color: #64748b;
+}
+
+.dialog-btn-cancel:hover:not(:disabled) {
+  background: rgba(0, 31, 61, 0.04);
+}
+
+.dialog-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  margin-left: 12px;
 }
 
-.btn-secondary:hover {
-  background: #7f8c8d;
+.dialog-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
 }
 
-.btn-danger {
-  background: #e74c3c;
+.dialog-btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  margin-left: 12px;
 }
 
-.btn-danger:hover:not(:disabled) {
-  background: #c0392b;
+.dialog-btn-danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
-.warning {
-  color: #e74c3c;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
+.form-field-wrapper {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-btn {
+    flex: 1;
+    justify-content: center;
+  }
 }
 </style>
