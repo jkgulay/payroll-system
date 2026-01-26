@@ -157,12 +157,13 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Debug: Log employee ID being queried
-        Log::info('Employee Dashboard Query', [
-            'user_id' => $user->id,
-            'employee_id' => $employee->id,
-            'employee_number' => $employee->employee_number,
-        ]);
+        if (config('app.debug')) {
+            Log::debug('Employee Dashboard Query', [
+                'user_id' => $user->id,
+                'employee_id' => $employee->id,
+                'employee_number' => $employee->employee_number,
+            ]);
+        }
 
         // Get attendance for last 3 months (including current month)
         $threeMonthsAgo = Carbon::now()->subMonths(2)->startOfMonth();
@@ -171,12 +172,13 @@ class DashboardController extends Controller
             ->orderBy('attendance_date', 'desc')
             ->get();
 
-        // Debug: Log attendance query results
-        Log::info('Attendance Query', [
-            'employee_id' => $employee->id,
-            'date_from' => $threeMonthsAgo->toDateString(),
-            'records_found' => $attendance->count(),
-        ]);
+        if (config('app.debug')) {
+            Log::debug('Attendance Query', [
+                'employee_id' => $employee->id,
+                'date_from' => $threeMonthsAgo->toDateString(),
+                'records_found' => $attendance->count(),
+            ]);
+        }
 
         // Get current month attendance for summary
         $currentMonth = Carbon::now()->format('Y-m');
@@ -230,12 +232,13 @@ class DashboardController extends Controller
             ->latest('id')
             ->get();
 
-        // Debug: Log payslip query results
-        Log::info('Payslip Query', [
-            'employee_id' => $employee->id,
-            'date_from' => $oneYearAgo->toDateString(),
-            'records_found' => $payslipHistory->count(),
-        ]);
+        if (config('app.debug')) {
+            Log::debug('Payslip Query', [
+                'employee_id' => $employee->id,
+                'date_from' => $oneYearAgo->toDateString(),
+                'records_found' => $payslipHistory->count(),
+            ]);
+        }
 
         return response()->json([
             'employee' => $employee,

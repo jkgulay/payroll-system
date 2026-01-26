@@ -210,9 +210,9 @@ class PayrollController extends Controller
 
     public function downloadPayslip($payrollId, $employeeId)
     {
-        // Increase memory limit for PDF generation
-        ini_set('memory_limit', '1024M');
-        ini_set('max_execution_time', '300');
+        // Validate parameters
+        $payrollId = (int) $payrollId;
+        $employeeId = (int) $employeeId;
 
         $payroll = Payroll::findOrFail($payrollId);
 
@@ -258,14 +258,14 @@ class PayrollController extends Controller
 
     private function generatePayrollItems(Payroll $payroll, array $filters = [])
     {
-        Log::info('=== Payroll Generation Debug ===');
-        Log::info('Filters received:', $filters);
-        Log::info('Has attendance value: ' . var_export($filters['has_attendance'] ?? 'not set', true));
-        Log::info('Has attendance empty check: ' . var_export(empty($filters['has_attendance']), true));
+        if (config('app.debug')) {
+            Log::debug('Payroll Generation', [
+                'filters' => $filters,
+                'has_attendance' => $filters['has_attendance'] ?? 'not set'
+            ]);
+        }
 
         $query = Employee::where('activity_status', 'active');
-        $initialCount = Employee::where('activity_status', 'active')->count();
-        Log::info('Initial active employees: ' . $initialCount);
 
         // Apply filters based on filter type
         if (!empty($filters['type']) && $filters['type'] !== 'all') {
@@ -286,23 +286,20 @@ class PayrollController extends Controller
             }
 
             // If filter type is set but no specific values provided, treat as 'all'
-            if (!$filterApplied) {
-                Log::info('Filter type "' . $filters['type'] . '" set but no specific values provided, treating as "all"');
+            if (!$filterApplied && config('app.debug')) {
+                Log::debug('Filter type "' . $filters['type'] . '" set but no specific values provided, treating as "all"');
             }
         }
 
+        // Store count after type filters for error messages
         $afterTypeFilter = $query->count();
-        Log::info('After type filter: ' . $afterTypeFilter);
 
         // Filter by attendance if requested
         if (!empty($filters['has_attendance'])) {
-            Log::info('Applying attendance filter for period: ' . $payroll->period_start . ' to ' . $payroll->period_end);
             $query->whereHas('attendance', function ($q) use ($payroll) {
                 $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                     ->where('status', '!=', 'absent');
             });
-            $afterAttendance = $query->count();
-            Log::info('After attendance filter: ' . $afterAttendance);
         }
 
         // Order by employee number for consistent selection

@@ -138,13 +138,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/loans/{loan}/payments', [App\Http\Controllers\Api\LoanController::class, 'recordPayment']);
     Route::apiResource('loans', App\Http\Controllers\Api\LoanController::class);
 
-    // Payroll - specific routes MUST come before apiResource
-    Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize']);
-    Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess']);
-    Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister']);
-    Route::get('/payrolls/{payroll}/export-excel', [App\Http\Controllers\PayrollController::class, 'exportToExcel']);
-    Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip']);
-    Route::apiResource('payrolls', App\Http\Controllers\PayrollController::class);
+    // Payroll - specific routes MUST come before apiResource (Protected by role middleware)
+    Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize'])->middleware('role:admin,accountant');
+    Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess'])->middleware('role:admin,accountant');
+    Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister'])->middleware('role:admin,accountant');
+    Route::get('/payrolls/{payroll}/export-excel', [App\Http\Controllers\PayrollController::class, 'exportToExcel'])->middleware('role:admin,accountant');
+    Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip'])->middleware('role:admin,accountant,employee');
+    Route::apiResource('payrolls', App\Http\Controllers\PayrollController::class)->middleware('role:admin,accountant');
 
 
     // Deductions - specific routes MUST come before apiResource
