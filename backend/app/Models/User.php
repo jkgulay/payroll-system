@@ -58,6 +58,19 @@ class User extends Authenticatable
         'two_factor_confirmed_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'full_name',
+    ];
+
+    public function getFullNameAttribute(): string
+    {
+        if ($this->relationLoaded('employee') && $this->employee) {
+            return $this->employee->full_name;
+        }
+
+        return $this->name ?? 'System';
+    }
+
     /**
      * Get the avatar URL attribute
      */
@@ -74,5 +87,13 @@ class User extends Authenticatable
 
         // Return the storage URL
         return url('storage/' . $this->avatar);
+    }
+
+    /**
+     * Get the employee that owns the user account
+     */
+    public function employee()
+    {
+        return $this->hasOne(Employee::class);
     }
 }

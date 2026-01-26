@@ -192,7 +192,7 @@
             </v-avatar>
             <div>
               <div class="font-weight-medium">
-                {{ item.user?.name || "System" }}
+                {{ item.user?.full_name || "System" }}
               </div>
               <div class="text-caption text-medium-emphasis">
                 {{ item.user?.email || "N/A" }}
@@ -284,7 +284,7 @@
             <v-col cols="12" md="6">
               <v-text-field
                 label="User"
-                :model-value="selectedLog.user?.name || 'System'"
+                :model-value="selectedLog.user?.full_name || 'System'"
                 readonly
                 variant="outlined"
                 density="comfortable"
@@ -641,7 +641,6 @@ onMounted(() => {
 .audit-trail-page {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 32px;
 }
 
 // Page Header

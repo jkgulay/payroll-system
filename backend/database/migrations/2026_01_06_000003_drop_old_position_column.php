@@ -15,14 +15,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Log any employees still using VARCHAR position (shouldn't be any after previous migration)
+        // Check if any employees still using VARCHAR position without position_id
         $unmatchedCount = DB::table('employees')
             ->whereNull('position_id')
             ->whereNotNull('position')
             ->count();
 
         if ($unmatchedCount > 0) {
-            Log::warning("Found {$unmatchedCount} employees without position_id. They will lose position data.");
+            throw new \Exception(
+                "Cannot drop position column: {$unmatchedCount} employees have position data but no position_id. " .
+                    "Please run the previous migration (2026_01_06_000002) to fix this issue first."
+            );
         }
 
         Schema::table('employees', function (Blueprint $table) {
