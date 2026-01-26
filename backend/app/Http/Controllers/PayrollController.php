@@ -64,7 +64,7 @@ class PayrollController extends Controller
 
         DB::beginTransaction();
         try {
-            $payroll = Payroll::create([
+            $payroll = new Payroll([
                 'period_name' => $validated['period_name'],
                 'period_start' => $validated['period_start'],
                 'period_end' => $validated['period_end'],
@@ -73,9 +73,14 @@ class PayrollController extends Controller
                 'created_by' => auth()->id(),
                 'notes' => $validated['notes'] ?? null,
             ]);
-
-            // Refresh the model to ensure ID is available (critical for PostgreSQL)
-            $payroll->refresh();
+            
+            // Explicitly save and ensure the ID is generated before proceeding
+            $payroll->save();
+            
+            // Verify the payroll was saved and has an ID
+            if (!$payroll->id) {
+                throw new \Exception('Failed to generate payroll ID');
+            }
 
             // Generate payroll items for filtered employees
             $filters = [
