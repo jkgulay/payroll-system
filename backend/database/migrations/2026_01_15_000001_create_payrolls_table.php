@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('payrolls', function (Blueprint $table) {
+        if (!Schema::hasTable('payrolls')) {
+            Schema::create('payrolls', function (Blueprint $table) {
             $table->id();
             $table->string('payroll_number')->unique();
             $table->string('period_name');
@@ -26,8 +27,10 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+        }
 
-        Schema::create('payroll_items', function (Blueprint $table) {
+        if (!Schema::hasTable('payroll_items')) {
+            Schema::create('payroll_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payroll_id')->constrained()->cascadeOnDelete();
             $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
@@ -64,6 +67,7 @@ return new class extends Migration
             
             $table->timestamps();
         });
+        }
     }
 
     public function down(): void
