@@ -1,6 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <rect width="48" height="48" fill="#ff6f00"/>
-  <path d="M12 8h24v6H12zm0 10h24v6H12zm0 10h16v6H12z" fill="#fff"/>
-  <circle cx="36" cy="32" r="8" fill="#ffd54f"/>
-  <text x="36" y="36" font-size="12" text-anchor="middle" fill="#000" font-weight="bold">₱</text>
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ed985f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f7b980;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="24" cy="24" r="24" fill="url(#grad1)"/>
+  
+  <!-- Hard hat icon (simplified version of mdi-hard-hat) -->
+  <!-- Hat brim/base -->
+  <ellipse cx="24" cy="32" rx="16" ry="3" fill="#ffffff" opacity="0.9"/>
+  
+  <!-- Hat body -->
+  <path d="M 10 32 Q 10 18, 24 16 Q 38 18, 38 32 Z" fill="#ffffff"/>
+  
+  <!-- Hat top ridge -->
+  <path d="M 12 25 Q 12 20, 24 18 Q 36 20, 36 25" fill="none" stroke="#001f3d" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Center ventilation line -->
+  <line x1="24" y1="16" x2="24" y2="26" stroke="#001f3d" stroke-width="1.5" opacity="0.3"/>
 </svg>

@@ -93,7 +93,7 @@
       <v-col cols="12" sm="6" lg="3">
         <div
           class="stat-card-new stat-card-pending"
-          @click="$router.push('/resume-review')"
+          @click="goToPendingActions"
         >
           <div class="stat-icon-wrapper">
             <div class="stat-icon-circle stat-icon-pulse">
@@ -156,7 +156,7 @@
             <div
               v-if="stats.pendingLeaves > 0"
               class="action-item"
-              @click="$router.push('/hr/leave-approval')"
+              @click="$router.push('/leave-approval')"
             >
               <div class="action-item-icon action-icon-info">
                 <v-icon size="24">mdi-calendar-clock</v-icon>
@@ -825,6 +825,23 @@ function goToAttendanceToday() {
       tab: "list",
     },
   });
+}
+
+function goToPendingActions() {
+  // Intelligently route to the page with pending actions
+  // Priority order: Applications > Leaves > Attendance Corrections > Payrolls
+  if (stats.value.pendingApplications > 0) {
+    router.push("/resume-review");
+  } else if (stats.value.pendingLeaves > 0) {
+    router.push("/leave-approval");
+  } else if (stats.value.pendingAttendanceCorrections > 0) {
+    router.push({ path: "/attendance", query: { tab: "approvals" } });
+  } else if (stats.value.draftPayrolls > 0) {
+    router.push("/payroll");
+  } else {
+    // Fallback to resume-review if no specific pending actions
+    router.push("/resume-review");
+  }
 }
 
 async function refreshData() {
