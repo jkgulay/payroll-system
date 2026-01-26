@@ -134,7 +134,7 @@
             </tr>
             <tr>
                 <td class="label">POSITION</td>
-                <td>{{ $employee->position->position_name ?? ($employee->staff_type ?? 'N/A') }}</td>
+                <td>{{ $employee->position ?? ($employee->staff_type ?? 'N/A') }}</td>
                 <td class="label">DEPARTMENT</td>
                 <td>{{ $employee->department ?? 'N/A' }}</td>
             </tr>

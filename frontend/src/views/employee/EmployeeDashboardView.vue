@@ -41,7 +41,7 @@
           <div class="stat-card-new stat-card-employees">
             <div class="stat-icon-wrapper">
               <div class="stat-icon-circle">
-                <v-icon size="28">mdi-calendar-check</v-icon>
+                <v-icon size="22">mdi-calendar-check</v-icon>
               </div>
             </div>
             <div class="stat-content">
@@ -56,7 +56,7 @@
           <div class="stat-card-new stat-card-attendance">
             <div class="stat-icon-wrapper">
               <div class="stat-icon-circle">
-                <v-icon size="28">mdi-clock-alert</v-icon>
+                <v-icon size="22">mdi-clock-alert</v-icon>
               </div>
             </div>
             <div class="stat-content">
@@ -71,7 +71,7 @@
           <div class="stat-card-new stat-card-payroll">
             <div class="stat-icon-wrapper">
               <div class="stat-icon-circle">
-                <v-icon size="28">mdi-clock-time-four</v-icon>
+                <v-icon size="22">mdi-clock-time-four</v-icon>
               </div>
             </div>
             <div class="stat-content">
@@ -89,7 +89,7 @@
           >
             <div class="stat-icon-wrapper">
               <div class="stat-icon-circle stat-icon-pulse">
-                <v-icon size="28">mdi-cash-multiple</v-icon>
+                <v-icon size="22">mdi-cash-multiple</v-icon>
               </div>
             </div>
             <div class="stat-content">
@@ -399,8 +399,9 @@ const totalDays = computed(() => {
 });
 
 const latestPayslip = computed(() => {
-  const netPay = currentPayslip.value?.net_pay || 0;
-  return typeof netPay === "number" ? netPay : 0;
+  const netPay = currentPayslip.value?.net_pay;
+  if (!netPay) return 0;
+  return typeof netPay === "number" ? netPay : parseFloat(netPay) || 0;
 });
 
 const userAvatar = computed(() => {
@@ -459,16 +460,31 @@ async function loadDashboardData() {
 async function downloadPayslip(payslipId, format) {
   downloading.value = true;
   try {
-    const response = await api.get(`/payslips/${payslipId}/${format}`, {
-      responseType: "blob",
-    });
+    // Find the payslip in history or current
+    let payslip =
+      currentPayslip.value?.id === payslipId
+        ? currentPayslip.value
+        : payslipHistory.value.find((p) => p.id === payslipId);
+
+    if (!payslip) {
+      toast.error("Payslip not found");
+      return;
+    }
+
+    const response = await api.get(
+      `/payrolls/${payslip.payroll_id}/employees/${payslip.employee_id}/download-payslip`,
+      {
+        params: { format: format === "excel" ? "excel" : "pdf" },
+        responseType: "blob",
+      },
+    );
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute(
       "download",
-      `payslip_${format === "pdf" ? ".pdf" : ".xlsx"}`,
+      `payslip_${payslip.employee_id}_${format === "pdf" ? ".pdf" : ".xlsx"}`,
     );
     document.body.appendChild(link);
     link.click();
@@ -656,10 +672,10 @@ function calculateHours(record) {
 .stat-card-new {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 24px;
+  gap: 12px;
+  padding: 16px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(0, 31, 61, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   cursor: pointer;
@@ -701,9 +717,9 @@ function calculateHours(record) {
 }
 
 .stat-icon-circle {
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   background: linear-gradient(
     135deg,
     rgba(237, 152, 95, 0.12) 0%,
@@ -739,20 +755,20 @@ function calculateHours(record) {
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: rgba(0, 31, 61, 0.6);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
   color: #001f3d;
   line-height: 1;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .stat-meta {

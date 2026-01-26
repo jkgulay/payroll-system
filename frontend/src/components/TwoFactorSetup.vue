@@ -2,10 +2,12 @@
   <div class="two-factor-card">
     <!-- Modern Card Header -->
     <div class="card-header">
-      <div class="header-badge">
-        <v-icon icon="mdi-shield-lock" size="18" color="white"></v-icon>
+      <div class="card-header-left">
+        <div class="card-header-icon">
+          <v-icon icon="mdi-shield-lock" size="18"></v-icon>
+        </div>
+        <h3 class="card-header-title">Two-Factor Authentication</h3>
       </div>
-      <h3 class="header-title">Two-Factor Authentication</h3>
     </div>
 
     <div class="card-content">
@@ -612,6 +614,7 @@ function closeRecoveryDialog() {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 20px 24px;
   background: linear-gradient(
@@ -622,7 +625,14 @@ function closeRecoveryDialog() {
   border-bottom: 1px solid rgba(0, 31, 61, 0.08);
 }
 
-.header-badge {
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.card-header-icon {
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -632,9 +642,13 @@ function closeRecoveryDialog() {
   justify-content: center;
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+
+  .v-icon {
+    color: #ffffff !important;
+  }
 }
 
-.header-title {
+.card-header-title {
   font-size: 16px;
   font-weight: 700;
   color: #001f3d;

@@ -20,10 +20,12 @@
       <v-col cols="12" md="4">
         <div class="profile-picture-card">
           <div class="card-header">
-            <div class="card-header-icon">
-              <v-icon size="18">mdi-camera-account</v-icon>
+            <div class="card-header-left">
+              <div class="card-header-icon">
+                <v-icon size="18">mdi-camera-account</v-icon>
+              </div>
+              <h3 class="card-header-title">Profile Picture</h3>
             </div>
-            <h3 class="card-header-title">Profile Picture</h3>
           </div>
 
           <div class="profile-avatar-section">
@@ -271,110 +273,116 @@
         <!-- Change Password Card -->
         <div class="profile-password-card mb-4">
           <div class="card-header">
-            <div class="card-header-icon">
-              <v-icon size="18">mdi-lock-reset</v-icon>
+            <div class="card-header-left">
+              <div class="card-header-icon">
+                <v-icon size="18">mdi-lock-reset</v-icon>
+              </div>
+              <h3 class="card-header-title">Change Password</h3>
             </div>
-            <h3 class="card-header-title">Change Password</h3>
           </div>
 
-          <v-form
-            @submit.prevent="changePassword"
-            ref="passwordFormRef"
-            validate-on="submit lazy"
-          >
-            <v-row dense>
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="passwordForm.current_password"
-                  label="Current Password"
-                  :type="showCurrentPassword ? 'text' : 'password'"
-                  :append-inner-icon="
-                    showCurrentPassword ? 'mdi-eye' : 'mdi-eye-off'
-                  "
-                  @click:append-inner="
-                    showCurrentPassword = !showCurrentPassword
-                  "
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="compact"
-                  hide-details="auto"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="passwordForm.new_password"
-                  label="New Password"
-                  :type="showNewPassword ? 'text' : 'password'"
-                  :append-inner-icon="
-                    showNewPassword ? 'mdi-eye' : 'mdi-eye-off'
-                  "
-                  @click:append-inner="showNewPassword = !showNewPassword"
-                  :rules="[rules.required, rules.minLength]"
-                  variant="outlined"
-                  density="compact"
-                  hint="At least 8 characters"
-                  persistent-hint
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="passwordForm.new_password_confirmation"
-                  label="Confirm Password"
-                  :type="showConfirmPassword ? 'text' : 'password'"
-                  :append-inner-icon="
-                    showConfirmPassword ? 'mdi-eye' : 'mdi-eye-off'
-                  "
-                  @click:append-inner="
-                    showConfirmPassword = !showConfirmPassword
-                  "
-                  :rules="[rules.required, rules.passwordMatch]"
-                  variant="outlined"
-                  density="compact"
-                  hide-details="auto"
-                ></v-text-field>
-              </v-col>
-            </v-row>
-
-            <v-alert
-              v-if="passwordError"
-              type="error"
-              density="compact"
-              class="mt-3 mb-2"
-              dismissible
+          <div class="password-form-wrapper">
+            <v-form
+              @submit.prevent="changePassword"
+              ref="passwordFormRef"
+              validate-on="submit lazy"
             >
-              {{ passwordError }}
-            </v-alert>
+              <v-row dense>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model="passwordForm.current_password"
+                    label="Current Password"
+                    :type="showCurrentPassword ? 'text' : 'password'"
+                    :append-inner-icon="
+                      showCurrentPassword ? 'mdi-eye' : 'mdi-eye-off'
+                    "
+                    @click:append-inner="
+                      showCurrentPassword = !showCurrentPassword
+                    "
+                    :rules="[rules.required]"
+                    variant="outlined"
+                    density="compact"
+                    hide-details="auto"
+                  ></v-text-field>
+                </v-col>
 
-            <v-alert
-              v-if="passwordSuccess"
-              type="success"
-              density="compact"
-              class="mt-3 mb-2"
-              dismissible
-            >
-              {{ passwordSuccess }}
-            </v-alert>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model="passwordForm.new_password"
+                    label="New Password"
+                    :type="showNewPassword ? 'text' : 'password'"
+                    :append-inner-icon="
+                      showNewPassword ? 'mdi-eye' : 'mdi-eye-off'
+                    "
+                    @click:append-inner="showNewPassword = !showNewPassword"
+                    :rules="[rules.required, rules.minLength]"
+                    variant="outlined"
+                    density="compact"
+                    hint="At least 8 characters"
+                    persistent-hint
+                  ></v-text-field>
+                </v-col>
 
-            <button
-              type="submit"
-              class="password-btn"
-              :disabled="changingPassword"
-            >
-              <v-icon v-if="!changingPassword" size="18">mdi-lock-check</v-icon>
-              <v-progress-circular
-                v-else
-                size="18"
-                width="2"
-                indeterminate
-                color="white"
-              ></v-progress-circular>
-              <span>{{
-                changingPassword ? "Updating..." : "Update Password"
-              }}</span>
-            </button>
-          </v-form>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model="passwordForm.new_password_confirmation"
+                    label="Confirm Password"
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    :append-inner-icon="
+                      showConfirmPassword ? 'mdi-eye' : 'mdi-eye-off'
+                    "
+                    @click:append-inner="
+                      showConfirmPassword = !showConfirmPassword
+                    "
+                    :rules="[rules.required, rules.passwordMatch]"
+                    variant="outlined"
+                    density="compact"
+                    hide-details="auto"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+
+              <v-alert
+                v-if="passwordError"
+                type="error"
+                density="compact"
+                class="mt-3 mb-2"
+                dismissible
+              >
+                {{ passwordError }}
+              </v-alert>
+
+              <v-alert
+                v-if="passwordSuccess"
+                type="success"
+                density="compact"
+                class="mt-3 mb-2"
+                dismissible
+              >
+                {{ passwordSuccess }}
+              </v-alert>
+
+              <button
+                type="submit"
+                class="password-btn"
+                :disabled="changingPassword"
+              >
+                <v-icon v-if="!changingPassword" size="18"
+                  >mdi-lock-check</v-icon
+                >
+                <v-progress-circular
+                  v-else
+                  size="18"
+                  width="2"
+                  indeterminate
+                  color="white"
+                ></v-progress-circular>
+                <span>{{
+                  changingPassword ? "Updating..." : "Update Password"
+                }}</span>
+              </button>
+            </v-form>
+          </div>
         </div>
 
         <!-- Two-Factor Authentication Card -->
@@ -1102,14 +1110,15 @@ function formatDate(dateString) {
   background: #ffffff;
   border-radius: 16px;
   border: 1px solid rgba(0, 31, 61, 0.08);
-  padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
 }
 
 .profile-info-view {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 24px;
 }
 
 .info-item {
@@ -1167,8 +1176,8 @@ function formatDate(dateString) {
 
 // Forms
 .profile-edit-form,
-.form-actions {
-  margin-top: 20px;
+.password-form-wrapper {
+  padding: 24px;
 }
 
 .form-actions {

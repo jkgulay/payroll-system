@@ -205,11 +205,11 @@ class DashboardController extends Controller
             'overtime_hours' => $currentMonthAttendance->sum('overtime_hours'),
         ];
 
-        // Get current/latest payslip (most recent paid)
-        $currentPayslip = PayrollItem::with(['payroll', 'details'])
+        // Get current/latest payslip (most recent paid or finalized)
+        $currentPayslip = PayrollItem::with(['payroll'])
             ->where('employee_id', $employee->id)
             ->whereHas('payroll', function ($query) {
-                $query->where('status', 'paid');
+                $query->whereIn('status', ['paid', 'finalized']);
             })
             ->latest('id')
             ->first();
@@ -219,7 +219,7 @@ class DashboardController extends Controller
         $payslipHistory = PayrollItem::with(['payroll'])
             ->where('employee_id', $employee->id)
             ->whereHas('payroll', function ($query) use ($oneYearAgo) {
-                $query->where('status', 'paid')
+                $query->whereIn('status', ['paid', 'finalized'])
                     ->where('period_start', '>=', $oneYearAgo);
             })
             ->latest('id')

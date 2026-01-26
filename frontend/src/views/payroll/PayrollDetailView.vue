@@ -154,6 +154,7 @@
             :headers="headers"
             :items="payroll?.items || []"
             :search="search"
+            :custom-filter="customFilter"
             :items-per-page="15"
             class="modern-table"
           >
@@ -178,7 +179,9 @@
                 <div class="text-caption">
                   <span v-if="item.regular_days > 0 || item.holiday_days > 0">
                     {{ item.regular_days }} reg
-                    <span v-if="item.holiday_days > 0"> + {{ item.holiday_days }} hol</span>
+                    <span v-if="item.holiday_days > 0">
+                      + {{ item.holiday_days }} hol</span
+                    >
                   </span>
                   <span v-else>{{ item.days_worked }} days</span>
                 </div>
@@ -189,7 +192,10 @@
             <template v-slot:item.basic_pay="{ item }">
               <div class="text-right">
                 <div>₱{{ formatCurrency(item.basic_pay) }}</div>
-                <div v-if="item.holiday_pay > 0" class="text-caption text-success">
+                <div
+                  v-if="item.holiday_pay > 0"
+                  class="text-caption text-success"
+                >
                   +₱{{ formatCurrency(item.holiday_pay) }} hol
                 </div>
               </div>
@@ -282,6 +288,31 @@ const headers = [
   { title: "Net Pay", key: "net_pay", sortable: true, align: "end" },
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
+
+// Custom filter function to search employee names properly
+function customFilter(value, query, item) {
+  if (!query) return true;
+
+  const searchTerm = query.toLowerCase();
+  const employee = item.raw?.employee;
+
+  if (!employee) return false;
+
+  // Search in first name, last name, middle name, full name, and employee number
+  const firstName = (employee.first_name || "").toLowerCase();
+  const middleName = (employee.middle_name || "").toLowerCase();
+  const lastName = (employee.last_name || "").toLowerCase();
+  const fullName = `${firstName} ${middleName} ${lastName}`.trim();
+  const employeeNumber = (employee.employee_number || "").toLowerCase();
+
+  return (
+    firstName.includes(searchTerm) ||
+    lastName.includes(searchTerm) ||
+    middleName.includes(searchTerm) ||
+    fullName.includes(searchTerm) ||
+    employeeNumber.includes(searchTerm)
+  );
+}
 
 onMounted(() => {
   fetchPayroll();
@@ -578,7 +609,7 @@ function formatCurrency(amount) {
 .stat-card {
   background: white;
   border-radius: 16px;
-  padding: 10px;
+  padding: 16px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -626,6 +657,8 @@ function formatCurrency(amount) {
 
 .stat-content {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .stat-label {
@@ -638,10 +671,12 @@ function formatCurrency(amount) {
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: #001f3d;
   letter-spacing: -0.5px;
+  word-break: break-word;
+  line-height: 1.2;
 }
 
 .stat-value.primary {

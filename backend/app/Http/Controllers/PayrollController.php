@@ -210,7 +210,7 @@ class PayrollController extends Controller
 
         $item = PayrollItem::where('payroll_id', $payrollId)
             ->where('employee_id', $employeeId)
-            ->with('employee.position')
+            ->with('employee.positionRate')
             ->first();
 
         if (!$item) {
@@ -232,7 +232,7 @@ class PayrollController extends Controller
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', '300');
 
-        $payroll->load(['items.employee.position']);
+        $payroll->load(['items.employee.positionRate']);
 
         $pdf = Pdf::loadView('payroll.register', compact('payroll'));
 
@@ -241,7 +241,7 @@ class PayrollController extends Controller
 
     public function exportToExcel(Payroll $payroll)
     {
-        $payroll->load(['items.employee.position']);
+        $payroll->load(['items.employee.positionRate']);
 
         $filename = "payroll_{$payroll->period_name}_" . now()->format('YmdHis') . ".xlsx";
 
