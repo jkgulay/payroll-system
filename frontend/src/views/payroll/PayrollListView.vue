@@ -578,8 +578,6 @@
         </div>
 
         <v-card-text class="delete-dialog-content">
-    
-
           <!-- Payroll Details Card -->
           <div v-if="selectedPayroll" class="details-card">
             <div class="details-header">
@@ -593,7 +591,9 @@
                 </div>
                 <div class="detail-content">
                   <div class="detail-label">Period</div>
-                  <div class="detail-value">{{ selectedPayroll.period_name }}</div>
+                  <div class="detail-value">
+                    {{ selectedPayroll.period_name }}
+                  </div>
                 </div>
               </div>
               <div class="detail-item">
@@ -602,7 +602,9 @@
                 </div>
                 <div class="detail-content">
                   <div class="detail-label">Employees</div>
-                  <div class="detail-value">{{ selectedPayroll.items_count }} affected</div>
+                  <div class="detail-value">
+                    {{ selectedPayroll.items_count }} affected
+                  </div>
                 </div>
               </div>
               <div class="detail-item">
@@ -611,7 +613,9 @@
                 </div>
                 <div class="detail-content">
                   <div class="detail-label">Total Amount</div>
-                  <div class="detail-value">₱{{ formatCurrency(selectedPayroll.total_net) }}</div>
+                  <div class="detail-value">
+                    ₱{{ formatCurrency(selectedPayroll.total_net) }}
+                  </div>
                 </div>
               </div>
               <div class="detail-item">
@@ -637,7 +641,9 @@
           <!-- Consequences List -->
           <div class="consequences-section">
             <div class="consequences-title">
-              <v-icon size="16" color="#64748b">mdi-alert-circle-outline</v-icon>
+              <v-icon size="16" color="#64748b"
+                >mdi-alert-circle-outline</v-icon
+              >
               <span>What will be deleted:</span>
             </div>
             <ul class="consequences-list">
@@ -650,7 +656,9 @@
           <!-- Final Confirmation -->
           <div class="final-confirmation">
             <v-icon size="20" color="#ef4444">mdi-alert</v-icon>
-            <span>Are you absolutely sure you want to delete this payroll?</span>
+            <span
+              >Are you absolutely sure you want to delete this payroll?</span
+            >
           </div>
         </v-card-text>
 
@@ -677,7 +685,6 @@
             Delete Permanently
           </v-btn>
         </v-card-actions>
-
       </v-card>
     </v-dialog>
   </div>
