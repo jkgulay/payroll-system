@@ -106,7 +106,7 @@ class LoanController extends Controller
             'balance' => round($totalAmount, 2),
             'amount_paid' => 0,
             'maturity_date' => $maturityDate,
-            'status' => $isAdminCreate ? 'approved' : 'pending', // Only admin can create auto-approved loans
+            'status' => $isAdminCreate ? 'active' : 'pending', // Admin-created loans are active
             'requested_by' => $isEmployeeRequest ? $user->id : null,
             'created_by' => ($isAccountantRequest || $isAdminCreate) ? $user->id : null,
             'approved_by' => $isAdminCreate ? $user->id : null,
@@ -124,7 +124,7 @@ class LoanController extends Controller
             $description = match ($user->role) {
                 'employee' => "Employee requested loan: {$loan->loan_number}",
                 'accountant' => "Accountant requested loan for employee: {$loan->employee->full_name}",
-                'admin' => "Admin created and approved loan for employee: {$loan->employee->full_name}",
+                'admin' => "Admin created and activated loan for employee: {$loan->employee->full_name}",
                 default => "Loan created: {$loan->loan_number}",
             };
 
@@ -145,7 +145,7 @@ class LoanController extends Controller
             $message = match ($user->role) {
                 'employee' => 'Loan request submitted for approval',
                 'accountant' => 'Loan request submitted for admin approval',
-                'admin' => 'Loan created and approved successfully',
+                'admin' => 'Loan created and activated successfully',
                 default => 'Loan created successfully',
             };
 
@@ -308,7 +308,7 @@ class LoanController extends Controller
         DB::beginTransaction();
         try {
             $loan->update([
-                'status' => 'approved',
+                'status' => 'active', // Changed from 'approved' to 'active'
                 'approved_by' => auth()->id(),
                 'approved_at' => now(),
                 'approval_notes' => $validated['approval_notes'] ?? null,
@@ -318,11 +318,11 @@ class LoanController extends Controller
             AuditLog::create([
                 'module' => 'loans',
                 'action' => 'approve',
-                'description' => "Loan approved: {$loan->loan_number}",
+                'description' => "Loan approved and activated: {$loan->loan_number}",
                 'user_id' => auth()->id(),
                 'record_id' => $loan->id,
                 'old_values' => json_encode(['status' => 'pending']),
-                'new_values' => json_encode(['status' => 'approved', 'approval_notes' => $validated['approval_notes'] ?? null]),
+                'new_values' => json_encode(['status' => 'active', 'approval_notes' => $validated['approval_notes'] ?? null]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
@@ -330,7 +330,7 @@ class LoanController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Loan approved successfully',
+                'message' => 'Loan approved and activated successfully',
                 'data' => $loan->load(['employee', 'requestedBy', 'approvedBy'])
             ]);
         } catch (\Exception $e) {

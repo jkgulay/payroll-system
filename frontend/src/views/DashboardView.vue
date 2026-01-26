@@ -216,6 +216,26 @@
                 {{ stats.draftPayrolls }}
               </div>
             </div>
+
+            <!-- Pending Resignations -->
+            <div
+              v-if="stats.pendingResignations > 0"
+              class="action-item"
+              @click="$router.push('/resignations')"
+            >
+              <div class="action-item-icon action-icon-danger">
+                <v-icon size="24">mdi-briefcase-remove</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Resignations</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingResignations }} pending review
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingResignations }}
+              </div>
+            </div>
           </div>
 
           <!-- No Pending Actions -->
@@ -762,7 +782,8 @@ const totalPendingActions = computed(() => {
     stats.value.pendingApplications +
     stats.value.pendingLeaves +
     stats.value.pendingAttendanceCorrections +
-    stats.value.draftPayrolls
+    stats.value.draftPayrolls +
+    (stats.value.pendingResignations || 0)
   );
 });
 
@@ -1356,6 +1377,18 @@ Role: Employee
 
     .v-icon {
       color: #ed985f !important;
+    }
+  }
+
+  &.action-icon-danger {
+    background: linear-gradient(
+      135deg,
+      rgba(239, 68, 68, 0.15) 0%,
+      rgba(239, 68, 68, 0.1) 100%
+    );
+
+    .v-icon {
+      color: #ef4444 !important;
     }
   }
 }

@@ -11,6 +11,7 @@ use App\Models\EmployeeApplication;
 use App\Models\EmployeeLeave;
 use App\Models\AttendanceCorrection;
 use App\Models\AuditLog;
+use App\Models\Resignation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -58,6 +59,9 @@ class DashboardController extends Controller
 
         // Draft Payrolls
         $draftPayrolls = Payroll::where('status', 'draft')->count();
+
+        // Pending Resignations
+        $pendingResignations = Resignation::where('status', 'pending')->count();
 
         // Employees with complete data (has government info)
         $employeesCompleteData = Employee::where('is_active', true)
@@ -111,6 +115,7 @@ class DashboardController extends Controller
                 'pendingLeaves' => $pendingLeaves,
                 'pendingAttendanceCorrections' => $pendingAttendanceCorrections,
                 'draftPayrolls' => $draftPayrolls,
+                'pendingResignations' => $pendingResignations,
                 'employeesCompleteData' => $employeesCompleteData,
                 'monthlyAttendanceRate' => $monthlyAttendanceRate,
                 'lastBiometricImportDate' => $lastBiometricImport ? $lastBiometricImport->created_at : null,
