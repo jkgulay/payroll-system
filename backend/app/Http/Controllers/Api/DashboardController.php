@@ -661,14 +661,27 @@ class DashboardController extends Controller
 
         $activities = AuditLog::with('user')
             ->whereIn('action', [
+                // Employee actions
                 'employee_created',
                 'employee_updated',
+                // Payroll actions
+                'create_payroll',
+                'update_payroll',
+                'finalize_payroll',
+                'delete_payroll',
+                'reprocess_payroll',
                 'payroll_approved',
                 'payroll_finalized',
-                'leave_approved',
-                'leave_rejected',
+                // Attendance actions
+                'approve_attendance',
+                'update_attendance',
+                'reject_attendance',
                 'attendance_corrected',
                 'biometric_import',
+                // Leave actions
+                'leave_approved',
+                'leave_rejected',
+                // Application actions
                 'application_approved',
                 'application_rejected'
             ])

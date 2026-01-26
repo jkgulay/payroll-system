@@ -3,7 +3,7 @@
  * Logs are only output in development mode
  */
 
-const isDevelopment = import.meta.env.MODE === 'development';
+const isDevelopment = import.meta.env.MODE === "development";
 
 export const devLog = {
   log: (...args) => {
@@ -11,30 +11,30 @@ export const devLog = {
       console.log(...args);
     }
   },
-  
+
   error: (...args) => {
     if (isDevelopment) {
       console.error(...args);
     }
   },
-  
+
   warn: (...args) => {
     if (isDevelopment) {
       console.warn(...args);
     }
   },
-  
+
   debug: (...args) => {
     if (isDevelopment) {
       console.debug(...args);
     }
   },
-  
+
   info: (...args) => {
     if (isDevelopment) {
       console.info(...args);
     }
-  }
+  },
 };
 
 export default devLog;

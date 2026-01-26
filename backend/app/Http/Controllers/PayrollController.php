@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
+use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
 use App\Models\User;
 use App\Exports\PayrollExport;
@@ -73,10 +74,10 @@ class PayrollController extends Controller
                 'created_by' => auth()->id(),
                 'notes' => $validated['notes'] ?? null,
             ]);
-            
+
             // Explicitly save and ensure the ID is generated before proceeding
             $payroll->save();
-            
+
             // Verify the payroll was saved and has an ID
             if (!$payroll->id) {
                 throw new \Exception('Failed to generate payroll ID');
@@ -98,6 +99,23 @@ class PayrollController extends Controller
 
             // Reload with count
             $payroll->loadCount('items');
+
+            // Log payroll creation
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'create_payroll',
+                'description' => "Payroll '{$payroll->period_name}' created with {$payroll->items_count} employee(s)",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'new_values' => [
+                    'payroll_id' => $payroll->id,
+                    'period_name' => $payroll->period_name,
+                    'period_start' => $payroll->period_start,
+                    'period_end' => $payroll->period_end,
+                    'items_count' => $payroll->items_count,
+                ],
+            ]);
 
             return response()->json([
                 'message' => 'Payroll created successfully',
@@ -140,7 +158,20 @@ class PayrollController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $oldValues = $payroll->toArray();
         $payroll->update($validated);
+
+        // Log payroll update
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'payroll',
+            'action' => 'update_payroll',
+            'description' => "Payroll '{$payroll->period_name}' updated",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $oldValues,
+            'new_values' => $payroll->fresh()->toArray(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -151,8 +182,21 @@ class PayrollController extends Controller
 
     public function destroy(Payroll $payroll)
     {
+        $payrollData = $payroll->toArray();
+
         // Allow deletion of any payroll status (draft, finalized, paid)
         $payroll->delete();
+
+        // Log payroll deletion
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'payroll',
+            'action' => 'delete_payroll',
+            'description' => "Payroll '{$payrollData['period_name']}' (ID: {$payrollData['id']}) deleted",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $payrollData,
+        ]);
 
         return response()->json([
             'message' => 'Payroll deleted successfully'
@@ -175,6 +219,21 @@ class PayrollController extends Controller
             'finalized_at' => now(),
         ]);
 
+        // Log payroll finalization
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'payroll',
+            'action' => 'finalize_payroll',
+            'description' => "Payroll '{$payroll->period_name}' finalized",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'new_values' => [
+                'payroll_id' => $payroll->id,
+                'status' => 'finalized',
+                'finalized_at' => now()->toDateTimeString(),
+            ],
+        ]);
+
         return response()->json([
             'message' => 'Payroll finalized successfully',
             'payroll' => $payroll->load(['items.employee', 'creator', 'finalizer'])
@@ -194,6 +253,20 @@ class PayrollController extends Controller
         try {
             $payrollService = new \App\Services\PayrollService();
             $payrollService->reprocessPayroll($payroll);
+
+            // Log payroll reprocessing
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'reprocess_payroll',
+                'description' => "Payroll '{$payroll->period_name}' reprocessed",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'new_values' => [
+                    'payroll_id' => $payroll->id,
+                    'items_count' => $payroll->items()->count(),
+                ],
+            ]);
 
             return response()->json([
                 'success' => true,
