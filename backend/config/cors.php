@@ -19,13 +19,14 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
+    'allowed_origins' => array_filter([
         'http://localhost:5173',
         'http://localhost:3000',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
         'https://payroll-system-gamma.vercel.app',
-    ],
+        env('FRONTEND_URL'), // Add frontend URL from .env
+    ]),
 
     'allowed_origins_patterns' => [],
 
