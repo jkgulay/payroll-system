@@ -566,98 +566,118 @@
       </v-card>
     </v-dialog>
 
-    <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="deleteDialog" max-width="500">
-      <v-card>
-        <v-card-title class="text-h5 bg-error text-white pa-4">
-          <v-icon color="white" class="mr-2">mdi-alert-circle</v-icon>
-          Confirm Delete
-        </v-card-title>
-        <v-card-text class="pa-6">
-          <v-alert type="warning" variant="tonal" class="mb-4">
-            <template v-slot:prepend>
-              <v-icon>mdi-alert</v-icon>
-            </template>
-            <div class="text-subtitle-2 font-weight-bold mb-2">
-              Warning: This action cannot be undone!
-            </div>
-            <div class="text-caption">
-              Deleting this payroll will permanently remove all associated data
-              including employee payroll items and deductions.
-            </div>
-          </v-alert>
+    <!-- Delete Confirmation Dialog - Modern Design -->
+    <v-dialog v-model="deleteDialog" max-width="550">
+      <v-card class="delete-dialog-modern">
+        <!-- Modern Header with Icon -->
+        <div class="delete-dialog-header">
+          <div class="delete-icon-wrapper">
+            <v-icon size="40" color="white">mdi-alert-circle-outline</v-icon>
+          </div>
+          <h2 class="delete-title">Confirm Deletion</h2>
+        </div>
 
-          <div v-if="selectedPayroll" class="mb-4">
-            <div class="text-subtitle-2 font-weight-bold mb-2">
-              Payroll Details:
+        <v-card-text class="delete-dialog-content">
+    
+
+          <!-- Payroll Details Card -->
+          <div v-if="selectedPayroll" class="details-card">
+            <div class="details-header">
+              <v-icon size="16" color="#ed985f">mdi-information-outline</v-icon>
+              <span>Payroll Information</span>
             </div>
-            <v-list density="compact" bg-color="grey-lighten-4" class="rounded">
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon size="small">mdi-label</v-icon>
-                </template>
-                <v-list-item-title>{{
-                  selectedPayroll.period_name
-                }}</v-list-item-title>
-                <v-list-item-subtitle>Period</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon size="small">mdi-account-group</v-icon>
-                </template>
-                <v-list-item-title
-                  >{{
-                    selectedPayroll.items_count
-                  }}
-                  employees</v-list-item-title
-                >
-                <v-list-item-subtitle>Affected Employees</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon size="small">mdi-cash</v-icon>
-                </template>
-                <v-list-item-title
-                  >₱{{
-                    formatCurrency(selectedPayroll.total_net)
-                  }}</v-list-item-title
-                >
-                <v-list-item-subtitle>Total Net Pay</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <template v-slot:prepend>
-                  <v-icon size="small">mdi-flag</v-icon>
-                </template>
-                <v-list-item-title>
-                  <v-chip
-                    :color="getStatusColor(selectedPayroll.status)"
-                    size="small"
-                  >
-                    {{ selectedPayroll.status.toUpperCase() }}
-                  </v-chip>
-                </v-list-item-title>
-                <v-list-item-subtitle>Status</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
+            <div class="details-grid">
+              <div class="detail-item">
+                <div class="detail-icon">
+                  <v-icon size="16">mdi-label</v-icon>
+                </div>
+                <div class="detail-content">
+                  <div class="detail-label">Period</div>
+                  <div class="detail-value">{{ selectedPayroll.period_name }}</div>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-icon">
+                  <v-icon size="16">mdi-account-group</v-icon>
+                </div>
+                <div class="detail-content">
+                  <div class="detail-label">Employees</div>
+                  <div class="detail-value">{{ selectedPayroll.items_count }} affected</div>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-icon">
+                  <v-icon size="16">mdi-cash</v-icon>
+                </div>
+                <div class="detail-content">
+                  <div class="detail-label">Total Amount</div>
+                  <div class="detail-value">₱{{ formatCurrency(selectedPayroll.total_net) }}</div>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-icon">
+                  <v-icon size="16">mdi-flag</v-icon>
+                </div>
+                <div class="detail-content">
+                  <div class="detail-label">Status</div>
+                  <div class="detail-value">
+                    <v-chip
+                      :color="getStatusColor(selectedPayroll.status)"
+                      size="small"
+                      variant="flat"
+                    >
+                      {{ selectedPayroll.status.toUpperCase() }}
+                    </v-chip>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <p class="text-body-2 mb-0">
-            Are you absolutely sure you want to delete this payroll?
-          </p>
+          <!-- Consequences List -->
+          <div class="consequences-section">
+            <div class="consequences-title">
+              <v-icon size="16" color="#64748b">mdi-alert-circle-outline</v-icon>
+              <span>What will be deleted:</span>
+            </div>
+            <ul class="consequences-list">
+              <li>All employee payroll items and calculations</li>
+              <li>Associated deduction records and installments</li>
+              <li>Payment history and transaction logs</li>
+            </ul>
+          </div>
+
+          <!-- Final Confirmation -->
+          <div class="final-confirmation">
+            <v-icon size="20" color="#ef4444">mdi-alert</v-icon>
+            <span>Are you absolutely sure you want to delete this payroll?</span>
+          </div>
         </v-card-text>
-        <v-card-actions class="pa-4">
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
+
+        <!-- Modern Actions -->
+        <v-card-actions class="delete-dialog-actions">
           <v-btn
-            color="error"
+            variant="outlined"
+            color="#64748b"
+            @click="deleteDialog = false"
+            class="cancel-btn"
+          >
+            <v-icon size="18" class="mr-1">mdi-close</v-icon>
+            Cancel
+          </v-btn>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="#ef4444"
             variant="flat"
             :loading="deleting"
             @click="deletePayroll"
+            class="delete-btn"
           >
-            <v-icon class="mr-1">mdi-delete</v-icon>
+            <v-icon size="18" class="mr-1">mdi-delete-forever</v-icon>
             Delete Permanently
           </v-btn>
         </v-card-actions>
+
       </v-card>
     </v-dialog>
   </div>
@@ -1330,12 +1350,278 @@ function formatCurrency(amount) {
 .dialog-btn-primary {
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-  margin-left: 12px;
 
   &:hover:not(:disabled) {
-    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+    transform: translateY(-1px);
+  }
+}
+
+// Delete Dialog - Modern Design
+.delete-dialog-modern {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.delete-dialog-header {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  padding: 32px 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 70%
+    );
+    animation: pulse 3s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.delete-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.delete-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 8px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.delete-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.delete-dialog-content {
+  padding: 24px !important;
+}
+
+.warning-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  margin-bottom: 20px;
+
+  span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ef4444;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.details-card {
+  background: linear-gradient(
+    135deg,
+    rgba(237, 152, 95, 0.04) 0%,
+    rgba(247, 185, 128, 0.02) 100%
+  );
+  border: 1px solid rgba(237, 152, 95, 0.15);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.details-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+
+  span {
+    font-size: 13px;
+    font-weight: 700;
+    color: #001f3d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.detail-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .v-icon {
+    color: white !important;
+  }
+}
+
+.detail-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #001f3d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.consequences-section {
+  background: rgba(100, 116, 139, 0.04);
+  border: 1px solid rgba(100, 116, 139, 0.15);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.consequences-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  span {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.consequences-list {
+  margin: 0;
+  padding-left: 20px;
+
+  li {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 6px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.final-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  border-left: 4px solid #ef4444;
+
+  span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #001f3d;
+    line-height: 1.5;
+  }
+}
+
+.delete-dialog-actions {
+  padding: 20px 24px !important;
+  background: rgba(0, 31, 61, 0.02);
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.cancel-btn {
+  text-transform: none !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  padding: 10px 20px !important;
+  letter-spacing: 0 !important;
+
+  &:hover {
+    background: rgba(100, 116, 139, 0.08) !important;
+  }
+}
+
+.delete-btn {
+  text-transform: none !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  padding: 10px 20px !important;
+  letter-spacing: 0 !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4) !important;
+    transform: translateY(-1px);
   }
 }
 
