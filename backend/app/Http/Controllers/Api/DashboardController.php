@@ -13,6 +13,7 @@ use App\Models\AttendanceCorrection;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -125,16 +126,16 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // Get employee using the employee_id from users table
-        $employee = null;
-
-        if ($user->employee_id) {
-            $employee = Employee::with(['project'])->find($user->employee_id);
-        }
+        // Get employee record for the logged-in user
+        $employee = Employee::with(['project'])
+            ->where('user_id', $user->id)
+            ->first();
 
         if (!$employee) {
             return response()->json([
-                'message' => 'Employee record not found',
+                'message' => 'Employee record not found. Please contact administrator.',
+                'user_id' => $user->id,
+                'username' => $user->username,
                 'employee' => null,
                 'attendance' => [],
                 'attendance_summary' => [
@@ -151,16 +152,36 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Get attendance for current month
-        $currentMonth = Carbon::now()->format('Y-m');
+        // Debug: Log employee ID being queried
+        Log::info('Employee Dashboard Query', [
+            'user_id' => $user->id,
+            'employee_id' => $employee->id,
+            'employee_number' => $employee->employee_number,
+        ]);
+
+        // Get attendance for last 3 months (including current month)
+        $threeMonthsAgo = Carbon::now()->subMonths(2)->startOfMonth();
         $attendance = Attendance::where('employee_id', $employee->id)
-            ->whereRaw("TO_CHAR(attendance_date, 'YYYY-MM') = ?", [$currentMonth])
+            ->where('attendance_date', '>=', $threeMonthsAgo)
             ->orderBy('attendance_date', 'desc')
             ->get();
 
+        // Debug: Log attendance query results
+        Log::info('Attendance Query', [
+            'employee_id' => $employee->id,
+            'date_from' => $threeMonthsAgo->toDateString(),
+            'records_found' => $attendance->count(),
+        ]);
+
+        // Get current month attendance for summary
+        $currentMonth = Carbon::now()->format('Y-m');
+        $currentMonthAttendance = $attendance->filter(function ($record) use ($currentMonth) {
+            return Carbon::parse($record->attendance_date)->format('Y-m') === $currentMonth;
+        });
+
         // Calculate total hours from time_in and time_out if regular_hours is 0
         $totalHours = 0;
-        foreach ($attendance as $record) {
+        foreach ($currentMonthAttendance as $record) {
             if ($record->regular_hours > 0) {
                 $totalHours += $record->regular_hours;
             } elseif ($record->time_in && $record->time_out) {
@@ -173,15 +194,15 @@ class DashboardController extends Controller
             }
         }
 
-        // Calculate attendance summary
+        // Calculate attendance summary (current month only)
         $attendanceSummary = [
-            'total_days' => $attendance->count(),
-            'present' => $attendance->where('status', 'present')->count(),
-            'absent' => $attendance->where('status', 'absent')->count(),
-            'late' => $attendance->where('status', 'late')->count(),
-            'undertime' => $attendance->where('status', 'undertime')->count(),
+            'total_days' => $currentMonthAttendance->count(),
+            'present' => $currentMonthAttendance->where('status', 'present')->count(),
+            'absent' => $currentMonthAttendance->where('status', 'absent')->count(),
+            'late' => $currentMonthAttendance->where('status', 'late')->count(),
+            'undertime' => $currentMonthAttendance->where('status', 'undertime')->count(),
             'total_hours' => round($totalHours, 2),
-            'overtime_hours' => $attendance->sum('overtime_hours'),
+            'overtime_hours' => $currentMonthAttendance->sum('overtime_hours'),
         ];
 
         // Get current/latest payslip (most recent paid)
@@ -193,25 +214,36 @@ class DashboardController extends Controller
             ->latest('id')
             ->first();
 
-        // Get payslip history (excluding current)
+        // Get all payslip history (last 12 months)
+        $oneYearAgo = Carbon::now()->subYear();
         $payslipHistory = PayrollItem::with(['payroll'])
             ->where('employee_id', $employee->id)
-            ->whereHas('payroll', function ($query) {
-                $query->where('status', 'paid');
-            })
-            ->when($currentPayslip, function ($query) use ($currentPayslip) {
-                $query->where('id', '!=', $currentPayslip->id);
+            ->whereHas('payroll', function ($query) use ($oneYearAgo) {
+                $query->where('status', 'paid')
+                    ->where('period_start', '>=', $oneYearAgo);
             })
             ->latest('id')
-            ->limit(10)
             ->get();
+
+        // Debug: Log payslip query results
+        Log::info('Payslip Query', [
+            'employee_id' => $employee->id,
+            'date_from' => $oneYearAgo->toDateString(),
+            'records_found' => $payslipHistory->count(),
+        ]);
 
         return response()->json([
             'employee' => $employee,
-            'attendance' => $attendance,
-            'attendance_summary' => $attendanceSummary,
+            'attendance' => $attendance, // Last 3 months
+            'attendance_summary' => $attendanceSummary, // Current month only
             'current_payslip' => $currentPayslip,
-            'payslip_history' => $payslipHistory,
+            'payslip_history' => $payslipHistory, // Last 12 months
+            'debug' => [
+                'employee_id' => $employee->id,
+                'attendance_count' => $attendance->count(),
+                'payslip_count' => $payslipHistory->count(),
+                'date_range_from' => $threeMonthsAgo->toDateString(),
+            ]
         ]);
     }
 

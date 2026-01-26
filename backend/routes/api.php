@@ -35,7 +35,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // User profile
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        $user = $request->user();
+
+        // Load employee relationship if user is an employee
+        if ($user->role === 'employee') {
+            $user->load('employee');
+        }
+
+        return $user;
     });
     Route::get('/profile', [App\Http\Controllers\Api\UserProfileController::class, 'getProfile']);
     Route::put('/profile', [App\Http\Controllers\Api\UserProfileController::class, 'updateProfile']);
