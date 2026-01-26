@@ -74,6 +74,9 @@ class PayrollController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
+            // Refresh the model to ensure ID is available (critical for PostgreSQL)
+            $payroll->refresh();
+
             // Generate payroll items for filtered employees
             $filters = [
                 'type' => $validated['filter_type'] ?? 'all',
