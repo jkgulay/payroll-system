@@ -34,28 +34,48 @@
             </div>
           </div>
 
-          <!-- Collapsible Info Section -->
-          <v-expansion-panels variant="accordion" class="info-accordion">
+          <!-- File Requirements - Collapsible Modern Card -->
+          <v-expansion-panels
+            variant="accordion"
+            class="requirements-accordion"
+          >
             <v-expansion-panel>
-              <v-expansion-panel-title class="info-panel-title">
-                <v-icon size="18" class="mr-2">mdi-information</v-icon>
-                <span class="text-body-2">File Requirements</span>
+              <v-expansion-panel-title class="requirements-panel-title">
+                <v-icon size="16" color="#ed985f" class="mr-2"
+                  >mdi-file-document-outline</v-icon
+                >
+                <span>File Requirements</span>
               </v-expansion-panel-title>
-              <v-expansion-panel-text class="info-panel-text">
-                <div class="info-grid">
-                  <div class="info-item">
-                    <div class="info-label">Required</div>
-                    <div class="info-value">Staff Code, Name</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Optional</div>
-                    <div class="info-value">
-                      Email, Mobile, Gender, Position, Department
+              <v-expansion-panel-text class="requirements-panel-text">
+                <div class="requirements-grid">
+                  <div class="requirement-item required">
+                    <div class="requirement-icon">
+                      <v-icon size="14">mdi-check-circle</v-icon>
+                    </div>
+                    <div class="requirement-content">
+                      <div class="requirement-label">Required Fields</div>
+                      <div class="requirement-value">Staff Code, Name</div>
                     </div>
                   </div>
-                  <div class="info-item">
-                    <div class="info-label">Format</div>
-                    <div class="info-value">Excel (.xls, .xlsx)</div>
+                  <div class="requirement-item optional">
+                    <div class="requirement-icon">
+                      <v-icon size="14">mdi-information</v-icon>
+                    </div>
+                    <div class="requirement-content">
+                      <div class="requirement-label">Optional Fields</div>
+                      <div class="requirement-value">
+                        Email, Mobile, Gender, Position, Department
+                      </div>
+                    </div>
+                  </div>
+                  <div class="requirement-item format">
+                    <div class="requirement-icon">
+                      <v-icon size="14">mdi-file-excel</v-icon>
+                    </div>
+                    <div class="requirement-content">
+                      <div class="requirement-label">File Format</div>
+                      <div class="requirement-value">Excel (.xls, .xlsx)</div>
+                    </div>
                   </div>
                 </div>
               </v-expansion-panel-text>
@@ -231,30 +251,50 @@
             </div>
           </div>
 
-          <!-- Collapsible Info Section -->
-          <v-expansion-panels variant="accordion" class="info-accordion">
+          <!-- File Requirements - Collapsible Modern Card -->
+          <v-expansion-panels
+            variant="accordion"
+            class="requirements-accordion"
+          >
             <v-expansion-panel>
-              <v-expansion-panel-title class="info-panel-title">
-                <v-icon size="18" class="mr-2">mdi-information</v-icon>
-                <span class="text-body-2">File Requirements</span>
+              <v-expansion-panel-title class="requirements-panel-title">
+                <v-icon size="16" color="#ed985f" class="mr-2"
+                  >mdi-file-document-outline</v-icon
+                >
+                <span>File Requirements</span>
               </v-expansion-panel-title>
-              <v-expansion-panel-text class="info-panel-text">
-                <div class="info-grid">
-                  <div class="info-item">
-                    <div class="info-label">Required</div>
-                    <div class="info-value">
-                      Staff Code, Name, Date columns (MM-DD)
+              <v-expansion-panel-text class="requirements-panel-text">
+                <div class="requirements-grid">
+                  <div class="requirement-item required">
+                    <div class="requirement-icon">
+                      <v-icon size="14">mdi-check-circle</v-icon>
+                    </div>
+                    <div class="requirement-content">
+                      <div class="requirement-label">Required Fields</div>
+                      <div class="requirement-value">
+                        Staff Code, Name, Date columns (MM-DD)
+                      </div>
                     </div>
                   </div>
-                  <div class="info-item">
-                    <div class="info-label">Time Format</div>
-                    <div class="info-value">
-                      HH:MM (e.g., 08:30), multiple times per day
+                  <div class="requirement-item optional">
+                    <div class="requirement-icon">
+                      <v-icon size="14">mdi-clock-outline</v-icon>
+                    </div>
+                    <div class="requirement-content">
+                      <div class="requirement-label">Time Format</div>
+                      <div class="requirement-value">
+                        HH:MM (e.g., 08:30), multiple times per day
+                      </div>
                     </div>
                   </div>
-                  <div class="info-item">
-                    <div class="info-label">Format</div>
-                    <div class="info-value">Excel (.xls, .xlsx)</div>
+                  <div class="requirement-item format">
+                    <div class="requirement-icon">
+                      <v-icon size="14">mdi-file-excel</v-icon>
+                    </div>
+                    <div class="requirement-content">
+                      <div class="requirement-label">File Format</div>
+                      <div class="requirement-value">Excel (.xls, .xlsx)</div>
+                    </div>
                   </div>
                 </div>
               </v-expansion-panel-text>
@@ -869,57 +909,6 @@ const showTemplateInfo = () => {
   margin: 4px 0 0 0;
 }
 
-// Info Accordion - Compact
-.info-accordion {
-  margin: 16px 24px;
-
-  :deep(.v-expansion-panel) {
-    background: transparent !important;
-    box-shadow: none !important;
-  }
-
-  .info-panel-title {
-    min-height: 40px !important;
-    padding: 8px 12px !important;
-    font-size: 13px;
-    font-weight: 600;
-    color: #001f3d;
-    background: rgba(0, 31, 61, 0.02);
-    border-radius: 8px;
-  }
-
-  .info-panel-text {
-    padding: 12px !important;
-  }
-}
-
-.info-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.info-item {
-  padding: 10px 12px;
-  background: rgba(0, 31, 61, 0.02);
-  border-radius: 8px;
-  border-left: 3px solid #ed985f;
-}
-
-.info-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.info-value {
-  font-size: 13px;
-  color: #001f3d;
-  line-height: 1.5;
-}
-
 // Default Values & Date Selection Sections
 .default-values-section,
 .date-selection-section {
@@ -939,6 +928,134 @@ const showTemplateInfo = () => {
   .v-icon {
     color: #ed985f;
   }
+}
+
+// File Requirements Accordion - Modern Collapsible Design
+.requirements-accordion {
+  margin: 16px 16px;
+  max-width: 95%;
+
+  :deep(.v-expansion-panel) {
+    background: linear-gradient(
+      135deg,
+      rgba(237, 152, 95, 0.04) 0%,
+      rgba(247, 185, 128, 0.02) 100%
+    ) !important;
+    border: 1px solid rgba(237, 152, 95, 0.15) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  :deep(.v-expansion-panel-title) {
+    min-height: 48px !important;
+    padding: 12px 48px 12px 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  :deep(.v-expansion-panel-title__overlay) {
+    display: none !important;
+  }
+
+  :deep(.v-expansion-panel-title__icon) {
+    position: absolute !important;
+    right: 12px !important;
+    margin-inline-start: 0 !important;
+  }
+
+  :deep(.v-expansion-panel-text__wrapper) {
+    padding: 0 16px 16px 16px !important;
+  }
+}
+
+.requirements-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #001f3d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  span {
+    font-size: 13px;
+    font-weight: 700;
+  }
+}
+
+.requirements-panel-text {
+  padding: 0 !important;
+}
+
+.requirements-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.requirement-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+
+  &.required .requirement-icon {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  }
+
+  &.optional .requirement-icon {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  }
+
+  &.format .requirement-icon {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  }
+}
+
+.requirement-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+  .v-icon {
+    color: white !important;
+  }
+}
+
+.requirement-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.requirement-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.requirement-value {
+  font-size: 13px;
+  color: #001f3d;
+  line-height: 1.5;
+  font-weight: 500;
 }
 
 // Compact Drop Zone
