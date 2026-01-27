@@ -102,7 +102,7 @@ class EmployeeController extends Controller
 
         // Validate role separately (it's for user account, not employee record)
         $requestedRole = $request->validate([
-            'role' => 'nullable|in:admin,accountant,employee',
+            'role' => 'nullable|in:admin,accountant,employee,payrollist',
         ])['role'] ?? null;
 
         // Normalize employee data using helper
@@ -200,15 +200,19 @@ class EmployeeController extends Controller
                     $newSalary
                 );
 
-                // Auto-update user role: if new position is "Accountant", set role to "accountant"
-                if (strtolower($newPosition->position_name) === 'accountant') {
-                    if ($employee->user_id) {
+                // Auto-update user role based on position
+                if ($employee->user_id) {
+                    $newPositionName = strtolower($newPosition->position_name);
+                    $oldPositionName = strtolower($oldPosition->position_name);
+
+                    // Assign role based on new position
+                    if ($newPositionName === 'accountant') {
                         \App\Models\User::where('id', $employee->user_id)->update(['role' => 'accountant']);
+                    } elseif ($newPositionName === 'payrollist') {
+                        \App\Models\User::where('id', $employee->user_id)->update(['role' => 'payrollist']);
                     }
-                }
-                // If changing FROM Accountant to something else, set role back to "employee"
-                elseif (strtolower($oldPosition->position_name) === 'accountant') {
-                    if ($employee->user_id) {
+                    // If changing FROM Accountant or Payrollist to something else, set role back to "employee"
+                    elseif (in_array($oldPositionName, ['accountant', 'payrollist'])) {
                         \App\Models\User::where('id', $employee->user_id)->update(['role' => 'employee']);
                     }
                 }
@@ -362,12 +366,13 @@ class EmployeeController extends Controller
             'role' => $role,
             'is_active' => true,
             'must_change_password' => true,
+            'employee_id' => $employee->id,
         ]);
 
         // Store temporary password on user object (not saved to DB)
         $user->temporary_password = $temporaryPassword;
 
-        // Link user to employee
+        // Link user to employee (bidirectional)
         $employee->user_id = $user->id;
         $employee->save();
 
@@ -396,12 +401,12 @@ class EmployeeController extends Controller
         $employee->save();
 
         // Log the change for audit
-        $description = "Pay rate updated from ₱" . number_format((float)$oldRate, 2) . " to ₱" . number_format((float)$newRate, 2) . 
+        $description = "Pay rate updated from ₱" . number_format((float)$oldRate, 2) . " to ₱" . number_format((float)$newRate, 2) .
             " for employee {$employee->employee_number} ({$employee->full_name})";
         if (!empty($validated['reason'])) {
             $description .= ". Reason: {$validated['reason']}";
         }
-        
+
         AuditLog::create([
             'user_id' => auth()->id(),
             'module' => 'employees',
@@ -442,13 +447,13 @@ class EmployeeController extends Controller
         $newRate = $employee->getBasicSalary();
 
         // Log the change for audit
-        $description = "Custom pay rate cleared. Rate changed from ₱" . number_format((float)$oldRate, 2) . " to ₱" . number_format((float)$newRate, 2) . 
+        $description = "Custom pay rate cleared. Rate changed from ₱" . number_format((float)$oldRate, 2) . " to ₱" . number_format((float)$newRate, 2) .
             " (position-based rate) for employee {$employee->employee_number} ({$employee->full_name})";
         $reason = $request->input('reason');
         if (!empty($reason)) {
             $description .= ". Reason: {$reason}";
         }
-        
+
         AuditLog::create([
             'user_id' => auth()->id(),
             'module' => 'employees',

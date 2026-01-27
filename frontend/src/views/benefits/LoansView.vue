@@ -1,69 +1,67 @@
 <template>
   <div class="loans-page">
-    <!-- Modern Page Header -->
-    <div class="page-header">
-      <div class="page-title-section">
+    <div class="modern-card">
+      <!-- Modern Page Header -->
+      <div class="page-header">
         <div class="page-icon-badge">
-          <v-icon size="20">mdi-hand-coin</v-icon>
+          <v-icon icon="mdi-hand-coin" size="24" color="white"></v-icon>
         </div>
-        <div>
+        <div class="page-header-content">
           <h1 class="page-title">Employee Loans</h1>
           <p class="page-subtitle">
             Manage employee loan requests and payment tracking
           </p>
         </div>
+        <button
+          v-if="userRole !== 'employee'"
+          class="action-btn action-btn-primary"
+          @click="openAddDialog"
+        >
+          <v-icon size="20">mdi-plus</v-icon>
+          <span>Add Loan</span>
+        </button>
       </div>
-      <button
-        v-if="userRole !== 'employee'"
-        class="action-btn action-btn-primary"
-        @click="openAddDialog"
-      >
-        <v-icon size="20">mdi-plus</v-icon>
-        <span>Add Loan</span>
-      </button>
-    </div>
 
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon total">
-          <v-icon size="20">mdi-hand-coin</v-icon>
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon total">
+            <v-icon size="20">mdi-hand-coin</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Total Loans</div>
+            <div class="stat-value">{{ loans.length }}</div>
+          </div>
         </div>
-        <div class="stat-content">
-          <div class="stat-label">Total Loans</div>
-          <div class="stat-value">{{ loans.length }}</div>
+        <div class="stat-card" v-if="userRole !== 'employee'">
+          <div class="stat-icon pending">
+            <v-icon size="20">mdi-clock-alert</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value">{{ pendingCount }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon active">
+            <v-icon size="20">mdi-check-circle</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Active</div>
+            <div class="stat-value">{{ activeCount }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon balance">
+            <v-icon size="20">mdi-cash-multiple</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Total Balance</div>
+            <div class="stat-value">₱{{ formatNumber(totalBalance) }}</div>
+          </div>
         </div>
       </div>
-      <div class="stat-card" v-if="userRole !== 'employee'">
-        <div class="stat-icon pending">
-          <v-icon size="20">mdi-clock-alert</v-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-label">Pending</div>
-          <div class="stat-value">{{ pendingCount }}</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon active">
-          <v-icon size="20">mdi-check-circle</v-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-label">Active</div>
-          <div class="stat-value">{{ activeCount }}</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon balance">
-          <v-icon size="20">mdi-cash-multiple</v-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-label">Total Balance</div>
-          <div class="stat-value">₱{{ formatNumber(totalBalance) }}</div>
-        </div>
-      </div>
-    </div>
 
-    <div class="modern-card">
       <!-- Pending Approval Alert (Admin Only) -->
       <v-alert
         v-if="userRole === 'admin' && pendingCount > 0"
@@ -207,55 +205,71 @@
         </template>
 
         <template v-slot:item.actions="{ item }">
-          <!-- Admin Actions -->
-          <template v-if="userRole === 'admin' && item.status === 'pending'">
-            <v-btn
-              icon="mdi-check"
-              size="small"
-              variant="text"
-              color="success"
-              @click="openApproveDialog(item)"
-            ></v-btn>
-            <v-btn
-              icon="mdi-close"
-              size="small"
-              variant="text"
-              color="error"
-              @click="openRejectDialog(item)"
-            ></v-btn>
-          </template>
+          <v-menu>
+            <template v-slot:activator="{ props }">
+              <v-btn
+                icon="mdi-dots-vertical"
+                size="small"
+                variant="text"
+                v-bind="props"
+              ></v-btn>
+            </template>
+            <v-list density="compact">
+              <!-- View Details -->
+              <v-list-item @click="viewDetails(item)">
+                <template v-slot:prepend>
+                  <v-icon color="info">mdi-eye</v-icon>
+                </template>
+                <v-list-item-title>View Details</v-list-item-title>
+              </v-list-item>
 
-          <!-- Accountant/Admin Actions -->
-          <v-btn
-            v-if="
-              userRole !== 'employee' &&
-              ['pending', 'approved'].includes(item.status)
-            "
-            icon="mdi-pencil"
-            size="small"
-            variant="text"
-            @click="openEditDialog(item)"
-          ></v-btn>
-          <v-btn
-            v-if="
-              userRole !== 'employee' &&
-              ['pending', 'rejected'].includes(item.status)
-            "
-            icon="mdi-delete"
-            size="small"
-            variant="text"
-            color="error"
-            @click="confirmDelete(item)"
-          ></v-btn>
+              <!-- Admin Actions - Approve/Reject -->
+              <template
+                v-if="userRole === 'admin' && item.status === 'pending'"
+              >
+                <v-list-item @click="openApproveDialog(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="success">mdi-check</v-icon>
+                  </template>
+                  <v-list-item-title>Approve</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="openRejectDialog(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="error">mdi-close</v-icon>
+                  </template>
+                  <v-list-item-title>Reject</v-list-item-title>
+                </v-list-item>
+              </template>
 
-          <!-- View Details -->
-          <v-btn
-            icon="mdi-eye"
-            size="small"
-            variant="text"
-            color="info"
-            @click="viewDetails(item)"
-          ></v-btn>
+              <!-- Edit Action -->
+              <v-list-item
+                v-if="
+                  userRole !== 'employee' &&
+                  ['pending', 'approved'].includes(item.status)
+                "
+                @click="openEditDialog(item)"
+              >
+                <template v-slot:prepend>
+                  <v-icon>mdi-pencil</v-icon>
+                </template>
+                <v-list-item-title>Edit</v-list-item-title>
+              </v-list-item>
+
+              <!-- Delete Action -->
+              <v-list-item
+                v-if="
+                  userRole !== 'employee' &&
+                  ['pending', 'rejected'].includes(item.status)
+                "
+                @click="confirmDelete(item)"
+              >
+                <template v-slot:prepend>
+                  <v-icon color="error">mdi-delete</v-icon>
+                </template>
+                <v-list-item-title class="text-error">Delete</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </template>
 
         <template v-slot:no-data>
@@ -1292,70 +1306,71 @@ onMounted(() => {
 </script>
 <style lang="scss" scoped>
 .loans-page {
-  max-width: 1400px;
-  margin: 0 auto;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.modern-card {
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 // Page Header
 .page-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
   margin-bottom: 32px;
-  flex-wrap: wrap;
-}
-
-.page-title-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
 }
 
 .page-icon-badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
   flex-shrink: 0;
+}
 
-  .v-icon {
-    color: #ffffff !important;
-  }
+.page-header-content {
+  flex: 1;
 }
 
 .page-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: #001f3d;
-  margin: 0 0 4px 0;
-  letter-spacing: -0.5px;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .page-subtitle {
   font-size: 14px;
-  color: rgba(0, 31, 61, 0.6);
-  margin: 0;
+  color: #64748b;
+  margin: 4px 0 0 0;
 }
 
 // Stats Grid
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
 
 .stat-card {
-  background: white;
+  background: #f8f9fa;
   border-radius: 12px;
   padding: 14px 16px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
+  border: 1px solid rgba(0, 31, 61, 0.06);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1376,9 +1391,9 @@ onMounted(() => {
   }
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
-    border-color: rgba(237, 152, 95, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.15);
+    border-color: rgba(237, 152, 95, 0.2);
 
     &::before {
       transform: scaleY(1);
@@ -1447,15 +1462,6 @@ onMounted(() => {
   font-weight: 700;
   color: #001f3d;
   line-height: 1;
-}
-
-.modern-card {
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  overflow: hidden;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .filters-section {

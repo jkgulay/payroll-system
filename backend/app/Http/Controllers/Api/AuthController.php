@@ -87,6 +87,12 @@ class AuthController extends Controller
         $user->last_login_at = now();
         $user->save();
 
+        // Load employee relationship to get full name
+        $user->load('employee');
+
+        // Get full name from employee if available
+        $fullName = $user->employee ? $user->employee->full_name : $user->name;
+
         // Create token
         $token = $user->createToken('auth-token')->plainTextToken;
 
@@ -95,7 +101,8 @@ class AuthController extends Controller
             'user' => [
                 'id' => $user->id,
                 'username' => $user->username,
-                'name' => $user->name,
+                'name' => $fullName,
+                'full_name' => $fullName,
                 'email' => $user->email,
                 'role' => $user->role,
                 'is_active' => $user->is_active,

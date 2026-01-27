@@ -163,7 +163,9 @@
                                   ? '#ed985f'
                                   : item.value === 'accountant'
                                     ? '#f7b980'
-                                    : '#001f3d'
+                                    : item.value === 'payrollist'
+                                      ? '#4CAF50'
+                                      : '#001f3d'
                               "
                               size="20"
                             >
@@ -172,7 +174,9 @@
                                   ? "mdi-shield-crown"
                                   : item.value === "accountant"
                                     ? "mdi-calculator"
-                                    : "mdi-account-hard-hat"
+                                    : item.value === "payrollist"
+                                      ? "mdi-cash-register"
+                                      : "mdi-account-hard-hat"
                               }}
                             </v-icon>
                           </template>
@@ -287,6 +291,7 @@ const errors = reactive({
 const roles = [
   { title: "Admin", value: "admin" },
   { title: "Accountant", value: "accountant" },
+  { title: "Payrollist", value: "payrollist" },
   { title: "Employee", value: "employee" },
 ];
 

@@ -6,7 +6,7 @@ export const useAuthStore = defineStore("auth", () => {
   // State
   const user = ref(null);
   const token = ref(
-    localStorage.getItem("token") || sessionStorage.getItem("token") || null
+    localStorage.getItem("token") || sessionStorage.getItem("token") || null,
   );
   const loading = ref(false);
   const rememberMe = ref(localStorage.getItem("rememberMe") === "true");
@@ -31,10 +31,10 @@ export const useAuthStore = defineStore("auth", () => {
   const userRole = computed(() => user.value?.role || null);
   const isAdmin = computed(() => userRole.value === "admin");
   const isAccountant = computed(() =>
-    ["admin", "accountant"].includes(userRole.value)
+    ["admin", "accountant"].includes(userRole.value),
   );
   const mustChangePassword = computed(
-    () => user.value?.must_change_password || false
+    () => user.value?.must_change_password || false,
   );
 
   // Actions
@@ -53,6 +53,19 @@ export const useAuthStore = defineStore("auth", () => {
       user.value = response.data.user;
       rememberMe.value = credentials.remember || false;
 
+      // Set default Authorization header first
+      api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
+
+      // Fetch fresh profile data to get full employee info
+      try {
+        const profileResponse = await api.get("/profile");
+        if (profileResponse.data.success && profileResponse.data.data) {
+          user.value = { ...user.value, ...profileResponse.data.data };
+        }
+      } catch (profileError) {
+        console.warn("Could not fetch profile after login:", profileError);
+      }
+
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(user.value));
 
@@ -68,9 +81,6 @@ export const useAuthStore = defineStore("auth", () => {
         localStorage.removeItem("token");
         localStorage.removeItem("rememberMe");
       }
-
-      // Set default Authorization header
-      api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
 
       return response.data;
     } catch (error) {

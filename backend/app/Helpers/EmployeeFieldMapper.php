@@ -128,14 +128,24 @@ class EmployeeFieldMapper
     {
         if (isset($data['_position_rate'])) {
             $positionRate = $data['_position_rate'];
-            if (strtolower($positionRate->position_name) === 'accountant') {
+            $positionName = strtolower($positionRate->position_name);
+
+            if ($positionName === 'accountant') {
                 return 'accountant';
+            } elseif ($positionName === 'payrollist') {
+                return 'payrollist';
             }
         }
 
         // Check by position string as fallback
-        if (!empty($data['position']) && strtolower($data['position']) === 'accountant') {
-            return 'accountant';
+        if (!empty($data['position'])) {
+            $positionName = strtolower($data['position']);
+
+            if ($positionName === 'accountant') {
+                return 'accountant';
+            } elseif ($positionName === 'payrollist') {
+                return 'payrollist';
+            }
         }
 
         return $defaultRole;

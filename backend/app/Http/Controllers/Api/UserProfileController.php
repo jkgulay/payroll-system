@@ -21,9 +21,31 @@ class UserProfileController extends Controller
         try {
             $user = auth()->user();
 
+            // Load employee relationship
+            $user->load('employee');
+
+            // Get full name from employee if available
+            $fullName = null;
+            if ($user->employee) {
+                $fullName = $user->employee->full_name;
+            }
+
             return response()->json([
                 'success' => true,
-                'data' => $user
+                'data' => [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'name' => $fullName ?? $user->name,
+                    'full_name' => $fullName ?? $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'is_active' => $user->is_active,
+                    'must_change_password' => $user->must_change_password,
+                    'last_login_at' => $user->last_login_at,
+                    'avatar' => $user->avatar,
+                    'employee_id' => $user->employee ? $user->employee->id : null,
+                    'employee' => $user->employee,
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
