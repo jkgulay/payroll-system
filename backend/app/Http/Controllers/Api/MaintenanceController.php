@@ -34,13 +34,13 @@ class MaintenanceController extends Controller
 
             // Get the max ID from payrolls table
             $maxId = DB::table('payrolls')->max('id') ?? 0;
-            
+
             // Check current sequence value
             $currentSeq = DB::selectOne("SELECT last_value FROM payrolls_id_seq")?->last_value ?? 0;
-            
+
             // Check if sequence is already correct
             $isCorrect = ($maxId == 0 && $currentSeq <= 1) || ($currentSeq >= $maxId && $currentSeq - $maxId <= 1);
-            
+
             if ($isCorrect) {
                 return response()->json([
                     'message' => 'Sequence is already correct, no fix needed',
