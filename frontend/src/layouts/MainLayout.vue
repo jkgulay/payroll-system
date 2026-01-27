@@ -545,7 +545,7 @@ const menuItems = computed(() => {
       icon: "mdi-calendar-star",
       value: "holidays",
       to: "/holidays",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "accountant", "payrollist"],
     },
     {
       title: "Settings",
@@ -672,7 +672,7 @@ const menuSections = computed(() => {
       icon: "mdi-calendar-star",
       value: "holidays",
       to: "/holidays",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "accountant", "payrollist"],
     },
     {
       title: "Departments",

@@ -300,7 +300,10 @@ const router = createRouter({
             import(
               /* webpackChunkName: "settings" */ "@/views/settings/HolidayManagementView.vue"
             ),
-          meta: { title: "Holiday Management", roles: ["admin", "accountant"] },
+          meta: {
+            title: "Holiday Management",
+            roles: ["admin", "accountant", "payrollist"],
+          },
         },
         {
           path: "audit-trail",

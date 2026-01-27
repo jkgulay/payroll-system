@@ -19,6 +19,7 @@ class UserProfileController extends Controller
     public function getProfile()
     {
         try {
+            /** @var User $user */
             $user = auth()->user();
 
             // Load employee relationship

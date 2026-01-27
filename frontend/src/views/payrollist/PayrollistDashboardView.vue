@@ -331,6 +331,15 @@
               </button>
               <button
                 class="quick-action-btn"
+                @click="$router.push('/holidays')"
+              >
+                <div class="quick-action-icon">
+                  <v-icon>mdi-calendar-star</v-icon>
+                </div>
+                <span>Holidays</span>
+              </button>
+              <button
+                class="quick-action-btn"
                 @click="$router.push('/profile')"
               >
                 <div class="quick-action-icon">
