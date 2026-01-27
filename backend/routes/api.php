@@ -36,6 +36,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Maintenance Routes (Admin only)
     Route::post('/maintenance/fix-payroll-sequence', [App\Http\Controllers\Api\MaintenanceController::class, 'fixPayrollSequence'])->middleware('role:admin');
     Route::get('/maintenance/database-health', [App\Http\Controllers\Api\MaintenanceController::class, 'databaseHealth'])->middleware('role:admin');
+    Route::post('/maintenance/clean-database', [App\Http\Controllers\Api\MaintenanceController::class, 'cleanDatabase'])->middleware('role:admin');
 
     // User profile
     Route::get('/user', function (Request $request) {
