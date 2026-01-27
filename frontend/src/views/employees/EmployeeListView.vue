@@ -859,6 +859,7 @@
                   clearable
                   hint="Daily rate will auto-update based on position"
                   persistent-hint
+                  @update:model-value="onPositionChange"
                 ></v-autocomplete>
               </v-col>
 
@@ -1365,8 +1366,14 @@ import {
 
 const toast = useToast();
 const employeeStore = useEmployeeStore();
-const { positionOptions, getRate, loadPositionRates, refreshRates } =
-  usePositionRates();
+const {
+  positionOptions,
+  getRate,
+  loadPositionRates,
+  refreshRates,
+  positionRates,
+  getPositionRate,
+} = usePositionRates();
 
 const search = ref("");
 const page = ref(1);
@@ -1475,6 +1482,18 @@ watch(
     }
   },
 );
+
+// Handle position change - update both position name and position_id
+function onPositionChange(positionName) {
+  if (!selectedEmployee.value || !positionName) {
+    return;
+  }
+
+  const positionRate = getPositionRate(positionName);
+  if (positionRate) {
+    selectedEmployee.value.position_id = positionRate.id;
+  }
+}
 
 async function fetchEmployees() {
   const response = await employeeStore.fetchEmployees({
@@ -1699,6 +1718,10 @@ function closeDialog() {
   showEmployeeDialog.value = false;
   isEditing.value = false;
   selectedEmployee.value = null;
+}
+
+function toggleEditMode() {
+  isEditing.value = !isEditing.value;
 }
 
 function getWorkScheduleColor(schedule) {
