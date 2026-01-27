@@ -24,7 +24,7 @@ class MaintenanceController extends Controller
             }
 
             $driver = DB::connection()->getDriverName();
-            
+
             if ($driver !== 'pgsql') {
                 return response()->json([
                     'message' => 'This fix is only for PostgreSQL databases.',
@@ -34,19 +34,19 @@ class MaintenanceController extends Controller
 
             // Get the max ID from payrolls table
             $maxId = DB::table('payrolls')->max('id') ?? 0;
-            
+
             // Reset the sequence
             DB::statement("SELECT setval('payrolls_id_seq', {$maxId})");
-            
+
             // Verify
             $nextId = DB::selectOne("SELECT nextval('payrolls_id_seq') as next_id")->next_id;
-            
+
             Log::info('Payroll sequence fixed', [
                 'max_id' => $maxId,
                 'next_id' => $nextId,
                 'user_id' => auth()->id()
             ]);
-            
+
             return response()->json([
                 'message' => 'Payroll sequence fixed successfully',
                 'current_max_id' => $maxId,
@@ -55,7 +55,7 @@ class MaintenanceController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Error fixing payroll sequence: ' . $e->getMessage());
-            
+
             return response()->json([
                 'message' => 'Error fixing sequence',
                 'error' => $e->getMessage()
@@ -86,7 +86,7 @@ class MaintenanceController extends Controller
                 // Check payroll sequence
                 $maxId = DB::table('payrolls')->max('id') ?? 0;
                 $currentSeq = DB::selectOne("SELECT last_value FROM payrolls_id_seq")?->last_value ?? 0;
-                
+
                 $health['payrolls'] = [
                     'max_id' => $maxId,
                     'sequence_value' => $currentSeq,

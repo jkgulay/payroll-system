@@ -109,7 +109,7 @@ async function checkHealth() {
 async function fixPayrollSequence() {
   if (
     !confirm(
-      "Are you sure you want to fix the payroll sequence? This is safe but should only be done when needed."
+      "Are you sure you want to fix the payroll sequence? This is safe but should only be done when needed.",
     )
   ) {
     return;
