@@ -179,11 +179,12 @@ class Attendance extends Model
         $this->late_hours = $this->calculateLateHours($timeIn);
 
         // Calculate undertime - use department-specific logic if applicable
-        if ($this->isUndertimeDepartment()) {
-            // Use strict undertime calculation for specific departments
+        $undertimeGroup = $this->getUndertimeGroup();
+        if ($undertimeGroup) {
+            // Use strict undertime calculation for tracked departments
             $this->undertime_hours = $this->calculateUndertimeHours($timeIn, $totalHours);
         } else {
-            // Default undertime calculation for other departments
+            // Default undertime calculation for non-tracked departments
             if ($totalHours < $standardHours && $this->status === 'present') {
                 $this->undertime_hours = $standardHours - $totalHours;
             } else {
@@ -233,46 +234,59 @@ class Attendance extends Model
 
     /**
      * Check if employee's department requires strict undertime tracking
-     * These departments have 8:00 AM time-in requirement
+     * Returns the group ('8am', '730am', or null)
      */
-    private function isUndertimeDepartment(): bool
+    private function getUndertimeGroup(): ?string
     {
         if (!$this->employee) {
-            return false;
+            return null;
         }
 
-        // Get tracked departments from config
-        $undertimeDepartments = config('payroll.undertime.tracked_departments', [
-            'Admin Resign',
-            'Sur admin',
-            'Weekly Admin (mix)',
-            'ENGINEER SA SITE',
-            'Giovanni Construction and Power On Enterprise Co',
-        ]);
+        $department = $this->employee->department;
 
-        return in_array($this->employee->department, $undertimeDepartments);
+        // Check if in 8:00 AM group
+        $group8am = config('payroll.undertime.group_8am.departments', []);
+        if (in_array($department, $group8am)) {
+            return '8am';
+        }
+
+        // Check if in 7:30 AM group (all other departments)
+        // Excluding null/empty departments
+        if (!empty($department)) {
+            return '730am';
+        }
+
+        return null;
     }
 
     /**
      * Calculate undertime hours for departments with strict time-in requirements
+     * Supports multiple department groups with different time-in schedules
      */
     private function calculateUndertimeHours(Carbon $timeIn, float $totalHours): float
     {
-        // Only apply for undertime-tracked departments
-        if (!$this->isUndertimeDepartment()) {
+        // Get the undertime group this employee belongs to
+        $group = $this->getUndertimeGroup();
+        
+        if (!$group) {
+            return 0; // No undertime tracking for this department
+        }
+
+        // Get configuration for the specific group
+        $groupConfig = config("payroll.undertime.group_{$group}");
+        if (!$groupConfig) {
             return 0;
         }
 
-        // Get configuration values
-        $standardTimeInConfig = config('payroll.undertime.standard_time_in', '08:00');
-        $gracePeriodMinutes = config('payroll.undertime.grace_period_minutes', 3);
-        $halfDayThresholdConfig = config('payroll.undertime.half_day_threshold', '09:01');
+        $standardTimeInConfig = $groupConfig['standard_time_in'];
+        $gracePeriodMinutes = $groupConfig['grace_period_minutes'];
+        $halfDayThresholdConfig = $groupConfig['half_day_threshold'];
         $standardHours = config('payroll.standard_hours_per_day', 8);
 
         $standardTimeIn = Carbon::parse($timeIn->toDateString() . ' ' . $standardTimeInConfig);
         $halfDayThreshold = Carbon::parse($timeIn->toDateString() . ' ' . $halfDayThresholdConfig);
 
-        // Check if time-in is 9:01 or later - mark as half day
+        // Check if time-in is at or after half-day threshold - mark as half day
         if ($timeIn->gte($halfDayThreshold)) {
             $this->status = 'half_day';
             // Undertime is 4 hours (half of 8 hours)

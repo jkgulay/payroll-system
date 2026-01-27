@@ -45,22 +45,29 @@ return [
         // Enable/disable undertime tracking
         'enabled' => env('PAYROLL_UNDERTIME_ENABLED', true),
 
-        // Standard time-in for undertime-tracked departments
-        'standard_time_in' => env('PAYROLL_UNDERTIME_TIME_IN', '08:00'),
+        // Group 1: 8:00 AM time-in departments (Admin/Engineers)
+        'group_8am' => [
+            'standard_time_in' => '08:00',
+            'grace_period_minutes' => 3, // 8:00 - 8:03
+            'half_day_threshold' => '09:01',
+            'departments' => [
+                'Admin Resign',
+                'Sur admin',
+                'Weekly Admin (mix)',
+                'ENGINEER SA SITE',
+                'Giovanni Construction and Power On Enterprise Co',
+            ],
+        ],
 
-        // Grace period in minutes (e.g., 3 minutes = 8:00 to 8:03)
-        'grace_period_minutes' => env('PAYROLL_UNDERTIME_GRACE_PERIOD', 3),
-
-        // Half-day threshold (time-in at or after this time = half-day)
-        'half_day_threshold' => env('PAYROLL_UNDERTIME_HALFDAY_THRESHOLD', '09:01'),
-
-        // Departments that require strict undertime tracking
-        'tracked_departments' => [
-            'Admin Resign',
-            'Sur admin',
-            'Weekly Admin (mix)',
-            'ENGINEER SA SITE',
-            'Giovanni Construction and Power On Enterprise Co',
+        // Group 2: 7:30 AM time-in departments (Remaining sites/departments)
+        'group_730am' => [
+            'standard_time_in' => '07:30',
+            'grace_period_minutes' => 3, // 7:30 - 7:33
+            'half_day_threshold' => '08:31',
+            'departments' => [
+                // All other departments not in group_8am
+                // Will be determined dynamically
+            ],
         ],
     ],
 

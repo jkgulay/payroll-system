@@ -3,20 +3,31 @@
 ## Summary
 ✅ **Implemented department-specific undertime tracking with automatic salary deductions**
 
-## Departments Affected
+## Departments with Undertime Tracking
+
+### Group 1: 8:00 AM Time-In (Admin/Engineer Departments)
 - Admin Resign
 - Sur admin  
 - Weekly Admin (mix)
 - ENGINEER SA SITE
 - Giovanni Construction and Power On Enterprise Co
 
-## Quick Rules
-
+**Rules:**
 | Time In | Status | Undertime Hours | Deduction Formula |
 |---------|--------|-----------------|-------------------|
 | 8:00 - 8:03 | ✅ On Time | 0 | ₱0 |
 | 8:04 - 9:00 | ⚠️ Late | Minutes/60 | (Rate/8) × Hours |
 | 9:01+ | ❌ Half-Day | 4 hours | Rate/2 |
+
+### Group 2: 7:30 AM Time-In (All Other Departments/Sites)
+**All departments not listed in Group 1**
+
+**Rules:**
+| Time In | Status | Undertime Hours | Deduction Formula |
+|---------|--------|-----------------|-------------------|
+| 7:30 - 7:33 | ✅ On Time | 0 | ₱0 |
+| 7:34 - 8:30 | ⚠️ Late | Minutes/60 | (Rate/8) × Hours |
+| 8:31+ | ❌ Half-Day | 4 hours | Rate/2 |
 
 ## Code Changes
 
@@ -44,7 +55,7 @@ ALTER TABLE payroll_items ADD COLUMN undertime_deduction DECIMAL(12,2);
 
 ## Example Scenarios
 
-### Scenario 1: 10 Minutes Late
+### Group 1 (8:00 AM): 10 Minutes Late
 ```
 Time In: 8:10 AM
 Grace: 3 min → Late: 7 min
@@ -53,9 +64,27 @@ Rate: ₱800/day → ₱100/hour
 Deduction: ₱100 × 0.1167 = ₱11.67
 ```
 
-### Scenario 2: Half-Day
+### Group 1 (8:00 AM): Half-Day
 ```
 Time In: 9:15 AM
+Status: Half-Day
+Undertime: 4 hours
+Rate: ₱800/day → ₱100/hour
+Deduction: ₱100 × 4 = ₱400
+```
+
+### Group 2 (7:30 AM): 10 Minutes Late
+```
+Time In: 7:40 AM
+Grace: 3 min → Late: 7 min
+Undertime: 7/60 = 0.1167 hours
+Rate: ₱800/day → ₱100/hour
+Deduction: ₱100 × 0.1167 = ₱11.67
+```
+
+### Group 2 (7:30 AM): Half-Day
+```
+Time In: 8:45 AM
 Status: Half-Day
 Undertime: 4 hours
 Rate: ₱800/day → ₱100/hour
