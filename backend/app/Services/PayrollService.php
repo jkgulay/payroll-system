@@ -40,10 +40,10 @@ class PayrollService
         try {
             // Delete existing payroll items
             PayrollItem::where('payroll_id', $payroll->id)->delete();
-            
+
             // Process payroll again
             $this->processPayroll($payroll, $employeeIds);
-            
+
             DB::commit();
             return $payroll->fresh();
         } catch (\Exception $e) {
@@ -58,7 +58,6 @@ class PayrollService
      */
     public function processPayroll(Payroll $payroll, ?array $employeeIds = null)
     {
-        DB::beginTransaction();
         try {
             // If no employee IDs provided, process all active employees
             if (empty($employeeIds)) {
@@ -89,10 +88,8 @@ class PayrollService
                 'total_net' => $totalNet,
             ]);
 
-            DB::commit();
             return $payroll;
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Error processing payroll: ' . $e->getMessage());
             throw $e;
         }
@@ -123,25 +120,25 @@ class PayrollService
         // Process each attendance record
         foreach ($attendances as $attendance) {
             $attendanceDate = Carbon::parse($attendance->attendance_date);
-            
+
             // Accumulate undertime hours
             if ($attendance->undertime_hours > 0) {
                 $totalUndertimeHours += $attendance->undertime_hours;
             }
-            
+
             // Check if this date is a holiday
             $holiday = Holiday::getHolidayForDate($attendanceDate);
-            
+
             if ($holiday && $attendance->status === 'present') {
                 // This is a holiday with attendance - calculate holiday pay
                 $hoursWorked = $attendance->regular_hours ?? 8; // Default to 8 hours if not specified
                 $payMultiplier = $holiday->getPayMultiplier($attendanceDate);
                 $dayHolidayPay = $rate * $payMultiplier * ($hoursWorked / 8);
-                
+
                 // Calculate holiday pay for the hours worked
                 $holidayPay += $dayHolidayPay;
                 $holidayDays++;
-                
+
                 // Add overtime if any on holiday (should be calculated with higher rate)
                 if ($attendance->overtime_hours > 0) {
                     $regularOtHours += $attendance->overtime_hours;
@@ -151,7 +148,7 @@ class PayrollService
                 if ($attendance->status === 'present') {
                     $regularDays++;
                 }
-                
+
                 // Add regular overtime
                 if ($attendance->overtime_hours > 0) {
                     $regularOtHours += $attendance->overtime_hours;
@@ -254,7 +251,7 @@ class PayrollService
     {
         // Convert semi-monthly to monthly salary credit for SSS calculation
         $monthlySalary = $grossPay * 2;
-        
+
         // 2025 SSS Contribution Table - Employee Share (4.5%)
         // Using monthly salary credit brackets
         if ($monthlySalary < 4250) return 180.00;
@@ -300,7 +297,7 @@ class PayrollService
         if ($monthlySalary < 24250) return 1080.00;
         if ($monthlySalary < 24750) return 1102.50;
         if ($monthlySalary >= 25000) return 1125.00; // Maximum employee share
-        
+
         return 1125.00; // Maximum
     }
 
@@ -315,7 +312,7 @@ class PayrollService
         $monthlyGross = $grossPay * 2; // Assuming semi-monthly payroll
         $contribution = $monthlyGross * 0.045;
         $employeeShare = $contribution / 2;
-        
+
         // For semi-monthly, divide by 2
         $semiMonthlyShare = $employeeShare / 2;
 

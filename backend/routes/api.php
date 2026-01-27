@@ -33,6 +33,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/chat/suggestions', [App\Http\Controllers\Api\ChatController::class, 'getSuggestedQuestions']);
     Route::post('/chat/clear', [App\Http\Controllers\Api\ChatController::class, 'clearHistory']);
 
+    // Maintenance Routes (Admin only)
+    Route::post('/maintenance/fix-payroll-sequence', [App\Http\Controllers\Api\MaintenanceController::class, 'fixPayrollSequence'])->middleware('role:admin');
+    Route::get('/maintenance/database-health', [App\Http\Controllers\Api\MaintenanceController::class, 'databaseHealth'])->middleware('role:admin');
+
     // User profile
     Route::get('/user', function (Request $request) {
         $user = $request->user();

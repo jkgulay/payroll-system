@@ -8,6 +8,8 @@ use App\Models\Payroll;
 use App\Services\PayrollService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProjectController extends Controller
 {
@@ -173,12 +175,31 @@ class ProjectController extends Controller
             ], 422);
         }
 
+        DB::beginTransaction();
         try {
+            // Transform the validated data to match PayrollService expectations
+            $payrollData = [
+                'period_name' => $project->name . ' - ' . date('M d, Y', strtotime($validated['period_start_date'])) . ' to ' . date('M d, Y', strtotime($validated['period_end_date'])),
+                'period_start' => $validated['period_start_date'],
+                'period_end' => $validated['period_end_date'],
+                'payment_date' => $validated['payment_date'],
+            ];
+
             // Create payroll period
-            $payroll = $this->payrollService->createPayroll($validated);
+            $payroll = $this->payrollService->createPayroll($payrollData);
+
+            // Verify the payroll was saved and has an ID
+            if (!$payroll || !$payroll->id) {
+                throw new \Exception('Failed to create payroll record');
+            }
 
             // Process payroll only for employees in this project
             $this->payrollService->processPayroll($payroll, $employeeIds);
+
+            DB::commit();
+
+            // Reload with relationships
+            $payroll->load(['items.employee', 'creator']);
 
             return response()->json([
                 'message' => 'Payroll generated successfully for ' . count($employeeIds) . ' employees',
@@ -186,6 +207,11 @@ class ProjectController extends Controller
                 'employee_count' => count($employeeIds)
             ], 201);
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error generating project payroll: ' . $e->getMessage(), [
+                'project_id' => $project->id,
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'message' => 'Failed to generate payroll: ' . $e->getMessage()
             ], 500);

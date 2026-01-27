@@ -285,6 +285,15 @@ const router = createRouter({
           meta: { title: "Settings", roles: ["admin"] },
         },
         {
+          path: "maintenance",
+          name: "maintenance",
+          component: () =>
+            import(
+              /* webpackChunkName: "admin" */ "@/views/admin/MaintenanceView.vue"
+            ),
+          meta: { title: "Database Maintenance", roles: ["admin"] },
+        },
+        {
           path: "position-rates",
           name: "position-rates",
           component: () =>
