@@ -34,7 +34,7 @@ class MaintenanceController extends Controller
 
             // Get the max ID from payrolls table
             $maxId = DB::table('payrolls')->max('id') ?? 0;
-            
+
             // If there are no payrolls, reset to 1, otherwise set to max
             // The second parameter (true/false) tells setval whether to increment on next call
             if ($maxId == 0) {
@@ -48,7 +48,7 @@ class MaintenanceController extends Controller
             // Verify - this will get the NEXT value that will be used
             $nextIdResult = DB::selectOne("SELECT nextval('payrolls_id_seq') as next_id");
             $nextId = $nextIdResult->next_id;
-            
+
             // Reset back so we don't skip a number
             DB::statement("SELECT setval('payrolls_id_seq', " . ($nextId - 1) . ", true)");
 
@@ -106,7 +106,7 @@ class MaintenanceController extends Controller
                     'sequence_ok' => ($maxId == 0 && $currentSeq <= 1) || ($currentSeq >= $maxId && $currentSeq - $maxId <= 1),
                     'total_payrolls' => $payrollCount,
                 ];
-                
+
                 $health['employees'] = [
                     'active_count' => $activeEmployees,
                 ];
@@ -120,7 +120,7 @@ class MaintenanceController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Clear all orphaned data and reset sequences (DANGER - use with caution)
      */
@@ -133,7 +133,7 @@ class MaintenanceController extends Controller
                     'message' => 'Unauthorized. Admin access required.'
                 ], 403);
             }
-            
+
             // Require confirmation parameter
             if ($request->input('confirm') !== 'yes-delete-orphaned-data') {
                 return response()->json([
@@ -142,7 +142,7 @@ class MaintenanceController extends Controller
             }
 
             $driver = DB::connection()->getDriverName();
-            
+
             if ($driver !== 'pgsql') {
                 return response()->json([
                     'message' => 'This operation is only for PostgreSQL databases.'
@@ -150,42 +150,41 @@ class MaintenanceController extends Controller
             }
 
             DB::beginTransaction();
-            
+
             // Delete any orphaned payroll items (where payroll doesn't exist)
             $orphanedItems = DB::statement("
                 DELETE FROM payroll_items 
                 WHERE payroll_id NOT IN (SELECT id FROM payrolls)
             ");
-            
+
             // Reset sequences for all tables
             $tables = ['payrolls', 'payroll_items'];
             foreach ($tables as $table) {
                 $maxId = DB::table($table)->max('id') ?? 0;
                 $seqName = $table . '_id_seq';
-                
+
                 if ($maxId == 0) {
                     DB::statement("SELECT setval('{$seqName}', 1, false)");
                 } else {
                     DB::statement("SELECT setval('{$seqName}', {$maxId}, true)");
                 }
             }
-            
+
             DB::commit();
-            
+
             Log::info('Database cleaned and sequences reset', [
                 'user_id' => auth()->id()
             ]);
-            
+
             return response()->json([
                 'message' => 'Database cleaned successfully',
                 'orphaned_items_removed' => $orphanedItems ?? 0,
                 'success' => true
             ]);
-            
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error cleaning database: ' . $e->getMessage());
-            
+
             return response()->json([
                 'message' => 'Error cleaning database',
                 'error' => $e->getMessage()
