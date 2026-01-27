@@ -53,7 +53,7 @@
               </button>
               <button
                 class="action-btn action-btn-primary"
-                @click="downloadRegister"
+                @click="showExportDialog = true"
               >
                 <v-icon size="20">mdi-download</v-icon>
                 <span>Download Register</span>
@@ -260,6 +260,144 @@
         </div>
       </div>
     </div>
+
+    <!-- Export Filter Dialog -->
+    <v-dialog
+      v-model="showExportDialog"
+      max-width="600px"
+      persistent
+      scrollable
+    >
+      <v-card class="modern-dialog">
+        <!-- Enhanced Header -->
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">mdi-filter-variant</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Export Payroll Register</div>
+            <div class="dialog-subtitle">
+              Filter and download payroll register PDF
+            </div>
+          </div>
+        </v-card-title>
+
+        <v-divider></v-divider>
+
+        <v-card-text class="dialog-content">
+          <!-- Section: Filter Options -->
+          <v-col cols="12" class="px-0">
+            <div class="section-header">
+              <div class="section-icon">
+                <v-icon size="18">mdi-filter</v-icon>
+              </div>
+              <h3 class="section-title">Filter Options</h3>
+            </div>
+          </v-col>
+
+          <v-radio-group
+            v-model="exportFilter.type"
+            inline
+            hide-details
+            class="mb-4"
+          >
+            <v-radio label="All Employees" value="all"></v-radio>
+            <v-radio label="By Department" value="department"></v-radio>
+            <v-radio label="By Staff Type" value="staff_type"></v-radio>
+          </v-radio-group>
+
+          <div
+            class="form-field-wrapper"
+            v-if="exportFilter.type === 'department'"
+          >
+            <label class="form-label">
+              <v-icon size="small" color="#ed985f">mdi-office-building</v-icon>
+              Select Departments
+            </label>
+            <v-autocomplete
+              v-model="exportFilter.departments"
+              :items="departmentOptions"
+              placeholder="Choose one or more departments"
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-office-building"
+              color="#ed985f"
+              multiple
+              chips
+              closable-chips
+              hint="Select one or more departments"
+              persistent-hint
+            ></v-autocomplete>
+          </div>
+
+          <div
+            class="form-field-wrapper"
+            v-if="exportFilter.type === 'staff_type'"
+          >
+            <label class="form-label">
+              <v-icon size="small" color="#ed985f">mdi-account-group</v-icon>
+              Select Staff Types
+            </label>
+            <v-autocomplete
+              v-model="exportFilter.staff_types"
+              :items="staffTypeOptions"
+              placeholder="Choose one or more staff types"
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-account-group"
+              color="#ed985f"
+              multiple
+              chips
+              closable-chips
+              hint="Select one or more staff types"
+              persistent-hint
+            ></v-autocomplete>
+          </div>
+
+          <v-alert
+            v-if="exportFilter.type !== 'all'"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mt-4"
+          >
+            <template v-slot:prepend>
+              <v-icon icon="mdi-information"></v-icon>
+            </template>
+            <div class="text-caption">
+              <strong>Note:</strong>
+              <span v-if="exportFilter.type === 'department'">
+                Multiple departments will generate separate tables for each
+                department.
+              </span>
+              <span v-else-if="exportFilter.type === 'staff_type'">
+                Multiple staff types will generate separate tables for each
+                staff type.
+              </span>
+            </div>
+          </v-alert>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="dialog-actions">
+          <v-spacer></v-spacer>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="showExportDialog = false"
+          >
+            Cancel
+          </button>
+          <button
+            class="dialog-btn dialog-btn-primary"
+            @click="downloadRegister"
+          >
+            <v-icon size="20" class="mr-2">mdi-download</v-icon>
+            Download PDF
+          </button>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -277,6 +415,14 @@ const loading = ref(false);
 const finalizing = ref(false);
 const search = ref("");
 const payroll = ref(null);
+const showExportDialog = ref(false);
+const exportFilter = ref({
+  type: "all",
+  departments: [],
+  staff_types: [],
+});
+const departmentOptions = ref([]);
+const staffTypeOptions = ref([]);
 
 const headers = [
   { title: "Employee", key: "employee", sortable: true },
@@ -316,6 +462,8 @@ function customFilter(value, query, item) {
 
 onMounted(() => {
   fetchPayroll();
+  loadDepartmentOptions();
+  loadStaffTypeOptions();
 });
 
 async function fetchPayroll() {
@@ -356,9 +504,27 @@ async function finalizePayroll() {
 
 async function downloadRegister() {
   try {
+    // Build query parameters based on filter
+    const params = {
+      filter_type: exportFilter.value.type,
+    };
+
+    if (
+      exportFilter.value.type === "department" &&
+      exportFilter.value.departments.length > 0
+    ) {
+      params.departments = exportFilter.value.departments;
+    } else if (
+      exportFilter.value.type === "staff_type" &&
+      exportFilter.value.staff_types.length > 0
+    ) {
+      params.staff_types = exportFilter.value.staff_types;
+    }
+
     const response = await api.get(
       `/payrolls/${payroll.value.id}/download-register`,
       {
+        params,
         responseType: "blob",
       },
     );
@@ -366,18 +532,42 @@ async function downloadRegister() {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute(
-      "download",
-      `payroll_register_${payroll.value.payroll_number}.pdf`,
-    );
+
+    let filename = `payroll_register_${payroll.value.payroll_number}`;
+    if (exportFilter.value.type !== "all") {
+      filename += "_filtered";
+    }
+    filename += ".pdf";
+
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
 
     toast.success("Payroll register downloaded");
+    showExportDialog.value = false;
   } catch (error) {
     console.error("Error downloading register:", error);
     toast.error("Failed to download payroll register");
+  }
+}
+
+async function loadDepartmentOptions() {
+  try {
+    const response = await api.get("/employees/departments");
+    departmentOptions.value = response.data || [];
+  } catch (error) {
+    console.error("Error loading departments:", error);
+  }
+}
+
+async function loadStaffTypeOptions() {
+  try {
+    const response = await api.get("/position-rates");
+    staffTypeOptions.value =
+      response.data.map((pos) => pos.position_name) || [];
+  } catch (error) {
+    console.error("Error loading staff types:", error);
   }
 }
 
@@ -601,26 +791,44 @@ function formatCurrency(amount) {
 /* Stats Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .stat-card {
   background: white;
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: all 0.2s ease;
-  border: 1px solid rgba(0, 31, 61, 0.06);
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+  }
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+  border-color: rgba(237, 152, 95, 0.3);
+
+  &::before {
+    transform: scaleY(1);
+  }
 }
 
 .stat-card.info-card {
@@ -628,55 +836,74 @@ function formatCurrency(amount) {
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
   flex-shrink: 0;
 }
 
-.stat-icon.period,
+.stat-icon.period {
+  background: rgba(100, 116, 139, 0.1);
+
+  .v-icon {
+    color: #64748b;
+  }
+}
+
 .stat-icon.payment {
-  background: linear-gradient(135deg, #64748b 0%, #94a3b8 100%);
+  background: rgba(100, 116, 139, 0.1);
+
+  .v-icon {
+    color: #64748b;
+  }
 }
 
 .stat-icon.employees {
-  background: linear-gradient(135deg, #001f3d 0%, #0f3557 100%);
+  background: rgba(0, 31, 61, 0.1);
+
+  .v-icon {
+    color: #001f3d;
+  }
 }
 
 .stat-icon.gross {
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+
+  .v-icon {
+    color: white;
+  }
 }
 
 .stat-icon.net {
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  background: rgba(16, 185, 129, 0.1);
+
+  .v-icon {
+    color: #10b981;
+  }
 }
 
 .stat-content {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
 }
 
 .stat-label {
   font-size: 12px;
+  color: rgba(0, 31, 61, 0.6);
   font-weight: 600;
-  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
   color: #001f3d;
-  letter-spacing: -0.5px;
-  word-break: break-word;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .stat-value.primary {
@@ -823,6 +1050,143 @@ function formatCurrency(amount) {
   .action-btn {
     padding: 10px 16px;
     font-size: 13px;
+  }
+}
+
+/* Modern Dialog Styling */
+.modern-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.dialog-header {
+  background: white;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dialog-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+
+  &.primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  }
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1.2;
+}
+
+.dialog-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.form-field-wrapper {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
+}
+
+.dialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.dialog-btn-cancel {
+  background: transparent;
+  color: #64748b;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 31, 61, 0.04);
+  }
+}
+
+.dialog-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+    transform: translateY(-1px);
   }
 }
 </style>

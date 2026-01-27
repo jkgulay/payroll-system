@@ -146,31 +146,43 @@
 
           <!-- Actions -->
           <template v-slot:item.actions="{ item }">
-            <v-btn
-              icon="mdi-eye"
-              size="small"
-              variant="text"
-              color="primary"
-              @click="viewPayroll(item)"
-            >
-            </v-btn>
-            <v-btn
-              v-if="item.status === 'draft'"
-              icon="mdi-pencil"
-              size="small"
-              variant="text"
-              color="warning"
-              @click="editPayroll(item)"
-            >
-            </v-btn>
-            <v-btn
-              icon="mdi-delete"
-              size="small"
-              variant="text"
-              color="error"
-              @click="confirmDelete(item)"
-            >
-            </v-btn>
+            <v-menu>
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  icon="mdi-dots-vertical"
+                  size="small"
+                  variant="text"
+                  v-bind="props"
+                >
+                </v-btn>
+              </template>
+              <v-list density="compact">
+                <v-list-item @click="viewPayroll(item)">
+                  <template v-slot:prepend>
+                    <v-icon size="small" color="primary">mdi-eye</v-icon>
+                  </template>
+                  <v-list-item-title>View Details</v-list-item-title>
+                </v-list-item>
+                <v-list-item
+                  v-if="item.status === 'draft'"
+                  @click="editPayroll(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon size="small" color="warning">mdi-pencil</v-icon>
+                  </template>
+                  <v-list-item-title>Edit</v-list-item-title>
+                </v-list-item>
+                <v-divider></v-divider>
+                <v-list-item @click="confirmDelete(item)">
+                  <template v-slot:prepend>
+                    <v-icon size="small" color="error">mdi-delete</v-icon>
+                  </template>
+                  <v-list-item-title class="text-error"
+                    >Delete</v-list-item-title
+                  >
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </template>
         </v-data-table>
       </div>
@@ -298,184 +310,28 @@
               ></v-text-field>
             </div>
 
-            <!-- Section 2: Employee Filter -->
+            <!-- Section 2: Employee Selection -->
             <v-col cols="12" class="px-0 mt-5">
               <div class="section-header">
                 <div class="section-icon">
-                  <v-icon size="18">mdi-filter</v-icon>
+                  <v-icon size="18">mdi-account-group</v-icon>
                 </div>
-                <h3 class="section-title">Employee Filter</h3>
+                <h3 class="section-title">Employee Selection</h3>
               </div>
             </v-col>
 
-            <v-radio-group
-              v-model="formData.filter_type"
-              inline
-              hide-details
-              class="mb-4"
-            >
-              <v-radio label="All Employees" value="all"></v-radio>
-              <v-radio label="By Department" value="department"></v-radio>
-              <v-radio label="By Staff Type" value="staff_type"></v-radio>
-            </v-radio-group>
-
-            <!-- Employee Limit -->
-            <v-text-field
-              v-model.number="formData.employee_limit"
-              label="Limit Number of Employees (Optional)"
-              type="number"
-              min="1"
-              max="1000"
-              prepend-icon="mdi-account-multiple-check"
-              hint="Leave empty to include all matching employees, or specify a number to limit"
-              persistent-hint
-              clearable
-              class="mb-4"
-            >
-              <template v-slot:append-inner>
-                <v-tooltip location="top">
-                  <template v-slot:activator="{ props }">
-                    <v-icon
-                      v-bind="props"
-                      icon="mdi-information"
-                      size="small"
-                      color="#ed985f"
-                    ></v-icon>
-                  </template>
-                  <div style="max-width: 300px">
-                    Useful for creating partial payrolls or testing.<br />
-                    Employees are selected in order by employee number.
-                  </div>
-                </v-tooltip>
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
               </template>
-            </v-text-field>
+              <div class="text-caption">
+                <strong>Note:</strong> Payroll will include all active
+                employees. You can filter by department or staff type when
+                exporting/downloading the payroll.
+              </div>
+            </v-alert>
 
-            <!-- Position Filter -->
-            <v-autocomplete
-              v-if="formData.filter_type === 'position'"
-              v-model="formData.position_ids"
-              :items="positions"
-              :loading="loadingPositions"
-              item-title="position_name"
-              item-value="id"
-              label="Select Positions/Roles"
-              prepend-icon="mdi-account-hard-hat"
-              multiple
-              chips
-              closable-chips
-              :rules="[
-                (v) =>
-                  formData.filter_type !== 'position' ||
-                  (v && v.length > 0) ||
-                  'Select at least one position',
-              ]"
-              hint="Select one or more positions to include in payroll"
-              persistent-hint
-            >
-              <template v-slot:chip="{ props, item }">
-                <v-chip
-                  v-bind="props"
-                  :text="item.raw.position_name"
-                  size="small"
-                ></v-chip>
-              </template>
-              <template v-slot:item="{ props, item }">
-                <v-list-item v-bind="props">
-                  <template v-slot:title>
-                    {{ item.raw.position_name }}
-                  </template>
-                  <template v-slot:subtitle>
-                    {{ item.raw.code }} - ₱{{ item.raw.daily_rate }}/day
-                  </template>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
-
-            <!-- Project Filter -->
-            <v-autocomplete
-              v-if="formData.filter_type === 'project'"
-              v-model="formData.project_ids"
-              :items="projects"
-              :loading="loadingProjects"
-              item-title="name"
-              item-value="id"
-              label="Select Departments"
-              prepend-icon="mdi-briefcase"
-              multiple
-              chips
-              closable-chips
-              :rules="[
-                (v) =>
-                  formData.filter_type !== 'project' ||
-                  (v && v.length > 0) ||
-                  'Select at least one project',
-              ]"
-              hint="Select one or more projects to include in payroll"
-              persistent-hint
-            >
-              <template v-slot:chip="{ props, item }">
-                <v-chip
-                  v-bind="props"
-                  :text="item.raw.name"
-                  size="small"
-                ></v-chip>
-              </template>
-              <template v-slot:item="{ props, item }">
-                <v-list-item v-bind="props">
-                  <template v-slot:title>
-                    {{ item.raw.name }}
-                  </template>
-                  <template v-slot:subtitle>
-                    {{ item.raw.code }} -
-                    {{ item.raw.employees_count || 0 }} employees
-                  </template>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
-
-            <!-- Department Filter -->
-            <v-autocomplete
-              v-if="formData.filter_type === 'department'"
-              v-model="formData.departments"
-              :items="departmentOptions"
-              label="Select Departments"
-              prepend-icon="mdi-office-building"
-              multiple
-              chips
-              closable-chips
-              :rules="[
-                (v) =>
-                  formData.filter_type !== 'department' ||
-                  (v && v.length > 0) ||
-                  'Select at least one department',
-              ]"
-              hint="Select one or more departments to include in payroll"
-              persistent-hint
-            ></v-autocomplete>
-
-            <!-- Staff Type Filter -->
-            <v-autocomplete
-              v-if="formData.filter_type === 'staff_type'"
-              v-model="formData.staff_types"
-              :items="staffTypeOptions"
-              label="Select Staff Types"
-              prepend-icon="mdi-account-group"
-              multiple
-              chips
-              closable-chips
-              :rules="[
-                (v) =>
-                  formData.filter_type !== 'staff_type' ||
-                  (v && v.length > 0) ||
-                  'Select at least one staff type',
-              ]"
-              hint="Select one or more staff types to include in payroll"
-              persistent-hint
-            ></v-autocomplete>
-
-            <v-divider class="my-4"></v-divider>
-
-            <!-- Additional Filters -->
+            <!-- Optional: Only With Attendance -->
             <v-checkbox
               v-model="formData.has_attendance"
               label="Only include employees with attendance"
@@ -483,39 +339,8 @@
               hint="Exclude employees who have no attendance records in this payroll period"
               persistent-hint
               color="#ed985f"
-            ></v-checkbox>
-
-            <!-- Info Alert -->
-            <v-alert
-              v-if="formData.filter_type !== 'all'"
-              type="info"
-              variant="tonal"
-              density="compact"
               class="mb-4"
-            >
-              <template v-slot:prepend>
-                <v-icon icon="mdi-information"></v-icon>
-              </template>
-              <div class="text-caption">
-                <strong>Note:</strong>
-                <span v-if="formData.filter_type === 'position'">
-                  Only employees with the selected position(s) will be included
-                  in this payroll.
-                </span>
-                <span v-else-if="formData.filter_type === 'project'">
-                  Only employees assigned to the selected department(s) will be
-                  included in this payroll.
-                </span>
-                <span v-else-if="formData.filter_type === 'department'">
-                  Only employees from the selected department(s) will be
-                  included in this payroll.
-                </span>
-                <span v-else-if="formData.filter_type === 'staff_type'">
-                  Only employees with the selected staff type(s) will be
-                  included in this payroll.
-                </span>
-              </div>
-            </v-alert>
+            ></v-checkbox>
 
             <v-textarea
               v-model="formData.notes"
@@ -724,12 +549,6 @@ const formData = ref({
   period_end: "",
   payment_date: "",
   notes: "",
-  filter_type: "all",
-  position_ids: [],
-  project_ids: [],
-  departments: [],
-  staff_types: [],
-  employee_limit: null,
   has_attendance: false,
 });
 
@@ -835,12 +654,6 @@ function openCreateDialog() {
     period_end: "",
     payment_date: "",
     notes: "",
-    filter_type: "all",
-    position_ids: [],
-    project_ids: [],
-    departments: [],
-    staff_types: [],
-    employee_limit: null,
     has_attendance: false,
   };
   dialog.value = true;
@@ -868,39 +681,14 @@ async function savePayroll() {
   const { valid } = await form.value.validate();
   if (!valid) return;
 
-  // Prepare payload
+  // Prepare payload - simplified for all employees only
   const payload = {
     period_name: formData.value.period_name,
     period_start: formData.value.period_start,
     period_end: formData.value.period_end,
     payment_date: formData.value.payment_date,
     notes: formData.value.notes,
-    filter_type: formData.value.filter_type,
   };
-
-  // Add filter-specific data
-  if (formData.value.filter_type === "position") {
-    payload.position_ids = formData.value.position_ids;
-  } else if (formData.value.filter_type === "project") {
-    payload.project_ids = formData.value.project_ids;
-  } else if (formData.value.filter_type === "department") {
-    payload.departments = formData.value.departments;
-  } else if (formData.value.filter_type === "staff_type") {
-    payload.staff_types = formData.value.staff_types;
-  }
-
-  // Add optional filters
-  if (formData.value.employee_limit) {
-    payload.employee_limit = formData.value.employee_limit;
-  }
-  if (formData.value.has_attendance) {
-    payload.has_attendance = formData.value.has_attendance;
-  }
-
-  // Add employee limit if specified
-  if (formData.value.employee_limit && formData.value.employee_limit > 0) {
-    payload.employee_limit = formData.value.employee_limit;
-  }
 
   // Add attendance filter if enabled
   if (formData.value.has_attendance) {
@@ -916,11 +704,8 @@ async function savePayroll() {
       const response = await api.post("/payrolls", payload);
       const employeeCount =
         response.data.items_count || response.data.payroll?.items_count || 0;
-      const limitText = formData.value.employee_limit
-        ? ` (limited to ${formData.value.employee_limit})`
-        : "";
       toast.success(
-        `Payroll created successfully for ${employeeCount} employee(s)${limitText}`,
+        `Payroll created successfully for ${employeeCount} employee(s)`,
       );
     }
     await fetchPayrolls();
@@ -1110,9 +895,17 @@ function formatCurrency(amount) {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(20px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card {

@@ -47,18 +47,6 @@ class PayrollController extends Controller
             'period_end' => 'required|date|after_or_equal:period_start',
             'payment_date' => 'required|date',
             'notes' => 'nullable|string',
-            // Employee filtering options
-            'filter_type' => 'nullable|in:all,position,project,department,staff_type',
-            'position_ids' => 'nullable|array',
-            'position_ids.*' => 'exists:position_rates,id',
-            'project_ids' => 'nullable|array',
-            'project_ids.*' => 'exists:projects,id',
-            'departments' => 'nullable|array',
-            'departments.*' => 'string',
-            'staff_types' => 'nullable|array',
-            'staff_types.*' => 'string',
-            // Employee limit
-            'employee_limit' => 'nullable|integer|min:1|max:1000',
             // Only employees with attendance
             'has_attendance' => 'nullable|boolean',
         ]);
@@ -83,14 +71,8 @@ class PayrollController extends Controller
                 throw new \Exception('Failed to generate payroll ID');
             }
 
-            // Generate payroll items for filtered employees
+            // Generate payroll items for all active employees
             $filters = [
-                'type' => $validated['filter_type'] ?? 'all',
-                'position_ids' => $validated['position_ids'] ?? [],
-                'project_ids' => $validated['project_ids'] ?? [],
-                'departments' => $validated['departments'] ?? [],
-                'staff_types' => $validated['staff_types'] ?? [],
-                'limit' => $validated['employee_limit'] ?? null,
                 'has_attendance' => $validated['has_attendance'] ?? false,
             ];
             $this->generatePayrollItems($payroll, $filters);
@@ -307,17 +289,76 @@ class PayrollController extends Controller
         return $pdf->download("payslip_{$item->employee->employee_number}_{$payroll->period_name}.pdf");
     }
 
-    public function downloadRegister(Payroll $payroll)
+    public function downloadRegister(Request $request, Payroll $payroll)
     {
         // Increase memory limit for PDF generation
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', '300');
 
-        $payroll->load(['items.employee.positionRate']);
+        // Validate filter parameters
+        $validated = $request->validate([
+            'filter_type' => 'nullable|in:all,department,staff_type',
+            'departments' => 'nullable|array',
+            'departments.*' => 'string',
+            'staff_types' => 'nullable|array',
+            'staff_types.*' => 'string',
+        ]);
 
-        $pdf = Pdf::loadView('payroll.register', compact('payroll'));
+        // Load payroll items with employee relationship
+        $itemsQuery = $payroll->items()->with('employee.positionRate');
 
-        return $pdf->download("payroll_register_{$payroll->payroll_number}.pdf");
+        // Apply filters if provided
+        if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
+            if ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
+                $itemsQuery->whereHas('employee', function ($q) use ($validated) {
+                    $q->whereIn('department', $validated['departments']);
+                });
+            } elseif ($validated['filter_type'] === 'staff_type' && !empty($validated['staff_types'])) {
+                $itemsQuery->whereHas('employee.positionRate', function ($q) use ($validated) {
+                    $q->whereIn('position_name', $validated['staff_types']);
+                });
+            }
+        }
+
+        // Get filtered items
+        $payroll->setRelation('items', $itemsQuery->get());
+
+        // Group items by department or staff type if multiple filters selected
+        $groupedItems = null;
+        $filterInfo = null;
+        $filterType = $validated['filter_type'] ?? 'all';
+
+        if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
+            if ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
+                // Group by department if multiple departments selected
+                if (count($validated['departments']) > 1) {
+                    $groupedItems = $payroll->items->groupBy(function ($item) {
+                        return $item->employee->department ?? 'N/A';
+                    });
+                } else {
+                    $filterInfo = 'Department: ' . implode(', ', $validated['departments']);
+                }
+            } elseif ($validated['filter_type'] === 'staff_type' && !empty($validated['staff_types'])) {
+                // Group by staff type if multiple staff types selected
+                if (count($validated['staff_types']) > 1) {
+                    $groupedItems = $payroll->items->groupBy(function ($item) {
+                        return $item->employee->positionRate->position_name ?? 'N/A';
+                    });
+                } else {
+                    $filterInfo = 'Staff Type: ' . implode(', ', $validated['staff_types']);
+                }
+            }
+        }
+
+        $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType'));
+
+        $filename = "payroll_register_{$payroll->payroll_number}";
+        if ($filterInfo) {
+            $filename .= '_filtered';
+        }
+        $filename .= '.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function exportToExcel(Payroll $payroll)
@@ -338,34 +379,15 @@ class PayrollController extends Controller
             ]);
         }
 
-        $query = Employee::where('activity_status', 'active');
-
-        // Apply filters based on filter type
-        if (!empty($filters['type']) && $filters['type'] !== 'all') {
-            $filterApplied = false;
-
-            if ($filters['type'] === 'position' && !empty($filters['position_ids'])) {
-                $query->whereIn('position_id', $filters['position_ids']);
-                $filterApplied = true;
-            } elseif ($filters['type'] === 'project' && !empty($filters['project_ids'])) {
-                $query->whereIn('project_id', $filters['project_ids']);
-                $filterApplied = true;
-            } elseif ($filters['type'] === 'department' && !empty($filters['departments'])) {
-                $query->whereIn('department', $filters['departments']);
-                $filterApplied = true;
-            } elseif ($filters['type'] === 'staff_type' && !empty($filters['staff_types'])) {
-                $query->whereIn('staff_type', $filters['staff_types']);
-                $filterApplied = true;
-            }
-
-            // If filter type is set but no specific values provided, treat as 'all'
-            if (!$filterApplied && config('app.debug')) {
-                Log::debug('Filter type "' . $filters['type'] . '" set but no specific values provided, treating as "all"');
-            }
-        }
-
-        // Store count after type filters for error messages
-        $afterTypeFilter = $query->count();
+        // Include employees who were working during the payroll period
+        // This includes: active employees, on_leave employees, or anyone with attendance during the period
+        $query = Employee::where(function ($q) use ($payroll) {
+            $q->whereIn('activity_status', ['active', 'on_leave'])
+                ->orWhereHas('attendances', function ($subQ) use ($payroll) {
+                    $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                        ->where('status', '!=', 'absent');
+                });
+        });
 
         // Filter by attendance if requested
         if (!empty($filters['has_attendance'])) {
@@ -378,26 +400,16 @@ class PayrollController extends Controller
         // Order by employee number for consistent selection
         $query->orderBy('employee_number');
 
-        // Apply limit if specified
-        if (!empty($filters['limit'])) {
-            $query->limit($filters['limit']);
-        }
-
         $employees = $query->get();
 
         if ($employees->isEmpty()) {
-            $errorMsg = 'No employees found matching the selected filters';
+            $errorMsg = 'No employees found for this payroll period';
 
             // Provide more specific error message
             if (!empty($filters['has_attendance'])) {
-                $errorMsg .= '. Note: The "Only include employees with attendance" option is enabled. ';
-                if ($afterTypeFilter > 0) {
-                    $errorMsg .= "Found {$afterTypeFilter} employee(s) in the selected department/filter, but none have attendance records for this period.";
-                } else {
-                    $errorMsg .= 'No employees found in the selected department/filter.';
-                }
-            } elseif ($afterTypeFilter === 0) {
-                $errorMsg .= '. No employees found in the selected department/filter.';
+                $errorMsg .= '. Note: The "Only include employees with attendance" option is enabled, but no active employees have attendance records for this period.';
+            } else {
+                $errorMsg .= '. No active or on-leave employees found with activity during this period.';
             }
 
             // Throw a validation exception instead of generic exception
@@ -406,11 +418,6 @@ class PayrollController extends Controller
                 response()->json([
                     'message' => 'Validation failed',
                     'error' => $errorMsg,
-                    'employee_count' => [
-                        'total_active' => $initialCount ?? 0,
-                        'after_filter' => $afterTypeFilter,
-                        'with_attendance' => 0
-                    ]
                 ], 422)
             );
         }
