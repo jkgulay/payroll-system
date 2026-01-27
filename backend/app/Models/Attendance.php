@@ -178,9 +178,17 @@ class Attendance extends Model
         // Calculate late hours
         $this->late_hours = $this->calculateLateHours($timeIn);
 
-        // Calculate undertime
-        if ($totalHours < $standardHours && $this->status === 'present') {
-            $this->undertime_hours = $standardHours - $totalHours;
+        // Calculate undertime - use department-specific logic if applicable
+        if ($this->isUndertimeDepartment()) {
+            // Use strict undertime calculation for specific departments
+            $this->undertime_hours = $this->calculateUndertimeHours($timeIn, $totalHours);
+        } else {
+            // Default undertime calculation for other departments
+            if ($totalHours < $standardHours && $this->status === 'present') {
+                $this->undertime_hours = $standardHours - $totalHours;
+            } else {
+                $this->undertime_hours = 0;
+            }
         }
 
         $this->save();
@@ -218,6 +226,66 @@ class Attendance extends Model
         if ($timeIn->gt($standardTimeIn)) {
             $lateMinutes = $standardTimeIn->diffInMinutes($timeIn);
             return round($lateMinutes / 60, 2);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Check if employee's department requires strict undertime tracking
+     * These departments have 8:00 AM time-in requirement
+     */
+    private function isUndertimeDepartment(): bool
+    {
+        if (!$this->employee) {
+            return false;
+        }
+
+        // Get tracked departments from config
+        $undertimeDepartments = config('payroll.undertime.tracked_departments', [
+            'Admin Resign',
+            'Sur admin',
+            'Weekly Admin (mix)',
+            'ENGINEER SA SITE',
+            'Giovanni Construction and Power On Enterprise Co',
+        ]);
+
+        return in_array($this->employee->department, $undertimeDepartments);
+    }
+
+    /**
+     * Calculate undertime hours for departments with strict time-in requirements
+     */
+    private function calculateUndertimeHours(Carbon $timeIn, float $totalHours): float
+    {
+        // Only apply for undertime-tracked departments
+        if (!$this->isUndertimeDepartment()) {
+            return 0;
+        }
+
+        // Get configuration values
+        $standardTimeInConfig = config('payroll.undertime.standard_time_in', '08:00');
+        $gracePeriodMinutes = config('payroll.undertime.grace_period_minutes', 3);
+        $halfDayThresholdConfig = config('payroll.undertime.half_day_threshold', '09:01');
+        $standardHours = config('payroll.standard_hours_per_day', 8);
+
+        $standardTimeIn = Carbon::parse($timeIn->toDateString() . ' ' . $standardTimeInConfig);
+        $halfDayThreshold = Carbon::parse($timeIn->toDateString() . ' ' . $halfDayThresholdConfig);
+
+        // Check if time-in is 9:01 or later - mark as half day
+        if ($timeIn->gte($halfDayThreshold)) {
+            $this->status = 'half_day';
+            // Undertime is 4 hours (half of 8 hours)
+            return $standardHours / 2;
+        }
+
+        // Calculate undertime based on late time-in beyond grace period
+        $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
+        
+        if ($timeIn->gt($allowedTimeIn)) {
+            // Calculate minutes late
+            $minutesLate = $allowedTimeIn->diffInMinutes($timeIn);
+            return round($minutesLate / 60, 4); // Return in hours with precision
         }
 
         return 0;

@@ -114,6 +114,7 @@ class PayrollService
         $holidayDays = 0;
         $regularOtHours = 0;
         $holidayPay = 0;
+        $totalUndertimeHours = 0;
 
         // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
         $rate = $employee->getBasicSalary();
@@ -122,6 +123,11 @@ class PayrollService
         // Process each attendance record
         foreach ($attendances as $attendance) {
             $attendanceDate = Carbon::parse($attendance->attendance_date);
+            
+            // Accumulate undertime hours
+            if ($attendance->undertime_hours > 0) {
+                $totalUndertimeHours += $attendance->undertime_hours;
+            }
             
             // Check if this date is a holiday
             $holiday = Holiday::getHolidayForDate($attendanceDate);
@@ -173,8 +179,12 @@ class PayrollService
         $totalDaysWorked = $regularDays + $holidayDays;
         $cola = $totalDaysWorked * 0; // Set to 0, can be configured
 
-        // Calculate gross pay (include holiday pay)
-        $grossPay = $basicPay + $holidayPay + $regularOtPay + $cola + $allowances;
+        // Calculate undertime deduction
+        // Formula: (rate / 8) * undertime_hours
+        $undertimeDeduction = $hourlyRate * $totalUndertimeHours;
+
+        // Calculate gross pay (include holiday pay, subtract undertime deduction)
+        $grossPay = $basicPay + $holidayPay + $regularOtPay + $cola + $allowances - $undertimeDeduction;
 
         // Calculate government deductions
         $sss = $this->calculateSSS($grossPay);
@@ -218,6 +228,8 @@ class PayrollService
             'cola' => $cola,
             'other_allowances' => $allowances,
             'gross_pay' => $grossPay,
+            'undertime_hours' => $totalUndertimeHours,
+            'undertime_deduction' => $undertimeDeduction,
             'sss' => $sss,
             'philhealth' => $philhealth,
             'pagibig' => $pagibig,
