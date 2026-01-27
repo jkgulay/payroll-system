@@ -262,7 +262,12 @@
     </div>
 
     <!-- Export Filter Dialog -->
-    <v-dialog v-model="showExportDialog" max-width="600px" persistent scrollable>
+    <v-dialog
+      v-model="showExportDialog"
+      max-width="600px"
+      persistent
+      scrollable
+    >
       <v-card class="modern-dialog">
         <!-- Enhanced Header -->
         <v-card-title class="dialog-header">
@@ -301,7 +306,10 @@
             <v-radio label="By Staff Type" value="staff_type"></v-radio>
           </v-radio-group>
 
-          <div class="form-field-wrapper" v-if="exportFilter.type === 'department'">
+          <div
+            class="form-field-wrapper"
+            v-if="exportFilter.type === 'department'"
+          >
             <label class="form-label">
               <v-icon size="small" color="#ed985f">mdi-office-building</v-icon>
               Select Departments
@@ -322,7 +330,10 @@
             ></v-autocomplete>
           </div>
 
-          <div class="form-field-wrapper" v-if="exportFilter.type === 'staff_type'">
+          <div
+            class="form-field-wrapper"
+            v-if="exportFilter.type === 'staff_type'"
+          >
             <label class="form-label">
               <v-icon size="small" color="#ed985f">mdi-account-group</v-icon>
               Select Staff Types
@@ -356,10 +367,12 @@
             <div class="text-caption">
               <strong>Note:</strong>
               <span v-if="exportFilter.type === 'department'">
-                Multiple departments will generate separate tables for each department.
+                Multiple departments will generate separate tables for each
+                department.
               </span>
               <span v-else-if="exportFilter.type === 'staff_type'">
-                Multiple staff types will generate separate tables for each staff type.
+                Multiple staff types will generate separate tables for each
+                staff type.
               </span>
             </div>
           </v-alert>
@@ -381,7 +394,7 @@
           >
             <v-icon size="20" class="mr-2">mdi-download</v-icon>
             Download PDF
-        </button>
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
