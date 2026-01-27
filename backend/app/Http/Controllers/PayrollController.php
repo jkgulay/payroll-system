@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
+use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
 use App\Models\User;
 use App\Exports\PayrollExport;
@@ -73,10 +74,10 @@ class PayrollController extends Controller
                 'created_by' => auth()->id(),
                 'notes' => $validated['notes'] ?? null,
             ]);
-            
+
             // Explicitly save and ensure the ID is generated before proceeding
             $payroll->save();
-            
+
             // Verify the payroll was saved and has an ID
             if (!$payroll->id) {
                 throw new \Exception('Failed to generate payroll ID');
@@ -98,6 +99,23 @@ class PayrollController extends Controller
 
             // Reload with count
             $payroll->loadCount('items');
+
+            // Log payroll creation
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'create_payroll',
+                'description' => "Payroll '{$payroll->period_name}' created with {$payroll->items_count} employee(s)",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'new_values' => [
+                    'payroll_id' => $payroll->id,
+                    'period_name' => $payroll->period_name,
+                    'period_start' => $payroll->period_start,
+                    'period_end' => $payroll->period_end,
+                    'items_count' => $payroll->items_count,
+                ],
+            ]);
 
             return response()->json([
                 'message' => 'Payroll created successfully',
@@ -140,7 +158,20 @@ class PayrollController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $oldValues = $payroll->toArray();
         $payroll->update($validated);
+
+        // Log payroll update
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'payroll',
+            'action' => 'update_payroll',
+            'description' => "Payroll '{$payroll->period_name}' updated",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $oldValues,
+            'new_values' => $payroll->fresh()->toArray(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -151,8 +182,21 @@ class PayrollController extends Controller
 
     public function destroy(Payroll $payroll)
     {
+        $payrollData = $payroll->toArray();
+
         // Allow deletion of any payroll status (draft, finalized, paid)
         $payroll->delete();
+
+        // Log payroll deletion
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'payroll',
+            'action' => 'delete_payroll',
+            'description' => "Payroll '{$payrollData['period_name']}' (ID: {$payrollData['id']}) deleted",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $payrollData,
+        ]);
 
         return response()->json([
             'message' => 'Payroll deleted successfully'
@@ -175,6 +219,21 @@ class PayrollController extends Controller
             'finalized_at' => now(),
         ]);
 
+        // Log payroll finalization
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'payroll',
+            'action' => 'finalize_payroll',
+            'description' => "Payroll '{$payroll->period_name}' finalized",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'new_values' => [
+                'payroll_id' => $payroll->id,
+                'status' => 'finalized',
+                'finalized_at' => now()->toDateTimeString(),
+            ],
+        ]);
+
         return response()->json([
             'message' => 'Payroll finalized successfully',
             'payroll' => $payroll->load(['items.employee', 'creator', 'finalizer'])
@@ -195,6 +254,20 @@ class PayrollController extends Controller
             $payrollService = new \App\Services\PayrollService();
             $payrollService->reprocessPayroll($payroll);
 
+            // Log payroll reprocessing
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'reprocess_payroll',
+                'description' => "Payroll '{$payroll->period_name}' reprocessed",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'new_values' => [
+                    'payroll_id' => $payroll->id,
+                    'items_count' => $payroll->items()->count(),
+                ],
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Payroll reprocessed successfully',
@@ -210,9 +283,9 @@ class PayrollController extends Controller
 
     public function downloadPayslip($payrollId, $employeeId)
     {
-        // Increase memory limit for PDF generation
-        ini_set('memory_limit', '1024M');
-        ini_set('max_execution_time', '300');
+        // Validate parameters
+        $payrollId = (int) $payrollId;
+        $employeeId = (int) $employeeId;
 
         $payroll = Payroll::findOrFail($payrollId);
 
@@ -258,14 +331,14 @@ class PayrollController extends Controller
 
     private function generatePayrollItems(Payroll $payroll, array $filters = [])
     {
-        Log::info('=== Payroll Generation Debug ===');
-        Log::info('Filters received:', $filters);
-        Log::info('Has attendance value: ' . var_export($filters['has_attendance'] ?? 'not set', true));
-        Log::info('Has attendance empty check: ' . var_export(empty($filters['has_attendance']), true));
+        if (config('app.debug')) {
+            Log::debug('Payroll Generation', [
+                'filters' => $filters,
+                'has_attendance' => $filters['has_attendance'] ?? 'not set'
+            ]);
+        }
 
         $query = Employee::where('activity_status', 'active');
-        $initialCount = Employee::where('activity_status', 'active')->count();
-        Log::info('Initial active employees: ' . $initialCount);
 
         // Apply filters based on filter type
         if (!empty($filters['type']) && $filters['type'] !== 'all') {
@@ -286,23 +359,20 @@ class PayrollController extends Controller
             }
 
             // If filter type is set but no specific values provided, treat as 'all'
-            if (!$filterApplied) {
-                Log::info('Filter type "' . $filters['type'] . '" set but no specific values provided, treating as "all"');
+            if (!$filterApplied && config('app.debug')) {
+                Log::debug('Filter type "' . $filters['type'] . '" set but no specific values provided, treating as "all"');
             }
         }
 
+        // Store count after type filters for error messages
         $afterTypeFilter = $query->count();
-        Log::info('After type filter: ' . $afterTypeFilter);
 
         // Filter by attendance if requested
         if (!empty($filters['has_attendance'])) {
-            Log::info('Applying attendance filter for period: ' . $payroll->period_start . ' to ' . $payroll->period_end);
             $query->whereHas('attendance', function ($q) use ($payroll) {
                 $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                     ->where('status', '!=', 'absent');
             });
-            $afterAttendance = $query->count();
-            Log::info('After attendance filter: ' . $afterAttendance);
         }
 
         // Order by employee number for consistent selection

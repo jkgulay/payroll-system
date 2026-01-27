@@ -29,6 +29,8 @@ class User extends Authenticatable
         'last_login_at',
         'two_factor_secret',
         'two_factor_enabled',
+        'two_factor_confirmed_at',
+        'two_factor_recovery_codes',
     ];
 
     /**
