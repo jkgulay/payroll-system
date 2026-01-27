@@ -253,7 +253,11 @@ const loadSummary = async () => {
 const loadEmployees = async () => {
   loadingEmployees.value = true;
   try {
-    const response = await api.get("/employees");
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 10000, 
+      },
+    });
     employees.value = response.data.data || response.data || [];
   } catch (error) {
     toast.error("Failed to load employees");

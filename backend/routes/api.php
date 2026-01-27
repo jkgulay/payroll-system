@@ -37,9 +37,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         $user = $request->user();
 
-        // Load employee relationship if user is an employee
-        if ($user->role === 'employee') {
+        // Load employee relationship for employee-based roles
+        if (in_array($user->role, ['employee', 'payrollist', 'accountant'])) {
             $user->load('employee');
+
+            // Add full_name from employee if available
+            if ($user->employee) {
+                $user->full_name = $user->employee->full_name;
+            }
         }
 
         return $user;
@@ -132,19 +137,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('meal-allowances', App\Http\Controllers\Api\MealAllowanceController::class);
 
     // Loans - specific routes MUST come before apiResource
-    Route::get('/loans/pending', [App\Http\Controllers\Api\LoanController::class, 'index'])->middleware('role:admin');
-    Route::post('/loans/{loan}/approve', [App\Http\Controllers\Api\LoanController::class, 'approve'])->middleware('role:admin');
-    Route::post('/loans/{loan}/reject', [App\Http\Controllers\Api\LoanController::class, 'reject'])->middleware('role:admin');
+    Route::get('/loans/pending', [App\Http\Controllers\Api\LoanController::class, 'index'])->middleware('role:admin,payrollist');
+    Route::post('/loans/{loan}/approve', [App\Http\Controllers\Api\LoanController::class, 'approve'])->middleware('role:admin,payrollist');
+    Route::post('/loans/{loan}/reject', [App\Http\Controllers\Api\LoanController::class, 'reject'])->middleware('role:admin,payrollist');
     Route::post('/loans/{loan}/payments', [App\Http\Controllers\Api\LoanController::class, 'recordPayment']);
     Route::apiResource('loans', App\Http\Controllers\Api\LoanController::class);
 
     // Payroll - specific routes MUST come before apiResource (Protected by role middleware)
-    Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize'])->middleware('role:admin,accountant');
-    Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess'])->middleware('role:admin,accountant');
-    Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister'])->middleware('role:admin,accountant');
-    Route::get('/payrolls/{payroll}/export-excel', [App\Http\Controllers\PayrollController::class, 'exportToExcel'])->middleware('role:admin,accountant');
-    Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip'])->middleware('role:admin,accountant,employee');
-    Route::apiResource('payrolls', App\Http\Controllers\PayrollController::class)->middleware('role:admin,accountant');
+    Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize'])->middleware('role:admin,payrollist');
+    Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess'])->middleware('role:admin,payrollist');
+    Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister'])->middleware('role:admin,payrollist');
+    Route::get('/payrolls/{payroll}/export-excel', [App\Http\Controllers\PayrollController::class, 'exportToExcel'])->middleware('role:admin,payrollist');
+    Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip'])->middleware('role:admin,payrollist,employee');
+    Route::apiResource('payrolls', App\Http\Controllers\PayrollController::class)->middleware('role:admin,payrollist');
 
 
     // Deductions - specific routes MUST come before apiResource
@@ -152,8 +157,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Cash Bond specific routes
     Route::get('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'getCashBonds']);
-    Route::post('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'createCashBond'])->middleware('role:admin,accountant');
-    Route::post('/deductions/{deduction}/refund-cash-bond', [App\Http\Controllers\Api\DeductionController::class, 'refundCashBond'])->middleware('role:admin,accountant');
+    Route::post('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'createCashBond'])->middleware('role:admin,payrollist');
+    Route::post('/deductions/{deduction}/refund-cash-bond', [App\Http\Controllers\Api\DeductionController::class, 'refundCashBond'])->middleware('role:admin,payrollist');
 
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 

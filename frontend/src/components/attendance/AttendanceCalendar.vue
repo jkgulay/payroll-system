@@ -3,59 +3,61 @@
     <v-row>
       <v-col cols="12" md="3">
         <v-card>
-          <v-card-title class="text-h6">Date Navigation</v-card-title>
-          <v-card-text>
-            <v-date-picker
-              v-model="selectedDate"
-              @update:model-value="loadMonthData"
-              color="primary"
-              full-width
-              show-adjacent-months
-            ></v-date-picker>
-          </v-card-text>
-        </v-card>
-
-        <v-card class="mt-4">
-          <v-card-title class="text-h6">Legend</v-card-title>
-          <v-card-text>
-            <div class="d-flex align-center mb-2">
-              <v-icon color="success" class="mr-2">mdi-circle</v-icon>
-              <span>Present</span>
-            </div>
-            <div class="d-flex align-center mb-2">
-              <v-icon color="error" class="mr-2">mdi-circle</v-icon>
-              <span>Absent</span>
-            </div>
-            <div class="d-flex align-center mb-2">
-              <v-icon color="warning" class="mr-2">mdi-circle</v-icon>
-              <span>Late</span>
-            </div>
-            <div class="d-flex align-center mb-2">
-              <v-icon color="info" class="mr-2">mdi-circle</v-icon>
-              <span>Half Day</span>
-            </div>
-            <div class="d-flex align-center mb-2">
-              <v-icon color="purple" class="mr-2">mdi-circle</v-icon>
-              <span>On Leave</span>
-            </div>
-          </v-card-text>
-        </v-card>
-
-        <v-card class="mt-4">
-          <v-card-title class="text-h6">Filter</v-card-title>
+          <v-card-title class="text-h6">
+            <v-icon class="mr-2">mdi-filter</v-icon>
+            Filter by Employee
+          </v-card-title>
           <v-card-text>
             <v-autocomplete
               v-model="selectedEmployeeId"
               :items="employees"
               item-title="full_name"
               item-value="id"
-              label="Filter by Employee"
+              label="Search employee..."
               variant="outlined"
-              density="compact"
+              density="comfortable"
               clearable
               :loading="loadingEmployees"
               @update:model-value="loadMonthData"
-            ></v-autocomplete>
+              prepend-inner-icon="mdi-account-search"
+              hide-details
+            >
+              <template v-slot:item="{ item }">
+                <v-list-item
+                  :title="item.raw.full_name"
+                  :subtitle="item.raw.employee_number"
+                  :value="item.value"
+                >
+                  <template v-slot:prepend>
+                    <v-avatar size="32" color="primary" class="text-white">
+                      {{ item.raw.full_name?.charAt(0) }}
+                    </v-avatar>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
+
+            <v-divider class="my-4"></v-divider>
+
+            <div class="text-center">
+              <div class="text-h4 font-weight-bold text-primary">
+                {{ totalEmployees }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                Total Employees
+              </div>
+            </div>
+
+            <v-divider class="my-4"></v-divider>
+
+            <div class="text-center">
+              <div class="text-h4 font-weight-bold">
+                {{ attendanceData.length }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                Records This Month
+              </div>
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -74,22 +76,43 @@
                   icon="mdi-chevron-left"
                   @click="previousMonth"
                   variant="text"
+                  :loading="loading"
                 ></v-btn>
                 <v-btn
                   icon="mdi-calendar-today"
                   @click="goToToday"
                   variant="text"
+                  :loading="loading"
                 ></v-btn>
                 <v-btn
                   icon="mdi-chevron-right"
                   @click="nextMonth"
                   variant="text"
+                  :loading="loading"
                 ></v-btn>
               </v-col>
             </v-row>
           </v-card-title>
 
-          <v-card-text>
+          <!-- Loading Progress Bar -->
+          <v-progress-linear
+            v-if="loading"
+            indeterminate
+            color="primary"
+            height="3"
+          ></v-progress-linear>
+
+          <v-card-text :class="{ 'calendar-loading': loading }">
+            <!-- Loading Overlay -->
+            <div v-if="loading" class="calendar-loading-overlay">
+              <v-progress-circular
+                indeterminate
+                color="primary"
+                size="64"
+              ></v-progress-circular>
+              <p class="mt-4 text-subtitle-1">Loading attendance data...</p>
+            </div>
+
             <v-data-table
               :headers="calendarHeaders"
               :items="calendarDays"
@@ -251,6 +274,7 @@ const attendanceData = ref([]);
 const selectedEmployeeId = ref(null);
 const employees = ref([]);
 const loadingEmployees = ref(false);
+const totalEmployees = ref(0);
 const dayDetailsDialog = ref(false);
 const selectedDayDate = ref(null);
 const selectedDayRecords = ref([]);
@@ -307,20 +331,42 @@ const calendarDays = computed(() => {
   // Current month days
   for (let day = 1; day <= totalDays; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-      day
+      day,
     ).padStart(2, "0")}`;
 
-    const dayRecords = attendanceData.value.filter(
-      (a) => a.attendance_date === dateStr
-    );
+    // Filter records for this day - handle both date formats (YYYY-MM-DD and timestamp)
+    const dayRecords = attendanceData.value.filter((a) => {
+      const recordDate = a.attendance_date.split("T")[0]; // Extract date part from timestamp
+      return recordDate === dateStr;
+    });
 
     const summary = {
-      total: dayRecords.length,
+      total: selectedEmployeeId.value
+        ? dayRecords.length
+        : totalEmployees.value, // If filtering by employee, show their records; otherwise show total employees
       present: dayRecords.filter((r) => r.status === "present").length,
       absent: dayRecords.filter((r) => r.status === "absent").length,
       late: dayRecords.filter((r) => r.status === "late").length,
       onLeave: dayRecords.filter((r) => r.status === "on_leave").length,
     };
+
+    // Debug logging for first few days
+    if (day <= 3 && dayRecords.length > 0) {
+      console.log(`Day ${day} (${dateStr}):`, {
+        totalRecords: dayRecords.length,
+        statuses: {
+          present: summary.present,
+          absent: summary.absent,
+          late: summary.late,
+          onLeave: summary.onLeave,
+        },
+        sampleRecords: dayRecords.slice(0, 2).map((r) => ({
+          id: r.id,
+          employee: r.employee?.full_name,
+          status: r.status,
+        })),
+      });
+    }
 
     week.push({
       date: dateStr,
@@ -365,6 +411,7 @@ const loadMonthData = async () => {
     const params = {
       date_from: firstDay,
       date_to: lastDay,
+      per_page: 10000, // Request all attendance records for the month
     };
 
     if (selectedEmployeeId.value) {
@@ -372,8 +419,17 @@ const loadMonthData = async () => {
     }
 
     const response = await attendanceService.getAttendance(params);
-    attendanceData.value = response.data || [];
+    // Handle both paginated (response.data.data) and non-paginated (response.data) responses
+    attendanceData.value = response.data?.data || response.data || [];
+
+    // Debug: Log what we received
+    console.log("Calendar loaded attendance records:", {
+      count: attendanceData.value.length,
+      sample: attendanceData.value.slice(0, 3),
+      params,
+    });
   } catch (error) {
+    console.error("Calendar load error:", error);
     toast.error("Failed to load calendar data");
   } finally {
     loading.value = false;
@@ -383,8 +439,15 @@ const loadMonthData = async () => {
 const loadEmployees = async () => {
   loadingEmployees.value = true;
   try {
-    const response = await api.get("/employees");
-    employees.value = response.data.data || response.data || [];
+    // Fetch all employees without pagination by requesting a large per_page value
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 10000, // Request all employees (no activity_status filter to include all)
+      },
+    });
+    const employeeList = response.data.data || response.data || [];
+    employees.value = employeeList;
+    totalEmployees.value = employeeList.length; // Store total count for calendar summary
   } catch (error) {
     toast.error("Failed to load employees");
   } finally {
@@ -411,9 +474,18 @@ const getStatusColor = (status) => {
 };
 
 const handleDayClick = (day) => {
-  if (day.date) {
+  if (day.date && day.records.length > 0) {
+    // If day has records, show the details dialog
+    showDayDetails(day);
+  } else if (day.date) {
+    // If day has no records, emit date-click to create new attendance
     emit("date-click", day.date);
   }
+};
+
+const onDatePickerChange = (date) => {
+  // No longer needed - removed date picker
+  loadMonthData();
 };
 
 const previousMonth = () => {
@@ -498,5 +570,31 @@ onUnmounted(() => {
 .text-warning {
   color: #f57c00 !important;
   font-weight: 500;
+}
+
+/* Loading State */
+.calendar-loading {
+  position: relative;
+  min-height: 400px;
+}
+
+.calendar-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+.calendar-loading .attendance-calendar {
+  opacity: 0.3;
+  pointer-events: none;
 }
 </style>

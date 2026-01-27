@@ -462,7 +462,7 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'employee') {
+        if (!in_array($user->role, ['employee', 'payrollist'])) {
             return response()->json(['message' => 'This endpoint is for employees only'], 403);
         }
 
@@ -510,7 +510,7 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'employee') {
+        if (!in_array($user->role, ['employee', 'payrollist'])) {
             return response()->json(['message' => 'This endpoint is for employees only'], 403);
         }
 

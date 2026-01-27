@@ -20,24 +20,24 @@ return new class extends Migration
             $table->foreignId('position_id')->nullable()->constrained('position_rates')->onDelete('set null');
             $table->string('status')->default('draft'); // draft, pending_approval, approved, rejected
             $table->text('notes')->nullable();
-            
+
             // Approval workflow
-            $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
+            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('submitted_at')->nullable();
             $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('approved_at')->nullable();
             $table->text('approval_notes')->nullable();
-            
+
             // Signatories
             $table->string('prepared_by_name')->nullable();
             $table->string('checked_by_name')->nullable();
             $table->string('verified_by_name')->nullable();
             $table->string('recommended_by_name')->nullable();
             $table->string('approved_by_name')->nullable();
-            
+
             // PDF path
             $table->string('pdf_path')->nullable();
-            
+
             $table->timestamps();
             $table->softDeletes();
         });
