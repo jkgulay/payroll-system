@@ -59,12 +59,24 @@ class PayrollService
     public function processPayroll(Payroll $payroll, ?array $employeeIds = null)
     {
         try {
-            // If no employee IDs provided, process all active employees
+            // If no employee IDs provided, process employees who were working during the payroll period
             if (empty($employeeIds)) {
-                $employees = Employee::where('activity_status', 'active')->get();
+                $employees = Employee::where(function ($q) use ($payroll) {
+                    $q->whereIn('activity_status', ['active', 'on_leave'])
+                        ->orWhereHas('attendances', function ($subQ) use ($payroll) {
+                            $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                                ->where('status', '!=', 'absent');
+                        });
+                })->get();
             } else {
                 $employees = Employee::whereIn('id', $employeeIds)
-                    ->where('activity_status', 'active')
+                    ->where(function ($q) use ($payroll) {
+                        $q->whereIn('activity_status', ['active', 'on_leave'])
+                            ->orWhereHas('attendances', function ($subQ) use ($payroll) {
+                                $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                                    ->where('status', '!=', 'absent');
+                            });
+                    })
                     ->get();
             }
 

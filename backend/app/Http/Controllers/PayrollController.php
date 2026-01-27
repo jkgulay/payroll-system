@@ -338,7 +338,15 @@ class PayrollController extends Controller
             ]);
         }
 
-        $query = Employee::where('activity_status', 'active');
+        // Include employees who were working during the payroll period
+        // This includes: active employees, on_leave employees, or anyone with attendance during the period
+        $query = Employee::where(function ($q) use ($payroll) {
+            $q->whereIn('activity_status', ['active', 'on_leave'])
+                ->orWhereHas('attendances', function ($subQ) use ($payroll) {
+                    $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                        ->where('status', '!=', 'absent');
+                });
+        });
 
         // Apply filters based on filter type
         if (!empty($filters['type']) && $filters['type'] !== 'all') {
@@ -354,7 +362,10 @@ class PayrollController extends Controller
                 $query->whereIn('department', $filters['departments']);
                 $filterApplied = true;
             } elseif ($filters['type'] === 'staff_type' && !empty($filters['staff_types'])) {
-                $query->whereIn('staff_type', $filters['staff_types']);
+                // Staff type is actually position name from PositionRate table
+                $query->whereHas('positionRate', function ($q) use ($filters) {
+                    $q->whereIn('position_name', $filters['staff_types']);
+                });
                 $filterApplied = true;
             }
 

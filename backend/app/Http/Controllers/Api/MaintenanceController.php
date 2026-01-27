@@ -102,34 +102,146 @@ class MaintenanceController extends Controller
             $health = [
                 'database_driver' => $driver,
                 'connection' => 'ok',
+                'timestamp' => now()->toISOString(),
             ];
 
+            // Database Size & Performance
             if ($driver === 'pgsql') {
-                // Check payroll sequence
-                $maxId = DB::table('payrolls')->max('id') ?? 0;
-                $currentSeq = DB::selectOne("SELECT last_value FROM payrolls_id_seq")?->last_value ?? 0;
-                $payrollCount = DB::table('payrolls')->count();
-                $activeEmployees = DB::table('employees')->where('activity_status', 'active')->count();
-
-                $health['payrolls'] = [
-                    'max_id' => $maxId,
-                    'sequence_value' => $currentSeq,
-                    'sequence_ok' => ($maxId == 0 && $currentSeq <= 1) || ($currentSeq >= $maxId && $currentSeq - $maxId <= 1),
-                    'total_payrolls' => $payrollCount,
-                ];
-
-                $health['employees'] = [
-                    'active_count' => $activeEmployees,
+                $dbSize = DB::selectOne("SELECT pg_database_size(current_database()) as size")->size ?? 0;
+                $health['database'] = [
+                    'size_mb' => round($dbSize / 1024 / 1024, 2),
+                    'size_formatted' => $this->formatBytes($dbSize),
                 ];
             }
 
+            // Payroll Health Check
+            $maxPayrollId = DB::table('payrolls')->max('id') ?? 0;
+            $payrollCount = DB::table('payrolls')->count();
+            $draftPayrolls = DB::table('payrolls')->where('status', 'draft')->count();
+            $finalizedPayrolls = DB::table('payrolls')->where('status', 'finalized')->count();
+            $orphanedPayrollItems = DB::table('payroll_items')
+                ->whereNotIn('payroll_id', function ($query) {
+                    $query->select('id')->from('payrolls');
+                })
+                ->count();
+
+            if ($driver === 'pgsql') {
+                $currentSeq = DB::selectOne("SELECT last_value FROM payrolls_id_seq")?->last_value ?? 0;
+                $sequenceOk = ($maxPayrollId == 0 && $currentSeq <= 1) || ($currentSeq >= $maxPayrollId && $currentSeq - $maxPayrollId <= 1);
+            } else {
+                $currentSeq = null;
+                $sequenceOk = true;
+            }
+
+            $health['payrolls'] = [
+                'total' => $payrollCount,
+                'draft' => $draftPayrolls,
+                'finalized' => $finalizedPayrolls,
+                'max_id' => $maxPayrollId,
+                'sequence_value' => $currentSeq,
+                'sequence_ok' => $sequenceOk,
+                'orphaned_items' => $orphanedPayrollItems,
+                'has_issues' => !$sequenceOk || $orphanedPayrollItems > 0,
+            ];
+
+            // Employee Health Check
+            $totalEmployees = DB::table('employees')->count();
+            $activeEmployees = DB::table('employees')->where('activity_status', 'active')->count();
+            $inactiveEmployees = $totalEmployees - $activeEmployees;
+            $employeesWithoutPosition = DB::table('employees')->whereNull('position_id')->count();
+            $employeesWithoutProject = DB::table('employees')->whereNull('project_id')->count();
+            $employeesWithoutUser = DB::table('employees')
+                ->leftJoin('users', 'employees.id', '=', 'users.employee_id')
+                ->whereNull('users.id')
+                ->count();
+
+            $health['employees'] = [
+                'total' => $totalEmployees,
+                'active' => $activeEmployees,
+                'inactive' => $inactiveEmployees,
+                'without_position' => $employeesWithoutPosition,
+                'without_project' => $employeesWithoutProject,
+                'without_user_account' => $employeesWithoutUser,
+                'has_issues' => $employeesWithoutPosition > 0 || $activeEmployees == 0,
+            ];
+
+            // Attendance Health Check
+            $totalAttendance = DB::table('attendance')->count();
+            $thisMonthAttendance = DB::table('attendance')
+                ->whereYear('attendance_date', now()->year)
+                ->whereMonth('attendance_date', now()->month)
+                ->count();
+            $pendingCorrections = DB::table('attendance_corrections')
+                ->where('status', 'pending')
+                ->count();
+
+            $health['attendance'] = [
+                'total_records' => $totalAttendance,
+                'this_month' => $thisMonthAttendance,
+                'pending_corrections' => $pendingCorrections,
+                'has_issues' => $pendingCorrections > 10,
+            ];
+
+            // User Accounts Health Check
+            $totalUsers = DB::table('users')->count();
+            $adminUsers = DB::table('users')->where('role', 'admin')->count();
+            $usersWithoutEmployees = DB::table('users')->whereNull('employee_id')->count();
+            $inactiveUsers = DB::table('users')->where('is_active', false)->count();
+
+            $health['users'] = [
+                'total' => $totalUsers,
+                'admins' => $adminUsers,
+                'without_employee' => $usersWithoutEmployees,
+                'inactive' => $inactiveUsers,
+                'has_issues' => $adminUsers == 0,
+            ];
+
+            // Pending Approvals
+            $pendingLeaves = DB::table('employee_leaves')->where('status', 'pending')->count();
+            $pendingLoans = DB::table('employee_loans')->where('status', 'pending')->count();
+            $pendingResignations = DB::table('resignations')->where('status', 'pending')->count();
+
+            $health['pending_approvals'] = [
+                'leaves' => $pendingLeaves,
+                'loans' => $pendingLoans,
+                'resignations' => $pendingResignations,
+                'total' => $pendingLeaves + $pendingLoans + $pendingResignations,
+            ];
+
+            // Overall System Health
+            $criticalIssues = 0;
+            $warnings = 0;
+
+            if (!$sequenceOk || $orphanedPayrollItems > 0) $criticalIssues++;
+            if ($activeEmployees == 0) $criticalIssues++;
+            if ($adminUsers == 0) $criticalIssues++;
+            if ($employeesWithoutPosition > 0) $warnings++;
+            if ($pendingCorrections > 10) $warnings++;
+
+            $health['overall'] = [
+                'status' => $criticalIssues > 0 ? 'critical' : ($warnings > 0 ? 'warning' : 'healthy'),
+                'critical_issues' => $criticalIssues,
+                'warnings' => $warnings,
+            ];
+
             return response()->json($health);
         } catch (\Exception $e) {
+            Log::error('Error checking database health: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Error checking database health',
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        return round($bytes, $precision) . ' ' . $units[$pow];
     }
 
     /**
