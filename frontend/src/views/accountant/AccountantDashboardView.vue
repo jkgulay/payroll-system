@@ -421,7 +421,7 @@
                   :items="projects"
                   item-title="name"
                   item-value="id"
-                  label="Project"
+                  label="Department"
                   :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
@@ -845,7 +845,7 @@
               <v-col cols="12" md="6">
                 <v-text-field
                   :model-value="selectedEmployee.project?.name || 'N/A'"
-                  label="Project"
+                  label="Department"
                   readonly
                   variant="plain"
                   density="comfortable"
@@ -1428,25 +1428,25 @@ async function submitEmployeeApplication() {
     if (documents.value.resume) {
       formData.append(
         "resume",
-        documents.value.resume[0] || documents.value.resume
+        documents.value.resume[0] || documents.value.resume,
       );
     }
     if (documents.value.id_document) {
       formData.append(
         "id_document",
-        documents.value.id_document[0] || documents.value.id_document
+        documents.value.id_document[0] || documents.value.id_document,
       );
     }
     if (documents.value.contract) {
       formData.append(
         "contract",
-        documents.value.contract[0] || documents.value.contract
+        documents.value.contract[0] || documents.value.contract,
       );
     }
     if (documents.value.certificates) {
       formData.append(
         "certificates",
-        documents.value.certificates[0] || documents.value.certificates
+        documents.value.certificates[0] || documents.value.certificates,
       );
     }
 
@@ -1457,14 +1457,14 @@ async function submitEmployeeApplication() {
     });
 
     toast.success(
-      "Employee application submitted successfully! Waiting for admin approval."
+      "Employee application submitted successfully! Waiting for admin approval.",
     );
     closeEmployeeDialog();
     fetchDashboardData();
   } catch (error) {
     console.error("Error submitting employee application:", error);
     toast.error(
-      error.response?.data?.message || "Failed to submit application"
+      error.response?.data?.message || "Failed to submit application",
     );
   } finally {
     saving.value = false;
@@ -1480,7 +1480,7 @@ async function saveEmployee() {
     if (editingEmployee.value) {
       await api.put(
         `/employees/${editingEmployee.value.id}`,
-        employeeData.value
+        employeeData.value,
       );
       toast.success("Employee updated successfully");
     } else {

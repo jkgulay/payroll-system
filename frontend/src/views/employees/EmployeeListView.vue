@@ -54,7 +54,7 @@
               :items="projects"
               item-title="name"
               item-value="id"
-              label="Project"
+              label="Department"
               clearable
               variant="outlined"
               density="comfortable"
@@ -551,7 +551,7 @@
                         <v-icon size="small" class="mr-2"
                           >mdi-office-building</v-icon
                         >
-                        Project
+                        Department
                       </div>
                       <div class="detail-value">
                         {{
@@ -837,7 +837,7 @@
                   :items="projects || []"
                   item-title="name"
                   item-value="id"
-                  label="Project"
+                  label="Department"
                   prepend-inner-icon="mdi-office-building"
                   :readonly="!isEditing"
                   :variant="isEditing ? 'outlined' : 'outlined'"
@@ -1436,7 +1436,7 @@ const headers = [
   { title: "Biometric ID", key: "biometric_id", sortable: false },
   { title: "Name", key: "full_name", sortable: true },
   { title: "Gender", key: "gender", sortable: true },
-  { title: "Project", key: "project", sortable: true },
+  { title: "Department", key: "project", sortable: true },
   { title: "Position", key: "position", sortable: true },
   { title: "Pay Rate", key: "pay_rate", sortable: false },
   { title: "Date Hired", key: "date_hired", sortable: true },

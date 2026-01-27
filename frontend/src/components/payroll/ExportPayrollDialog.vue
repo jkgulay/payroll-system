@@ -37,17 +37,17 @@
             clearable
           ></v-autocomplete>
 
-          <!-- Project Filter -->
+          <!-- Department Filter -->
           <v-autocomplete
             v-if="exportType === 'project'"
             v-model="selectedProject"
             :items="projects"
             item-title="name"
             item-value="id"
-            label="Select Project/Location"
+            label="Select Department/Location"
             prepend-icon="mdi-briefcase"
-            :rules="[(v) => !!v || 'Project is required']"
-            hint="Projects are grouped by location/description"
+            :rules="[(v) => !!v || 'Department is required']"
+            hint="Departments are grouped by location/description"
             persistent-hint
             clearable
           ></v-autocomplete>
@@ -207,7 +207,7 @@ watch(
       resetForm();
       loadData();
     }
-  }
+  },
 );
 
 watch(dialog, (val) => {
@@ -289,7 +289,7 @@ const exportPDF = async () => {
       payload,
       {
         responseType: "blob",
-      }
+      },
     );
 
     // Create download link

@@ -166,7 +166,7 @@
                 :items="projects"
                 item-title="name"
                 item-value="id"
-                label="Project"
+                label="Department"
                 prepend-inner-icon="mdi-office-building"
                 :rules="[rules.required]"
                 variant="outlined"

@@ -395,7 +395,7 @@ const menuItems = computed(() => {
       roles: ["admin"],
     },
     {
-      title: "Projects",
+      title: "Departments",
       icon: "mdi-office-building",
       value: "projects",
       to: "/projects",
@@ -668,7 +668,7 @@ const menuSections = computed(() => {
       roles: ["admin", "accountant"],
     },
     {
-      title: "Projects",
+      title: "Departments",
       icon: "mdi-office-building",
       value: "projects",
       to: "/projects",

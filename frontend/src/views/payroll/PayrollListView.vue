@@ -399,7 +399,7 @@
               :loading="loadingProjects"
               item-title="name"
               item-value="id"
-              label="Select Projects"
+              label="Select Departments"
               prepend-icon="mdi-briefcase"
               multiple
               chips
@@ -503,7 +503,7 @@
                   in this payroll.
                 </span>
                 <span v-else-if="formData.filter_type === 'project'">
-                  Only employees assigned to the selected project(s) will be
+                  Only employees assigned to the selected department(s) will be
                   included in this payroll.
                 </span>
                 <span v-else-if="formData.filter_type === 'department'">

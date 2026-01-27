@@ -8,9 +8,9 @@
             <v-icon size="20">mdi-office-building</v-icon>
           </div>
           <div>
-            <h1 class="page-title">Project Management</h1>
+            <h1 class="page-title">Department Management</h1>
             <p class="page-subtitle">
-              Manage projects and track employee assignments
+              Manage departments and track employee assignments
             </p>
           </div>
         </div>
@@ -20,7 +20,7 @@
             @click="openCreateDialog"
           >
             <v-icon size="20">mdi-plus</v-icon>
-            <span>New Project</span>
+            <span>New Department</span>
           </button>
         </div>
       </div>
@@ -34,7 +34,7 @@
         @click="filterTab = 'all'"
       >
         <v-icon size="18">mdi-folder-multiple</v-icon>
-        <span>All Projects</span>
+        <span>All Departments</span>
       </button>
       <button
         class="filter-tab"
@@ -58,7 +58,7 @@
     <v-text-field
       v-model="search"
       prepend-inner-icon="mdi-magnify"
-      label="Search projects..."
+      label="Search departments..."
       variant="outlined"
       density="compact"
       clearable
@@ -211,12 +211,12 @@
       class="pa-8 text-center"
     >
       <v-icon size="64" color="grey-lighten-1">mdi-folder-open</v-icon>
-      <div class="text-h6 mt-4 text-grey">No projects found</div>
+      <div class="text-h6 mt-4 text-grey">No departments found</div>
       <div class="text-body-2 text-grey">
         {{
           search
             ? "Try adjusting your search"
-            : "Create your first project to get started"
+            : "Create your first department to get started"
         }}
       </div>
     </v-card>
@@ -234,13 +234,13 @@
             </div>
             <div class="flex-grow-1">
               <div class="text-h5 font-weight-bold">
-                {{ editMode ? "Edit Project" : "New Project" }}
+                {{ editMode ? "Edit Department" : "New Department" }}
               </div>
               <div class="text-subtitle-2 text-white-70">
                 {{
                   editMode
-                    ? "Update project information"
-                    : "Create a new project"
+                    ? "Update department information"
+                    : "Create a new department"
                 }}
               </div>
             </div>
@@ -264,7 +264,7 @@
                 <div class="form-field-wrapper">
                   <label class="form-label">
                     <v-icon size="small" color="primary">mdi-barcode</v-icon>
-                    Project Code
+                    Department Code
                     <v-chip size="x-small" color="info" class="ml-2"
                       >Auto-generated</v-chip
                     >
@@ -287,11 +287,11 @@
                 <div class="form-field-wrapper">
                   <label class="form-label">
                     <v-icon size="small" color="primary">mdi-folder</v-icon>
-                    Project Name <span class="text-error">*</span>
+                    Department Name <span class="text-error">*</span>
                   </label>
                   <v-text-field
                     v-model="formData.name"
-                    placeholder="Enter project name"
+                    placeholder="Enter department name"
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-folder"
@@ -311,7 +311,7 @@
                   </label>
                   <v-textarea
                     v-model="formData.description"
-                    placeholder="Enter project description"
+                    placeholder="Enter department description"
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-text"
@@ -328,14 +328,14 @@
                     <v-icon size="small" color="primary"
                       >mdi-account-tie</v-icon
                     >
-                    Project Head
+                    Department Head
                   </label>
                   <v-autocomplete
                     v-model="formData.head_employee_id"
                     :items="employees"
                     item-title="full_name"
                     item-value="id"
-                    placeholder="Select project head"
+                    placeholder="Select department head"
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-account-tie"
@@ -440,7 +440,7 @@
               <v-icon size="small" color="#ED985F" class="mr-1"
                 >mdi-account-tie</v-icon
               >
-              Project Head
+              Department Head
             </div>
             <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8)">
               {{

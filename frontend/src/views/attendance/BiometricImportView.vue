@@ -109,8 +109,8 @@
                 <v-autocomplete
                   v-model="defaultProject"
                   :items="projectOptions"
-                  label="Default Project"
-                  placeholder="Select project"
+                  label="Default Department"
+                  placeholder="Select department"
                   density="compact"
                   variant="outlined"
                   clearable
