@@ -48,7 +48,7 @@
       :headers="headers"
       :items="attendance"
       :loading="loading"
-      :items-per-page="15"
+      :items-per-page="-1"
       class="elevation-0"
     >
       <template v-slot:item.employee="{ item }">
@@ -253,7 +253,10 @@ const statusOptions = [
 const loadAttendance = async () => {
   loading.value = true;
   try {
-    const response = await attendanceService.getAttendance(filters);
+    const response = await attendanceService.getAttendance({
+      ...filters,
+      per_page: 10000 // Fetch all records
+    });
     attendance.value = response.data || [];
   } catch (error) {
     toast.error("Failed to load attendance records");

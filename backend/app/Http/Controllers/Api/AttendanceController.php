@@ -55,7 +55,9 @@ class AttendanceController extends Controller
             $query->where('status', $request->status);
         }
 
-        return response()->json($query->latest('attendance_date')->paginate(15));
+        // Use per_page from request, default to 1000 to show all records
+        $perPage = $request->input('per_page', 1000);
+        return response()->json($query->latest('attendance_date')->paginate($perPage));
     }
 
     public function store(Request $request)
@@ -561,7 +563,9 @@ class AttendanceController extends Controller
             $query->where('attendance_date', '<=', $request->date_to);
         }
 
-        return response()->json($query->latest('attendance_date')->paginate(15));
+        // Use per_page from request, default to 1000 to show all records
+        $perPage = $request->input('per_page', 1000);
+        return response()->json($query->latest('attendance_date')->paginate($perPage));
     }
 
     /**
