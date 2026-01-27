@@ -35,22 +35,33 @@ class MaintenanceController extends Controller
             // Get the max ID from payrolls table
             $maxId = DB::table('payrolls')->max('id') ?? 0;
 
+            // Check current sequence value
+            $currentSeq = DB::selectOne("SELECT last_value FROM payrolls_id_seq")?->last_value ?? 0;
+
+            // Check if sequence is already correct
+            $isCorrect = ($maxId == 0 && $currentSeq <= 1) || ($currentSeq >= $maxId && $currentSeq - $maxId <= 1);
+
+            if ($isCorrect) {
+                return response()->json([
+                    'message' => 'Sequence is already correct, no fix needed',
+                    'current_max_id' => $maxId,
+                    'current_sequence' => $currentSeq,
+                    'next_id_will_be' => $maxId + 1,
+                    'success' => true
+                ]);
+            }
+
             // If there are no payrolls, reset to 1, otherwise set to max
             // The second parameter (true/false) tells setval whether to increment on next call
             if ($maxId == 0) {
                 // No payrolls exist, start from 1
                 DB::statement("SELECT setval('payrolls_id_seq', 1, false)");
+                $nextId = 1;
             } else {
                 // Set to max ID, next call will increment
                 DB::statement("SELECT setval('payrolls_id_seq', {$maxId}, true)");
+                $nextId = $maxId + 1;
             }
-
-            // Verify - this will get the NEXT value that will be used
-            $nextIdResult = DB::selectOne("SELECT nextval('payrolls_id_seq') as next_id");
-            $nextId = $nextIdResult->next_id;
-
-            // Reset back so we don't skip a number
-            DB::statement("SELECT setval('payrolls_id_seq', " . ($nextId - 1) . ", true)");
 
             Log::info('Payroll sequence fixed', [
                 'max_id' => $maxId,

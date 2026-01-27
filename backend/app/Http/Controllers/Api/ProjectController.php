@@ -159,7 +159,7 @@ class ProjectController extends Controller
     {
         $validated = $request->validate([
             'period_start_date' => 'required|date',
-            'period_end_date' => 'required|date|after:period_start_date',
+            'period_end_date' => 'required|date|after_or_equal:period_start_date',
             'payment_date' => 'required|date',
         ]);
 
