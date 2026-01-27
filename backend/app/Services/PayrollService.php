@@ -58,7 +58,6 @@ class PayrollService
      */
     public function processPayroll(Payroll $payroll, ?array $employeeIds = null)
     {
-        DB::beginTransaction();
         try {
             // If no employee IDs provided, process all active employees
             if (empty($employeeIds)) {
@@ -89,10 +88,8 @@ class PayrollService
                 'total_net' => $totalNet,
             ]);
 
-            DB::commit();
             return $payroll;
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Error processing payroll: ' . $e->getMessage());
             throw $e;
         }

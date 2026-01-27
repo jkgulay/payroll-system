@@ -124,6 +124,24 @@
           </button>
         </div>
       </div>
+
+      <!-- Database Maintenance -->
+      <div class="setting-card" @click="goToMaintenance">
+        <div class="setting-icon-wrapper maintenance">
+          <v-icon size="32">mdi-database-cog</v-icon>
+        </div>
+        <div class="setting-content">
+          <h3 class="setting-title">Database Maintenance</h3>
+          <p class="setting-description">
+            Fix database sequences, check health status, and perform maintenance
+            tasks
+          </p>
+          <button class="setting-action-btn">
+            <span>Open Maintenance</span>
+            <v-icon size="18">mdi-arrow-right</v-icon>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Government Rates Dialog -->
@@ -133,12 +151,18 @@
 
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import GovernmentRatesDialog from "@/components/settings/GovernmentRatesDialog.vue";
 
+const router = useRouter();
 const showRatesDialog = ref(false);
 
 const openRatesDialog = () => {
   showRatesDialog.value = true;
+};
+
+const goToMaintenance = () => {
+  router.push({ name: "maintenance" });
 };
 </script>
 
@@ -312,6 +336,18 @@ const openRatesDialog = () => {
 
     .v-icon {
       color: #f7b980 !important;
+    }
+  }
+
+  &.maintenance {
+    background: linear-gradient(
+      135deg,
+      rgba(237, 152, 95, 0.15) 0%,
+      rgba(247, 185, 128, 0.12) 100%
+    );
+
+    .v-icon {
+      color: #ed985f !important;
     }
   }
 }
