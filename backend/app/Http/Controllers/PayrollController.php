@@ -369,7 +369,7 @@ class PayrollController extends Controller
 
         // Filter by attendance if requested
         if (!empty($filters['has_attendance'])) {
-            $query->whereHas('attendance', function ($q) use ($payroll) {
+            $query->whereHas('attendances', function ($q) use ($payroll) {
                 $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                     ->where('status', '!=', 'absent');
             });

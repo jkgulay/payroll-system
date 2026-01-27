@@ -50,9 +50,11 @@
           </v-col>
           <v-col cols="12" md="2">
             <v-select
-              v-model="filters.department"
-              :items="departments"
-              label="Department"
+              v-model="filters.project_id"
+              :items="projects"
+              item-title="name"
+              item-value="id"
+              label="Project"
               clearable
               variant="outlined"
               density="comfortable"
@@ -162,8 +164,8 @@
             </div>
           </template>
 
-          <template v-slot:item.department="{ item }">
-            <span v-if="item.department">{{ item.department }}</span>
+          <template v-slot:item.project="{ item }">
+            <span v-if="item.project">{{ item.project.name }}</span>
             <span v-else class="text-medium-emphasis">N/A</span>
           </template>
 
@@ -208,10 +210,6 @@
                   : "N/A"
               }}
             </v-chip>
-          </template>
-
-          <template v-slot:item.project="{ item }">
-            {{ item.project?.name || "N/A" }}
           </template>
 
           <template v-slot:item.position="{ item }">
@@ -440,10 +438,250 @@
         <v-divider></v-divider>
 
         <v-card-text class="pt-4" style="max-height: 70vh">
-          <v-form ref="employeeForm" v-if="selectedEmployee">
+          <!-- VIEW MODE - Details Display -->
+          <div v-if="!isEditing && selectedEmployee">
+            <!-- Personal Information Section -->
+            <v-card class="mb-4" variant="outlined">
+              <v-card-title class="bg-blue-lighten-5">
+                <v-icon start color="primary">mdi-account-circle</v-icon>
+                Personal Information
+              </v-card-title>
+              <v-card-text class="pt-4">
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-identifier</v-icon
+                        >
+                        Employee Number
+                      </div>
+                      <div class="detail-value">
+                        {{ selectedEmployee.employee_number }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2">mdi-account</v-icon>
+                        Full Name
+                      </div>
+                      <div class="detail-value">
+                        {{ selectedEmployee.first_name }}
+                        {{ selectedEmployee.middle_name || "" }}
+                        {{ selectedEmployee.last_name }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="4">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2">mdi-calendar</v-icon>
+                        Date of Birth
+                      </div>
+                      <div class="detail-value">
+                        {{ formatDate(selectedEmployee.date_of_birth) }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="4">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-gender-male-female</v-icon
+                        >
+                        Gender
+                      </div>
+                      <div class="detail-value text-capitalize">
+                        {{ selectedEmployee.gender }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="4">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2">mdi-cellphone</v-icon>
+                        Mobile Number
+                      </div>
+                      <div class="detail-value">
+                        {{ selectedEmployee.mobile_number || "Not provided" }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2">mdi-email</v-icon>
+                        Email Address
+                      </div>
+                      <div class="detail-value">
+                        {{ selectedEmployee.email || "Not provided" }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-map-marker</v-icon
+                        >
+                        Address
+                      </div>
+                      <div class="detail-value">
+                        {{ selectedEmployee.worker_address || "Not provided" }}
+                      </div>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+
+            <!-- Employment Information Section -->
+            <v-card class="mb-4" variant="outlined">
+              <v-card-title class="bg-green-lighten-5">
+                <v-icon start color="success">mdi-briefcase</v-icon>
+                Employment Information
+              </v-card-title>
+              <v-card-text class="pt-4">
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-office-building</v-icon
+                        >
+                        Project
+                      </div>
+                      <div class="detail-value">
+                        {{
+                          projects?.find(
+                            (p) => p.id === selectedEmployee.project_id,
+                          )?.name || "Not assigned"
+                        }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-badge-account</v-icon
+                        >
+                        Position
+                      </div>
+                      <div class="detail-value">
+                        {{ selectedEmployee.position || "Not assigned" }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-calendar-check</v-icon
+                        >
+                        Date Hired
+                      </div>
+                      <div class="detail-value">
+                        {{ formatDate(selectedEmployee.date_hired) }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2">mdi-cash</v-icon>
+                        Daily Rate
+                      </div>
+                      <div class="detail-value text-success font-weight-bold">
+                        ₱{{ formatSalaryDisplay(selectedEmployee) }}/day
+                      </div>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+
+            <!-- Contract & Status Section -->
+            <v-card variant="outlined">
+              <v-card-title class="bg-orange-lighten-5">
+                <v-icon start color="warning">mdi-file-document</v-icon>
+                Contract & Status
+              </v-card-title>
+              <v-card-text class="pt-4">
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2">mdi-file-sign</v-icon>
+                        Contract Type
+                      </div>
+                      <div class="detail-value text-capitalize">
+                        {{ selectedEmployee.contract_type }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-account-check</v-icon
+                        >
+                        Activity Status
+                      </div>
+                      <div class="detail-value">
+                        <v-chip
+                          :color="
+                            getActivityStatusColor(
+                              selectedEmployee.activity_status,
+                            )
+                          "
+                          size="small"
+                          class="text-capitalize"
+                        >
+                          {{
+                            selectedEmployee.activity_status?.replace("_", " ")
+                          }}
+                        </v-chip>
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-clock-outline</v-icon
+                        >
+                        Work Schedule
+                      </div>
+                      <div class="detail-value text-capitalize">
+                        {{ selectedEmployee.work_schedule }}
+                      </div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <div class="detail-row">
+                      <div class="detail-label">
+                        <v-icon size="small" class="mr-2"
+                          >mdi-cash-multiple</v-icon
+                        >
+                        Salary Type
+                      </div>
+                      <div class="detail-value text-capitalize">
+                        {{ selectedEmployee.salary_type }}
+                      </div>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- EDIT MODE - Form Fields -->
+          <v-form ref="employeeForm" v-else-if="isEditing && selectedEmployee">
             <!-- Info Alert for Edit Mode -->
             <v-alert
-              v-if="isEditing"
               type="info"
               variant="tonal"
               density="compact"
@@ -452,18 +690,6 @@
             >
               Update employee information below. Position changes will
               automatically update the salary.
-            </v-alert>
-
-            <!-- View Mode Info Alert -->
-            <v-alert
-              v-else
-              type="info"
-              variant="tonal"
-              density="compact"
-              class="mb-4"
-              icon="mdi-eye"
-            >
-              Viewing employee details. Click "Edit" to make changes.
             </v-alert>
 
             <v-row>
@@ -608,7 +834,7 @@
               <v-col cols="12" md="6">
                 <v-select
                   v-model="selectedEmployee.project_id"
-                  :items="projects"
+                  :items="projects || []"
                   item-title="name"
                   item-value="id"
                   label="Project"
@@ -1139,7 +1365,8 @@ import {
 
 const toast = useToast();
 const employeeStore = useEmployeeStore();
-const { positionOptions, getRate, loadPositionRates } = usePositionRates();
+const { positionOptions, getRate, loadPositionRates, refreshRates } =
+  usePositionRates();
 
 const search = ref("");
 const page = ref(1);
@@ -1147,7 +1374,7 @@ const itemsPerPage = ref(25);
 const totalEmployees = ref(0);
 
 const filters = ref({
-  department: null,
+  project_id: null,
   contract_type: null,
   activity_status: null,
   work_schedule: null,
@@ -1197,6 +1424,7 @@ const updatingPayRate = ref(false);
 const clearingPayRate = ref(false);
 
 const departments = ref([]);
+const projects = ref([]);
 const employeeForm = ref(null);
 
 const contractTypeOptions = CONTRACT_TYPES;
@@ -1208,7 +1436,7 @@ const headers = [
   { title: "Biometric ID", key: "biometric_id", sortable: false },
   { title: "Name", key: "full_name", sortable: true },
   { title: "Gender", key: "gender", sortable: true },
-  { title: "Department", key: "department", sortable: true },
+  { title: "Project", key: "project", sortable: true },
   { title: "Position", key: "position", sortable: true },
   { title: "Pay Rate", key: "pay_rate", sortable: false },
   { title: "Date Hired", key: "date_hired", sortable: true },
@@ -1220,6 +1448,7 @@ const headers = [
 onMounted(async () => {
   await fetchEmployees();
   await fetchDepartments();
+  await fetchProjects();
   await loadPositionRates();
 });
 
@@ -1292,6 +1521,16 @@ async function fetchDepartments() {
   }
 }
 
+async function fetchProjects() {
+  try {
+    const response = await api.get("/projects");
+    projects.value = response.data.data || response.data;
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    toast.error("Failed to load projects");
+  }
+}
+
 async function refreshEmployees() {
   page.value = 1;
   await fetchEmployees();
@@ -1301,7 +1540,7 @@ async function refreshEmployees() {
 function clearFilters() {
   search.value = "";
   filters.value = {
-    department: null,
+    project_id: null,
     contract_type: null,
     activity_status: null,
     work_schedule: null,
@@ -1326,6 +1565,9 @@ async function viewEmployee(employee) {
 
 async function editEmployee(employee) {
   try {
+    // Refresh position rates to get latest positions
+    await refreshRates();
+
     const response = await api.get(`/employees/${employee.id}`);
     selectedEmployee.value = { ...response.data };
     isEditing.value = true;
@@ -1498,6 +1740,17 @@ function formatActivityStatus(status) {
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+// Format date for display
+function formatDate(dateString) {
+  if (!dateString) return "Not provided";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 // Add Employee Dialog functions
@@ -2018,5 +2271,31 @@ function formatSalaryDisplay(employee) {
 .secondary-action-btn:hover {
   background: rgba(0, 31, 61, 0.04);
   border-color: rgba(0, 31, 61, 0.25);
+}
+
+/* Employee Details View Styles */
+.detail-row {
+  margin-bottom: 16px;
+}
+
+.detail-label {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 31, 61, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.detail-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: #001f3d;
+  padding: 8px 0;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
 }
 </style>

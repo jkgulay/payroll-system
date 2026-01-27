@@ -378,7 +378,8 @@ const props = defineProps({
   },
 });
 
-const { positionOptions, getRate, loadPositionRates } = usePositionRates();
+const { positionOptions, getRate, loadPositionRates, refreshRates } =
+  usePositionRates();
 
 const employeeForm = ref(null);
 const saving = ref(false);
@@ -493,8 +494,12 @@ const handleSave = async () => {
 
 watch(
   () => props.modelValue,
-  (newVal) => {
-    if (!newVal) {
+  async (newVal) => {
+    if (newVal) {
+      // Dialog is opening - refresh position rates to get latest data
+      await refreshRates();
+    } else {
+      // Dialog is closing - reset form
       formData.value = {
         first_name: "",
         middle_name: "",
