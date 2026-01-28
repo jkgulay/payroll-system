@@ -971,6 +971,60 @@
                   density="comfortable"
                 ></v-select>
               </v-col>
+
+              <!-- Section 4: Government Contributions -->
+              <v-col cols="12" class="mt-4">
+                <div class="text-h6 mb-2 d-flex align-center">
+                  <v-icon start color="primary">mdi-shield-account</v-icon>
+                  Section 4: Government Contributions
+                </div>
+                <v-divider class="mb-4"></v-divider>
+              </v-col>
+
+              <v-col cols="12">
+                <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                  Select which government contributions apply to this employee. Only selected contributions will be calculated in the payroll.
+                </v-alert>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-checkbox
+                  v-model="selectedEmployee.has_sss"
+                  label="SSS (Social Security System)"
+                  prepend-icon="mdi-shield-account"
+                  color="primary"
+                  :readonly="!isEditing"
+                  :disabled="!isEditing"
+                  hide-details
+                  density="comfortable"
+                ></v-checkbox>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-checkbox
+                  v-model="selectedEmployee.has_philhealth"
+                  label="PhilHealth"
+                  prepend-icon="mdi-hospital-box"
+                  color="success"
+                  :readonly="!isEditing"
+                  :disabled="!isEditing"
+                  hide-details
+                  density="comfortable"
+                ></v-checkbox>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-checkbox
+                  v-model="selectedEmployee.has_pagibig"
+                  label="Pag-IBIG"
+                  prepend-icon="mdi-home-city"
+                  color="orange"
+                  :readonly="!isEditing"
+                  :disabled="!isEditing"
+                  hide-details
+                  density="comfortable"
+                ></v-checkbox>
+              </v-col>
             </v-row>
           </v-form>
         </v-card-text>

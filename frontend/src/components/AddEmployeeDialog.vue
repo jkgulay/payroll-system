@@ -327,6 +327,64 @@
                 density="comfortable"
               ></v-select>
             </v-col>
+
+            <!-- Section 5: Government Contributions -->
+            <v-col cols="12" class="mt-4">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-shield-check</v-icon>
+                </div>
+                <h3 class="section-title">Government Contributions</h3>
+              </div>
+            </v-col>
+
+            <v-col cols="12">
+              <v-alert type="info" variant="tonal" density="compact" class="mb-2">
+                Select which government contributions apply to this employee. Only selected contributions will be calculated in the payroll.
+              </v-alert>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-checkbox
+                v-model="formData.has_sss"
+                label="SSS (Social Security System)"
+                color="primary"
+                hide-details
+                density="comfortable"
+              >
+                <template v-slot:prepend>
+                  <v-icon color="primary">mdi-shield-account</v-icon>
+                </template>
+              </v-checkbox>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-checkbox
+                v-model="formData.has_philhealth"
+                label="PhilHealth"
+                color="success"
+                hide-details
+                density="comfortable"
+              >
+                <template v-slot:prepend>
+                  <v-icon color="success">mdi-hospital-box</v-icon>
+                </template>
+              </v-checkbox>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-checkbox
+                v-model="formData.has_pagibig"
+                label="Pag-IBIG"
+                color="orange"
+                hide-details
+                density="comfortable"
+              >
+                <template v-slot:prepend>
+                  <v-icon color="orange">mdi-home-city</v-icon>
+                </template>
+              </v-checkbox>
+            </v-col>
           </v-row>
         </v-form>
       </v-card-text>
@@ -431,6 +489,11 @@ const formData = ref({
   salary_type: "daily",
   basic_salary: 0,
 
+  // Government Contributions
+  has_sss: true,
+  has_philhealth: true,
+  has_pagibig: true,
+
   // User Account
   role: "employee",
 });
@@ -518,6 +581,9 @@ watch(
         activity_status: "active",
         salary_type: "daily",
         basic_salary: 0,
+        has_sss: true,
+        has_philhealth: true,
+        has_pagibig: true,
         role: "employee",
       };
       saving.value = false;

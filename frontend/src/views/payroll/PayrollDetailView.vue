@@ -223,9 +223,30 @@
             <!-- Deductions -->
             <template v-slot:item.deductions="{ item }">
               <div class="text-caption">
-                <div>SSS: ₱{{ formatCurrency(item.sss) }}</div>
-                <div>PhilHealth: ₱{{ formatCurrency(item.philhealth) }}</div>
-                <div>Pag-IBIG: ₱{{ formatCurrency(item.pagibig) }}</div>
+                <div v-if="item.employee?.has_sss">
+                  <v-icon size="12" color="primary" class="mr-1">mdi-check-circle</v-icon>
+                  SSS: ₱{{ formatCurrency(item.sss) }}
+                </div>
+                <div v-else class="text-medium-emphasis">
+                  <v-icon size="12" class="mr-1">mdi-minus-circle-outline</v-icon>
+                  SSS: N/A
+                </div>
+                <div v-if="item.employee?.has_philhealth">
+                  <v-icon size="12" color="success" class="mr-1">mdi-check-circle</v-icon>
+                  PhilHealth: ₱{{ formatCurrency(item.philhealth) }}
+                </div>
+                <div v-else class="text-medium-emphasis">
+                  <v-icon size="12" class="mr-1">mdi-minus-circle-outline</v-icon>
+                  PhilHealth: N/A
+                </div>
+                <div v-if="item.employee?.has_pagibig">
+                  <v-icon size="12" color="orange" class="mr-1">mdi-check-circle</v-icon>
+                  Pag-IBIG: ₱{{ formatCurrency(item.pagibig) }}
+                </div>
+                <div v-else class="text-medium-emphasis">
+                  <v-icon size="12" class="mr-1">mdi-minus-circle-outline</v-icon>
+                  Pag-IBIG: N/A
+                </div>
                 <div v-if="item.total_loan_deductions > 0">
                   Loans: ₱{{ formatCurrency(item.total_loan_deductions) }}
                 </div>

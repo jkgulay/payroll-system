@@ -47,6 +47,11 @@ class StoreEmployeeRequest extends FormRequest
             'philhealth_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'pagibig_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'tin_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
+
+            // Government Contribution Flags
+            'has_sss' => ['nullable', 'boolean'],
+            'has_philhealth' => ['nullable', 'boolean'],
+            'has_pagibig' => ['nullable', 'boolean'],
         ];
     }
 
