@@ -246,6 +246,18 @@ const router = createRouter({
           meta: { title: "Reports" },
         },
         {
+          path: "reports/government-contributions",
+          name: "government-contributions-report",
+          component: () =>
+            import(
+              /* webpackChunkName: "reports" */ "@/views/reports/GovernmentContributionsReport.vue"
+            ),
+          meta: {
+            title: "Government Contributions Report",
+            roles: ["admin", "accountant"],
+          },
+        },
+        {
           path: "reports/attendance-summary",
           name: "attendance-summary-report",
           component: () =>

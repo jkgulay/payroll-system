@@ -86,7 +86,9 @@ const reports = [
 ];
 
 function generateReport(report) {
-  if (report.id === "attendance-summary") {
+  if (report.id === "government-contributions") {
+    router.push("/reports/government-contributions");
+  } else if (report.id === "attendance-summary") {
     router.push("/reports/attendance-summary");
   } else {
     toast.info(`${report.title} report - Coming soon`);
