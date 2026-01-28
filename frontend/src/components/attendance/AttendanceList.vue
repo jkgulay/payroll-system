@@ -48,7 +48,14 @@
       :headers="headers"
       :items="attendance"
       :loading="loading"
-      :items-per-page="-1"
+      :items-per-page="10"
+      :items-per-page-options="[
+        { value: 10, title: '10' },
+        { value: 25, title: '25' },
+        { value: 50, title: '50' },
+        { value: 100, title: '100' },
+        { value: -1, title: 'All' }
+      ]"
       class="elevation-0"
     >
       <template v-slot:item.employee="{ item }">
