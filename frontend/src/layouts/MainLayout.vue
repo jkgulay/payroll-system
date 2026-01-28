@@ -625,7 +625,7 @@ const menuSections = computed(() => {
       icon: "mdi-clock-check-outline",
       value: "attendance",
       to: "/attendance",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "accountant", "payrollist"],
     },
 
     {
@@ -651,7 +651,7 @@ const menuSections = computed(() => {
       icon: "mdi-hard-hat",
       value: "employees",
       to: "/employees",
-      roles: ["admin"],
+      roles: ["admin", "payrollist"],
     },
     {
       title: "Payrolls",
@@ -679,7 +679,7 @@ const menuSections = computed(() => {
       icon: "mdi-office-building",
       value: "projects",
       to: "/projects",
-      roles: ["admin"],
+      roles: ["admin", "payrollist"],
     },
     {
       title: "Hiring",
@@ -776,7 +776,7 @@ const menuSections = computed(() => {
       icon: "mdi-file-upload-outline",
       value: "biometric-import",
       to: "/biometric-import",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "accountant", "payrollist"],
     },
     {
       title: "My Leaves",
