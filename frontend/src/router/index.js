@@ -87,7 +87,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "employees" */ "@/views/employees/EmployeeListView.vue"
             ),
-          meta: { title: "Employees", roles: ["admin"] },
+          meta: { title: "Employees", roles: ["admin", "payrollist"] },
         },
         {
           path: "resignations",
@@ -144,7 +144,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "projects" */ "@/views/projects/ProjectManagementView.vue"
             ),
-          meta: { title: "Project Management", roles: ["admin"] },
+          meta: { title: "Project Management", roles: ["admin", "payrollist"] },
         },
         {
           path: "attendance",
@@ -153,7 +153,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "attendance" */ "@/views/attendance/AttendanceView.vue"
             ),
-          meta: { title: "Attendance", roles: ["admin", "accountant"] },
+          meta: { title: "Attendance", roles: ["admin", "accountant", "payrollist"] },
         },
         {
           path: "biometric-import",

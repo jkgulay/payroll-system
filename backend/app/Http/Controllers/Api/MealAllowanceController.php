@@ -63,16 +63,26 @@ class MealAllowanceController extends Controller
     public function getEmployeesByPosition(Request $request)
     {
         $validated = $request->validate([
-            'position_id' => 'required|exists:position_rates,id',
+            'position_id' => 'nullable|exists:position_rates,id',
             'project_id' => 'nullable|exists:projects,id',
+            'department' => 'nullable|string',
         ]);
 
         $query = Employee::with('positionRate')
-            ->where('position_id', $validated['position_id'])
             ->where('activity_status', 'active');
+
+        if (isset($validated['position_id'])) {
+            $query->where('position_id', $validated['position_id']);
+        }
 
         if (isset($validated['project_id'])) {
             $query->where('project_id', $validated['project_id']);
+        }
+
+        // Default filter by department "Field (operators, helper)" if not specified
+        $department = $validated['department'] ?? 'Field (operators, helper)';
+        if ($department && $department !== 'all') {
+            $query->where('department', $department);
         }
 
         $employees = $query->get()->map(function ($employee) {
@@ -82,6 +92,7 @@ class MealAllowanceController extends Controller
                 'employee_number' => $employee->employee_number,
                 'position' => $employee->position,
                 'position_code' => $employee->positionRate->code ?? '',
+                'department' => $employee->department,
                 'basic_salary' => $employee->getDailyRateAttribute(),
             ];
         });
@@ -478,23 +489,71 @@ class MealAllowanceController extends Controller
     }
 
     /**
+     * Search employees across all departments for meal allowance
+     */
+    public function searchEmployees(Request $request)
+    {
+        $validated = $request->validate([
+            'search' => 'required|string|min:2',
+            'position_id' => 'nullable|exists:position_rates,id',
+        ]);
+
+        $query = Employee::with('positionRate')
+            ->where('activity_status', 'active')
+            ->where(function ($q) use ($validated) {
+                $search = $validated['search'];
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('employee_number', 'like', "%{$search}%");
+            });
+
+        if (isset($validated['position_id'])) {
+            $query->where('position_id', $validated['position_id']);
+        }
+
+        $employees = $query->limit(50)->get()->map(function ($employee) {
+            return [
+                'id' => $employee->id,
+                'name' => $employee->full_name,
+                'employee_number' => $employee->employee_number,
+                'position' => $employee->position,
+                'position_code' => $employee->positionRate->code ?? '',
+                'department' => $employee->department,
+                'basic_salary' => $employee->getDailyRateAttribute(),
+            ];
+        });
+
+        return response()->json($employees);
+    }
+
+    /**
      * Bulk assign meal allowance to all employees with specific position
      */
     public function bulkAssignByPosition(Request $request)
     {
         $validated = $request->validate([
-            'position_id' => 'required|exists:position_rates,id',
+            'position_id' => 'nullable|exists:position_rates,id',
             'project_id' => 'nullable|exists:projects,id',
+            'department' => 'nullable|string',
             'no_of_days' => 'required|integer|min:1|max:31',
             'amount_per_day' => 'required|numeric|min:0',
         ]);
 
         $query = Employee::with('positionRate')
-            ->where('position_id', $validated['position_id'])
             ->where('activity_status', 'active');
+
+        if (isset($validated['position_id'])) {
+            $query->where('position_id', $validated['position_id']);
+        }
 
         if (isset($validated['project_id'])) {
             $query->where('project_id', $validated['project_id']);
+        }
+
+        // Default filter by department "Field (operators, helper)" if not specified
+        $department = $validated['department'] ?? 'Field (operators, helper)';
+        if ($department && $department !== 'all') {
+            $query->where('department', $department);
         }
 
         $employees = $query->get();
@@ -505,6 +564,7 @@ class MealAllowanceController extends Controller
                 'employee_name' => $employee->full_name,
                 'employee_number' => $employee->employee_number,
                 'position_code' => $employee->positionRate->code ?? '',
+                'department' => $employee->department,
                 'no_of_days' => $validated['no_of_days'],
                 'amount_per_day' => $validated['amount_per_day'],
                 'total_amount' => $validated['no_of_days'] * $validated['amount_per_day'],
