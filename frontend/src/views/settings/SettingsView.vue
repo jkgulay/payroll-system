@@ -64,7 +64,7 @@
             Manage system users, roles, and access permissions across the
             application
           </p>
-          <button class="setting-action-btn">
+          <button class="setting-action-btn" @click="$router.push('/user-management')">
             <span>Manage Users</span>
             <v-icon size="18">mdi-arrow-right</v-icon>
           </button>

@@ -12,7 +12,9 @@ use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
 use App\Models\User;
 use App\Exports\PayrollExport;
+use App\Exports\PayrollWordExport;
 use App\Services\PayrollService;
+use PhpOffice\PhpWord\IOFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -302,7 +304,11 @@ class PayrollController extends Controller
             'departments.*' => 'string',
             'staff_types' => 'nullable|array',
             'staff_types.*' => 'string',
+            'format' => 'nullable|in:pdf,excel,word',
         ]);
+
+        // Default to PDF if format not specified
+        $format = $validated['format'] ?? 'pdf';
 
         // Load payroll items with employee relationship
         $itemsQuery = $payroll->items()->with('employee.positionRate');
@@ -323,6 +329,38 @@ class PayrollController extends Controller
         // Get filtered items
         $payroll->setRelation('items', $itemsQuery->get());
 
+        // Build filename base
+        $filenameBase = "payroll_register_{$payroll->payroll_number}";
+        $filterInfo = null;
+        
+        if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
+            if ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
+                if (count($validated['departments']) == 1) {
+                    $filterInfo = 'Department: ' . implode(', ', $validated['departments']);
+                }
+            } elseif ($validated['filter_type'] === 'staff_type' && !empty($validated['staff_types'])) {
+                if (count($validated['staff_types']) == 1) {
+                    $filterInfo = 'Staff Type: ' . implode(', ', $validated['staff_types']);
+                }
+            }
+            if ($filterInfo) {
+                $filenameBase .= '_filtered';
+            }
+        }
+
+        // Handle different export formats
+        if ($format === 'excel') {
+            return $this->exportRegisterToExcel($payroll, $filenameBase);
+        } elseif ($format === 'word') {
+            return $this->exportRegisterToWord($payroll, $filenameBase);
+        } else {
+            // Default PDF export
+            return $this->exportRegisterToPdf($payroll, $validated, $filenameBase);
+        }
+    }
+
+    private function exportRegisterToPdf(Payroll $payroll, array $validated, string $filenameBase)
+    {
         // Group items by department or staff type if multiple filters selected
         $groupedItems = null;
         $filterInfo = null;
@@ -351,14 +389,28 @@ class PayrollController extends Controller
         }
 
         $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType'));
+        return $pdf->download($filenameBase . '.pdf');
+    }
 
-        $filename = "payroll_register_{$payroll->payroll_number}";
-        if ($filterInfo) {
-            $filename .= '_filtered';
-        }
-        $filename .= '.pdf';
+    private function exportRegisterToExcel(Payroll $payroll, string $filenameBase)
+    {
+        return Excel::download(new PayrollExport($payroll), $filenameBase . '.xlsx');
+    }
 
-        return $pdf->download($filename);
+    private function exportRegisterToWord(Payroll $payroll, string $filenameBase)
+    {
+        $export = new PayrollWordExport($payroll);
+        $phpWord = $export->generate();
+        
+        $filename = $filenameBase . '.docx';
+        $tempFile = tempnam(sys_get_temp_dir(), 'payroll_');
+        
+        $writer = IOFactory::createWriter($phpWord, 'Word2007');
+        $writer->save($tempFile);
+        
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ])->deleteFileAfterSend(true);
     }
 
     public function exportToExcel(Payroll $payroll)

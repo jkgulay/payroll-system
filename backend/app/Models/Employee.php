@@ -198,6 +198,11 @@ class Employee extends Model
         return $this->hasOne(Resignation::class);
     }
 
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {

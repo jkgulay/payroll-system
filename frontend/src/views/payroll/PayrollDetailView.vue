@@ -272,12 +272,12 @@
         <!-- Enhanced Header -->
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
-            <v-icon size="24">mdi-filter-variant</v-icon>
+            <v-icon size="24">mdi-download</v-icon>
           </div>
           <div>
             <div class="dialog-title">Export Payroll Register</div>
             <div class="dialog-subtitle">
-              Filter and download payroll register PDF
+              Choose export format for payroll register
             </div>
           </div>
         </v-card-title>
@@ -285,97 +285,54 @@
         <v-divider></v-divider>
 
         <v-card-text class="dialog-content">
-          <!-- Section: Filter Options -->
+          <!-- Section: Export Format -->
           <v-col cols="12" class="px-0">
             <div class="section-header">
               <div class="section-icon">
-                <v-icon size="18">mdi-filter</v-icon>
+                <v-icon size="18">mdi-file-document</v-icon>
               </div>
-              <h3 class="section-title">Filter Options</h3>
+              <h3 class="section-title">Select Format</h3>
             </div>
           </v-col>
 
           <v-radio-group
-            v-model="exportFilter.type"
-            inline
+            v-model="exportFilter.format"
             hide-details
-            class="mb-4"
           >
-            <v-radio label="All Employees" value="all"></v-radio>
-            <v-radio label="By Department" value="department"></v-radio>
-            <v-radio label="By Staff Type" value="staff_type"></v-radio>
+            <v-radio value="pdf" class="mb-3">
+              <template v-slot:label>
+                <div class="d-flex align-center">
+                  <v-icon size="24" class="mr-3" color="#D32F2F">mdi-file-pdf-box</v-icon>
+                  <div>
+                    <div class="text-subtitle-1 font-weight-medium">PDF Document</div>
+                    <div class="text-caption text-grey">Best for printing and viewing</div>
+                  </div>
+                </div>
+              </template>
+            </v-radio>
+            <v-radio value="excel" class="mb-3">
+              <template v-slot:label>
+                <div class="d-flex align-center">
+                  <v-icon size="24" class="mr-3" color="#217346">mdi-file-excel-box</v-icon>
+                  <div>
+                    <div class="text-subtitle-1 font-weight-medium">Excel Spreadsheet</div>
+                    <div class="text-caption text-grey">Editable data for calculations</div>
+                  </div>
+                </div>
+              </template>
+            </v-radio>
+            <v-radio value="word" class="mb-3">
+              <template v-slot:label>
+                <div class="d-flex align-center">
+                  <v-icon size="24" class="mr-3" color="#2B579A">mdi-file-word-box</v-icon>
+                  <div>
+                    <div class="text-subtitle-1 font-weight-medium">Word Document</div>
+                    <div class="text-caption text-grey">Editable formatted document</div>
+                  </div>
+                </div>
+              </template>
+            </v-radio>
           </v-radio-group>
-
-          <div
-            class="form-field-wrapper"
-            v-if="exportFilter.type === 'department'"
-          >
-            <label class="form-label">
-              <v-icon size="small" color="#ed985f">mdi-office-building</v-icon>
-              Select Departments
-            </label>
-            <v-autocomplete
-              v-model="exportFilter.departments"
-              :items="departmentOptions"
-              placeholder="Choose one or more departments"
-              variant="outlined"
-              density="comfortable"
-              prepend-inner-icon="mdi-office-building"
-              color="#ed985f"
-              multiple
-              chips
-              closable-chips
-              hint="Select one or more departments"
-              persistent-hint
-            ></v-autocomplete>
-          </div>
-
-          <div
-            class="form-field-wrapper"
-            v-if="exportFilter.type === 'staff_type'"
-          >
-            <label class="form-label">
-              <v-icon size="small" color="#ed985f">mdi-account-group</v-icon>
-              Select Staff Types
-            </label>
-            <v-autocomplete
-              v-model="exportFilter.staff_types"
-              :items="staffTypeOptions"
-              placeholder="Choose one or more staff types"
-              variant="outlined"
-              density="comfortable"
-              prepend-inner-icon="mdi-account-group"
-              color="#ed985f"
-              multiple
-              chips
-              closable-chips
-              hint="Select one or more staff types"
-              persistent-hint
-            ></v-autocomplete>
-          </div>
-
-          <v-alert
-            v-if="exportFilter.type !== 'all'"
-            type="info"
-            variant="tonal"
-            density="compact"
-            class="mt-4"
-          >
-            <template v-slot:prepend>
-              <v-icon icon="mdi-information"></v-icon>
-            </template>
-            <div class="text-caption">
-              <strong>Note:</strong>
-              <span v-if="exportFilter.type === 'department'">
-                Multiple departments will generate separate tables for each
-                department.
-              </span>
-              <span v-else-if="exportFilter.type === 'staff_type'">
-                Multiple staff types will generate separate tables for each
-                staff type.
-              </span>
-            </div>
-          </v-alert>
         </v-card-text>
 
         <v-divider></v-divider>
@@ -393,7 +350,7 @@
             @click="downloadRegister"
           >
             <v-icon size="20" class="mr-2">mdi-download</v-icon>
-            Download PDF
+            Download {{ exportFilter.format.toUpperCase() }}
           </button>
         </v-card-actions>
       </v-card>
@@ -417,12 +374,8 @@ const search = ref("");
 const payroll = ref(null);
 const showExportDialog = ref(false);
 const exportFilter = ref({
-  type: "all",
-  departments: [],
-  staff_types: [],
+  format: "pdf", // pdf, excel, word
 });
-const departmentOptions = ref([]);
-const staffTypeOptions = ref([]);
 
 const headers = [
   { title: "Employee", key: "employee", sortable: true },
@@ -462,8 +415,6 @@ function customFilter(value, query, item) {
 
 onMounted(() => {
   fetchPayroll();
-  loadDepartmentOptions();
-  loadStaffTypeOptions();
 });
 
 async function fetchPayroll() {
@@ -504,27 +455,12 @@ async function finalizePayroll() {
 
 async function downloadRegister() {
   try {
-    // Build query parameters based on filter
-    const params = {
-      filter_type: exportFilter.value.type,
-    };
-
-    if (
-      exportFilter.value.type === "department" &&
-      exportFilter.value.departments.length > 0
-    ) {
-      params.departments = exportFilter.value.departments;
-    } else if (
-      exportFilter.value.type === "staff_type" &&
-      exportFilter.value.staff_types.length > 0
-    ) {
-      params.staff_types = exportFilter.value.staff_types;
-    }
-
     const response = await api.get(
       `/payrolls/${payroll.value.id}/download-register`,
       {
-        params,
+        params: {
+          format: exportFilter.value.format,
+        },
         responseType: "blob",
       },
     );
@@ -533,41 +469,29 @@ async function downloadRegister() {
     const link = document.createElement("a");
     link.href = url;
 
-    let filename = `payroll_register_${payroll.value.payroll_number}`;
-    if (exportFilter.value.type !== "all") {
-      filename += "_filtered";
-    }
-    filename += ".pdf";
+    // Build filename with appropriate extension
+    const extensions = {
+      pdf: ".pdf",
+      excel: ".xlsx",
+      word: ".docx"
+    };
+    const filename = `payroll_register_${payroll.value.payroll_number}${extensions[exportFilter.value.format]}`;
 
     link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
 
-    toast.success("Payroll register downloaded");
+    const formatNames = {
+      pdf: "PDF",
+      excel: "Excel",
+      word: "Word"
+    };
+    toast.success(`Payroll register downloaded as ${formatNames[exportFilter.value.format]}`);
     showExportDialog.value = false;
   } catch (error) {
     console.error("Error downloading register:", error);
     toast.error("Failed to download payroll register");
-  }
-}
-
-async function loadDepartmentOptions() {
-  try {
-    const response = await api.get("/employees/departments");
-    departmentOptions.value = response.data || [];
-  } catch (error) {
-    console.error("Error loading departments:", error);
-  }
-}
-
-async function loadStaffTypeOptions() {
-  try {
-    const response = await api.get("/position-rates");
-    staffTypeOptions.value =
-      response.data.map((pos) => pos.position_name) || [];
-  } catch (error) {
-    console.error("Error loading staff types:", error);
   }
 }
 
