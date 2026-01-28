@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeLoan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ReportController extends Controller
@@ -18,7 +19,7 @@ class ReportController extends Controller
         $dateFrom = $request->input('date_from', Carbon::now()->startOfMonth());
         $dateTo = $request->input('date_to', Carbon::now()->endOfMonth());
 
-        $payrolls = Payroll::whereBetween('pay_date', [$dateFrom, $dateTo])
+        $payrolls = Payroll::whereBetween('payment_date', [$dateFrom, $dateTo])
             ->with('items.employee')
             ->get();
 
@@ -45,7 +46,7 @@ class ReportController extends Controller
         }
 
         $query->whereHas('payroll', function ($q) use ($year) {
-            $q->whereYear('pay_date', $year);
+            $q->whereYear('payment_date', $year);
         });
 
         $earnings = $query->get();
@@ -69,21 +70,122 @@ class ReportController extends Controller
         $month = $request->input('month', Carbon::now()->month);
         $year = $request->input('year', Carbon::now()->year);
 
+        // Query payroll items where the payroll's period_start is within the selected month/year
+        // This is more reliable than payment_date which can be in a different month
         $payrollItems = PayrollItem::whereHas('payroll', function ($query) use ($month, $year) {
-            $query->whereMonth('pay_date', $month)
-                ->whereYear('pay_date', $year);
+            $query->where(function ($q) use ($month, $year) {
+                $q->whereMonth('period_start', $month)
+                  ->whereYear('period_start', $year);
+            })
+            ->orWhere(function ($q) use ($month, $year) {
+                $q->whereMonth('period_end', $month)
+                  ->whereYear('period_end', $year);
+            });
         })
-            ->with('employee')
+            ->with(['employee', 'payroll'])
             ->get();
+
+        // Debug logging
+        Log::info('Government Remittance Query', [
+            'month' => $month,
+            'year' => $year,
+            'payroll_items_count' => $payrollItems->count(),
+            'unique_employees' => $payrollItems->unique('employee_id')->count()
+        ]);
+
+        // If no payroll items found, return empty data
+        if ($payrollItems->isEmpty()) {
+            return response()->json([
+                'period' => Carbon::createFromDate($year, $month, 1)->format('F Y'),
+                'month' => (int) $month,
+                'year' => (int) $year,
+                'employee_count' => 0,
+                'sss_employee' => 0,
+                'philhealth_employee' => 0,
+                'pagibig_employee' => 0,
+                'total_employee_contributions' => 0,
+                'sss_employer' => 0,
+                'philhealth_employer' => 0,
+                'pagibig_employer' => 0,
+                'total_employer_contributions' => 0,
+                'sss_total' => 0,
+                'philhealth_total' => 0,
+                'pagibig_total' => 0,
+                'grand_total' => 0,
+                'withholding_tax' => 0,
+                'employees' => [],
+            ]);
+        }
+
+        // Calculate employer shares (typically employer matches employee contribution)
+        $employeeSss = $payrollItems->sum('sss');
+        $employeePhilhealth = $payrollItems->sum('philhealth');
+        $employeePagibig = $payrollItems->sum('pagibig');
+
+        // Employer shares (usually matching contributions)
+        $employerSss = $employeeSss; // SSS employer typically matches
+        $employerPhilhealth = $employeePhilhealth; // PhilHealth employer matches
+        $employerPagibig = $employeePagibig; // Pag-IBIG employer matches
+
+        // Group by employee for detailed breakdown
+        $employeeBreakdown = $payrollItems->groupBy('employee_id')->map(function ($items, $employeeId) {
+            $employee = $items->first()->employee;
+            
+            // Skip if employee doesn't exist
+            if (!$employee) {
+                return null;
+            }
+            
+            return [
+                'employee_id' => $employeeId,
+                'employee_number' => $employee->employee_number ?? 'N/A',
+                'full_name' => $employee->full_name,
+                'department' => $employee->department ?? 'N/A',
+                'position' => $employee->position ?? 'N/A',
+                'sss_employee' => (float) $items->sum('sss'),
+                'sss_employer' => (float) $items->sum('sss'), // Employer share
+                'sss_total' => (float) $items->sum('sss') * 2,
+                'philhealth_employee' => (float) $items->sum('philhealth'),
+                'philhealth_employer' => (float) $items->sum('philhealth'),
+                'philhealth_total' => (float) $items->sum('philhealth') * 2,
+                'pagibig_employee' => (float) $items->sum('pagibig'),
+                'pagibig_employer' => (float) $items->sum('pagibig'),
+                'pagibig_total' => (float) $items->sum('pagibig') * 2,
+                'total_employee' => (float) ($items->sum('sss') + $items->sum('philhealth') + $items->sum('pagibig')),
+                'total_employer' => (float) ($items->sum('sss') + $items->sum('philhealth') + $items->sum('pagibig')),
+                'grand_total' => (float) (($items->sum('sss') + $items->sum('philhealth') + $items->sum('pagibig')) * 2),
+            ];
+        })->filter()->values(); // Remove null values and reindex
 
         $remittance = [
             'period' => Carbon::createFromDate($year, $month, 1)->format('F Y'),
-            'total_sss' => $payrollItems->sum('sss'),
-            'total_philhealth' => $payrollItems->sum('philhealth'),
-            'total_pagibig' => $payrollItems->sum('pagibig'),
-            'total_tax' => $payrollItems->sum('withholding_tax'),
-            'employee_count' => $payrollItems->count(),
-            'details' => $payrollItems,
+            'month' => (int) $month,
+            'year' => (int) $year,
+            'employee_count' => $payrollItems->unique('employee_id')->count(),
+            
+            // Employee contributions (deducted from salary)
+            'sss_employee' => $employeeSss,
+            'philhealth_employee' => $employeePhilhealth,
+            'pagibig_employee' => $employeePagibig,
+            'total_employee_contributions' => $employeeSss + $employeePhilhealth + $employeePagibig,
+            
+            // Employer contributions
+            'sss_employer' => $employerSss,
+            'philhealth_employer' => $employerPhilhealth,
+            'pagibig_employer' => $employerPagibig,
+            'total_employer_contributions' => $employerSss + $employerPhilhealth + $employerPagibig,
+            
+            // Total remittance to government
+            'sss_total' => $employeeSss + $employerSss,
+            'philhealth_total' => $employeePhilhealth + $employerPhilhealth,
+            'pagibig_total' => $employeePagibig + $employerPagibig,
+            'grand_total' => ($employeeSss + $employerSss) + ($employeePhilhealth + $employerPhilhealth) + ($employeePagibig + $employerPagibig),
+            
+            // Tax withholding
+            'withholding_tax' => $payrollItems->sum('withholding_tax'),
+            
+            // Detailed breakdown per employee
+            'employees' => $employeeBreakdown,
         ];
 
         return response()->json($remittance);

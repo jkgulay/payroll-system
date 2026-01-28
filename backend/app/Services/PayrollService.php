@@ -195,10 +195,10 @@ class PayrollService
         // Calculate gross pay (include holiday pay, subtract undertime deduction)
         $grossPay = $basicPay + $holidayPay + $regularOtPay + $cola + $allowances - $undertimeDeduction;
 
-        // Calculate government deductions
-        $sss = $this->calculateSSS($grossPay);
-        $philhealth = $this->calculatePhilHealth($grossPay);
-        $pagibig = $this->calculatePagibig($grossPay);
+        // Calculate government deductions (only if enabled for the employee)
+        $sss = $employee->has_sss ? $this->calculateSSS($grossPay) : 0;
+        $philhealth = $employee->has_philhealth ? $this->calculatePhilHealth($grossPay) : 0;
+        $pagibig = $employee->has_pagibig ? $this->calculatePagibig($grossPay) : 0;
 
         // Get loans deduction for this period
         $loanDeduction = EmployeeLoan::where('employee_id', $employee->id)

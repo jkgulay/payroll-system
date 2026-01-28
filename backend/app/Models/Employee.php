@@ -52,6 +52,10 @@ class Employee extends Model
         'philhealth_number',
         'pagibig_number',
         'tin_number',
+        // Government Contribution Flags
+        'has_sss',
+        'has_philhealth',
+        'has_pagibig',
         'bank_name',
         'bank_account_number',
         'profile_photo',
@@ -69,6 +73,9 @@ class Employee extends Model
         'basic_salary' => 'decimal:2',
         'custom_pay_rate' => 'decimal:2',
         'is_active' => 'boolean',
+        'has_sss' => 'boolean',
+        'has_philhealth' => 'boolean',
+        'has_pagibig' => 'boolean',
     ];
 
     protected $appends = [
