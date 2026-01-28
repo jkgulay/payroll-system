@@ -67,6 +67,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/two-factor/disable', [App\Http\Controllers\Api\TwoFactorController::class, 'disable']);
     Route::post('/two-factor/recovery-codes', [App\Http\Controllers\Api\TwoFactorController::class, 'regenerateRecoveryCodes']);
 
+    // User Management (Admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/users/stats', [App\Http\Controllers\Api\UserController::class, 'getStats']);
+        Route::get('/users/available-employees', [App\Http\Controllers\Api\UserController::class, 'getAvailableEmployees']);
+        Route::post('/users/{id}/toggle-status', [App\Http\Controllers\Api\UserController::class, 'toggleStatus']);
+        Route::post('/users/{id}/reset-password', [App\Http\Controllers\Api\UserController::class, 'resetPassword']);
+        Route::apiResource('users', App\Http\Controllers\Api\UserController::class);
+    });
+
     // Employee Import - MUST come before employees apiResource
     Route::post('/employees/import-file', [App\Http\Controllers\Api\EmployeeImportController::class, 'importFromFile']); // NEW: Fast file upload method
     Route::post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']); // OLD: JSON data method (kept for backwards compatibility)

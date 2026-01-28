@@ -285,6 +285,15 @@ const router = createRouter({
           meta: { title: "Settings", roles: ["admin"] },
         },
         {
+          path: "user-management",
+          name: "user-management",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/UserManagementView.vue"
+            ),
+          meta: { title: "User Management", roles: ["admin"] },
+        },
+        {
           path: "maintenance",
           name: "maintenance",
           component: () =>
