@@ -205,9 +205,9 @@ class Employee extends Model
         return $this->hasOne(Resignation::class);
     }
 
-    public function user(): HasOne
+    public function user(): BelongsTo
     {
-        return $this->hasOne(User::class);
+        return $this->belongsTo(User::class);
     }
 
     // Scopes

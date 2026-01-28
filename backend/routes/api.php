@@ -28,6 +28,87 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/employee/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'employeeDashboard']);
     Route::get('/accountant/dashboard/stats', [App\Http\Controllers\Api\AccountantController::class, 'getDashboardStats']);
 
+    // Employee Self-Service Routes (for users linked to employees)
+    Route::middleware('employee.access')->group(function () {
+        // Employee can view their own payslips
+        Route::get('/employee/payslips', function (Request $request) {
+            $user = $request->user();
+            if (!$user->employee_id) {
+                return response()->json(['message' => 'No employee record linked'], 403);
+            }
+            
+            $payslips = \App\Models\PayrollItem::with(['payroll'])
+                ->where('employee_id', $user->employee_id)
+                ->whereHas('payroll', function ($query) {
+                    $query->whereIn('status', ['paid', 'finalized']);
+                })
+                ->orderBy('id', 'desc')
+                ->paginate(15);
+                
+            return response()->json($payslips);
+        });
+        
+        // Employee can view their own attendance
+        Route::get('/employee/attendance', function (Request $request) {
+            $user = $request->user();
+            if (!$user->employee_id) {
+                return response()->json(['message' => 'No employee record linked'], 403);
+            }
+            
+            $startDate = $request->input('start_date', \Carbon\Carbon::now()->subMonths(3)->toDateString());
+            $endDate = $request->input('end_date', \Carbon\Carbon::now()->toDateString());
+            
+            $attendance = \App\Models\Attendance::where('employee_id', $user->employee_id)
+                ->whereBetween('attendance_date', [$startDate, $endDate])
+                ->orderBy('attendance_date', 'desc')
+                ->paginate(30);
+                
+            return response()->json($attendance);
+        });
+        
+        // Employee can view their own loans
+        Route::get('/employee/loans', function (Request $request) {
+            $user = $request->user();
+            if (!$user->employee_id) {
+                return response()->json(['message' => 'No employee record linked'], 403);
+            }
+            
+            $loans = \App\Models\EmployeeLoan::where('employee_id', $user->employee_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+                
+            return response()->json($loans);
+        });
+        
+        // Employee can view their own deductions
+        Route::get('/employee/deductions', function (Request $request) {
+            $user = $request->user();
+            if (!$user->employee_id) {
+                return response()->json(['message' => 'No employee record linked'], 403);
+            }
+            
+            $deductions = \App\Models\EmployeeDeduction::where('employee_id', $user->employee_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+                
+            return response()->json($deductions);
+        });
+        
+        // Employee can view their own allowances
+        Route::get('/employee/allowances', function (Request $request) {
+            $user = $request->user();
+            if (!$user->employee_id) {
+                return response()->json(['message' => 'No employee record linked'], 403);
+            }
+            
+            $allowances = \App\Models\EmployeeAllowance::where('employee_id', $user->employee_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+                
+            return response()->json($allowances);
+        });
+    });
+
     // AI Chat Routes
     Route::post('/chat', [App\Http\Controllers\Api\ChatController::class, 'chat']);
     Route::get('/chat/suggestions', [App\Http\Controllers\Api\ChatController::class, 'getSuggestedQuestions']);

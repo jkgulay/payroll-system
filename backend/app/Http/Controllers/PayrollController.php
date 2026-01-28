@@ -271,6 +271,19 @@ class PayrollController extends Controller
         $payrollId = (int) $payrollId;
         $employeeId = (int) $employeeId;
 
+        $user = auth()->user();
+
+        // If user is an employee, they can only download their own payslip
+        if ($user->role === 'employee') {
+            if (!$user->employee_id) {
+                return response()->json(['message' => 'No employee record linked to your account'], 403);
+            }
+            
+            if ($user->employee_id !== $employeeId) {
+                return response()->json(['message' => 'You can only download your own payslip'], 403);
+            }
+        }
+
         $payroll = Payroll::findOrFail($payrollId);
 
         $item = PayrollItem::where('payroll_id', $payrollId)

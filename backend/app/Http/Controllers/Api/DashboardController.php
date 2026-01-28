@@ -131,9 +131,31 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // Get employee record for the logged-in user
+        // Check if user has an employee_id linked
+        if (!$user->employee_id) {
+            return response()->json([
+                'message' => 'No employee record linked to your account. Please contact administrator.',
+                'user_id' => $user->id,
+                'username' => $user->username,
+                'employee' => null,
+                'attendance' => [],
+                'attendance_summary' => [
+                    'total_days' => 0,
+                    'present' => 0,
+                    'absent' => 0,
+                    'late' => 0,
+                    'undertime' => 0,
+                    'total_hours' => 0,
+                    'overtime_hours' => 0,
+                ],
+                'current_payslip' => null,
+                'payslip_history' => [],
+            ]);
+        }
+
+        // Get employee record for the logged-in user using employee_id from User
         $employee = Employee::with(['project'])
-            ->where('user_id', $user->id)
+            ->where('id', $user->employee_id)
             ->first();
 
         if (!$employee) {
@@ -141,6 +163,7 @@ class DashboardController extends Controller
                 'message' => 'Employee record not found. Please contact administrator.',
                 'user_id' => $user->id,
                 'username' => $user->username,
+                'employee_id' => $user->employee_id,
                 'employee' => null,
                 'attendance' => [],
                 'attendance_summary' => [
