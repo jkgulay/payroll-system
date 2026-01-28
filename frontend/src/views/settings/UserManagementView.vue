@@ -282,7 +282,7 @@
         <v-divider></v-divider>
 
         <v-card-text class="dialog-content">
-          <v-form ref="userForm">
+          <v-form ref="formRef">
             <v-row>
               <v-col cols="12">
                 <label class="form-label">
@@ -603,6 +603,7 @@ import api from "@/services/api";
 const router = useRouter();
 const toast = useToast();
 
+const formRef = ref(null);
 const loading = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
@@ -805,6 +806,13 @@ function closeUserDialog() {
 }
 
 async function saveUser() {
+  // Validate form before submitting
+  const { valid } = await formRef.value.validate();
+  if (!valid) {
+    toast.warning("Please fill in all required fields correctly");
+    return;
+  }
+
   saving.value = true;
   try {
     if (isEditMode.value) {
