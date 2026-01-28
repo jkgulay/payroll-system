@@ -92,23 +92,6 @@
               ></v-text-field>
             </v-col>
 
-            <!-- Position/Role -->
-            <v-col cols="12" md="6">
-              <v-select
-                v-model="form.position_id"
-                :items="positions"
-                item-title="position_name"
-                item-value="id"
-                label="Position/Role"
-                placeholder="Select position/role"
-                prepend-inner-icon="mdi-account-hard-hat"
-                :rules="[rules.required]"
-                variant="outlined"
-                density="comfortable"
-                @update:model-value="loadEmployees"
-              ></v-select>
-            </v-col>
-
             <!-- Notes -->
             <v-col cols="12">
               <v-textarea
@@ -130,34 +113,57 @@
                 </div>
                 <h3 class="section-title">Employee Allowances</h3>
                 <v-spacer></v-spacer>
+
+                <!-- Department Info Chip -->
+                <v-chip
+                  color="primary"
+                  variant="tonal"
+                  class="mr-2"
+                  size="small"
+                >
+                  <v-icon start size="16">mdi-office-building</v-icon>
+                  {{ selectedDepartment }}
+                </v-chip>
+
                 <v-chip v-if="form.items.length > 0" color="info" class="mr-2">
                   {{ form.items.length }} employee(s)
                 </v-chip>
+
+                <!-- Search Other Employees Button -->
+                <v-btn
+                  color="secondary"
+                  size="small"
+                  prepend-icon="mdi-magnify"
+                  class="mr-2"
+                  @click="showSearchDialog = true"
+                >
+                  Search Other Employees
+                </v-btn>
 
                 <!-- Bulk Assignment Dialog -->
                 <v-dialog v-model="showBulkDialog" max-width="500px">
                   <template v-slot:activator="{ props }">
                     <v-btn
-                      v-if="form.position_id && availableEmployees.length > 0"
+                      v-if="availableEmployees.length > 0"
                       v-bind="props"
                       color="primary"
                       size="small"
                       prepend-icon="mdi-account-multiple-plus"
                     >
-                      Bulk Add by Position
+                      Bulk Add by Department
                     </v-btn>
                   </template>
 
                   <v-card>
                     <v-card-title class="bg-primary">
                       <v-icon left>mdi-account-multiple-plus</v-icon>
-                      Bulk Add Employees by Position
+                      Bulk Add Field Employees
                     </v-card-title>
 
                     <v-card-text class="pt-4">
                       <v-alert type="info" variant="tonal" class="mb-4">
                         This will add all {{ availableEmployees.length }} active
-                        employee(s) with the selected position to the meal
+                        employee(s) from Field (operators, helper) department to the meal
                         allowance.
                       </v-alert>
 
@@ -205,6 +211,77 @@
                       >
                         <v-icon left>mdi-check</v-icon>
                         Add All Employees
+                      </v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-dialog>
+
+                <!-- Employee Search Dialog -->
+                <v-dialog v-model="showSearchDialog" max-width="600px">
+                  <v-card>
+                    <v-card-title class="bg-secondary">
+                      <v-icon left>mdi-magnify</v-icon>
+                      Search Employees from Other Departments
+                    </v-card-title>
+
+                    <v-card-text class="pt-4">
+                      <v-alert type="info" variant="tonal" class="mb-4">
+                        Search for employees from departments other than "Field
+                        (operators, helper)" by name or employee number.
+                      </v-alert>
+
+                      <v-text-field
+                        v-model="searchTerm"
+                        label="Search Employee"
+                        placeholder="Enter name or employee number"
+                        prepend-inner-icon="mdi-magnify"
+                        clearable
+                        variant="outlined"
+                        density="comfortable"
+                        @input="debouncedSearch"
+                        :loading="searchLoading"
+                      ></v-text-field>
+
+                      <v-list v-if="searchResults.length > 0" class="mt-3">
+                        <v-list-item
+                          v-for="employee in searchResults"
+                          :key="employee.id"
+                          @click="addSearchedEmployee(employee)"
+                        >
+                          <template #prepend>
+                            <v-avatar color="primary" size="40">
+                              <v-icon>mdi-account</v-icon>
+                            </v-avatar>
+                          </template>
+                          <v-list-item-title>
+                            {{ employee.name }}
+                          </v-list-item-title>
+                          <v-list-item-subtitle>
+                            {{ employee.employee_number }} - {{ employee.department }}
+                          </v-list-item-subtitle>
+                          <template #append>
+                            <v-btn
+                              icon="mdi-plus"
+                              size="small"
+                              color="primary"
+                            ></v-btn>
+                          </template>
+                        </v-list-item>
+                      </v-list>
+
+                      <v-alert
+                        v-else-if="searchTerm && !searchLoading"
+                        type="warning"
+                        variant="tonal"
+                      >
+                        No employees found. Try a different search term.
+                      </v-alert>
+                    </v-card-text>
+
+                    <v-card-actions>
+                      <v-spacer></v-spacer>
+                      <v-btn @click="showSearchDialog = false" variant="outlined">
+                        Close
                       </v-btn>
                     </v-card-actions>
                   </v-card>
@@ -380,6 +457,11 @@ const loadingEmployees = ref(false);
 const bulkLoading = ref(false);
 const showBulkDialog = ref(false);
 const availableEmployees = ref([]);
+const searchLoading = ref(false);
+const searchResults = ref([]);
+const searchTerm = ref("");
+const showSearchDialog = ref(false);
+const selectedDepartment = ref("Field (operators, helper)");
 
 const form = ref({
   title: "",
@@ -445,18 +527,84 @@ watch(
   { immediate: true },
 );
 
-async function loadEmployees() {
-  if (!form.value.position_id) return;
+// Load employees on mount
+loadEmployees();
 
+async function loadEmployees() {
   loadingEmployees.value = true;
   try {
     availableEmployees.value =
-      await mealAllowanceService.getEmployeesByPosition(form.value.position_id);
+      await mealAllowanceService.getEmployeesByPosition(
+        null,
+        null,
+        selectedDepartment.value
+      );
   } catch (error) {
     console.error("Error loading employees:", error);
   } finally {
     loadingEmployees.value = false;
   }
+}
+
+// Debounced search for employees
+let searchTimeout = null;
+function debouncedSearch() {
+  clearTimeout(searchTimeout);
+  if (!searchTerm.value || searchTerm.value.length < 2) {
+    searchResults.value = [];
+    return;
+  }
+  searchTimeout = setTimeout(async () => {
+    await searchEmployees();
+  }, 500);
+}
+
+async function searchEmployees() {
+  if (!searchTerm.value || searchTerm.value.length < 2) return;
+
+  searchLoading.value = true;
+  try {
+    searchResults.value = await mealAllowanceService.searchEmployees(
+      searchTerm.value,
+      null
+    );
+  } catch (error) {
+    console.error("Error searching employees:", error);
+    searchResults.value = [];
+  } finally {
+    searchLoading.value = false;
+  }
+}
+
+function addSearchedEmployee(employee) {
+  // Check if employee already exists in items
+  const exists = form.value.items.some(
+    (item) => item.employee_id === employee.id
+  );
+
+  if (exists) {
+    alert("Employee already added to the list");
+    return;
+  }
+
+  // Add employee to items
+  form.value.items.push({
+    employee_id: employee.id,
+    employee_name: employee.name,
+    employee_number: employee.employee_number,
+    position_code: employee.position_code,
+    department: employee.department,
+    no_of_days: 15,
+    amount_per_day: employee.basic_salary || 120.0,
+    total_amount: 15 * (employee.basic_salary || 120.0),
+  });
+
+  // Clear search and close dialog
+  searchTerm.value = "";
+  searchResults.value = [];
+  showSearchDialog.value = false;
+
+  alert(`${employee.name} added successfully!`);
 }
 
 function addItem() {
@@ -485,11 +633,6 @@ function addAllEmployees() {
 }
 
 async function bulkAddEmployees() {
-  if (!form.value.position_id) {
-    alert("Please select a position first");
-    return;
-  }
-
   if (!bulkForm.value.no_of_days || !bulkForm.value.amount_per_day) {
     alert("Please fill in all fields");
     return;
@@ -506,8 +649,9 @@ async function bulkAddEmployees() {
   bulkLoading.value = true;
   try {
     const response = await mealAllowanceService.bulkAssignByPosition({
-      position_id: form.value.position_id,
+      position_id: null,
       project_id: form.value.project_id || null,
+      department: selectedDepartment.value,
       no_of_days: bulkForm.value.no_of_days,
       amount_per_day: bulkForm.value.amount_per_day,
     });

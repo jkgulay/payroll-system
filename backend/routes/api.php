@@ -223,6 +223,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Meal Allowance Management - specific routes MUST come before apiResource
     Route::get('/meal-allowances/positions', [App\Http\Controllers\Api\MealAllowanceController::class, 'getPositions']);
     Route::post('/meal-allowances/employees-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'getEmployeesByPosition']);
+    Route::post('/meal-allowances/search-employees', [App\Http\Controllers\Api\MealAllowanceController::class, 'searchEmployees']);
     Route::post('/meal-allowances/bulk-assign-by-position', [App\Http\Controllers\Api\MealAllowanceController::class, 'bulkAssignByPosition']);
     Route::get('/meal-allowances/{mealAllowance}/items', [App\Http\Controllers\Api\MealAllowanceController::class, 'getItems']);
     Route::post('/meal-allowances/{mealAllowance}/submit', [App\Http\Controllers\Api\MealAllowanceController::class, 'submit']);

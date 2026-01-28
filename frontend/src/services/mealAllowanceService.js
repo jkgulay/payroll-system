@@ -20,10 +20,20 @@ export default {
   },
 
   // Get employees by position
-  async getEmployeesByPosition(positionId, projectId = null) {
+  async getEmployeesByPosition(positionId, projectId = null, department = null) {
     const response = await api.post("/meal-allowances/employees-by-position", {
       position_id: positionId,
       project_id: projectId,
+      department: department,
+    });
+    return response.data;
+  },
+
+  // Search employees across all departments
+  async searchEmployees(searchTerm, positionId = null) {
+    const response = await api.post("/meal-allowances/search-employees", {
+      search: searchTerm,
+      position_id: positionId,
     });
     return response.data;
   },
