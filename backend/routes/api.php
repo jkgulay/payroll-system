@@ -18,7 +18,7 @@ Route::middleware(['throttle:login'])->group(function () {
 Route::post('/logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 // Two-Factor Authentication routes
-// Registration disabled - accounts created by admin/accountant through employee management
+// Registration disabled - accounts created by admin/hr through employee management
 
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -26,7 +26,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'index']);
     Route::get('/employee/dashboard', [App\Http\Controllers\Api\DashboardController::class, 'employeeDashboard']);
-    Route::get('/accountant/dashboard/stats', [App\Http\Controllers\Api\AccountantController::class, 'getDashboardStats']);
+    Route::get('/hr/dashboard/stats', [App\Http\Controllers\Api\HrController::class, 'getDashboardStats']);
 
     // Employee Self-Service Routes (for users linked to employees)
     Route::middleware('employee.access')->group(function () {
@@ -124,7 +124,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         $user = $request->user();
 
         // Load employee relationship for employee-based roles
-        if (in_array($user->role, ['employee', 'payrollist', 'accountant'])) {
+        if (in_array($user->role, ['employee', 'payrollist', 'hr'])) {
             $user->load('employee');
 
             // Add full_name from employee if available
@@ -298,29 +298,29 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/attendance-corrections/{id}/approve', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'approve']);
     Route::post('/attendance-corrections/{id}/reject', [App\Http\Controllers\Api\AttendanceCorrectionController::class, 'reject']);
 
-    // Accountant Routes
-    Route::post('/payslip-modifications', [App\Http\Controllers\Api\AccountantController::class, 'submitPayslipModification']);
-    Route::put('/attendance/{id}/update', [App\Http\Controllers\Api\AccountantController::class, 'updateAttendance']);
-    Route::get('/employees/{employeeId}/attendance', [App\Http\Controllers\Api\AccountantController::class, 'getEmployeeAttendance']);
+    // HR Routes
+    Route::post('/payslip-modifications', [App\Http\Controllers\Api\HrController::class, 'submitPayslipModification']);
+    Route::put('/attendance/{id}/update', [App\Http\Controllers\Api\HrController::class, 'updateAttendance']);
+    Route::get('/employees/{employeeId}/attendance', [App\Http\Controllers\Api\HrController::class, 'getEmployeeAttendance']);
 
-    // Accountant Resume Management
-    Route::prefix('accountant-resumes')->group(function () {
-        // Accountant routes
-        Route::post('/upload', [App\Http\Controllers\Api\AccountantResumeController::class, 'upload']);
-        Route::get('/my-resumes', [App\Http\Controllers\Api\AccountantResumeController::class, 'myResumes']);
-        Route::get('/approved', [App\Http\Controllers\Api\AccountantResumeController::class, 'approvedResumes']);
-        Route::delete('/{id}', [App\Http\Controllers\Api\AccountantResumeController::class, 'destroy']);
+    // HR Resume Management
+    Route::prefix('hr-resumes')->group(function () {
+        // HR routes
+        Route::post('/upload', [App\Http\Controllers\Api\HrResumeController::class, 'upload']);
+        Route::get('/my-resumes', [App\Http\Controllers\Api\HrResumeController::class, 'myResumes']);
+        Route::get('/approved', [App\Http\Controllers\Api\HrResumeController::class, 'approvedResumes']);
+        Route::delete('/{id}', [App\Http\Controllers\Api\HrResumeController::class, 'destroy']);
 
         // Admin routes
         Route::middleware(['role:admin'])->group(function () {
-            Route::get('/pending', [App\Http\Controllers\Api\AccountantResumeController::class, 'pendingResumes']);
-            Route::get('/all', [App\Http\Controllers\Api\AccountantResumeController::class, 'allResumes']);
-            Route::post('/{id}/approve', [App\Http\Controllers\Api\AccountantResumeController::class, 'approve']);
-            Route::post('/{id}/reject', [App\Http\Controllers\Api\AccountantResumeController::class, 'reject']);
+            Route::get('/pending', [App\Http\Controllers\Api\HrResumeController::class, 'pendingResumes']);
+            Route::get('/all', [App\Http\Controllers\Api\HrResumeController::class, 'allResumes']);
+            Route::post('/{id}/approve', [App\Http\Controllers\Api\HrResumeController::class, 'approve']);
+            Route::post('/{id}/reject', [App\Http\Controllers\Api\HrResumeController::class, 'reject']);
         });
 
-        // Download (both accountant and admin)
-        Route::get('/{id}/download', [App\Http\Controllers\Api\AccountantResumeController::class, 'download']);
+        // Download (both HR and admin)
+        Route::get('/{id}/download', [App\Http\Controllers\Api\HrResumeController::class, 'download']);
     });
 
     // Leave Management

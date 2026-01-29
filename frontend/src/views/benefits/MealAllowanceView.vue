@@ -284,17 +284,17 @@ const headers = [
 ];
 
 const canCreate = computed(() =>
-  ["admin", "accountant", "hr"].includes(authStore.user?.role),
+  ["admin", "hr", "hr"].includes(authStore.user?.role),
 );
 const canEdit = computed(() =>
-  ["admin", "accountant", "hr"].includes(authStore.user?.role),
+  ["admin", "hr", "hr"].includes(authStore.user?.role),
 );
 const canSubmit = computed(() =>
-  ["admin", "accountant", "hr"].includes(authStore.user?.role),
+  ["admin", "hr", "hr"].includes(authStore.user?.role),
 );
 const canApprove = computed(() => authStore.user?.role === "admin");
 const canDelete = computed(() =>
-  ["admin", "accountant", "hr"].includes(authStore.user?.role),
+  ["admin", "hr", "hr"].includes(authStore.user?.role),
 );
 const isAdmin = computed(() => authStore.user?.role === "admin");
 
@@ -593,3 +593,4 @@ function getStatusColor(status) {
   }
 }
 </style>
+

@@ -75,7 +75,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => ['required', Rule::in(['admin', 'accountant', 'payrollist', 'employee'])],
+            'role' => ['required', Rule::in(['admin', 'hr', 'payrollist', 'employee'])],
             'is_active' => 'boolean',
         ]);
 
@@ -137,7 +137,7 @@ class UserController extends Controller
             'username' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => ['required', Rule::in(['admin', 'accountant', 'payrollist', 'employee'])],
+            'role' => ['required', Rule::in(['admin', 'hr', 'payrollist', 'employee'])],
             'is_active' => 'boolean',
             'password' => 'nullable|string|min:8',
         ]);
@@ -347,7 +347,7 @@ class UserController extends Controller
             'inactive' => User::where('is_active', false)->count(),
             'by_role' => [
                 'admin' => User::where('role', 'admin')->count(),
-                'accountant' => User::where('role', 'accountant')->count(),
+                'hr' => User::where('role', 'hr')->count(),
                 'payrollist' => User::where('role', 'payrollist')->count(),
                 'employee' => User::where('role', 'employee')->count(),
             ],

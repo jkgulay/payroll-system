@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class AccountantResume extends Model
+class HrResume extends Model
 {
     use HasFactory, SoftDeletes;
+    
+    protected $table = 'hr_resumes';
 
     protected $fillable = [
         'user_id',

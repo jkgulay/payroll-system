@@ -376,9 +376,9 @@ const menuItems = computed(() => {
     {
       title: "Dashboard",
       icon: "mdi-view-dashboard-variant",
-      value: "accountant-dashboard",
-      to: "/accountant-dashboard",
-      roles: ["accountant"],
+      value: "Human Resources-dashboard",
+      to: "/Human Resources-dashboard",
+      roles: ["hr"],
     },
     {
       title: "My Dashboard",
@@ -406,28 +406,28 @@ const menuItems = computed(() => {
       icon: "mdi-clock-check-outline",
       value: "attendance",
       to: "/attendance",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
     },
     {
       title: "Biometric Import",
       icon: "mdi-file-upload-outline",
       value: "biometric-import",
       to: "/biometric-import",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
     },
     {
       title: "Payroll",
       icon: "mdi-cash-multiple",
       value: "payroll",
       to: "/payroll",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
     },
     {
       title: "My Resumes",
       icon: "mdi-file-document-outline",
       value: "resumes",
       to: "/resumes",
-      roles: ["accountant"],
+      roles: ["hr"],
     },
     {
       title: "HR Management",
@@ -454,7 +454,7 @@ const menuItems = computed(() => {
           icon: "mdi-briefcase-remove-outline",
           value: "resignations",
           to: "/resignations",
-          roles: ["admin", "accountant"],
+          roles: ["admin", "hr"],
         },
       ],
     },
@@ -462,21 +462,21 @@ const menuItems = computed(() => {
       title: "Benefits & Deductions",
       icon: "mdi-cash-multiple",
       value: "benefits",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
       children: [
         {
           title: "Allowances",
           icon: "mdi-food",
           value: "allowances",
           to: "/allowances",
-          roles: ["admin", "accountant", "hr"],
+          roles: ["admin", "hr", "hr"],
         },
         {
           title: "13th Month Pay",
           icon: "mdi-gift-outline",
           value: "thirteenth-month-pay",
           to: "/thirteenth-month-pay",
-          roles: ["admin", "accountant", "hr"],
+          roles: ["admin", "hr", "hr"],
         },
         {
           title: "Loans",
@@ -503,7 +503,7 @@ const menuItems = computed(() => {
       icon: "mdi-file-chart-outline",
       value: "reports",
       to: "/reports",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
     },
     {
       title: "My Leaves",
@@ -531,21 +531,21 @@ const menuItems = computed(() => {
       icon: "mdi-badge-account-horizontal-outline",
       value: "profile",
       to: "/profile",
-      roles: ["admin", "accountant", "employee"],
+      roles: ["admin", "hr", "employee"],
     },
     {
       title: "Position Rates",
       icon: "mdi-badge-account",
       value: "position-rates",
       to: "/position-rates",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
     },
     {
       title: "Holidays",
       icon: "mdi-calendar-star",
       value: "holidays",
       to: "/holidays",
-      roles: ["admin", "accountant", "payrollist"],
+      roles: ["admin", "hr", "payrollist"],
     },
     {
       title: "Settings",
@@ -602,9 +602,9 @@ const menuSections = computed(() => {
     {
       title: "Dashboard",
       icon: "mdi-view-dashboard-variant",
-      value: "accountant-dashboard",
-      to: "/accountant-dashboard",
-      roles: ["accountant"],
+      value: "hr-dashboard",
+      to: "/hr-dashboard",
+      roles: ["hr"],
     },
     {
       title: "Dashboard",
@@ -625,7 +625,7 @@ const menuSections = computed(() => {
       icon: "mdi-clock-check-outline",
       value: "attendance",
       to: "/attendance",
-      roles: ["admin", "accountant", "payrollist"],
+      roles: ["admin", "payrollist"],
     },
 
     {
@@ -640,7 +640,7 @@ const menuSections = computed(() => {
       icon: "mdi-badge-account-horizontal-outline",
       value: "profile",
       to: "/profile",
-      roles: ["admin", "accountant", "employee", "payrollist"],
+      roles: ["admin", "hr", "employee", "payrollist"],
     },
   ];
 
@@ -665,14 +665,28 @@ const menuSections = computed(() => {
       icon: "mdi-badge-account",
       value: "position-rates",
       to: "/position-rates",
-      roles: ["admin", "accountant"],
+      roles: ["admin"],
     },
     {
       title: "Holidays",
       icon: "mdi-calendar-star",
       value: "holidays",
       to: "/holidays",
-      roles: ["admin", "accountant", "payrollist"],
+      roles: ["admin", "payrollist"],
+    },
+    {
+      title: "Leave Requests",
+      icon: "mdi-calendar-check",
+      value: "leave-approval",
+      to: "/leave-approval",
+      roles: ["admin", "hr"],
+    },
+    {
+      title: "Resignations",
+      icon: "mdi-briefcase-remove-outline",
+      value: "resignations",
+      to: "/resignations",
+      roles: ["admin", "hr"],
     },
     {
       title: "Departments",
@@ -706,7 +720,7 @@ const menuSections = computed(() => {
           icon: "mdi-briefcase-remove-outline",
           value: "resignations",
           to: "/resignations",
-          roles: ["admin", "accountant"],
+          roles: ["admin", "hr"],
         },
       ],
     },
@@ -715,7 +729,7 @@ const menuSections = computed(() => {
       icon: "mdi-file-document-outline",
       value: "resumes",
       to: "/resumes",
-      roles: ["accountant"],
+      roles: ["hr"],
     },
   ];
 
@@ -726,7 +740,7 @@ const menuSections = computed(() => {
       icon: "mdi-file-chart-outline",
       value: "reports",
       to: "/reports",
-      roles: ["admin", "accountant"],
+      roles: ["admin"],
     },
     {
       title: "Benefits & Deductions",
@@ -746,7 +760,7 @@ const menuSections = computed(() => {
           icon: "mdi-gift-outline",
           value: "thirteenth-month-pay",
           to: "/thirteenth-month-pay",
-          roles: ["admin", "accountant", "payrollist"],
+          roles: ["admin", "hr", "payrollist"],
         },
         {
           title: "Loans",
@@ -776,7 +790,7 @@ const menuSections = computed(() => {
       icon: "mdi-file-upload-outline",
       value: "biometric-import",
       to: "/biometric-import",
-      roles: ["admin", "accountant", "payrollist"],
+      roles: ["admin", "payrollist"],
     },
     {
       title: "My Leaves",
@@ -1605,3 +1619,4 @@ async function downloadCurrentPayslip() {
   }
 }
 </style>
+

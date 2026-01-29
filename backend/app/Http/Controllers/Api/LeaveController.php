@@ -288,7 +288,7 @@ class LeaveController extends Controller
     {
         // Only admin/hr can approve
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'accountant'])) {
+        if (!in_array($user->role, ['admin', 'hr'])) {
             return response()->json(['message' => 'Unauthorized. Only HR/Admin can approve leaves.'], 403);
         }
 
@@ -351,7 +351,7 @@ class LeaveController extends Controller
     {
         // Only admin/hr can reject
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'accountant'])) {
+        if (!in_array($user->role, ['admin', 'hr'])) {
             return response()->json(['message' => 'Unauthorized. Only HR/Admin can reject leaves.'], 403);
         }
 
@@ -493,7 +493,7 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'accountant'])) {
+        if (!in_array($user->role, ['admin', 'hr'])) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

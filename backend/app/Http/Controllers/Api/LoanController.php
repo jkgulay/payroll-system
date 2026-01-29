@@ -16,10 +16,10 @@ class LoanController extends Controller
     public function __construct()
     {
         // Employee can request loans (create)
-        // Accountant can create loans for employees
+        // HR can create loans for employees
         // Admin approves/rejects loans
         $this->middleware('role:admin')->only(['approve', 'reject']);
-        $this->middleware('role:admin,accountant')->only(['update', 'destroy']);
+        $this->middleware('role:admin,hr')->only(['update', 'destroy']);
     }
 
     public function index(Request $request)
@@ -95,7 +95,7 @@ class LoanController extends Controller
         // Determine who is creating the loan
         $user = auth()->user();
         $isEmployeeRequest = $user->role === 'employee';
-        $isAccountantRequest = $user->role === 'accountant';
+        $isHrRequest = $user->role === 'hr';
         $isAdminCreate = $user->role === 'admin';
 
         $loanData = array_merge($validated, [
@@ -108,7 +108,7 @@ class LoanController extends Controller
             'maturity_date' => $maturityDate,
             'status' => $isAdminCreate ? 'active' : 'pending', // Admin-created loans are active
             'requested_by' => $isEmployeeRequest ? $user->id : null,
-            'created_by' => ($isAccountantRequest || $isAdminCreate) ? $user->id : null,
+            'created_by' => ($isHrRequest || $isAdminCreate) ? $user->id : null,
             'approved_by' => $isAdminCreate ? $user->id : null,
             'approved_at' => $isAdminCreate ? now() : null,
         ]);
@@ -123,7 +123,7 @@ class LoanController extends Controller
             // Create audit log
             $description = match ($user->role) {
                 'employee' => "Employee requested loan: {$loan->loan_number}",
-                'accountant' => "Accountant requested loan for employee: {$loan->employee->full_name}",
+                'hr' => "HR requested loan for employee: {$loan->employee->full_name}",
                 'admin' => "Admin created and activated loan for employee: {$loan->employee->full_name}",
                 default => "Loan created: {$loan->loan_number}",
             };
@@ -144,7 +144,7 @@ class LoanController extends Controller
 
             $message = match ($user->role) {
                 'employee' => 'Loan request submitted for approval',
-                'accountant' => 'Loan request submitted for admin approval',
+                'hr' => 'Loan request submitted for admin approval',
                 'admin' => 'Loan created and activated successfully',
                 default => 'Loan created successfully',
             };

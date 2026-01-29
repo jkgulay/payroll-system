@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadResumeRequest;
 use App\Services\FileSecurityService;
-use App\Models\AccountantResume;
+use App\Models\HrResume;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class AccountantResumeController extends Controller
+class HrResumeController extends Controller
 {
     /**
-     * Upload a new resume (Accountant)
+     * Upload a new resume (HR)
      */
     public function upload(UploadResumeRequest $request)
     {
@@ -65,7 +65,7 @@ class AccountantResumeController extends Controller
             $filePath = $file->storeAs('resumes', $storedFilename, 'public');
 
             // Create resume record
-            $resume = AccountantResume::create([
+            $resume = HrResume::create([
                 'user_id' => auth()->id(),
                 'original_filename' => $originalFilename,
                 'stored_filename' => $storedFilename,
@@ -79,7 +79,7 @@ class AccountantResumeController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
-                    'module' => 'accountant_resume',
+                    'module' => 'hr_resume',
                     'action' => 'resume_uploaded',
                     'description' => "Uploaded resume: {$originalFilename}",
                     'ip_address' => $request->ip(),
@@ -104,12 +104,12 @@ class AccountantResumeController extends Controller
     }
 
     /**
-     * Get accountant's own resumes
+     * Get HR's own resumes
      */
     public function myResumes()
     {
         try {
-            $resumes = AccountantResume::where('user_id', auth()->id())
+            $resumes = HrResume::where('user_id', auth()->id())
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -130,12 +130,12 @@ class AccountantResumeController extends Controller
     }
 
     /**
-     * Get approved resumes for the accountant
+     * Get approved resumes for the HR
      */
     public function approvedResumes()
     {
         try {
-            $resumes = AccountantResume::where('user_id', auth()->id())
+            $resumes = HrResume::where('user_id', auth()->id())
                 ->approved()
                 ->orderBy('reviewed_at', 'desc')
                 ->get();
@@ -161,7 +161,7 @@ class AccountantResumeController extends Controller
     public function destroy($id)
     {
         try {
-            $resume = AccountantResume::where('user_id', auth()->id())
+            $resume = HrResume::where('user_id', auth()->id())
                 ->where('id', $id)
                 ->firstOrFail();
 
@@ -184,7 +184,7 @@ class AccountantResumeController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
-                    'module' => 'accountant_resume',
+                    'module' => 'hr_resume',
                     'action' => 'resume_deleted',
                     'description' => "Deleted resume: {$originalFilename}",
                     'ip_address' => request()->ip(),
@@ -212,7 +212,7 @@ class AccountantResumeController extends Controller
     public function pendingResumes()
     {
         try {
-            $resumes = AccountantResume::pending()
+            $resumes = HrResume::pending()
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -237,7 +237,7 @@ class AccountantResumeController extends Controller
     public function allResumes(Request $request)
     {
         try {
-            $query = AccountantResume::query();
+            $query = HrResume::query();
 
             // Filter by status
             if ($request->has('status') && $request->status !== 'all') {
@@ -344,7 +344,7 @@ class AccountantResumeController extends Controller
         }
 
         try {
-            $resume = AccountantResume::findOrFail($id);
+            $resume = HrResume::findOrFail($id);
 
             if ($resume->status !== 'pending') {
                 return response()->json([
@@ -364,7 +364,7 @@ class AccountantResumeController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
-                    'module' => 'accountant_resume',
+                    'module' => 'hr_resume',
                     'action' => 'resume_approved',
                     'description' => "Approved resume for user ID: {$resume->user_id}",
                     'ip_address' => $request->ip(),
@@ -415,7 +415,7 @@ class AccountantResumeController extends Controller
         }
 
         try {
-            $resume = AccountantResume::findOrFail($id);
+            $resume = HrResume::findOrFail($id);
 
             if ($resume->status !== 'pending') {
                 return response()->json([
@@ -435,7 +435,7 @@ class AccountantResumeController extends Controller
             try {
                 AuditLog::create([
                     'user_id' => auth()->id(),
-                    'module' => 'accountant_resume',
+                    'module' => 'hr_resume',
                     'action' => 'resume_rejected',
                     'description' => "Rejected resume for user ID: {$resume->user_id}",
                     'ip_address' => $request->ip(),
@@ -466,7 +466,7 @@ class AccountantResumeController extends Controller
     public function download($id)
     {
         try {
-            $resume = AccountantResume::findOrFail($id);
+            $resume = HrResume::findOrFail($id);
 
             // Check permissions
             if (auth()->user()->role !== 'admin' && $resume->user_id !== auth()->id()) {

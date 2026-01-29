@@ -190,7 +190,7 @@
         <div class="signature-block">
             <div class="signature-label">Prepared by:</div>
             <div class="signature-line"></div>
-            <div class="signature-title">Accountant</div>
+            <div class="signature-title">Human Resources</div>
         </div>
         <div class="signature-block">
             <div class="signature-label">Checked by:</div>

@@ -13,7 +13,7 @@ class StoreEmployeeRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return auth()->check() && in_array(auth()->user()->role, ['admin', 'accountant']);
+        return auth()->check() && in_array(auth()->user()->role, ['admin', 'hr']);
     }
 
     /**

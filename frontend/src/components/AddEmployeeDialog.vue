@@ -315,7 +315,7 @@
               <v-select
                 v-model="formData.role"
                 :items="[
-                  { title: 'Accountant', value: 'accountant' },
+                  { title: 'hr', value: 'hr' },
                   { title: 'Employee', value: 'employee' },
                 ]"
                 label="User Role"
@@ -724,3 +724,4 @@ watch(
   }
 }
 </style>
+

@@ -233,10 +233,10 @@ const listView = ref(null);
 
 // User permissions
 const canManualEntry = computed(() =>
-  ["admin", "accountant"].includes(authStore.userRole),
+  ["admin", "hr"].includes(authStore.userRole),
 );
 const canApprove = computed(() =>
-  ["admin", "accountant", "manager"].includes(authStore.userRole),
+  ["admin", "hr", "manager"].includes(authStore.userRole),
 );
 
 // Dialogs
@@ -731,3 +731,4 @@ onMounted(async () => {
   background: transparent !important;
 }
 </style>
+

@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class AccountantController extends Controller
+class HrController extends Controller
 {
     public function getDashboardStats()
     {
@@ -90,7 +90,7 @@ class AccountantController extends Controller
                     'allowance_type' => 'other',
                     'amount' => $validated['additional_allowance'],
                     'frequency' => 'semi_monthly',
-                    'description' => $validated['notes'] ?? 'Additional allowance by accountant',
+                    'description' => $validated['notes'] ?? 'Additional allowance by HR',
                     'is_taxable' => true,
                     'is_active' => true,
                     'effective_date' => now(),
@@ -98,7 +98,7 @@ class AccountantController extends Controller
                 ]);
 
                 // Log the modification
-                Log::info('Allowance added by accountant', [
+                Log::info('Allowance added by HR', [
                     'employee_id' => $validated['employee_id'],
                     'amount' => $validated['additional_allowance'],
                     'by_user' => auth()->id(),
@@ -112,14 +112,14 @@ class AccountantController extends Controller
                     'deduction_type' => 'other',
                     'amount' => $validated['additional_deduction'],
                     'amount_per_cutoff' => $validated['additional_deduction'],
-                    'description' => $validated['notes'] ?? 'Additional deduction by accountant',
+                    'description' => $validated['notes'] ?? 'Additional deduction by HR',
                     'status' => 'active',
                     'effective_date' => now(),
                     'created_by' => auth()->id(),
                 ]);
 
                 // Log the modification
-                Log::info('Deduction added by accountant', [
+                Log::info('Deduction added by HR', [
                     'employee_id' => $validated['employee_id'],
                     'amount' => $validated['additional_deduction'],
                     'by_user' => auth()->id(),

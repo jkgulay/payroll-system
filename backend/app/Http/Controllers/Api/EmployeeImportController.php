@@ -17,7 +17,7 @@ class EmployeeImportController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:admin,accountant');
+        $this->middleware('role:admin,hr');
     }
 
     /**

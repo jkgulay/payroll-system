@@ -23,8 +23,8 @@ const router = createRouter({
             const authStore = useAuthStore();
             if (authStore.userRole === "employee") {
               return { name: "employee-dashboard" };
-            } else if (authStore.userRole === "accountant") {
-              return { name: "accountant-dashboard" };
+            } else if (authStore.userRole === "hr") {
+              return { name: "hr-dashboard" };
             } else if (authStore.userRole === "payrollist") {
               return { name: "payrollist-dashboard" };
             } else {
@@ -42,13 +42,13 @@ const router = createRouter({
           meta: { title: "Dashboard", roles: ["admin"] },
         },
         {
-          path: "accountant-dashboard",
-          name: "accountant-dashboard",
+          path: "hr-dashboard",
+          name: "hr-dashboard",
           component: () =>
             import(
-              /* webpackChunkName: "dashboard" */ "@/views/accountant/AccountantDashboardView.vue"
+              /* webpackChunkName: "dashboard" */ "@/views/hr/HrDashboardView.vue"
             ),
-          meta: { title: "Dashboard", roles: ["accountant"] },
+          meta: { title: "Dashboard", roles: ["hr"] },
         },
         {
           path: "payrollist-dashboard",
@@ -77,7 +77,7 @@ const router = createRouter({
             ),
           meta: {
             title: "My Profile",
-            roles: ["admin", "accountant", "employee", "payrollist"],
+            roles: ["admin", "hr", "employee", "payrollist"],
           },
         },
         {
@@ -98,7 +98,7 @@ const router = createRouter({
             ),
           meta: {
             title: "Resignation Management",
-            roles: ["admin", "accountant"],
+            roles: ["admin", "hr"],
           },
         },
         {
@@ -135,7 +135,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "hr" */ "@/views/hr/LeaveApprovalView.vue"
             ),
-          meta: { title: "Leave Approval", roles: ["admin", "accountant"] },
+          meta: { title: "Leave Approval", roles: ["admin", "hr"] },
         },
         {
           path: "projects",
@@ -153,7 +153,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "attendance" */ "@/views/attendance/AttendanceView.vue"
             ),
-          meta: { title: "Attendance", roles: ["admin", "accountant", "payrollist"] },
+          meta: { title: "Attendance", roles: ["admin", "hr", "payrollist"] },
         },
         {
           path: "biometric-import",
@@ -162,23 +162,23 @@ const router = createRouter({
             import(
               /* webpackChunkName: "attendance" */ "@/views/attendance/BiometricImportView.vue"
             ),
-          meta: { title: "Biometric Import", roles: ["admin", "accountant"] },
+          meta: { title: "Biometric Import", roles: ["admin", "hr"] },
         },
         {
           path: "resumes",
           name: "resumes",
           component: () =>
             import(
-              /* webpackChunkName: "accountant" */ "@/views/accountant/ResumeManagement.vue"
+              /* webpackChunkName: "hr" */ "@/views/hr/ResumeManagement.vue"
             ),
-          meta: { title: "My Resumes", roles: ["accountant"] },
+          meta: { title: "My Resumes", roles: ["hr"] },
         },
         {
           path: "resume-review",
           name: "resume-review",
           component: () =>
             import(
-              /* webpackChunkName: "accountant" */ "@/views/accountant/AdminResumeReview.vue"
+              /* webpackChunkName: "hr" */ "@/views/hr/AdminResumeReview.vue"
             ),
           meta: { title: "Resume Review", roles: ["admin"] },
         },
@@ -191,7 +191,7 @@ const router = createRouter({
             ),
           meta: {
             title: "Allowances",
-            roles: ["admin", "accountant", "payrollist"],
+            roles: ["admin", "hr", "payrollist"],
           },
         },
         {
@@ -203,7 +203,7 @@ const router = createRouter({
             ),
           meta: {
             title: "13th Month Pay",
-            roles: ["admin", "accountant", "payrollist"],
+            roles: ["admin", "hr", "payrollist"],
           },
         },
         {
@@ -254,7 +254,7 @@ const router = createRouter({
             ),
           meta: {
             title: "Government Contributions Report",
-            roles: ["admin", "accountant"],
+            roles: ["admin", "hr"],
           },
         },
         {
@@ -266,7 +266,7 @@ const router = createRouter({
             ),
           meta: {
             title: "Attendance Summary Report",
-            roles: ["admin", "accountant"],
+            roles: ["admin", "hr"],
           },
         },
         {
@@ -321,7 +321,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "settings" */ "@/views/settings/PositionRatesView.vue"
             ),
-          meta: { title: "Position Rates", roles: ["admin", "accountant"] },
+          meta: { title: "Position Rates", roles: ["admin", "hr"] },
         },
         {
           path: "holidays",
@@ -332,7 +332,7 @@ const router = createRouter({
             ),
           meta: {
             title: "Holiday Management",
-            roles: ["admin", "accountant", "payrollist"],
+            roles: ["admin", "hr", "payrollist"],
           },
         },
         {
@@ -388,8 +388,8 @@ router.beforeEach(async (to, from, next) => {
       let targetRoute;
       if (authStore.userRole === "employee") {
         targetRoute = "employee-dashboard";
-      } else if (authStore.userRole === "accountant") {
-        targetRoute = "accountant-dashboard";
+      } else if (authStore.userRole === "hr") {
+        targetRoute = "hr-dashboard";
       } else if (authStore.userRole === "payrollist") {
         targetRoute = "payrollist-dashboard";
       } else {
@@ -404,8 +404,8 @@ router.beforeEach(async (to, from, next) => {
       let targetRoute;
       if (authStore.userRole === "employee") {
         targetRoute = "employee-dashboard";
-      } else if (authStore.userRole === "accountant") {
-        targetRoute = "accountant-dashboard";
+      } else if (authStore.userRole === "hr") {
+        targetRoute = "hr-dashboard";
       } else if (authStore.userRole === "payrollist") {
         targetRoute = "payrollist-dashboard";
       } else {
@@ -424,8 +424,8 @@ router.beforeEach(async (to, from, next) => {
       let targetRoute;
       if (authStore.userRole === "employee") {
         targetRoute = "employee-dashboard";
-      } else if (authStore.userRole === "accountant") {
-        targetRoute = "accountant-dashboard";
+      } else if (authStore.userRole === "hr") {
+        targetRoute = "hr-dashboard";
       } else if (authStore.userRole === "payrollist") {
         targetRoute = "payrollist-dashboard";
       } else {
@@ -444,3 +444,4 @@ router.beforeEach(async (to, from, next) => {
 });
 
 export default router;
+

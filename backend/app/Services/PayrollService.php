@@ -122,6 +122,10 @@ class PayrollService
         $regularDays = 0;
         $holidayDays = 0;
         $regularOtHours = 0;
+        $sundayOtHours = 0;
+        $regularHolidayOtHours = 0; // Regular holiday OT (weekday)
+        $regularHolidaySundayOtHours = 0; // Regular holiday OT on Sunday
+        $specialHolidayOtHours = 0; // Special holiday OT
         $holidayPay = 0;
         $totalUndertimeHours = 0;
 
@@ -138,6 +142,9 @@ class PayrollService
                 $totalUndertimeHours += $attendance->undertime_hours;
             }
 
+            // Check if this date is Sunday (0 = Sunday in Carbon)
+            $isSunday = $attendanceDate->dayOfWeek === 0;
+
             // Check if this date is a holiday
             $holiday = Holiday::getHolidayForDate($attendanceDate);
 
@@ -151,19 +158,35 @@ class PayrollService
                 $holidayPay += $dayHolidayPay;
                 $holidayDays++;
 
-                // Add overtime if any on holiday (should be calculated with higher rate)
+                // Handle holiday overtime with specific rates
                 if ($attendance->overtime_hours > 0) {
-                    $regularOtHours += $attendance->overtime_hours;
+                    if ($holiday->type === 'regular') {
+                        // Regular holiday overtime
+                        if ($isSunday) {
+                            // Regular holiday on Sunday: rate/8 × 1.3 × 1.3 × hours
+                            $regularHolidaySundayOtHours += $attendance->overtime_hours;
+                        } else {
+                            // Regular holiday weekday: rate/8 × 2 × 1.3 × hours
+                            $regularHolidayOtHours += $attendance->overtime_hours;
+                        }
+                    } else {
+                        // Special holiday: rate/8 × 1.3 × 1.3 × hours
+                        $specialHolidayOtHours += $attendance->overtime_hours;
+                    }
                 }
             } else {
-                // Regular working day
-                if ($attendance->status === 'present') {
+                // Regular working day or Sunday
+                if ($attendance->status === 'present' || $attendance->status === 'half_day') {
                     $regularDays++;
                 }
 
-                // Add regular overtime
+                // Add overtime - separate Sunday from regular days
                 if ($attendance->overtime_hours > 0) {
-                    $regularOtHours += $attendance->overtime_hours;
+                    if ($isSunday) {
+                        $sundayOtHours += $attendance->overtime_hours;
+                    } else {
+                        $regularOtHours += $attendance->overtime_hours;
+                    }
                 }
             }
         }
@@ -171,8 +194,25 @@ class PayrollService
         // Calculate basic pay (excluding holiday days)
         $basicPay = $rate * $regularDays;
 
-        // Calculate overtime pay (1.25x for regular OT)
+        // Calculate overtime pay with different rates
+        // Regular days: rate/8 × 1.25 × hours
         $regularOtPay = $regularOtHours * $hourlyRate * 1.25;
+        
+        // Sunday: rate/8 × 1.3 × hours
+        $sundayOtPay = $sundayOtHours * $hourlyRate * 1.3;
+        
+        // Regular holiday (weekday): rate/8 × 2 × 1.3 × hours
+        $regularHolidayOtPay = $regularHolidayOtHours * $hourlyRate * 2 * 1.3;
+        
+        // Regular holiday on Sunday: rate/8 × 1.3 × 1.3 × hours
+        $regularHolidaySundayOtPay = $regularHolidaySundayOtHours * $hourlyRate * 1.3 * 1.3;
+        
+        // Special holiday: rate/8 × 1.3 × 1.3 × hours
+        $specialHolidayOtPay = $specialHolidayOtHours * $hourlyRate * 1.3 * 1.3;
+        
+        // Total overtime pay
+        $totalOtPay = $regularOtPay + $sundayOtPay + $regularHolidayOtPay + 
+                      $regularHolidaySundayOtPay + $specialHolidayOtPay;
 
         // Get allowances - sum allowances that are active and effective during the payroll period
         $allowances = EmployeeAllowance::where('employee_id', $employee->id)
@@ -192,8 +232,8 @@ class PayrollService
         // Formula: (rate / 8) * undertime_hours
         $undertimeDeduction = $hourlyRate * $totalUndertimeHours;
 
-        // Calculate gross pay (include holiday pay, subtract undertime deduction)
-        $grossPay = $basicPay + $holidayPay + $regularOtPay + $cola + $allowances - $undertimeDeduction;
+        // Calculate gross pay (include holiday pay, overtime, subtract undertime deduction)
+        $grossPay = $basicPay + $holidayPay + $totalOtPay + $cola + $allowances - $undertimeDeduction;
 
         // Calculate government deductions (only if enabled for the employee)
         $sss = $employee->has_sss ? $this->calculateSSS($grossPay) : 0;
@@ -230,8 +270,8 @@ class PayrollService
             'holiday_days' => $holidayDays,
             'holiday_pay' => $holidayPay,
             'basic_pay' => $basicPay,
-            'regular_ot_hours' => $regularOtHours,
-            'regular_ot_pay' => $regularOtPay,
+            'regular_ot_hours' => $regularOtHours + $sundayOtHours, // Combined for compatibility
+            'regular_ot_pay' => $totalOtPay, // Combined overtime pay
             'special_ot_hours' => 0,
             'special_ot_pay' => 0,
             'cola' => $cola,
