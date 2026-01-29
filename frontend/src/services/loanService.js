@@ -11,7 +11,7 @@ export default {
     return api.get(`/loans/${id}`);
   },
 
-  // Create a new loan (employee request or accountant create)
+  // Create a new loan (employee request or HR create)
   createLoan(data) {
     return api.post("/loans", data);
   },

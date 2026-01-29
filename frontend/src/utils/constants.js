@@ -156,7 +156,7 @@ export const DEDUCTION_STATUSES = [
 // User Roles
 export const USER_ROLES = [
   { value: "admin", title: "Administrator" },
-  { value: "accountant", title: "Accountant" },
+  { value: "hr", title: "Human Resources" },
   { value: "hr", title: "HR" },
   { value: "employee", title: "Employee" },
 ];

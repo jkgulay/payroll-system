@@ -203,7 +203,7 @@ class MealAllowanceController extends Controller
     {
         $user = auth()->user();
 
-        // Allow draft updates for HR/Accountant, but only admin can update approved/pending
+        // Allow draft updates for HR, but only admin can update approved/pending
         if ($mealAllowance->status !== 'draft' && $user->role !== 'admin') {
             return response()->json([
                 'message' => 'Only admin can update meal allowances that are not in draft status',
@@ -281,7 +281,7 @@ class MealAllowanceController extends Controller
     {
         // Check if user has permission (HR/Accountant)
         $user = auth()->user();
-        if (!in_array($user->role, ['admin', 'accountant', 'hr'])) {
+        if (!in_array($user->role, ['admin', 'hr'])) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

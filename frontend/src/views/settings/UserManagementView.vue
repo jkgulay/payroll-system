@@ -614,7 +614,7 @@ const stats = ref({
   inactive: 0,
   by_role: {
     admin: 0,
-    accountant: 0,
+    hr: 0,
     payrollist: 0,
     employee: 0,
   },
@@ -645,7 +645,7 @@ const userForm = ref({
 
 const roleOptions = [
   { title: "Admin", value: "admin" },
-  { title: "Accountant", value: "accountant" },
+  { title: "hr", value: "hr" },
   { title: "Payroll Staff", value: "payrollist" },
   { title: "Employee", value: "employee" },
 ];
@@ -688,7 +688,7 @@ const filteredUsers = computed(() => {
 function getRoleColor(role) {
   const colors = {
     admin: "error",
-    accountant: "info",
+    hr: "info",
     payrollist: "warning",
     employee: "success",
   };
@@ -698,7 +698,7 @@ function getRoleColor(role) {
 function getRoleIcon(role) {
   const icons = {
     admin: "mdi-shield-crown",
-    accountant: "mdi-calculator",
+    hr: "mdi-calculator",
     payrollist: "mdi-cash-multiple",
     employee: "mdi-account",
   };
@@ -708,7 +708,7 @@ function getRoleIcon(role) {
 function getRoleLabel(role) {
   const labels = {
     admin: "Admin",
-    accountant: "Accountant",
+    hr: "hr",
     payrollist: "Payroll Staff",
     employee: "Employee",
   };
@@ -1284,3 +1284,4 @@ onMounted(() => {
   color: #f44336 !important;
 }
 </style>
+

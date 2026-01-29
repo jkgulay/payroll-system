@@ -26,14 +26,14 @@ class AttendanceController extends Controller
         $this->attendanceService = $attendanceService;
         $this->biometricService = $biometricService;
 
-        // Manual entry and editing: admin and accountant only
-        $this->middleware('role:admin,accountant')->only(['store', 'update', 'destroy', 'markAbsent']);
+        // Manual entry and editing: admin and hr only
+        $this->middleware('role:admin,hr')->only(['store', 'update', 'destroy', 'markAbsent']);
 
-        // Approval actions: admin, accountant, and manager
-        $this->middleware('role:admin,accountant,manager')->only(['approve', 'reject']);
+        // Approval actions: admin, hr, and manager
+        $this->middleware('role:admin,hr,manager')->only(['approve', 'reject']);
 
-        // Biometric import and device management: admin and accountant only
-        $this->middleware('role:admin,accountant')->only(['importBiometric', 'fetchFromDevice', 'syncEmployees', 'clearDeviceLogs']);
+        // Biometric import and device management: admin and hr only
+        $this->middleware('role:admin,hr')->only(['importBiometric', 'fetchFromDevice', 'syncEmployees', 'clearDeviceLogs']);
     }
     public function index(Request $request)
     {
@@ -138,7 +138,7 @@ class AttendanceController extends Controller
         // Prevent editing approved records without proper permission
         if (
             $attendance->is_approved &&
-            !in_array($request->user()->role, ['admin', 'accountant'])
+            !in_array($request->user()->role, ['admin', 'hr'])
         ) {
             return response()->json([
                 'message' => 'Cannot edit approved attendance records',

@@ -12,14 +12,14 @@ class EnsureEmployeeAccess
      * Handle an incoming request.
      *
      * Ensures that users with the 'employee' role can only access their own employee data.
-     * Admin, accountant, and payrollist roles have full access.
+     * Admin, hr, and payrollist roles have full access.
      */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
         
-        // Admin, accountant, and payrollist have full access - no restrictions
-        if (in_array($user->role, ['admin', 'accountant', 'payrollist'])) {
+        // Admin, hr, and payrollist have full access - no restrictions
+        if (in_array($user->role, ['admin', 'hr', 'payrollist'])) {
             return $next($request);
         }
         

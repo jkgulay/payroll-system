@@ -161,7 +161,7 @@
                               :color="
                                 item.value === 'admin'
                                   ? '#ed985f'
-                                  : item.value === 'accountant'
+                                  : item.value === 'hr'
                                     ? '#f7b980'
                                     : item.value === 'payrollist'
                                       ? '#4CAF50'
@@ -172,7 +172,7 @@
                               {{
                                 item.value === "admin"
                                   ? "mdi-shield-crown"
-                                  : item.value === "accountant"
+                                  : item.value === "hr"
                                     ? "mdi-calculator"
                                     : item.value === "payrollist"
                                       ? "mdi-cash-register"
@@ -290,7 +290,7 @@ const errors = reactive({
 
 const roles = [
   { title: "Admin", value: "admin" },
-  { title: "Accountant", value: "accountant" },
+  { title: "hr", value: "hr" },
   { title: "Payrollist", value: "payrollist" },
   { title: "Employee", value: "employee" },
 ];
@@ -400,8 +400,8 @@ async function handleTwoFactorVerified({ userId, code }) {
         const role = response.data.user.role;
         if (role === "employee") {
           redirectPath = "/employee-dashboard";
-        } else if (role === "accountant") {
-          redirectPath = "/accountant-dashboard";
+        } else if (role === "hr") {
+          redirectPath = "/Human Resources-dashboard";
         } else {
           redirectPath = "/admin-dashboard";
         }
@@ -443,8 +443,8 @@ async function handlePasswordChanged() {
       const role = authStore.userRole;
       if (role === "employee") {
         router.push("/employee-dashboard");
-      } else if (role === "accountant") {
-        router.push("/accountant-dashboard");
+      } else if (role === "hr") {
+        router.push("/Human Resources-dashboard");
       } else {
         router.push("/admin-dashboard");
       }
@@ -462,3 +462,4 @@ function handleTwoFactorCancel() {
 </script>
 
 <style scoped lang="scss" src="@/styles/login-view.scss"></style>
+

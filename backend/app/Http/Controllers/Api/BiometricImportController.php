@@ -19,7 +19,7 @@ class BiometricImportController extends Controller
     {
         $this->staffImportService = $staffImportService;
         $this->punchRecordImportService = $punchRecordImportService;
-        $this->middleware('role:admin,accountant');
+        $this->middleware('role:admin,hr');
     }
 
     /**

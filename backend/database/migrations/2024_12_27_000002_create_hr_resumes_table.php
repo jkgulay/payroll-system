@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('accountant_resumes')) {
-            Schema::create('accountant_resumes', function (Blueprint $table) {
+        if (!Schema::hasTable('hr_resumes')) {
+            Schema::create('hr_resumes', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
                 $table->string('original_filename');
@@ -32,6 +32,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('accountant_resumes');
+        Schema::dropIfExists('hr_resumes');
     }
 };

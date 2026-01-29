@@ -10,7 +10,7 @@
           <div>
             <h1 class="page-title">Resume Review</h1>
             <p class="page-subtitle">
-              Review and approve resume submissions from accountants
+              Review and approve resume submissions from Human Resourcess
             </p>
           </div>
         </div>
@@ -1034,3 +1034,4 @@ function formatDate(dateString) {
   padding: 24px;
 }
 </style>
+

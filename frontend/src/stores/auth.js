@@ -30,8 +30,8 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = computed(() => !!token.value);
   const userRole = computed(() => user.value?.role || null);
   const isAdmin = computed(() => userRole.value === "admin");
-  const isAccountant = computed(() =>
-    ["admin", "accountant"].includes(userRole.value),
+  const isHr = computed(() =>
+    ["admin", "hr"].includes(userRole.value),
   );
   const mustChangePassword = computed(
     () => user.value?.must_change_password || false,
@@ -186,7 +186,7 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated,
     userRole,
     isAdmin,
-    isAccountant,
+    isHr,
     mustChangePassword,
     // Actions
     login,

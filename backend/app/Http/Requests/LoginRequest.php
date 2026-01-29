@@ -35,7 +35,7 @@ class LoginRequest extends FormRequest
             ],
             'role' => [
                 'required',
-                'in:admin,accountant,employee,payrollist',
+                'in:admin,hr,employee,payrollist',
             ],
         ];
     }

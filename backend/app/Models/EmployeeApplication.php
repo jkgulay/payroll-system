@@ -74,7 +74,7 @@ class EmployeeApplication extends Model
     }
 
     /**
-     * Get the user who created the application (HR/Accountant).
+     * Get the user who created the application (HR).
      */
     public function creator(): BelongsTo
     {

@@ -1,9 +1,9 @@
 import api from './api';
 
 export const resumeService = {
-  // Accountant endpoints
+  // HR endpoints
   async uploadResume(formData) {
-    const response = await api.post('/accountant-resumes/upload', formData, {
+    const response = await api.post('/hr-resumes/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -12,40 +12,40 @@ export const resumeService = {
   },
 
   async getMyResumes() {
-    const response = await api.get('/accountant-resumes/my-resumes');
+    const response = await api.get('/hr-resumes/my-resumes');
     return response.data;
   },
 
   async getApprovedResumes() {
-    const response = await api.get('/accountant-resumes/approved');
+    const response = await api.get('/hr-resumes/approved');
     return response.data;
   },
 
   async deleteResume(id) {
-    const response = await api.delete(`/accountant-resumes/${id}`);
+    const response = await api.delete(`/hr-resumes/${id}`);
     return response.data;
   },
 
   // Admin endpoints
   async getPendingResumes() {
-    const response = await api.get('/accountant-resumes/pending');
+    const response = await api.get('/hr-resumes/pending');
     return response.data;
   },
 
   async getAllResumes(params) {
-    const response = await api.get('/accountant-resumes/all', { params });
+    const response = await api.get('/hr-resumes/all', { params });
     return response.data;
   },
 
   async approveResume(id, adminNotes) {
-    const response = await api.post(`/accountant-resumes/${id}/approve`, {
+    const response = await api.post(`/hr-resumes/${id}/approve`, {
       admin_notes: adminNotes,
     });
     return response.data;
   },
 
   async rejectResume(id, adminNotes) {
-    const response = await api.post(`/accountant-resumes/${id}/reject`, {
+    const response = await api.post(`/hr-resumes/${id}/reject`, {
       admin_notes: adminNotes,
     });
     return response.data;
@@ -53,7 +53,7 @@ export const resumeService = {
 
   // Common
   async downloadResume(id) {
-    const response = await api.get(`/accountant-resumes/${id}/download`, {
+    const response = await api.get(`/hr-resumes/${id}/download`, {
       responseType: 'blob',
     });
     return response;

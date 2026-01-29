@@ -102,7 +102,7 @@ class EmployeeController extends Controller
 
         // Validate role separately (it's for user account, not employee record)
         $requestedRole = $request->validate([
-            'role' => 'nullable|in:admin,accountant,employee,payrollist',
+            'role' => 'nullable|in:admin,hr,employee,payrollist',
         ])['role'] ?? null;
 
         // Normalize employee data using helper
@@ -206,13 +206,13 @@ class EmployeeController extends Controller
                     $oldPositionName = strtolower($oldPosition->position_name);
 
                     // Assign role based on new position
-                    if ($newPositionName === 'accountant') {
-                        \App\Models\User::where('id', $employee->user_id)->update(['role' => 'accountant']);
+                    if (in_array($newPositionName, ['hr', 'human resources'])) {
+                        \App\Models\User::where('id', $employee->user_id)->update(['role' => 'hr']);
                     } elseif ($newPositionName === 'payrollist') {
                         \App\Models\User::where('id', $employee->user_id)->update(['role' => 'payrollist']);
                     }
-                    // If changing FROM Accountant or Payrollist to something else, set role back to "employee"
-                    elseif (in_array($oldPositionName, ['accountant', 'payrollist'])) {
+                    // If changing FROM HR or Payrollist to something else, set role back to "employee"
+                    elseif (in_array($oldPositionName, ['hr', 'human resources', 'payrollist'])) {
                         \App\Models\User::where('id', $employee->user_id)->update(['role' => 'employee']);
                     }
                 }
