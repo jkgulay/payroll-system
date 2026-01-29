@@ -192,7 +192,31 @@ class Attendance extends Model
             }
         }
 
+        // Apply undertime-overtime offset
+        $this->applyUndertimeOvertimeOffset();
+
         $this->save();
+    }
+
+    /**
+     * Apply undertime-overtime offset
+     * If employee has both undertime and overtime, offset them
+     * Example: 2hrs undertime + 2hrs overtime = 0 undertime, 0 overtime
+     * Example: 4hrs undertime + 2hrs overtime = 2hrs undertime, 0 overtime
+     */
+    private function applyUndertimeOvertimeOffset(): void
+    {
+        // Only apply offset if both undertime and overtime exist
+        if ($this->undertime_hours > 0 && $this->overtime_hours > 0) {
+            $offset = min($this->undertime_hours, $this->overtime_hours);
+            
+            $this->undertime_hours -= $offset;
+            $this->overtime_hours -= $offset;
+            
+            // Adjust regular hours to reflect the offset
+            // When we offset, we're essentially saying those hours count as regular work
+            $this->regular_hours += $offset;
+        }
     }
 
     private function calculateNightDifferentialHours(Carbon $timeIn, Carbon $timeOut): float
