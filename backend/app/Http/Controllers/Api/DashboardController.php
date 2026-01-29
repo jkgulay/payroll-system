@@ -250,11 +250,16 @@ class DashboardController extends Controller
             'overtime_hours' => $currentMonthAttendance->sum('overtime_hours'),
         ];
 
-        // Get current/latest payslip (most recent paid or finalized)
+        $payrollStatuses = ['paid', 'finalized'];
+        if (in_array($user->role, ['admin', 'hr', 'payrollist'])) {
+            $payrollStatuses[] = 'draft';
+        }
+
+        // Get current/latest payslip
         $currentPayslip = PayrollItem::with(['payroll'])
             ->where('employee_id', $employee->id)
-            ->whereHas('payroll', function ($query) {
-                $query->whereIn('status', ['paid', 'finalized']);
+            ->whereHas('payroll', function ($query) use ($payrollStatuses) {
+                $query->whereIn('status', $payrollStatuses);
             })
             ->latest('id')
             ->first();
@@ -263,8 +268,8 @@ class DashboardController extends Controller
         $oneYearAgo = Carbon::now()->subYear();
         $payslipHistory = PayrollItem::with(['payroll'])
             ->where('employee_id', $employee->id)
-            ->whereHas('payroll', function ($query) use ($oneYearAgo) {
-                $query->whereIn('status', ['paid', 'finalized'])
+            ->whereHas('payroll', function ($query) use ($oneYearAgo, $payrollStatuses) {
+                $query->whereIn('status', $payrollStatuses)
                     ->where('period_start', '>=', $oneYearAgo);
             })
             ->latest('id')
@@ -276,6 +281,10 @@ class DashboardController extends Controller
                 'date_from' => $oneYearAgo->toDateString(),
                 'records_found' => $payslipHistory->count(),
             ]);
+        }
+
+        if ($attendanceSummary['total_hours'] <= 0 && $currentPayslip) {
+            $attendanceSummary['total_hours'] = round(($currentPayslip->days_worked ?? 0) * 8, 2);
         }
 
         return response()->json([

@@ -96,7 +96,15 @@ class MealAllowance extends Model
 
         static::creating(function ($model) {
             if (empty($model->reference_number)) {
-                $model->reference_number = 'MA-' . date('Ymd') . '-' . str_pad(static::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
+                $datePart = date('Ymd');
+                $sequence = static::withTrashed()->whereDate('created_at', today())->count() + 1;
+                do {
+                    $reference = 'MA-' . $datePart . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+                    $exists = static::withTrashed()->where('reference_number', $reference)->exists();
+                    $sequence++;
+                } while ($exists);
+
+                $model->reference_number = $reference;
             }
         });
     }

@@ -9,6 +9,8 @@ use App\Models\Employee;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class LoanController extends Controller
@@ -57,7 +59,10 @@ class LoanController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_id' => [
+                'required',
+                Rule::exists('employees', 'id')->whereNull('deleted_at'),
+            ],
             'loan_type' => 'required|in:sss,pag_ibig,company,emergency,salary_advance,other',
             'principal_amount' => 'required|numeric|min:100',
             'interest_rate' => 'nullable|numeric|min:0|max:100',
@@ -155,6 +160,10 @@ class LoanController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Failed to create loan', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'message' => 'Failed to create loan',
                 'error' => $e->getMessage()
@@ -493,12 +502,21 @@ class LoanController extends Controller
         $year = date('Y');
         $month = date('m');
 
-        // Get the count of loans for this type this month
-        $count = EmployeeLoan::where('loan_type', $loanType)
+        // Get the count of loans for this type this month (including trashed)
+        $count = EmployeeLoan::withTrashed()
+            ->where('loan_type', $loanType)
             ->whereYear('created_at', $year)
             ->whereMonth('created_at', $month)
             ->count() + 1;
 
-        return sprintf('%s-%s%s-%04d', $prefix, $year, $month, $count);
+        do {
+            $loanNumber = sprintf('%s-%s%s-%04d', $prefix, $year, $month, $count);
+            $exists = EmployeeLoan::withTrashed()
+                ->where('loan_number', $loanNumber)
+                ->exists();
+            $count++;
+        } while ($exists);
+
+        return $loanNumber;
     }
 }

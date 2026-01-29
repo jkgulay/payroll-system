@@ -34,7 +34,7 @@
               density="comfortable"
               clearable
               hide-details
-              @update:model-value="fetchMealAllowances"
+              @update:model-value="fetchAllowances"
             ></v-select>
           </v-col>
           <v-col cols="12" md="3">
@@ -48,7 +48,7 @@
               density="comfortable"
               clearable
               hide-details
-              @update:model-value="fetchMealAllowances"
+              @update:model-value="fetchAllowances"
             ></v-select>
           </v-col>
           <v-col cols="12" md="4">
@@ -60,7 +60,7 @@
               density="comfortable"
               clearable
               hide-details
-              @update:model-value="fetchMealAllowances"
+              @update:model-value="fetchAllowances"
             ></v-text-field>
           </v-col>
         </v-row>
@@ -69,7 +69,7 @@
       <!-- Data Table -->
       <v-data-table
         :headers="headers"
-        :items="mealAllowances"
+        :items="allowances"
         :loading="loading"
         class="modern-table"
       >
@@ -110,106 +110,91 @@
         </template>
 
         <template #[`item.actions`]="{ item }">
-          <v-tooltip text="View Details" location="top">
+          <v-menu location="bottom end">
             <template v-slot:activator="{ props }">
               <v-btn
                 v-bind="props"
-                icon="mdi-eye"
+                icon="mdi-dots-vertical"
                 size="small"
                 variant="text"
-                @click="viewDetails(item)"
               ></v-btn>
             </template>
-          </v-tooltip>
+            <v-list density="compact">
+              <v-list-item @click="viewDetails(item)">
+                <template #prepend>
+                  <v-icon size="18">mdi-eye</v-icon>
+                </template>
+                <v-list-item-title>View Details</v-list-item-title>
+              </v-list-item>
 
-          <v-tooltip text="Edit" location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn
+              <v-list-item
                 v-if="
                   (item.status === 'draft' && canEdit) ||
                   (item.status !== 'draft' && isAdmin)
                 "
-                v-bind="props"
-                icon="mdi-pencil"
-                size="small"
-                variant="text"
-                color="primary"
-                @click="editMealAllowance(item)"
-              ></v-btn>
-            </template>
-          </v-tooltip>
+                @click="editAllowance(item)"
+              >
+                <template #prepend>
+                  <v-icon size="18" color="primary">mdi-pencil</v-icon>
+                </template>
+                <v-list-item-title>Edit</v-list-item-title>
+              </v-list-item>
 
-          <v-tooltip text="Submit for Approval" location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn
+              <v-list-item
                 v-if="item.status === 'draft' && canSubmit && !item._submitted"
-                v-bind="props"
-                icon="mdi-send"
-                size="small"
-                variant="text"
-                color="success"
                 @click="submitForApproval(item)"
-              ></v-btn>
-            </template>
-          </v-tooltip>
+              >
+                <template #prepend>
+                  <v-icon size="18" color="success">mdi-send</v-icon>
+                </template>
+                <v-list-item-title>Submit for Approval</v-list-item-title>
+              </v-list-item>
 
-          <v-tooltip text="Approve/Reject" location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn
+              <v-list-item
                 v-if="item.status === 'pending_approval' && canApprove"
-                v-bind="props"
-                icon="mdi-check-circle"
-                size="small"
-                variant="text"
-                color="success"
                 @click="openApprovalDialog(item)"
-              ></v-btn>
-            </template>
-          </v-tooltip>
+              >
+                <template #prepend>
+                  <v-icon size="18" color="success">mdi-check-circle</v-icon>
+                </template>
+                <v-list-item-title>Approve/Reject</v-list-item-title>
+              </v-list-item>
 
-          <v-tooltip text="Generate PDF" location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn
+              <v-list-item
                 v-if="
                   item.status === 'approved' && canApprove && !item.pdf_path
                 "
-                v-bind="props"
-                icon="mdi-file-pdf-box"
-                size="small"
-                variant="text"
-                color="orange"
                 @click="generatePdf(item)"
-              ></v-btn>
-            </template>
-          </v-tooltip>
+              >
+                <template #prepend>
+                  <v-icon size="18" color="orange">mdi-file-pdf-box</v-icon>
+                </template>
+                <v-list-item-title>Generate PDF</v-list-item-title>
+              </v-list-item>
 
-          <v-tooltip text="Download PDF" location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn
+              <v-list-item
                 v-if="item.status === 'approved' && item.pdf_path"
-                v-bind="props"
-                icon="mdi-download"
-                size="small"
-                variant="text"
-                color="error"
                 @click="downloadPdf(item)"
-              ></v-btn>
-            </template>
-          </v-tooltip>
+              >
+                <template #prepend>
+                  <v-icon size="18" color="error">mdi-download</v-icon>
+                </template>
+                <v-list-item-title>Download PDF</v-list-item-title>
+              </v-list-item>
 
-          <v-tooltip text="Delete" location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn
+              <v-divider></v-divider>
+
+              <v-list-item
                 v-if="(item.status === 'draft' && canDelete) || isAdmin"
-                v-bind="props"
-                icon="mdi-delete"
-                size="small"
-                variant="text"
-                color="error"
-                @click="deleteMealAllowance(item)"
-              ></v-btn>
-            </template>
-          </v-tooltip>
+                @click="deleteAllowance(item)"
+              >
+                <template #prepend>
+                  <v-icon size="18" color="error">mdi-delete</v-icon>
+                </template>
+                <v-list-item-title>Delete</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </template>
       </v-data-table>
     </div>
@@ -217,7 +202,7 @@
     <!-- Create/Edit Dialog -->
     <AllowanceForm
       v-model="showFormDialog"
-      :meal-allowance="selectedMealAllowance"
+      :meal-allowance="selectedAllowance"
       :positions="positions"
       @saved="onSaved"
     />
@@ -225,13 +210,13 @@
     <!-- View Details Dialog -->
     <AllowanceDetails
       v-model="showDetailsDialog"
-      :meal-allowance="selectedMealAllowance"
+      :meal-allowance="selectedAllowance"
     />
 
     <!-- Approval Dialog -->
     <AllowanceApproval
       v-model="showApprovalDialog"
-      :meal-allowance="selectedMealAllowance"
+      :meal-allowance="selectedAllowance"
       @approved="onApproved"
     />
   </div>
@@ -247,9 +232,9 @@ import AllowanceApproval from "@/components/allowance/AllowanceApproval.vue";
 
 const authStore = useAuthStore();
 const loading = ref(false);
-const mealAllowances = ref([]);
+const allowances = ref([]);
 const positions = ref([]);
-const selectedMealAllowance = ref(null);
+const selectedAllowance = ref(null);
 const showFormDialog = ref(false);
 const showDetailsDialog = ref(false);
 const showApprovalDialog = ref(false);
@@ -300,17 +285,17 @@ const isAdmin = computed(() => authStore.user?.role === "admin");
 
 onMounted(async () => {
   await fetchPositions();
-  await fetchMealAllowances();
+  await fetchAllowances();
 });
 
-async function fetchMealAllowances() {
+async function fetchAllowances() {
   loading.value = true;
   try {
     const response = await allowanceService.getAll(filters.value);
-    mealAllowances.value = response.data || response;
+    allowances.value = response.data || response;
   } catch (error) {
     console.error("Error fetching allowances:", error);
-    mealAllowances.value = [];
+    allowances.value = [];
   } finally {
     loading.value = false;
   }
@@ -325,22 +310,22 @@ async function fetchPositions() {
 }
 
 function openCreateDialog() {
-  selectedMealAllowance.value = null;
+  selectedAllowance.value = null;
   showFormDialog.value = true;
 }
 
-function editMealAllowance(item) {
-  selectedMealAllowance.value = item;
+function editAllowance(item) {
+  selectedAllowance.value = item;
   showFormDialog.value = true;
 }
 
 function viewDetails(item) {
-  selectedMealAllowance.value = item;
+  selectedAllowance.value = item;
   showDetailsDialog.value = true;
 }
 
 function openApprovalDialog(item) {
-  selectedMealAllowance.value = item;
+  selectedAllowance.value = item;
   showApprovalDialog.value = true;
 }
 
@@ -350,7 +335,7 @@ async function submitForApproval(item) {
   try {
     await allowanceService.submit(item.id);
     alert("Allowance submitted for approval");
-    await fetchMealAllowances();
+    await fetchAllowances();
   } catch (error) {
     console.error("Error submitting allowance:", error);
     alert("Failed to submit allowance");
@@ -364,7 +349,7 @@ async function generatePdf(item) {
   try {
     const response = await allowanceService.generatePdf(item.id);
     alert("PDF generated successfully");
-    await fetchMealAllowances();
+    await fetchAllowances();
   } catch (error) {
     console.error("Error generating PDF:", error);
     alert(error.response?.data?.message || "Failed to generate PDF");
@@ -391,7 +376,7 @@ async function downloadPdf(item) {
   }
 }
 
-async function deleteMealAllowance(item) {
+async function deleteAllowance(item) {
   const isApproved = item.status === "approved";
   const message = isApproved
     ? `⚠️ WARNING: This allowance (${item.reference_number}) has been APPROVED and may have been used in payroll calculations. Are you absolutely sure you want to delete it?`
@@ -402,7 +387,7 @@ async function deleteMealAllowance(item) {
   try {
     await allowanceService.delete(item.id);
     alert("Allowance deleted successfully");
-    await fetchMealAllowances();
+    await fetchAllowances();
   } catch (error) {
     console.error("Error deleting allowance:", error);
     alert(error.response?.data?.message || "Failed to delete allowance");
@@ -411,12 +396,12 @@ async function deleteMealAllowance(item) {
 
 function onSaved() {
   showFormDialog.value = false;
-  fetchMealAllowances();
+  fetchAllowances();
 }
 
 function onApproved() {
   showApprovalDialog.value = false;
-  fetchMealAllowances();
+  fetchAllowances();
 }
 
 function formatDate(date) {
@@ -434,11 +419,11 @@ function formatNumber(value) {
   }).format(value);
 }
 
-function calculateTotal(mealAllowance) {
-  if (!mealAllowance.items || !Array.isArray(mealAllowance.items)) {
+function calculateTotal(allowance) {
+  if (!allowance.items || !Array.isArray(allowance.items)) {
     return 0;
   }
-  return mealAllowance.items.reduce((total, item) => {
+  return allowance.items.reduce((total, item) => {
     return (
       total +
       parseFloat(item.no_of_days || 0) * parseFloat(item.amount_per_day || 0)

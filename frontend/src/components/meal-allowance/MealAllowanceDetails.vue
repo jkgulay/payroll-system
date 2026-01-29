@@ -7,7 +7,7 @@
     <v-card v-if="mealAllowance">
       <v-card-title class="bg-primary">
         <v-icon left>mdi-file-document</v-icon>
-        Meal Allowance Details
+        Allowance Details
         <v-spacer></v-spacer>
         <v-btn icon="mdi-close" variant="text" @click="close"></v-btn>
       </v-card-title>

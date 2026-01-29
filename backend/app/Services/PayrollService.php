@@ -7,6 +7,7 @@ use App\Models\PayrollItem;
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeAllowance;
+use App\Models\MealAllowanceItem;
 use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
 use App\Models\Holiday;
@@ -216,14 +217,45 @@ class PayrollService
             $regularHolidaySundayOtPay + $specialHolidayOtPay;
 
         // Get allowances - sum allowances that are active and effective during the payroll period
-        $allowances = EmployeeAllowance::where('employee_id', $employee->id)
+        $activeAllowances = EmployeeAllowance::where('employee_id', $employee->id)
             ->where('is_active', true)
             ->where('effective_date', '<=', $payroll->period_end)
             ->where(function ($query) use ($payroll) {
                 $query->whereNull('end_date')
                     ->orWhere('end_date', '>=', $payroll->period_start);
             })
-            ->sum('amount') ?? 0;
+            ->get();
+
+        $allowances = $activeAllowances->sum('amount') ?? 0;
+
+        $allowancesBreakdown = $activeAllowances->map(function ($allowance) {
+            return [
+                'id' => $allowance->id,
+                'type' => $allowance->allowance_type,
+                'name' => $allowance->allowance_name ?: $allowance->allowance_type,
+                'amount' => (float) $allowance->amount,
+            ];
+        })->values()->all();
+
+        // Include approved meal allowances within the payroll period
+        $mealAllowanceTotal = MealAllowanceItem::where('employee_id', $employee->id)
+            ->whereHas('mealAllowance', function ($query) use ($payroll) {
+                $query->where('status', 'approved')
+                    ->where('period_start', '<=', $payroll->period_end)
+                    ->where('period_end', '>=', $payroll->period_start);
+            })
+            ->sum('total_amount') ?? 0;
+
+        if ($mealAllowanceTotal > 0) {
+            $allowancesBreakdown[] = [
+                'id' => null,
+                'type' => 'meal_allowance',
+                'name' => 'Allowance',
+                'amount' => (float) $mealAllowanceTotal,
+            ];
+        }
+
+        $otherAllowances = $allowances + $mealAllowanceTotal;
 
         // Calculate COLA (Cost of Living Allowance) - typically per day
         $totalDaysWorked = $regularDays + $holidayDays;
@@ -234,7 +266,7 @@ class PayrollService
         $undertimeDeduction = $hourlyRate * $totalUndertimeHours;
 
         // Calculate gross pay (include holiday pay, overtime, subtract undertime deduction)
-        $grossPay = $basicPay + $holidayPay + $totalOtPay + $cola + $allowances - $undertimeDeduction;
+        $grossPay = $basicPay + $holidayPay + $totalOtPay + $cola + $otherAllowances - $undertimeDeduction;
 
         // Calculate government deductions (only if enabled for the employee)
         $sss = $employee->has_sss ? $this->calculateSSS($grossPay) : 0;
@@ -339,7 +371,8 @@ class PayrollService
             'special_ot_hours' => 0,
             'special_ot_pay' => 0,
             'cola' => $cola,
-            'other_allowances' => $allowances,
+            'other_allowances' => $otherAllowances,
+            'allowances_breakdown' => $allowancesBreakdown,
             'gross_pay' => $grossPay,
             'undertime_hours' => $totalUndertimeHours,
             'undertime_deduction' => $undertimeDeduction,

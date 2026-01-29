@@ -187,7 +187,7 @@ const router = createRouter({
           name: "allowances",
           component: () =>
             import(
-              /* webpackChunkName: "benefits" */ "@/views/benefits/MealAllowanceView.vue"
+              /* webpackChunkName: "benefits" */ "@/views/benefits/AllowanceView.vue"
             ),
           meta: {
             title: "Allowances",

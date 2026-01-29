@@ -237,7 +237,7 @@
               </div>
             </div>
 
-            <!-- Pending Meal Allowances -->
+            <!-- Pending Allowances -->
             <div
               v-if="stats.pendingMealAllowances > 0"
               class="action-item"
@@ -247,7 +247,7 @@
                 <v-icon size="24">mdi-food</v-icon>
               </div>
               <div class="action-item-content">
-                <div class="action-item-title">Meal Allowances</div>
+                <div class="action-item-title">Allowances</div>
                 <div class="action-item-desc">
                   {{ stats.pendingMealAllowances }} pending approval
                 </div>
