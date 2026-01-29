@@ -72,14 +72,14 @@
       </div>
 
       <!-- Payroll Settings -->
-      <div class="setting-card">
+      <div class="setting-card" @click="openPayrollDialog">
         <div class="setting-icon-wrapper payroll">
           <v-icon size="32">mdi-currency-usd</v-icon>
         </div>
         <div class="setting-content">
           <h3 class="setting-title">Payroll Configuration</h3>
           <p class="setting-description">
-            Configure pay periods, overtime rates, and payroll calculation
+            Configure overtime rates, and payroll calculation
             settings
           </p>
           <button class="setting-action-btn">
@@ -146,6 +146,9 @@
 
     <!-- Government Rates Dialog -->
     <GovernmentRatesDialog v-model="showRatesDialog" />
+
+    <!-- Payroll Configuration Dialog -->
+    <PayrollConfigurationDialog v-model="showPayrollDialog" />
   </div>
 </template>
 
@@ -153,12 +156,18 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import GovernmentRatesDialog from "@/components/settings/GovernmentRatesDialog.vue";
+import PayrollConfigurationDialog from "@/components/settings/PayrollConfigurationDialog.vue";
 
 const router = useRouter();
 const showRatesDialog = ref(false);
+const showPayrollDialog = ref(false);
 
 const openRatesDialog = () => {
   showRatesDialog.value = true;
+};
+
+const openPayrollDialog = () => {
+  showPayrollDialog.value = true;
 };
 
 const goToMaintenance = () => {
