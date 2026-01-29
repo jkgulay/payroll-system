@@ -243,6 +243,14 @@
                 <td class="value">PHP {{ number_format($item->loans, 2) }}</td>
             </tr>
             @endif
+            @if(!empty($item->deductions_breakdown))
+            @foreach($item->deductions_breakdown as $deduction)
+            <tr>
+                <td class="label">{{ $deduction['name'] ?? ucwords(str_replace('_', ' ', $deduction['type'])) }}</td>
+                <td class="value">PHP {{ number_format($deduction['amount'], 2) }}</td>
+            </tr>
+            @endforeach
+            @endif
             @if($item->other_deductions > 0)
             <tr>
                 <td class="label">Other Deductions</td>

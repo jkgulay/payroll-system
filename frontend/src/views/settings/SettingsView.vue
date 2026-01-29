@@ -18,7 +18,7 @@
     <!-- Settings Cards Grid -->
     <div class="settings-grid">
       <!-- Company Information -->
-      <div class="setting-card">
+      <div class="setting-card" @click="$router.push('/company-info')">
         <div class="setting-icon-wrapper company">
           <v-icon size="32">mdi-office-building</v-icon>
         </div>
@@ -64,7 +64,10 @@
             Manage system users, roles, and access permissions across the
             application
           </p>
-          <button class="setting-action-btn" @click="$router.push('/user-management')">
+          <button
+            class="setting-action-btn"
+            @click="$router.push('/user-management')"
+          >
             <span>Manage Users</span>
             <v-icon size="18">mdi-arrow-right</v-icon>
           </button>
@@ -79,8 +82,7 @@
         <div class="setting-content">
           <h3 class="setting-title">Payroll Configuration</h3>
           <p class="setting-description">
-            Configure overtime rates, and payroll calculation
-            settings
+            Configure overtime rates, and payroll calculation settings
           </p>
           <button class="setting-action-btn">
             <span>Configure Payroll</span>

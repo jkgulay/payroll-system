@@ -1206,18 +1206,39 @@ onMounted(() => {
 
 .stat-card {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+  }
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+  border-color: rgba(237, 152, 95, 0.3);
+
+  &::before {
+    transform: scaleY(1);
+  }
 }
 
 .stat-icon {

@@ -12,22 +12,24 @@
             Manage employee deductions and installment payments
           </p>
         </div>
-        <button
-          v-if="userRole !== 'employee'"
-          class="action-btn action-btn-primary"
-          @click="openAddDialog"
-        >
-          <v-icon size="20">mdi-plus</v-icon>
-          <span>Add Deduction</span>
-        </button>
+        <div class="d-flex gap-2">
+          <v-btn
+            icon="mdi-refresh"
+            variant="text"
+            color="primary"
+            @click="fetchDeductions"
+            title="Refresh"
+          ></v-btn>
+          <button
+            v-if="userRole !== 'employee'"
+            class="action-btn action-btn-primary"
+            @click="openAddDialog"
+          >
+            <v-icon size="20">mdi-plus</v-icon>
+            <span>Add Deduction</span>
+          </button>
+        </div>
       </div>
-
-      <!-- Category Tabs -->
-      <v-tabs v-model="activeTab" class="mb-4" color="#ED985F">
-        <v-tab value="all">All Deductions</v-tab>
-        <v-tab value="government">Government Deductions</v-tab>
-        <v-tab value="company">Company Deductions</v-tab>
-      </v-tabs>
 
       <!-- Filters -->
       <div class="filters-section">
@@ -36,7 +38,7 @@
             <v-text-field
               v-model="filters.search"
               prepend-inner-icon="mdi-magnify"
-              label="Search deductions..."
+              label="Search employee..."
               variant="outlined"
               density="comfortable"
               clearable
@@ -45,23 +47,37 @@
             ></v-text-field>
           </v-col>
           <v-col cols="12" md="3" v-if="userRole !== 'employee'">
-            <v-autocomplete
-              v-model="filters.employee_id"
-              :items="employees"
-              item-title="full_name"
-              item-value="id"
-              label="Filter by Employee"
+            <v-select
+              v-model="filters.department"
+              :items="departments"
+              item-title="title"
+              item-value="value"
+              label="Filter by Department"
               variant="outlined"
               density="comfortable"
               clearable
               hide-details
               @update:model-value="fetchDeductions"
-            ></v-autocomplete>
+            ></v-select>
+          </v-col>
+          <v-col cols="12" md="3" v-if="userRole !== 'employee'">
+            <v-select
+              v-model="filters.position"
+              :items="positions"
+              item-title="title"
+              item-value="value"
+              label="Filter by Position"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              hide-details
+              @update:model-value="fetchDeductions"
+            ></v-select>
           </v-col>
           <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
             <v-select
               v-model="filters.deduction_type"
-              :items="deductionTypes"
+              :items="filterDeductionTypes"
               label="Filter by Type"
               variant="outlined"
               density="comfortable"
@@ -229,11 +245,21 @@
               {{ editMode ? "Edit Deduction" : "Add Deduction" }}
             </div>
             <div class="dialog-subtitle">
-              {{
-                editMode
-                  ? "Update deduction details"
-                  : "Create new deduction for employee"
-              }}
+              <template v-if="editMode"> Update deduction details </template>
+              <template v-else>
+                <span v-if="selectionMode === 'individual'"
+                  >Create new deduction for employee</span
+                >
+                <span v-else-if="selectionMode === 'multiple'"
+                  >Create deduction for multiple employees</span
+                >
+                <span v-else-if="selectionMode === 'department'"
+                  >Create deduction for all employees in a department</span
+                >
+                <span v-else-if="selectionMode === 'position'"
+                  >Create deduction for all employees with a position</span
+                >
+              </template>
             </div>
           </div>
         </v-card-title>
@@ -250,8 +276,41 @@
                   <h3 class="section-title">Deduction Information</h3>
                 </div>
               </v-col>
-              <!-- Employee Selection -->
-              <v-col cols="12">
+
+              <!-- Selection Mode (only for new deduction) -->
+              <v-col cols="12" v-if="!editMode">
+                <v-btn-toggle
+                  v-model="selectionMode"
+                  color="primary"
+                  variant="outlined"
+                  divided
+                  mandatory
+                  class="mb-2"
+                >
+                  <v-btn value="individual" size="small">
+                    <v-icon start>mdi-account</v-icon>
+                    Individual
+                  </v-btn>
+                  <v-btn value="multiple" size="small">
+                    <v-icon start>mdi-account-multiple</v-icon>
+                    Multiple Employees
+                  </v-btn>
+                  <v-btn value="department" size="small">
+                    <v-icon start>mdi-office-building</v-icon>
+                    By Department
+                  </v-btn>
+                  <v-btn value="position" size="small">
+                    <v-icon start>mdi-briefcase</v-icon>
+                    By Position
+                  </v-btn>
+                </v-btn-toggle>
+              </v-col>
+
+              <!-- Individual Employee Selection -->
+              <v-col
+                cols="12"
+                v-if="!editMode && selectionMode === 'individual'"
+              >
                 <v-autocomplete
                   v-model="formData.employee_id"
                   :items="employees"
@@ -262,7 +321,6 @@
                   variant="outlined"
                   density="comfortable"
                   :rules="[rules.required]"
-                  :disabled="editMode"
                   clearable
                   prepend-inner-icon="mdi-account-search"
                   hint="Search by name, employee number, or position"
@@ -302,11 +360,183 @@
                 </v-autocomplete>
               </v-col>
 
+              <!-- Multiple Employees Selection -->
+              <v-col cols="12" v-if="!editMode && selectionMode === 'multiple'">
+                <v-autocomplete
+                  v-model="formData.employee_ids"
+                  :items="employees"
+                  item-title="full_name"
+                  item-value="id"
+                  label="Select Multiple Employees *"
+                  placeholder="Search and select employees"
+                  variant="outlined"
+                  density="comfortable"
+                  :rules="[rules.arrayRequired]"
+                  clearable
+                  multiple
+                  chips
+                  closable-chips
+                  prepend-inner-icon="mdi-account-multiple"
+                  hint="Select multiple employees to apply this deduction"
+                  persistent-hint
+                  no-data-text="No employees found matching your search"
+                  :custom-filter="customEmployeeFilter"
+                >
+                  <template v-slot:chip="{ item, props }">
+                    <v-chip v-bind="props" color="primary" size="small">
+                      {{ item.raw.full_name }}
+                    </v-chip>
+                  </template>
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props">
+                      <template v-slot:prepend>
+                        <v-avatar color="primary" size="40">
+                          <span class="text-white text-subtitle-2">
+                            {{ getInitials(item.raw.full_name) }}
+                          </span>
+                        </v-avatar>
+                      </template>
+                      <template v-slot:title>
+                        <span class="font-weight-medium">{{
+                          item.raw.full_name
+                        }}</span>
+                      </template>
+                      <template v-slot:subtitle>
+                        <v-chip
+                          size="x-small"
+                          class="mr-1"
+                          color="primary"
+                          variant="outlined"
+                        >
+                          {{ item.raw.employee_number }}
+                        </v-chip>
+                        <span class="text-caption">{{
+                          item.raw.position || "N/A"
+                        }}</span>
+                      </template>
+                    </v-list-item>
+                  </template>
+                </v-autocomplete>
+              </v-col>
+
+              <!-- Department Selection -->
+              <v-col
+                cols="12"
+                v-if="!editMode && selectionMode === 'department'"
+              >
+                <v-select
+                  v-model="formData.department"
+                  :items="departments"
+                  label="Select Department *"
+                  placeholder="Choose a department"
+                  variant="outlined"
+                  density="comfortable"
+                  :rules="[rules.required]"
+                  :loading="loadingDepartments"
+                  prepend-inner-icon="mdi-office-building"
+                  hint="Deduction will be applied to all active employees in this department"
+                  persistent-hint
+                  @update:model-value="loadEmployeesByFilter"
+                >
+                  <template v-slot:prepend-item>
+                    <v-list-item>
+                      <v-list-item-title class="text-caption text-grey">
+                        {{ departments.length }} department(s) available
+                      </v-list-item-title>
+                    </v-list-item>
+                    <v-divider></v-divider>
+                  </template>
+                </v-select>
+              </v-col>
+
+              <!-- Position Selection -->
+              <v-col cols="12" v-if="!editMode && selectionMode === 'position'">
+                <v-select
+                  v-model="formData.position"
+                  :items="positions"
+                  label="Select Position *"
+                  placeholder="Choose a position"
+                  variant="outlined"
+                  density="comfortable"
+                  :rules="[rules.required]"
+                  :loading="loadingPositions"
+                  prepend-inner-icon="mdi-briefcase"
+                  hint="Deduction will be applied to all active employees with this position"
+                  persistent-hint
+                  @update:model-value="loadEmployeesByFilter"
+                >
+                  <template v-slot:prepend-item>
+                    <v-list-item>
+                      <v-list-item-title class="text-caption text-grey">
+                        {{ positions.length }} position(s) available
+                      </v-list-item-title>
+                    </v-list-item>
+                    <v-divider></v-divider>
+                  </template>
+                </v-select>
+              </v-col>
+
+              <!-- Show affected employees count -->
+              <v-col
+                cols="12"
+                v-if="
+                  !editMode &&
+                  (selectionMode === 'department' ||
+                    selectionMode === 'position') &&
+                  affectedEmployeesCount > 0
+                "
+              >
+                <v-alert
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                  icon="mdi-information"
+                >
+                  <strong>{{ affectedEmployeesCount }}</strong> active
+                  employee(s) will receive this deduction
+                </v-alert>
+              </v-col>
+
+              <!-- Show selected count for multiple -->
+              <v-col
+                cols="12"
+                v-if="
+                  !editMode &&
+                  selectionMode === 'multiple' &&
+                  formData.employee_ids &&
+                  formData.employee_ids.length > 0
+                "
+              >
+                <v-alert
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                  icon="mdi-account-check"
+                >
+                  <strong>{{ formData.employee_ids.length }}</strong>
+                  employee(s) selected
+                </v-alert>
+              </v-col>
+
+              <!-- Edit Mode: Show employee name only -->
+              <v-col cols="12" v-if="editMode">
+                <v-text-field
+                  :model-value="selectedDeduction?.employee?.full_name"
+                  label="Employee"
+                  variant="outlined"
+                  density="comfortable"
+                  readonly
+                  prepend-inner-icon="mdi-account"
+                  hint="Employee cannot be changed when editing"
+                  persistent-hint
+                ></v-text-field>
+              </v-col>
+
               <!-- Deduction Type -->
               <v-col cols="12" md="6">
                 <v-select
                   v-model="formData.deduction_type"
-                  :items="deductionTypes"
+                  :items="formDeductionTypes"
                   label="Deduction Type *"
                   placeholder="Select deduction type"
                   variant="outlined"
@@ -314,6 +544,22 @@
                   prepend-inner-icon="mdi-tag"
                   :rules="[rules.required]"
                 ></v-select>
+              </v-col>
+
+              <v-col
+                cols="12"
+                md="6"
+                v-if="formData.deduction_type === 'custom'"
+              >
+                <v-text-field
+                  v-model="formData.custom_deduction_type"
+                  label="Custom Deduction Type *"
+                  placeholder="e.g., Equipment Rental"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-tag-plus"
+                  :rules="[rules.required]"
+                ></v-text-field>
               </v-col>
 
               <!-- Deduction Name -->
@@ -370,20 +616,23 @@
                   density="comfortable"
                   prepend-inner-icon="mdi-cash"
                   :rules="[rules.required, rules.positive]"
-                  hint="Semi-monthly deduction amount"
+                  hint="Automatically calculated from Total Amount ÷ Installments"
                   persistent-hint
+                  readonly
+                  :disabled="true"
                 ></v-text-field>
               </v-col>
 
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model.number="formData.installments"
-                  label="Number of Installments"
+                  label="Number of Installments *"
                   type="number"
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-numeric"
-                  hint="Calculated from dates if left blank"
+                  :rules="[rules.required, rules.positive]"
+                  hint="How many payroll periods to deduct"
                   persistent-hint
                 ></v-text-field>
               </v-col>
@@ -430,29 +679,20 @@
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-calendar-end"
-                  hint="Calculated from installments if left blank"
+                  hint="Automatically calculated from start date and installments"
                   persistent-hint
+                  readonly
+                  :disabled="true"
                 ></v-text-field>
               </v-col>
 
-              <v-col cols="12" md="6">
+              <v-col cols="12">
                 <v-textarea
                   v-model="formData.description"
                   label="Description"
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-text-box"
-                  rows="2"
-                ></v-textarea>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-textarea
-                  v-model="formData.notes"
-                  label="Notes (Optional)"
-                  variant="outlined"
-                  density="comfortable"
-                  prepend-inner-icon="mdi-note-text"
                   rows="2"
                 ></v-textarea>
               </v-col>
@@ -682,7 +922,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useToast } from "vue-toastification";
 import deductionService from "@/services/deductionService";
 import api from "@/services/api";
@@ -697,9 +937,13 @@ const userRole = computed(() => authStore.user?.role);
 // Data
 const deductions = ref([]);
 const employees = ref([]);
+const departments = ref([]);
+const positions = ref([]);
 const loading = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
+const loadingDepartments = ref(false);
+const loadingPositions = ref(false);
 const dialog = ref(false);
 const deleteDialog = ref(false);
 const detailsDialog = ref(false);
@@ -707,21 +951,26 @@ const editMode = ref(false);
 const formValid = ref(false);
 const form = ref(null);
 const selectedDeduction = ref(null);
-const activeTab = ref("all");
+const selectionMode = ref("individual");
+const affectedEmployeesCount = ref(0);
 
 // Filters
 const filters = ref({
   search: "",
-  employee_id: null,
+  department: null,
+  position: null,
   deduction_type: null,
   status: null,
-  category: null,
 });
 
 // Form data
 const defaultFormData = {
   employee_id: null,
+  employee_ids: [],
+  department: null,
+  position: null,
   deduction_type: null,
+  custom_deduction_type: "",
   deduction_name: "",
   total_amount: null,
   amount_per_cutoff: null,
@@ -730,28 +979,12 @@ const defaultFormData = {
   end_date: null,
   description: "",
   reference_number: "",
-  notes: "",
 };
 
 const formData = ref({ ...defaultFormData });
 
 // Computed - Filter deductions by category tab
 const filteredDeductions = computed(() => {
-  if (activeTab.value === "all") return deductions.value;
-
-  const governmentTypes = ["sss", "philhealth", "pagibig", "tax"];
-  const companyTypes = ["ppe", "tools", "uniform", "absence", "loan", "other"];
-
-  if (activeTab.value === "government") {
-    return deductions.value.filter((d) =>
-      governmentTypes.includes(d.deduction_type),
-    );
-  } else if (activeTab.value === "company") {
-    return deductions.value.filter((d) =>
-      companyTypes.includes(d.deduction_type),
-    );
-  }
-
   return deductions.value;
 });
 
@@ -796,22 +1029,24 @@ const headers = computed(() => {
 });
 
 // Options
-const deductionTypes = [
+const baseDeductionTypes = [
   { title: "PPE (Personal Protective Equipment)", value: "ppe" },
   { title: "Tools", value: "tools" },
   { title: "Uniform", value: "uniform" },
   { title: "Absence", value: "absence" },
   { title: "Cash Advance", value: "cash_advance" },
-  { title: "Cash Bond", value: "cash_bond" },
   { title: "Insurance", value: "insurance" },
   { title: "Cooperative", value: "cooperative" },
-  { title: "SSS Contribution", value: "sss" },
-  { title: "PhilHealth Contribution", value: "philhealth" },
-  { title: "Pag-IBIG Contribution", value: "pagibig" },
-  { title: "Withholding Tax", value: "tax" },
   { title: "Loan Repayment", value: "loan" },
   { title: "Other", value: "other" },
 ];
+
+const formDeductionTypes = [
+  ...baseDeductionTypes,
+  { title: "Custom", value: "custom" },
+];
+
+const filterDeductionTypes = [...baseDeductionTypes];
 
 const statusOptions = [
   { title: "Active", value: "active" },
@@ -822,29 +1057,66 @@ const statusOptions = [
 // Validation rules
 const rules = {
   required: (value) => !!value || "This field is required",
+  arrayRequired: (value) =>
+    (Array.isArray(value) && value.length > 0) ||
+    "Please select at least one employee",
   positive: (value) => value > 0 || "Must be greater than 0",
 };
 
-// Watch active tab to update category filter
-watch(activeTab, (newTab) => {
-  filters.value.category = newTab === "all" ? null : newTab;
-  fetchDeductions();
+// Watch selection mode to reset related fields
+watch(selectionMode, (newMode) => {
+  affectedEmployeesCount.value = 0;
+  formData.value.employee_id = null;
+  formData.value.employee_ids = [];
+  formData.value.department = null;
+  formData.value.position = null;
 });
+
+// Watch total_amount and installments to auto-calculate amount_per_cutoff
+watch(
+  () => [formData.value.total_amount, formData.value.installments],
+  ([totalAmount, installments]) => {
+    if (totalAmount > 0 && installments > 0) {
+      formData.value.amount_per_cutoff = parseFloat(
+        (totalAmount / installments).toFixed(2),
+      );
+    } else {
+      formData.value.amount_per_cutoff = null;
+    }
+  },
+);
+
+// Watch start_date and installments to auto-calculate end_date
+watch(
+  () => [formData.value.start_date, formData.value.installments],
+  ([startDate, installments]) => {
+    if (startDate && installments > 0) {
+      const start = new Date(startDate);
+      // Each installment is a semi-monthly period (approximately 15 days)
+      const installmentsInMonths = Math.ceil(installments / 2);
+      const endDate = new Date(start);
+      endDate.setMonth(endDate.getMonth() + installmentsInMonths);
+      formData.value.end_date = endDate.toISOString().split("T")[0];
+    } else {
+      formData.value.end_date = null;
+    }
+  },
+);
 
 // Fetch deductions
 const fetchDeductions = async () => {
   loading.value = true;
   try {
-    const params = {};
+    const params = {
+      paginate: false,
+      per_page: 10000,
+    };
     if (filters.value.search) params.search = filters.value.search;
-    if (filters.value.employee_id)
-      params.employee_id = filters.value.employee_id;
+    if (filters.value.department) params.department = filters.value.department;
+    if (filters.value.position) params.position = filters.value.position;
     if (filters.value.deduction_type)
       params.deduction_type = filters.value.deduction_type;
     if (filters.value.status) params.status = filters.value.status;
-    if (filters.value.category && filters.value.category !== "all") {
-      params.category = filters.value.category;
-    }
 
     const response = await deductionService.getDeductions(params);
     deductions.value = response.data.data || response.data;
@@ -891,9 +1163,60 @@ const fetchEmployees = async () => {
   }
 };
 
+// Fetch departments
+const fetchDepartments = async () => {
+  loadingDepartments.value = true;
+  try {
+    const response = await deductionService.getDepartments();
+    departments.value = response.data;
+  } catch (error) {
+    console.error("Failed to load departments:", error);
+    toast.error("Failed to load departments");
+  } finally {
+    loadingDepartments.value = false;
+  }
+};
+
+// Fetch positions
+const fetchPositions = async () => {
+  loadingPositions.value = true;
+  try {
+    const response = await deductionService.getPositions();
+    positions.value = response.data;
+  } catch (error) {
+    console.error("Failed to load positions:", error);
+    toast.error("Failed to load positions");
+  } finally {
+    loadingPositions.value = false;
+  }
+};
+
+// Load employees by department or position
+const loadEmployeesByFilter = async () => {
+  try {
+    const filters = {};
+    if (selectionMode.value === "department" && formData.value.department) {
+      filters.department = formData.value.department;
+    } else if (selectionMode.value === "position" && formData.value.position) {
+      filters.position = formData.value.position;
+    } else {
+      affectedEmployeesCount.value = 0;
+      return;
+    }
+
+    const response = await deductionService.getEmployeesByFilter(filters);
+    affectedEmployeesCount.value = response.data.count || 0;
+  } catch (error) {
+    console.error("Failed to load employees by filter:", error);
+    affectedEmployeesCount.value = 0;
+  }
+};
+
 // Open dialogs
 const openAddDialog = () => {
   editMode.value = false;
+  selectionMode.value = "individual";
+  affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
   dialog.value = true;
 };
@@ -901,9 +1224,12 @@ const openAddDialog = () => {
 const openEditDialog = (deduction) => {
   editMode.value = true;
   selectedDeduction.value = deduction;
+  const baseTypeValues = baseDeductionTypes.map((type) => type.value);
+  const isKnownType = baseTypeValues.includes(deduction.deduction_type);
   formData.value = {
     employee_id: deduction.employee_id,
-    deduction_type: deduction.deduction_type,
+    deduction_type: isKnownType ? deduction.deduction_type : "custom",
+    custom_deduction_type: isKnownType ? "" : deduction.deduction_type,
     deduction_name: deduction.deduction_name,
     total_amount: deduction.total_amount,
     amount_per_cutoff: deduction.amount_per_cutoff,
@@ -912,7 +1238,6 @@ const openEditDialog = (deduction) => {
     end_date: deduction.end_date,
     description: deduction.description,
     reference_number: deduction.reference_number,
-    notes: deduction.notes,
   };
   dialog.value = true;
 };
@@ -920,6 +1245,8 @@ const openEditDialog = (deduction) => {
 const closeDialog = () => {
   dialog.value = false;
   editMode.value = false;
+  selectionMode.value = "individual";
+  affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
   if (form.value) form.value.resetValidation();
 };
@@ -933,15 +1260,42 @@ const saveDeduction = async () => {
 
   saving.value = true;
   try {
+    const payload = { ...formData.value };
+    if (payload.deduction_type === "custom") {
+      const customType = (payload.custom_deduction_type || "").trim();
+      payload.deduction_type = normalizeDeductionType(customType);
+      if (!payload.deduction_name) {
+        payload.deduction_name = customType;
+      }
+    }
+    delete payload.custom_deduction_type;
+
     if (editMode.value) {
+      // Edit mode - single update
       await deductionService.updateDeduction(
         selectedDeduction.value.id,
-        formData.value,
+        payload,
       );
       toast.success("Deduction updated successfully");
     } else {
-      await deductionService.createDeduction(formData.value);
-      toast.success("Deduction created successfully");
+      // Create mode - check selection mode
+      if (selectionMode.value === "individual") {
+        // Single employee
+        await deductionService.createDeduction(payload);
+        toast.success("Deduction created successfully");
+      } else {
+        // Bulk creation (multiple, department, or position)
+        const bulkData = {
+          selection_mode: selectionMode.value,
+          ...payload,
+        };
+
+        const response = await deductionService.bulkCreateDeductions(bulkData);
+        const count = response.data.data?.count || 0;
+        toast.success(
+          `Successfully created deductions for ${count} employee(s)`,
+        );
+      }
     }
     closeDialog();
     fetchDeductions();
@@ -984,10 +1338,10 @@ const viewDetails = (deduction) => {
 const clearFilters = () => {
   filters.value = {
     search: "",
-    employee_id: null,
+    department: null,
+    position: null,
     deduction_type: null,
     status: null,
-    category: activeTab.value === "all" ? null : activeTab.value,
   };
   fetchDeductions();
 };
@@ -1014,7 +1368,23 @@ const formatDeductionType = (type) => {
     loan: "Loan",
     other: "Other",
   };
-  return types[type] || type;
+  if (types[type]) return types[type];
+  if (!type) return "";
+  return type
+    .toString()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const normalizeDeductionType = (value) => {
+  return (
+    value
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "other"
+  );
 };
 
 const formatStatus = (status) => {
@@ -1071,7 +1441,24 @@ onMounted(() => {
   fetchDeductions();
   if (userRole.value !== "employee") {
     fetchEmployees();
+    fetchDepartments();
+    fetchPositions();
   }
+
+  // Refresh data when user returns to the tab
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+});
+
+// Refresh data when user returns to the tab
+const handleVisibilityChange = () => {
+  if (!document.hidden) {
+    fetchDeductions();
+  }
+};
+
+// Cleanup on component unmount
+onBeforeUnmount(() => {
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
 });
 </script>
 

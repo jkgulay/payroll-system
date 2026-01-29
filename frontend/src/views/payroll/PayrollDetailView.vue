@@ -136,6 +136,17 @@
             </div>
           </div>
           <div class="header-right">
+            <v-select
+              v-model="positionFilter"
+              :items="availablePositions"
+              label="Filter by Position"
+              prepend-inner-icon="mdi-briefcase"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              hide-details
+              style="min-width: 250px"
+            ></v-select>
             <v-text-field
               v-model="search"
               prepend-inner-icon="mdi-magnify"
@@ -144,7 +155,7 @@
               variant="outlined"
               density="comfortable"
               hide-details
-              style="min-width: 400px"
+              style="min-width: 300px"
             ></v-text-field>
           </div>
         </div>
@@ -152,7 +163,7 @@
         <div class="table-section">
           <v-data-table
             :headers="headers"
-            :items="payroll?.items || []"
+            :items="filteredItems"
             :search="search"
             :custom-filter="customFilter"
             :items-per-page="15"
@@ -224,27 +235,39 @@
             <template v-slot:item.deductions="{ item }">
               <div class="text-caption">
                 <div v-if="item.employee?.has_sss">
-                  <v-icon size="12" color="primary" class="mr-1">mdi-check-circle</v-icon>
+                  <v-icon size="12" color="primary" class="mr-1"
+                    >mdi-check-circle</v-icon
+                  >
                   SSS: ₱{{ formatCurrency(item.sss) }}
                 </div>
                 <div v-else class="text-medium-emphasis">
-                  <v-icon size="12" class="mr-1">mdi-minus-circle-outline</v-icon>
+                  <v-icon size="12" class="mr-1"
+                    >mdi-minus-circle-outline</v-icon
+                  >
                   SSS: N/A
                 </div>
                 <div v-if="item.employee?.has_philhealth">
-                  <v-icon size="12" color="success" class="mr-1">mdi-check-circle</v-icon>
+                  <v-icon size="12" color="success" class="mr-1"
+                    >mdi-check-circle</v-icon
+                  >
                   PhilHealth: ₱{{ formatCurrency(item.philhealth) }}
                 </div>
                 <div v-else class="text-medium-emphasis">
-                  <v-icon size="12" class="mr-1">mdi-minus-circle-outline</v-icon>
+                  <v-icon size="12" class="mr-1"
+                    >mdi-minus-circle-outline</v-icon
+                  >
                   PhilHealth: N/A
                 </div>
                 <div v-if="item.employee?.has_pagibig">
-                  <v-icon size="12" color="orange" class="mr-1">mdi-check-circle</v-icon>
+                  <v-icon size="12" color="orange" class="mr-1"
+                    >mdi-check-circle</v-icon
+                  >
                   Pag-IBIG: ₱{{ formatCurrency(item.pagibig) }}
                 </div>
                 <div v-else class="text-medium-emphasis">
-                  <v-icon size="12" class="mr-1">mdi-minus-circle-outline</v-icon>
+                  <v-icon size="12" class="mr-1"
+                    >mdi-minus-circle-outline</v-icon
+                  >
                   Pag-IBIG: N/A
                 </div>
                 <div v-if="item.total_loan_deductions > 0">
@@ -324,10 +347,16 @@
             <v-radio value="pdf" class="mb-3">
               <template v-slot:label>
                 <div class="d-flex align-center">
-                  <v-icon size="24" class="mr-3" color="#D32F2F">mdi-file-pdf-box</v-icon>
+                  <v-icon size="24" class="mr-3" color="#D32F2F"
+                    >mdi-file-pdf-box</v-icon
+                  >
                   <div>
-                    <div class="text-subtitle-1 font-weight-medium">PDF Document</div>
-                    <div class="text-caption text-grey">Best for printing and viewing</div>
+                    <div class="text-subtitle-1 font-weight-medium">
+                      PDF Document
+                    </div>
+                    <div class="text-caption text-grey">
+                      Best for printing and viewing
+                    </div>
                   </div>
                 </div>
               </template>
@@ -335,10 +364,16 @@
             <v-radio value="excel" class="mb-3">
               <template v-slot:label>
                 <div class="d-flex align-center">
-                  <v-icon size="24" class="mr-3" color="#217346">mdi-file-excel-box</v-icon>
+                  <v-icon size="24" class="mr-3" color="#217346"
+                    >mdi-file-excel-box</v-icon
+                  >
                   <div>
-                    <div class="text-subtitle-1 font-weight-medium">Excel Spreadsheet</div>
-                    <div class="text-caption text-grey">Editable data for calculations</div>
+                    <div class="text-subtitle-1 font-weight-medium">
+                      Excel Spreadsheet
+                    </div>
+                    <div class="text-caption text-grey">
+                      Editable data for calculations
+                    </div>
                   </div>
                 </div>
               </template>
@@ -346,10 +381,16 @@
             <v-radio value="word" class="mb-3">
               <template v-slot:label>
                 <div class="d-flex align-center">
-                  <v-icon size="24" class="mr-3" color="#2B579A">mdi-file-word-box</v-icon>
+                  <v-icon size="24" class="mr-3" color="#2B579A"
+                    >mdi-file-word-box</v-icon
+                  >
                   <div>
-                    <div class="text-subtitle-1 font-weight-medium">Word Document</div>
-                    <div class="text-caption text-grey">Editable formatted document</div>
+                    <div class="text-subtitle-1 font-weight-medium">
+                      Word Document
+                    </div>
+                    <div class="text-caption text-grey">
+                      Editable formatted document
+                    </div>
                   </div>
                 </div>
               </template>
@@ -381,7 +422,7 @@
             clearable
             hint="Leave empty to include all departments"
             persistent-hint
-            class="mb-2"
+            class="mb-4"
           >
             <template v-slot:selection="{ item, index }">
               <v-chip v-if="index < 2" size="small" color="primary">
@@ -396,9 +437,38 @@
             </template>
           </v-select>
 
+          <v-select
+            v-model="exportFilter.positions"
+            :items="availablePositions"
+            label="Filter by Position"
+            prepend-inner-icon="mdi-briefcase"
+            variant="outlined"
+            density="comfortable"
+            multiple
+            chips
+            closable-chips
+            clearable
+            hint="Leave empty to include all positions"
+            persistent-hint
+            class="mb-2"
+          >
+            <template v-slot:selection="{ item, index }">
+              <v-chip v-if="index < 2" size="small" color="#ED985F">
+                {{ item.title }}
+              </v-chip>
+              <span
+                v-if="index === 2"
+                class="text-grey text-caption align-self-center"
+              >
+                (+{{ exportFilter.positions.length - 2 }} others)
+              </span>
+            </template>
+          </v-select>
+
           <div class="text-caption text-grey">
             <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
-            Filtering will only include employees from selected departments
+            Filtering will only include employees from selected departments and
+            positions
           </div>
         </v-card-text>
 
@@ -408,17 +478,20 @@
           <v-spacer></v-spacer>
           <button
             class="dialog-btn dialog-btn-cancel"
+            :disabled="downloadingRegister"
             @click="showExportDialog = false"
           >
             Cancel
           </button>
-          <button
+          <v-btn
             class="dialog-btn dialog-btn-primary"
+            :loading="downloadingRegister"
+            :disabled="downloadingRegister"
             @click="downloadRegister"
           >
             <v-icon size="20" class="mr-2">mdi-download</v-icon>
             Download {{ exportFilter.format.toUpperCase() }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -426,7 +499,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
@@ -438,13 +511,43 @@ const toast = useToast();
 const loading = ref(false);
 const finalizing = ref(false);
 const search = ref("");
+const positionFilter = ref(null);
 const payroll = ref(null);
 const showExportDialog = ref(false);
+const downloadingRegister = ref(false);
 const exportFilter = ref({
   format: "pdf", // pdf, excel, word
   departments: [], // Array of department names
+  positions: [], // Array of position names
 });
 const availableDepartments = ref([]);
+
+// Compute available positions from payroll items
+const availablePositions = computed(() => {
+  if (!payroll.value?.items) return [];
+
+  const positions = new Set();
+  payroll.value.items.forEach((item) => {
+    if (item.employee?.position?.position_name) {
+      positions.add(item.employee.position.position_name);
+    }
+  });
+
+  return Array.from(positions).sort();
+});
+
+// Filter items by position
+const filteredItems = computed(() => {
+  if (!payroll.value?.items) return [];
+
+  if (!positionFilter.value) {
+    return payroll.value.items;
+  }
+
+  return payroll.value.items.filter((item) => {
+    return item.employee?.position?.position_name === positionFilter.value;
+  });
+});
 
 const headers = [
   { title: "Employee", key: "employee", sortable: true },
@@ -491,10 +594,10 @@ async function fetchPayroll() {
   try {
     const response = await api.get(`/payrolls/${route.params.id}`);
     payroll.value = response.data;
-    
+
     // Extract unique departments from payroll items
     const departments = new Set();
-    payroll.value.items.forEach(item => {
+    payroll.value.items.forEach((item) => {
       if (item.employee?.department) {
         departments.add(item.employee.department);
       }
@@ -532,18 +635,33 @@ async function finalizePayroll() {
 }
 
 async function downloadRegister() {
+  if (downloadingRegister.value) return;
+  downloadingRegister.value = true;
   try {
     // Build params object
     const params = {
       format: exportFilter.value.format,
     };
 
-    // Add department filter if selected
-    if (exportFilter.value.departments && exportFilter.value.departments.length > 0) {
-      params.filter_type = 'department';
+    // Determine filter type based on selections
+    const hasDepartments =
+      exportFilter.value.departments &&
+      exportFilter.value.departments.length > 0;
+    const hasPositions =
+      exportFilter.value.positions && exportFilter.value.positions.length > 0;
+
+    if (hasDepartments && hasPositions) {
+      params.filter_type = "both";
       params.departments = exportFilter.value.departments;
+      params.positions = exportFilter.value.positions;
+    } else if (hasDepartments) {
+      params.filter_type = "department";
+      params.departments = exportFilter.value.departments;
+    } else if (hasPositions) {
+      params.filter_type = "position";
+      params.positions = exportFilter.value.positions;
     } else {
-      params.filter_type = 'all';
+      params.filter_type = "all";
     }
 
     const response = await api.get(
@@ -562,20 +680,23 @@ async function downloadRegister() {
     const extensions = {
       pdf: ".pdf",
       excel: ".xlsx",
-      word: ".docx"
+      word: ".docx",
     };
-    
+
     let filename = `payroll_register_${payroll.value.payroll_number}`;
-    
+
     // Add department info to filename if filtered
-    if (exportFilter.value.departments && exportFilter.value.departments.length > 0) {
+    if (
+      exportFilter.value.departments &&
+      exportFilter.value.departments.length > 0
+    ) {
       if (exportFilter.value.departments.length === 1) {
-        filename += `_${exportFilter.value.departments[0].replace(/\s+/g, '_')}`;
+        filename += `_${exportFilter.value.departments[0].replace(/\s+/g, "_")}`;
       } else {
-        filename += '_filtered';
+        filename += "_filtered";
       }
     }
-    
+
     filename += extensions[exportFilter.value.format];
 
     link.setAttribute("download", filename);
@@ -586,22 +707,45 @@ async function downloadRegister() {
     const formatNames = {
       pdf: "PDF",
       excel: "Excel",
-      word: "Word"
+      word: "Word",
     };
-    
+
     let successMessage = `Payroll register downloaded as ${formatNames[exportFilter.value.format]}`;
-    if (exportFilter.value.departments && exportFilter.value.departments.length > 0) {
-      successMessage += ` (filtered by ${exportFilter.value.departments.length} department${exportFilter.value.departments.length > 1 ? 's' : ''})`;
+    const filterParts = [];
+
+    if (
+      exportFilter.value.departments &&
+      exportFilter.value.departments.length > 0
+    ) {
+      filterParts.push(
+        `${exportFilter.value.departments.length} department${exportFilter.value.departments.length > 1 ? "s" : ""}`,
+      );
     }
-    
+
+    if (
+      exportFilter.value.positions &&
+      exportFilter.value.positions.length > 0
+    ) {
+      filterParts.push(
+        `${exportFilter.value.positions.length} position${exportFilter.value.positions.length > 1 ? "s" : ""}`,
+      );
+    }
+
+    if (filterParts.length > 0) {
+      successMessage += ` (filtered by ${filterParts.join(" and ")})`;
+    }
+
     toast.success(successMessage);
     showExportDialog.value = false;
-    
-    // Reset filter for next time
+
+    // Reset filters for next time
     exportFilter.value.departments = [];
+    exportFilter.value.positions = [];
   } catch (error) {
     console.error("Error downloading register:", error);
     toast.error("Failed to download payroll register");
+  } finally {
+    downloadingRegister.value = false;
   }
 }
 

@@ -12,6 +12,9 @@ use App\Models\EmployeeLeave;
 use App\Models\AttendanceCorrection;
 use App\Models\AuditLog;
 use App\Models\Resignation;
+use App\Models\MealAllowance;
+use App\Models\ThirteenthMonthPay;
+use App\Models\EmployeeLoan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -62,6 +65,15 @@ class DashboardController extends Controller
 
         // Pending Resignations
         $pendingResignations = Resignation::where('status', 'pending')->count();
+
+        // Pending Meal Allowances (draft or pending)
+        $pendingMealAllowances = MealAllowance::whereIn('status', ['draft', 'pending'])->count();
+
+        // Pending 13th Month Pay (draft or pending)
+        $pending13thMonthPay = ThirteenthMonthPay::whereIn('status', ['draft', 'pending'])->count();
+
+        // Pending Employee Loans
+        $pendingEmployeeLoans = EmployeeLoan::where('status', 'pending')->count();
 
         // Employees with complete data (has government info)
         $employeesCompleteData = Employee::where('is_active', true)
@@ -116,6 +128,9 @@ class DashboardController extends Controller
                 'pendingAttendanceCorrections' => $pendingAttendanceCorrections,
                 'draftPayrolls' => $draftPayrolls,
                 'pendingResignations' => $pendingResignations,
+                'pendingMealAllowances' => $pendingMealAllowances,
+                'pending13thMonthPay' => $pending13thMonthPay,
+                'pendingEmployeeLoans' => $pendingEmployeeLoans,
                 'employeesCompleteData' => $employeesCompleteData,
                 'monthlyAttendanceRate' => $monthlyAttendanceRate,
                 'lastBiometricImportDate' => $lastBiometricImport ? $lastBiometricImport->created_at : null,

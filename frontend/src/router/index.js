@@ -306,6 +306,15 @@ const router = createRouter({
           meta: { title: "User Management", roles: ["admin"] },
         },
         {
+          path: "company-info",
+          name: "company-info",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/CompanyInfoView.vue"
+            ),
+          meta: { title: "Company Information", roles: ["admin"] },
+        },
+        {
           path: "maintenance",
           name: "maintenance",
           component: () =>
@@ -444,4 +453,3 @@ router.beforeEach(async (to, from, next) => {
 });
 
 export default router;
-
