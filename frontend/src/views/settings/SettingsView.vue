@@ -108,7 +108,7 @@
       </div>
 
       <!-- Backup & Security -->
-      <div class="setting-card">
+      <div class="setting-card" @click="openSecurityDialog">
         <div class="setting-icon-wrapper security">
           <v-icon size="32">mdi-shield-check</v-icon>
         </div>
@@ -149,6 +149,9 @@
 
     <!-- Payroll Configuration Dialog -->
     <PayrollConfigurationDialog v-model="showPayrollDialog" />
+
+    <!-- Backup & Security Dialog -->
+    <BackupSecurityDialog v-model="showSecurityDialog" />
   </div>
 </template>
 
@@ -157,10 +160,12 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import GovernmentRatesDialog from "@/components/settings/GovernmentRatesDialog.vue";
 import PayrollConfigurationDialog from "@/components/settings/PayrollConfigurationDialog.vue";
+import BackupSecurityDialog from "@/components/settings/BackupSecurityDialog.vue";
 
 const router = useRouter();
 const showRatesDialog = ref(false);
 const showPayrollDialog = ref(false);
+const showSecurityDialog = ref(false);
 
 const openRatesDialog = () => {
   showRatesDialog.value = true;
@@ -168,6 +173,10 @@ const openRatesDialog = () => {
 
 const openPayrollDialog = () => {
   showPayrollDialog.value = true;
+};
+
+const openSecurityDialog = () => {
+  showSecurityDialog.value = true;
 };
 
 const goToMaintenance = () => {
