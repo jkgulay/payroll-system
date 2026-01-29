@@ -681,13 +681,7 @@ const menuSections = computed(() => {
       to: "/leave-approval",
       roles: ["admin", "hr"],
     },
-    {
-      title: "Resignations",
-      icon: "mdi-briefcase-remove-outline",
-      value: "resignations",
-      to: "/resignations",
-      roles: ["admin", "hr"],
-    },
+
     {
       title: "Departments",
       icon: "mdi-office-building",
