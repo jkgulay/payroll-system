@@ -200,21 +200,13 @@ class EmployeeController extends Controller
                     $newSalary
                 );
 
-                // Auto-update user role based on position
+                // Auto-update user role based on position using the same logic as employee creation
                 if ($employee->user_id) {
-                    $newPositionName = strtolower($newPosition->position_name);
-                    $oldPositionName = strtolower($oldPosition->position_name);
+                    $newRole = EmployeeFieldMapper::determineRoleFromPosition([
+                        '_position_rate' => $newPosition
+                    ], 'employee');
 
-                    // Assign role based on new position
-                    if (in_array($newPositionName, ['hr', 'human resources'])) {
-                        \App\Models\User::where('id', $employee->user_id)->update(['role' => 'hr']);
-                    } elseif ($newPositionName === 'payrollist') {
-                        \App\Models\User::where('id', $employee->user_id)->update(['role' => 'payrollist']);
-                    }
-                    // If changing FROM HR or Payrollist to something else, set role back to "employee"
-                    elseif (in_array($oldPositionName, ['hr', 'human resources', 'payrollist'])) {
-                        \App\Models\User::where('id', $employee->user_id)->update(['role' => 'employee']);
-                    }
+                    \App\Models\User::where('id', $employee->user_id)->update(['role' => $newRole]);
                 }
             }
         }

@@ -69,15 +69,17 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        // Password is optional - will be auto-generated if not provided
+        $validationRules = [
             'employee_id' => 'nullable|exists:employees,id',
             'username' => 'required|string|max:255|unique:users,username',
-            'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8',
+            'password' => 'nullable|string|min:8',
             'role' => ['required', Rule::in(['admin', 'hr', 'payrollist', 'employee'])],
             'is_active' => 'boolean',
-        ]);
+        ];
+        
+        $validator = Validator::make($request->all(), $validationRules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -87,15 +89,34 @@ class UserController extends Controller
         }
 
         try {
+            // Auto-generate password if not provided (like EmployeeController)
+            $temporaryPassword = null;
+            if (!$request->password) {
+                // Get employee data for password generation
+                $employee = $request->employee_id ? Employee::find($request->employee_id) : null;
+                
+                if ($employee) {
+                    // Generate temporary password: LastName + EmployeeNumber + @ + 2 random digits
+                    $randomDigits = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+                    $temporaryPassword = $employee->last_name . $employee->employee_number . '@' . $randomDigits;
+                } else {
+                    // Generate random password for non-employee users
+                    $temporaryPassword = 'Temp' . rand(1000, 9999) . '@' . str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+                }
+                $password = $temporaryPassword;
+            } else {
+                $password = $request->password;
+            }
+            
+            // Create user exactly like EmployeeController does - NO name field
             $user = User::create([
                 'employee_id' => $request->employee_id,
                 'username' => $request->username,
-                'name' => $request->name,
                 'email' => $request->email,
-                'password' => Hash::make($request->password),
+                'password' => Hash::make($password),
                 'role' => $request->role,
                 'is_active' => $request->is_active ?? true,
-                'must_change_password' => true,
+                'must_change_password' => $temporaryPassword ? true : false,
             ]);
 
             // Log user creation
@@ -113,10 +134,18 @@ class UserController extends Controller
                 ],
             ]);
 
-            return response()->json([
+            $response = [
                 'message' => 'User created successfully',
-                'user' => $user->load('employee')
-            ], 201);
+                'user' => $user->load('employee'),
+                'username' => $user->username,
+            ];
+            
+            // Include temporary password in response if auto-generated
+            if ($temporaryPassword) {
+                $response['temporary_password'] = $temporaryPassword;
+            }
+
+            return response()->json($response, 201);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to create user',
@@ -322,13 +351,17 @@ class UserController extends Controller
     {
         $employees = Employee::whereDoesntHave('user')
             ->where('activity_status', 'active')
-            ->select('id', 'employee_number', 'first_name', 'last_name', 'middle_name')
+            ->select('id', 'employee_number', 'first_name', 'last_name', 'middle_name', 'email')
             ->orderBy('employee_number')
             ->get()
             ->map(function ($employee) {
                 return [
                     'id' => $employee->id,
                     'employee_number' => $employee->employee_number,
+                    'first_name' => $employee->first_name,
+                    'last_name' => $employee->last_name,
+                    'middle_name' => $employee->middle_name,
+                    'email' => $employee->email,
                     'full_name' => $employee->full_name,
                 ];
             });

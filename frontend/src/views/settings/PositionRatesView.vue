@@ -103,8 +103,16 @@
           </template>
 
           <template v-slot:item.employee_count="{ item }">
-            <v-chip size="small" color="info">
-              {{ item.employee_count || 0 }} employees
+            <v-chip
+              size="small"
+              color="info"
+              :style="item.employee_count > 0 ? 'cursor: pointer;' : ''"
+              @click="item.employee_count > 0 && viewEmployees(item)"
+            >
+              <v-icon size="16" start>mdi-account-group</v-icon>
+              {{ item.employee_count || 0 }} employee{{
+                item.employee_count !== 1 ? "s" : ""
+              }}
             </v-chip>
           </template>
 
@@ -367,6 +375,111 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Employees List Dialog -->
+    <v-dialog v-model="showEmployeesDialog" max-width="700px" scrollable>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">mdi-account-group</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">
+              Employees in {{ selectedPositionForEmployees?.position_name }}
+            </div>
+            <div class="dialog-subtitle">
+              {{ positionEmployees.length }} employee{{
+                positionEmployees.length !== 1 ? "s" : ""
+              }}
+              assigned to this position
+            </div>
+          </div>
+        </v-card-title>
+        <v-divider></v-divider>
+
+        <v-card-text class="dialog-content" style="max-height: 60vh">
+          <v-progress-linear
+            v-if="loadingEmployees"
+            indeterminate
+            color="#ED985F"
+            class="mb-4"
+          ></v-progress-linear>
+
+          <div
+            v-if="!loadingEmployees && positionEmployees.length === 0"
+            class="text-center py-8"
+          >
+            <v-icon size="64" color="grey">mdi-account-off</v-icon>
+            <p class="text-h6 mt-4 text-grey">No employees found</p>
+          </div>
+
+          <v-list v-else lines="two" class="pa-0">
+            <v-list-item
+              v-for="employee in positionEmployees"
+              :key="employee.id"
+              class="employee-list-item"
+            >
+              <template v-slot:prepend>
+                <v-avatar color="#ED985F" size="48">
+                  <v-img
+                    v-if="employee.avatar"
+                    :src="getAvatarUrl(employee.avatar)"
+                    cover
+                  ></v-img>
+                  <span v-else class="text-white font-weight-bold">
+                    {{ getEmployeeInitials(employee) }}
+                  </span>
+                </v-avatar>
+              </template>
+
+              <v-list-item-title class="font-weight-bold">
+                {{ getEmployeeName(employee) }}
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                <div class="d-flex align-center gap-2 mt-1">
+                  <v-chip size="x-small" color="primary" variant="tonal">
+                    <v-icon size="12" start>mdi-identifier</v-icon>
+                    {{ employee.employee_number }}
+                  </v-chip>
+                  <v-chip
+                    v-if="employee.email"
+                    size="x-small"
+                    color="info"
+                    variant="tonal"
+                  >
+                    <v-icon size="12" start>mdi-email</v-icon>
+                    {{ employee.email }}
+                  </v-chip>
+                </div>
+              </v-list-item-subtitle>
+
+              <template v-slot:append>
+                <v-chip
+                  size="small"
+                  :color="
+                    employee.activity_status === 'active' ? 'success' : 'grey'
+                  "
+                >
+                  {{ employee.activity_status || "active" }}
+                </v-chip>
+              </template>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="dialog-actions">
+          <v-spacer></v-spacer>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="showEmployeesDialog = false"
+          >
+            Close
+          </button>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -399,6 +512,10 @@ const formData = ref({
 });
 
 const selectedPosition = ref(null);
+const showEmployeesDialog = ref(false);
+const selectedPositionForEmployees = ref(null);
+const positionEmployees = ref([]);
+const loadingEmployees = ref(false);
 
 const categoryOptions = [
   { title: "Skilled", value: "skilled" },
@@ -480,6 +597,49 @@ async function loadPositionRates() {
   } finally {
     loading.value = false;
   }
+}
+
+async function viewEmployees(position) {
+  selectedPositionForEmployees.value = position;
+  showEmployeesDialog.value = true;
+  loadingEmployees.value = true;
+  positionEmployees.value = [];
+
+  try {
+    const response = await api.get(`/employees?position=${position.id}`);
+    positionEmployees.value = response.data.data || response.data || [];
+  } catch (error) {
+    console.error("Error loading employees:", error);
+    toast.error("Failed to load employees for this position");
+  } finally {
+    loadingEmployees.value = false;
+  }
+}
+
+function getEmployeeName(employee) {
+  if (!employee) return "";
+  const parts = [
+    employee.first_name,
+    employee.middle_name,
+    employee.last_name,
+  ].filter(Boolean);
+  return parts.join(" ");
+}
+
+function getEmployeeInitials(employee) {
+  if (!employee) return "?";
+  const firstName = employee.first_name || "";
+  const lastName = employee.last_name || "";
+  return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || "??";
+}
+
+function getAvatarUrl(avatar) {
+  if (!avatar) return null;
+  if (avatar.startsWith("http")) return avatar;
+  const apiUrl = (
+    import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+  ).replace("/api", "");
+  return `${apiUrl}/storage/${avatar}`;
 }
 
 function openAddDialog() {
@@ -722,6 +882,20 @@ function formatCategory(category) {
 
 .table-section {
   background: #ffffff;
+}
+
+.employee-list-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 12px 16px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(237, 152, 95, 0.04);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .modern-dialog {
