@@ -9,7 +9,7 @@
             font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 20px;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .header {
@@ -20,19 +20,19 @@
         }
 
         .company-name {
-            font-size: 24px;
+            font-size: 23px;
             font-weight: bold;
             margin-bottom: 5px;
         }
 
         .payroll-title {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: bold;
             margin-top: 10px;
         }
 
         .period-info {
-            font-size: 13px;
+            font-size: 12px;
             margin-top: 5px;
         }
 
@@ -71,13 +71,13 @@
         .total-row {
             background-color: #e8e8e8;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .net-pay {
             background-color: #4CAF50;
             color: white;
-            font-size: 16px;
+            font-size: 15px;
         }
 
         .footer {
@@ -85,12 +85,12 @@
             padding-top: 15px;
             border-top: 2px solid #333;
             text-align: center;
-            font-size: 11px;
+            font-size: 10px;
         }
 
         .acknowledgment {
             margin-top: 40px;
-            font-size: 11px;
+            font-size: 10px;
             font-style: italic;
             text-align: center;
         }
@@ -242,6 +242,14 @@
                 <td class="label">Loans</td>
                 <td class="value">PHP {{ number_format($item->loans, 2) }}</td>
             </tr>
+            @endif
+            @if(!empty($item->deductions_breakdown))
+            @foreach($item->deductions_breakdown as $deduction)
+            <tr>
+                <td class="label">{{ $deduction['name'] ?? ucwords(str_replace('_', ' ', $deduction['type'])) }}</td>
+                <td class="value">PHP {{ number_format($deduction['amount'], 2) }}</td>
+            </tr>
+            @endforeach
             @endif
             @if($item->other_deductions > 0)
             <tr>

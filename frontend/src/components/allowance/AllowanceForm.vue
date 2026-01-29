@@ -77,20 +77,8 @@
               ></v-text-field>
             </v-col>
 
-            <!-- Location -->
-            <v-col cols="12" md="6">
-              <v-text-field
-                v-model="form.location"
-                label="Location"
-                placeholder="Enter location"
-                prepend-inner-icon="mdi-map-marker"
-                variant="outlined"
-                density="comfortable"
-              ></v-text-field>
-            </v-col>
-
             <!-- Period Start -->
-            <v-col cols="12" md="6">
+            <v-col cols="12" md="4">
               <v-text-field
                 v-model="form.period_start"
                 label="Period Start"
@@ -104,7 +92,7 @@
             </v-col>
 
             <!-- Period End -->
-            <v-col cols="12" md="6">
+            <v-col cols="12" md="4">
               <v-text-field
                 v-model="form.period_end"
                 label="Period End"
@@ -117,21 +105,35 @@
               ></v-text-field>
             </v-col>
 
-            <!-- Notes -->
-            <v-col cols="12">
-              <v-textarea
-                v-model="form.notes"
-                label="Notes"
-                placeholder="Enter notes"
-                prepend-inner-icon="mdi-note-text"
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model.number="bulkForm.no_of_days"
+                label="Default Days *"
+                type="number"
+                min="1"
+                max="31"
+                :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
-                rows="2"
-              ></v-textarea>
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model.number="bulkForm.amount_per_day"
+                label="Default Amount/Day *"
+                type="number"
+                min="0"
+                step="0.01"
+                :rules="[rules.required]"
+                variant="outlined"
+                density="comfortable"
+                prefix="₱"
+              ></v-text-field>
             </v-col>
 
             <!-- Section 2: Employee Allowances -->
-            <v-col cols="12" class="mt-4">
+            <v-col cols="12" class="mt-3">
               <div class="section-header">
                 <div class="section-icon">
                   <v-icon size="18">mdi-account-group</v-icon>
@@ -142,167 +144,6 @@
                 <v-chip v-if="form.items.length > 0" color="info" class="mr-2">
                   {{ form.items.length }} employee(s)
                 </v-chip>
-
-                <!-- Search Other Employees Button -->
-                <v-btn
-                  color="secondary"
-                  size="small"
-                  prepend-icon="mdi-magnify"
-                  class="mr-2"
-                  @click="showSearchDialog = true"
-                >
-                  Search Other Employees
-                </v-btn>
-
-                <!-- Bulk Assignment Dialog -->
-                <v-dialog v-model="showBulkDialog" max-width="500px">
-                  <template v-slot:activator="{ props }">
-                    <v-btn
-                      v-if="availableEmployees.length > 0"
-                      v-bind="props"
-                      color="primary"
-                      size="small"
-                      prepend-icon="mdi-account-multiple-plus"
-                    >
-                      Bulk Add by Department
-                    </v-btn>
-                  </template>
-
-                  <v-card>
-                    <v-card-title class="bg-primary">
-                      <v-icon left>mdi-account-multiple-plus</v-icon>
-                      Bulk Add Field Employees
-                    </v-card-title>
-
-                    <v-card-text class="pt-4">
-                      <v-alert type="info" variant="tonal" class="mb-4">
-                        This will add all {{ availableEmployees.length }} active
-                        employee(s) from the selected department to the
-                        allowance.
-                      </v-alert>
-
-                      <v-text-field
-                        v-model.number="bulkForm.no_of_days"
-                        label="Number of Days *"
-                        type="number"
-                        min="1"
-                        max="31"
-                        :rules="[rules.required]"
-                        outlined
-                        dense
-                        hint="Default days for all employees"
-                      ></v-text-field>
-
-                      <v-text-field
-                        v-model.number="bulkForm.amount_per_day"
-                        label="Amount per Day *"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        :rules="[rules.required]"
-                        outlined
-                        dense
-                        prefix="₱"
-                        hint="Default amount per day for all employees"
-                        class="mt-3"
-                      ></v-text-field>
-
-                      <v-alert type="warning" variant="tonal" class="mt-4">
-                        <strong>Note:</strong> This will replace any existing
-                        employees in the list.
-                      </v-alert>
-                    </v-card-text>
-
-                    <v-card-actions>
-                      <v-spacer></v-spacer>
-                      <v-btn @click="showBulkDialog = false" variant="outlined">
-                        Cancel
-                      </v-btn>
-                      <v-btn
-                        color="primary"
-                        @click="bulkAddEmployees"
-                        :loading="bulkLoading"
-                      >
-                        <v-icon left>mdi-check</v-icon>
-                        Add All Employees
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
-                </v-dialog>
-
-                <!-- Employee Search Dialog -->
-                <v-dialog v-model="showSearchDialog" max-width="600px">
-                  <v-card>
-                    <v-card-title class="bg-secondary">
-                      <v-icon left>mdi-magnify</v-icon>
-                      Search Employees from Other Departments
-                    </v-card-title>
-
-                    <v-card-text class="pt-4">
-                      <v-alert type="info" variant="tonal" class="mb-4">
-                        Search for employees by name or employee number.
-                      </v-alert>
-
-                      <v-text-field
-                        v-model="searchTerm"
-                        label="Search Employee"
-                        placeholder="Enter name or employee number"
-                        prepend-inner-icon="mdi-magnify"
-                        clearable
-                        variant="outlined"
-                        density="comfortable"
-                        @input="debouncedSearch"
-                        :loading="searchLoading"
-                      ></v-text-field>
-
-                      <v-list v-if="searchResults.length > 0" class="mt-3">
-                        <v-list-item
-                          v-for="employee in searchResults"
-                          :key="employee.id"
-                          @click="addSearchedEmployee(employee)"
-                        >
-                          <template #prepend>
-                            <v-avatar color="primary" size="40">
-                              <v-icon>mdi-account</v-icon>
-                            </v-avatar>
-                          </template>
-                          <v-list-item-title>
-                            {{ employee.name }}
-                          </v-list-item-title>
-                          <v-list-item-subtitle>
-                            {{ employee.employee_number }} -
-                            {{ employee.department }}
-                          </v-list-item-subtitle>
-                          <template #append>
-                            <v-btn
-                              icon="mdi-plus"
-                              size="small"
-                              color="primary"
-                            ></v-btn>
-                          </template>
-                        </v-list-item>
-                      </v-list>
-
-                      <v-alert
-                        v-else-if="searchTerm && !searchLoading"
-                        type="warning"
-                        variant="tonal"
-                      >
-                        No employees found. Try a different search term.
-                      </v-alert>
-                    </v-card-text>
-
-                    <v-card-actions>
-                      <v-spacer></v-spacer>
-                      <v-btn
-                        @click="showSearchDialog = false"
-                        variant="outlined"
-                      >
-                        Close
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
-                </v-dialog>
               </div>
 
               <!-- Selection Mode -->
@@ -374,33 +215,6 @@
                 ></v-select>
               </v-col>
 
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="bulkForm.no_of_days"
-                  label="Number of Days *"
-                  type="number"
-                  min="1"
-                  max="31"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="bulkForm.amount_per_day"
-                  label="Amount per Day *"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  :rules="[rules.required]"
-                  variant="outlined"
-                  density="comfortable"
-                  prefix="₱"
-                ></v-text-field>
-              </v-col>
-
               <v-col cols="12">
                 <v-btn color="primary" @click="applySelection">
                   <v-icon start>mdi-account-multiple-check</v-icon>
@@ -413,6 +227,9 @@
                 :headers="itemHeaders"
                 :items="form.items"
                 :loading="loadingEmployees"
+                :items-per-page="5"
+                :items-per-page-options="[5, 10, 25]"
+                show-current-page
                 density="compact"
                 class="mt-3"
               >
@@ -482,23 +299,11 @@
                     @click="removeItem(index)"
                   ></v-btn>
                 </template>
-
-                <template #bottom>
-                  <v-row class="ma-2">
-                    <v-col>
-                      <v-btn color="primary" size="small" @click="addItem">
-                        <v-icon left>mdi-plus</v-icon>
-                        Add Row
-                      </v-btn>
-                    </v-col>
-                    <v-col class="text-right">
-                      <strong
-                        >Grand Total: ₱{{ formatNumber(grandTotal) }}</strong
-                      >
-                    </v-col>
-                  </v-row>
-                </template>
               </v-data-table>
+
+              <div class="d-flex justify-end mt-2">
+                <strong>Grand Total: ₱{{ formatNumber(grandTotal) }}</strong>
+              </div>
             </v-col>
           </v-row>
         </v-form>
@@ -561,7 +366,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import mealAllowanceService from "@/services/mealAllowanceService";
+import allowanceService from "@/services/allowanceService";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -574,29 +379,20 @@ const emit = defineEmits(["update:modelValue", "saved"]);
 const formRef = ref(null);
 const saving = ref(false);
 const loadingEmployees = ref(false);
-const bulkLoading = ref(false);
-const showBulkDialog = ref(false);
 const availableEmployees = ref([]);
 const selectionMode = ref("individual");
 const departments = ref([]);
-const searchLoading = ref(false);
-const searchResults = ref([]);
-const searchTerm = ref("");
-const showSearchDialog = ref(false);
-const selectedDepartment = ref("all");
 
 const form = ref({
   title: "",
   allowance_type: null,
   custom_allowance_type: "",
-  location: "",
   period_start: "",
   period_end: "",
   position_id: null,
   department: null,
   employee_id: null,
   employee_ids: [],
-  notes: "",
   items: [],
 });
 
@@ -651,14 +447,12 @@ watch(
         title: newVal.title,
         allowance_type: newVal.allowance_type || inferred.type,
         custom_allowance_type: newVal.allowance_type ? "" : inferred.custom,
-        location: newVal.location || "",
         period_start: newVal.period_start,
         period_end: newVal.period_end,
         position_id: newVal.position_id,
         department: newVal.department || null,
         employee_id: null,
         employee_ids: [],
-        notes: newVal.notes || "",
         items: newVal.items
           ? newVal.items.map((item) => ({
               employee_id: item.employee_id,
@@ -683,12 +477,11 @@ loadEmployees();
 async function loadEmployees() {
   loadingEmployees.value = true;
   try {
-    availableEmployees.value =
-      await mealAllowanceService.getEmployeesByPosition(
-        null,
-        null,
-        selectedDepartment.value,
-      );
+    availableEmployees.value = await allowanceService.getEmployeesByPosition(
+      null,
+      null,
+      "all",
+    );
     departments.value = Array.from(
       new Set(
         availableEmployees.value.map((emp) => emp.department).filter(Boolean),
@@ -698,135 +491,6 @@ async function loadEmployees() {
     console.error("Error loading employees:", error);
   } finally {
     loadingEmployees.value = false;
-  }
-}
-
-// Debounced search for employees
-let searchTimeout = null;
-function debouncedSearch() {
-  clearTimeout(searchTimeout);
-  if (!searchTerm.value || searchTerm.value.length < 2) {
-    searchResults.value = [];
-    return;
-  }
-  searchTimeout = setTimeout(async () => {
-    await searchEmployees();
-  }, 500);
-}
-
-async function searchEmployees() {
-  if (!searchTerm.value || searchTerm.value.length < 2) return;
-
-  searchLoading.value = true;
-  try {
-    searchResults.value = await mealAllowanceService.searchEmployees(
-      searchTerm.value,
-      null,
-    );
-  } catch (error) {
-    console.error("Error searching employees:", error);
-    searchResults.value = [];
-  } finally {
-    searchLoading.value = false;
-  }
-}
-
-function addSearchedEmployee(employee) {
-  // Check if employee already exists in items
-  const exists = form.value.items.some(
-    (item) => item.employee_id === employee.id,
-  );
-
-  if (exists) {
-    alert("Employee already added to the list");
-    return;
-  }
-
-  // Add employee to items
-  form.value.items.push({
-    employee_id: employee.id,
-    employee_name: employee.name,
-    employee_number: employee.employee_number,
-    position_code: employee.position_code,
-    department: employee.department,
-    no_of_days: 15,
-    amount_per_day: employee.basic_salary || 120.0,
-    total_amount: 15 * (employee.basic_salary || 120.0),
-  });
-
-  // Clear search and close dialog
-  searchTerm.value = "";
-  searchResults.value = [];
-  showSearchDialog.value = false;
-
-  alert(`${employee.name} added successfully!`);
-}
-
-function addItem() {
-  form.value.items.push({
-    employee_id: null,
-    no_of_days: 15,
-    amount_per_day: 120.0,
-  });
-}
-
-function addAllEmployees() {
-  // Clear existing items and add all employees from selected position
-  form.value.items = [];
-
-  availableEmployees.value.forEach((emp) => {
-    form.value.items.push({
-      employee_id: emp.id,
-      employee_name: emp.name,
-      employee_number: emp.employee_number,
-      position_code: emp.position_code,
-      no_of_days: 15,
-      amount_per_day: 120.0,
-      total_amount: 15 * 120.0,
-    });
-  });
-}
-
-async function bulkAddEmployees() {
-  if (!bulkForm.value.no_of_days || !bulkForm.value.amount_per_day) {
-    alert("Please fill in all fields");
-    return;
-  }
-
-  if (
-    !confirm(
-      `Add all ${availableEmployees.value.length} employee(s) to this allowance? This will replace existing entries.`,
-    )
-  ) {
-    return;
-  }
-
-  bulkLoading.value = true;
-  try {
-    const response = await mealAllowanceService.bulkAssignByPosition({
-      position_id: null,
-      project_id: form.value.project_id || null,
-      department: selectedDepartment.value,
-      no_of_days: bulkForm.value.no_of_days,
-      amount_per_day: bulkForm.value.amount_per_day,
-    });
-
-    // Replace current items with bulk assigned items
-    form.value.items = response.items || response.data.items;
-
-    showBulkDialog.value = false;
-    alert(
-      response.message ||
-        `Successfully added ${form.value.items.length} employees`,
-    );
-  } catch (error) {
-    console.error("Error bulk assigning employees:", error);
-    alert(
-      "Failed to bulk add employees: " +
-        (error.response?.data?.message || error.message),
-    );
-  } finally {
-    bulkLoading.value = false;
   }
 }
 
@@ -871,10 +535,10 @@ async function save() {
   saving.value = true;
   try {
     if (isEdit.value) {
-      await mealAllowanceService.update(props.mealAllowance.id, form.value);
+      await allowanceService.update(props.mealAllowance.id, form.value);
       alert("Allowance updated successfully");
     } else {
-      await mealAllowanceService.create(form.value);
+      await allowanceService.create(form.value);
       alert("Allowance saved as draft");
     }
     emit("saved");
@@ -912,11 +576,11 @@ async function saveAndSubmit() {
   saving.value = true;
   try {
     // First create the allowance
-    const response = await mealAllowanceService.create(form.value);
+    const response = await allowanceService.create(form.value);
     const mealAllowanceId = response.data.id;
 
     // Then submit it for approval
-    await mealAllowanceService.submit(mealAllowanceId);
+    await allowanceService.submit(mealAllowanceId);
 
     alert("Allowance created and submitted for approval successfully!");
     emit("saved");
@@ -942,14 +606,12 @@ function resetForm() {
     title: "",
     allowance_type: null,
     custom_allowance_type: "",
-    location: "",
     period_start: "",
     period_end: "",
     position_id: null,
     department: null,
     employee_id: null,
     employee_ids: [],
-    notes: "",
     items: [],
   };
   availableEmployees.value = [];
@@ -1012,7 +674,7 @@ async function applySelection() {
       alert("Please select a department");
       return;
     }
-    employees = await mealAllowanceService.getEmployeesByPosition(
+    employees = await allowanceService.getEmployeesByPosition(
       null,
       null,
       form.value.department,
@@ -1024,10 +686,10 @@ async function applySelection() {
       alert("Please select a position");
       return;
     }
-    employees = await mealAllowanceService.getEmployeesByPosition(
+    employees = await allowanceService.getEmployeesByPosition(
       form.value.position_id,
       null,
-      null,
+      "all",
     );
   }
 

@@ -36,7 +36,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             if (!$user->employee_id) {
                 return response()->json(['message' => 'No employee record linked'], 403);
             }
-            
+
             $payslips = \App\Models\PayrollItem::with(['payroll'])
                 ->where('employee_id', $user->employee_id)
                 ->whereHas('payroll', function ($query) {
@@ -44,67 +44,67 @@ Route::middleware(['auth:sanctum'])->group(function () {
                 })
                 ->orderBy('id', 'desc')
                 ->paginate(15);
-                
+
             return response()->json($payslips);
         });
-        
+
         // Employee can view their own attendance
         Route::get('/employee/attendance', function (Request $request) {
             $user = $request->user();
             if (!$user->employee_id) {
                 return response()->json(['message' => 'No employee record linked'], 403);
             }
-            
+
             $startDate = $request->input('start_date', \Carbon\Carbon::now()->subMonths(3)->toDateString());
             $endDate = $request->input('end_date', \Carbon\Carbon::now()->toDateString());
-            
+
             $attendance = \App\Models\Attendance::where('employee_id', $user->employee_id)
                 ->whereBetween('attendance_date', [$startDate, $endDate])
                 ->orderBy('attendance_date', 'desc')
                 ->paginate(30);
-                
+
             return response()->json($attendance);
         });
-        
+
         // Employee can view their own loans
         Route::get('/employee/loans', function (Request $request) {
             $user = $request->user();
             if (!$user->employee_id) {
                 return response()->json(['message' => 'No employee record linked'], 403);
             }
-            
+
             $loans = \App\Models\EmployeeLoan::where('employee_id', $user->employee_id)
                 ->orderBy('created_at', 'desc')
                 ->get();
-                
+
             return response()->json($loans);
         });
-        
+
         // Employee can view their own deductions
         Route::get('/employee/deductions', function (Request $request) {
             $user = $request->user();
             if (!$user->employee_id) {
                 return response()->json(['message' => 'No employee record linked'], 403);
             }
-            
+
             $deductions = \App\Models\EmployeeDeduction::where('employee_id', $user->employee_id)
                 ->orderBy('created_at', 'desc')
                 ->get();
-                
+
             return response()->json($deductions);
         });
-        
+
         // Employee can view their own allowances
         Route::get('/employee/allowances', function (Request $request) {
             $user = $request->user();
             if (!$user->employee_id) {
                 return response()->json(['message' => 'No employee record linked'], 403);
             }
-            
+
             $allowances = \App\Models\EmployeeAllowance::where('employee_id', $user->employee_id)
                 ->orderBy('created_at', 'desc')
                 ->get();
-                
+
             return response()->json($allowances);
         });
     });
@@ -155,6 +155,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/users/{id}/toggle-status', [App\Http\Controllers\Api\UserController::class, 'toggleStatus']);
         Route::post('/users/{id}/reset-password', [App\Http\Controllers\Api\UserController::class, 'resetPassword']);
         Route::apiResource('users', App\Http\Controllers\Api\UserController::class);
+
+        // Company Information
+        Route::get('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'show']);
+        Route::post('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'store']);
     });
 
     // Employee Import - MUST come before employees apiResource
@@ -249,6 +253,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
     // Deductions - specific routes MUST come before apiResource
+    Route::post('/deductions/bulk', [App\Http\Controllers\Api\DeductionController::class, 'bulkStore'])->middleware('role:admin,hr');
+    Route::get('/deductions/departments/list', [App\Http\Controllers\Api\DeductionController::class, 'getDepartments']);
+    Route::get('/deductions/positions/list', [App\Http\Controllers\Api\DeductionController::class, 'getPositions']);
+    Route::post('/deductions/employees/filter', [App\Http\Controllers\Api\DeductionController::class, 'getEmployeesByFilter']);
     Route::post('/deductions/{deduction}/record-installment', [App\Http\Controllers\Api\DeductionController::class, 'recordInstallment']);
 
     // Cash Bond specific routes

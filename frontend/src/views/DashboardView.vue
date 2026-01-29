@@ -236,6 +236,66 @@
                 {{ stats.pendingResignations }}
               </div>
             </div>
+
+            <!-- Pending Allowances -->
+            <div
+              v-if="stats.pendingMealAllowances > 0"
+              class="action-item"
+              @click="$router.push('/allowances')"
+            >
+              <div class="action-item-icon action-icon-warning">
+                <v-icon size="24">mdi-food</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Allowances</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingMealAllowances }} pending approval
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingMealAllowances }}
+              </div>
+            </div>
+
+            <!-- Pending 13th Month Pay -->
+            <div
+              v-if="stats.pending13thMonthPay > 0"
+              class="action-item"
+              @click="$router.push('/thirteenth-month-pay')"
+            >
+              <div class="action-item-icon action-icon-success">
+                <v-icon size="24">mdi-gift</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">13th Month Pay</div>
+                <div class="action-item-desc">
+                  {{ stats.pending13thMonthPay }} pending finalization
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pending13thMonthPay }}
+              </div>
+            </div>
+
+            <!-- Pending Employee Loans -->
+            <div
+              v-if="stats.pendingEmployeeLoans > 0"
+              class="action-item"
+              @click="$router.push('/loans')"
+            >
+              <div class="action-item-icon action-icon-info">
+                <v-icon size="24">mdi-cash-multiple</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Employee Loans</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingEmployeeLoans }} awaiting approval
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingEmployeeLoans }}
+              </div>
+            </div>
           </div>
 
           <!-- No Pending Actions -->
@@ -717,6 +777,10 @@ const stats = ref({
   pendingLeaves: 0,
   pendingAttendanceCorrections: 0,
   draftPayrolls: 0,
+  pendingResignations: 0,
+  pendingMealAllowances: 0,
+  pending13thMonthPay: 0,
+  pendingEmployeeLoans: 0,
   employeesCompleteData: 0,
   monthlyAttendanceRate: 0,
   lastBiometricImportDate: null,
@@ -783,7 +847,10 @@ const totalPendingActions = computed(() => {
     stats.value.pendingLeaves +
     stats.value.pendingAttendanceCorrections +
     stats.value.draftPayrolls +
-    (stats.value.pendingResignations || 0)
+    (stats.value.pendingResignations || 0) +
+    (stats.value.pendingMealAllowances || 0) +
+    (stats.value.pending13thMonthPay || 0) +
+    (stats.value.pendingEmployeeLoans || 0)
   );
 });
 

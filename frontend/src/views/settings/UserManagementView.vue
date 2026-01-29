@@ -132,11 +132,17 @@
         <template v-slot:item.user="{ item }">
           <div class="user-cell">
             <div class="user-avatar">
-              <v-icon v-if="!item.avatar" size="24">mdi-account</v-icon>
-              <img v-else :src="item.avatar" alt="Avatar" />
+              <v-img
+                v-if="item.avatar"
+                :src="getAvatarUrl(item.avatar)"
+                cover
+              ></v-img>
+              <span v-else class="avatar-text">{{
+                getUserInitials(item)
+              }}</span>
             </div>
             <div class="user-info">
-              <div class="user-name">{{ item.name }}</div>
+              <div class="user-name">{{ getUserDisplayName(item) }}</div>
               <div class="user-username">@{{ item.username }}</div>
             </div>
           </div>
@@ -159,8 +165,12 @@
 
         <template v-slot:item.employee="{ item }">
           <div v-if="item.employee" class="employee-cell">
-            <div class="employee-number">{{ item.employee.employee_number }}</div>
-            <div class="employee-name">{{ getEmployeeName(item.employee) }}</div>
+            <div class="employee-number">
+              {{ item.employee.employee_number }}
+            </div>
+            <div class="employee-name">
+              {{ getEmployeeName(item.employee) }}
+            </div>
           </div>
           <span v-else class="text-grey">-</span>
         </template>
@@ -231,7 +241,9 @@
                   @click="toggleUserStatus(item)"
                 >
                   <v-icon size="18">
-                    {{ item.is_active ? "mdi-account-off" : "mdi-account-check" }}
+                    {{
+                      item.is_active ? "mdi-account-off" : "mdi-account-check"
+                    }}
                   </v-icon>
                 </v-btn>
               </template>
@@ -290,11 +302,12 @@
                   Full Name *
                 </label>
                 <v-text-field
-                  v-model="userForm.name"
+                  v-model="userForm.full_name"
                   variant="outlined"
                   density="comfortable"
-                  placeholder="Enter full name"
+                  placeholder="Full name (auto-filled from employee)"
                   :rules="[rules.required]"
+                  :readonly="!isEditMode && userForm.employee_id"
                 ></v-text-field>
               </v-col>
 
@@ -329,7 +342,9 @@
 
               <v-col cols="12" md="6">
                 <label class="form-label">
-                  <v-icon size="small" color="#ed985f">mdi-shield-account</v-icon>
+                  <v-icon size="small" color="#ed985f"
+                    >mdi-shield-account</v-icon
+                  >
                   Role *
                 </label>
                 <v-select
@@ -343,7 +358,9 @@
 
               <v-col cols="12" md="6">
                 <label class="form-label">
-                  <v-icon size="small" color="#ed985f">mdi-badge-account</v-icon>
+                  <v-icon size="small" color="#ed985f"
+                    >mdi-badge-account</v-icon
+                  >
                   Link to Employee (Optional)
                 </label>
                 <v-autocomplete
@@ -372,10 +389,11 @@
                 </v-autocomplete>
               </v-col>
 
-              <v-col cols="12" md="6">
+              <!-- Password fields only shown in Edit mode -->
+              <v-col cols="12" md="6" v-if="isEditMode">
                 <label class="form-label">
                   <v-icon size="small" color="#ed985f">mdi-lock</v-icon>
-                  Password {{ isEditMode ? "(Leave blank to keep current)" : "*" }}
+                  Password (Leave blank to keep current)
                 </label>
                 <v-text-field
                   v-model="userForm.password"
@@ -387,7 +405,7 @@
                 ></v-text-field>
               </v-col>
 
-              <v-col cols="12" md="6">
+              <v-col cols="12" md="6" v-if="isEditMode">
                 <label class="form-label">
                   <v-icon size="small" color="#ed985f">mdi-lock-check</v-icon>
                   Confirm Password
@@ -530,7 +548,10 @@
 
         <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <button class="dialog-btn dialog-btn-cancel" @click="showViewDialog = false">
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="showViewDialog = false"
+          >
             Close
           </button>
         </v-card-actions>
@@ -555,7 +576,8 @@
         <v-card-text class="dialog-content">
           <p>
             Are you sure you want to delete user
-            <strong>{{ userToDelete?.username }}</strong>?
+            <strong>{{ userToDelete?.username }}</strong
+            >?
           </p>
           <p class="text-error mt-3">
             This will permanently remove the user account and cannot be undone.
@@ -591,11 +613,91 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Credentials Dialog (like Employee page) -->
+    <v-dialog v-model="showPasswordDialog" max-width="600px" persistent>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">mdi-shield-check</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">User Account Created</div>
+            <div class="dialog-subtitle">
+              Save these credentials - they will not be shown again
+            </div>
+          </div>
+        </v-card-title>
+
+        <v-divider></v-divider>
+
+        <v-card-text class="dialog-content">
+          <v-alert type="success" variant="tonal" class="mb-4">
+            <div class="text-h6 mb-2">
+              {{ createdUser?.username || createdUsername }}
+            </div>
+          </v-alert>
+
+          <div class="mb-4">
+            <div class="text-subtitle-1 font-weight-bold mb-2">
+              Login Credentials:
+            </div>
+            <v-sheet color="grey-lighten-4" rounded class="pa-4">
+              <div class="mb-3">
+                <div class="text-caption">Username</div>
+                <div class="text-body-1 font-weight-bold">
+                  {{ createdUsername || createdUser?.username }}
+                </div>
+              </div>
+              <div class="mb-3" v-if="createdUser?.email">
+                <div class="text-caption">Email</div>
+                <div class="text-body-1 font-weight-bold">
+                  {{ createdUser?.email }}
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="text-caption">Temporary Password</div>
+                <div class="text-h6 font-weight-bold text-primary">
+                  {{ temporaryPassword }}
+                </div>
+              </div>
+              <div>
+                <div class="text-caption">Role</div>
+                <div class="text-body-1 font-weight-bold text-capitalize">
+                  {{ createdUser?.role }}
+                </div>
+              </div>
+            </v-sheet>
+          </div>
+
+          <v-alert type="warning" variant="tonal" density="compact">
+            User must change password on first login
+          </v-alert>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="dialog-actions">
+          <button class="dialog-btn dialog-btn-cancel" @click="copyCredentials">
+            <v-icon size="20" class="mr-2">mdi-content-copy</v-icon>
+            Copy Credentials
+          </button>
+          <v-spacer></v-spacer>
+          <button
+            class="dialog-btn dialog-btn-primary"
+            @click="showPasswordDialog = false"
+          >
+            <v-icon size="20" class="mr-2">mdi-check</v-icon>
+            Done
+          </button>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
@@ -628,12 +730,16 @@ const statusFilter = ref(null);
 const showUserDialog = ref(false);
 const showViewDialog = ref(false);
 const showDeleteDialog = ref(false);
+const showPasswordDialog = ref(false);
 const isEditMode = ref(false);
 const selectedUser = ref(null);
 const userToDelete = ref(null);
+const createdUser = ref(null);
+const createdUsername = ref("");
+const temporaryPassword = ref("");
 
 const userForm = ref({
-  name: "",
+  full_name: "",
   username: "",
   email: "",
   password: "",
@@ -645,7 +751,7 @@ const userForm = ref({
 
 const roleOptions = [
   { title: "Admin", value: "admin" },
-  { title: "hr", value: "hr" },
+  { title: "HR", value: "hr" },
   { title: "Payroll Staff", value: "payrollist" },
   { title: "Employee", value: "employee" },
 ];
@@ -708,7 +814,7 @@ function getRoleIcon(role) {
 function getRoleLabel(role) {
   const labels = {
     admin: "Admin",
-    hr: "hr",
+    hr: "HR",
     payrollist: "Payroll Staff",
     employee: "Employee",
   };
@@ -728,6 +834,45 @@ function formatDate(date) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function getUserInitials(user) {
+  if (user.employee) {
+    // Get initials from employee name
+    const firstName = user.employee.first_name || "";
+    const lastName = user.employee.last_name || "";
+    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+  } else if (user.name) {
+    // Get initials from user name
+    const names = user.name.split(" ");
+    if (names.length >= 2) {
+      return (
+        names[0].charAt(0) + names[names.length - 1].charAt(0)
+      ).toUpperCase();
+    }
+    return user.name.substring(0, 2).toUpperCase();
+  } else {
+    // Fallback to username initial
+    return user.username.charAt(0).toUpperCase();
+  }
+}
+
+function getUserDisplayName(user) {
+  if (user.employee) {
+    return getEmployeeName(user.employee);
+  }
+  return user.name || user.username;
+}
+
+function getAvatarUrl(avatar) {
+  if (!avatar) return null;
+  // If avatar is already a full URL, return it
+  if (avatar.startsWith("http")) return avatar;
+  // Otherwise, prepend the base URL (remove /api from VITE_API_URL)
+  const apiUrl = (
+    import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+  ).replace("/api", "");
+  return `${apiUrl}/storage/${avatar}`;
 }
 
 async function fetchUsers() {
@@ -764,7 +909,7 @@ async function fetchAvailableEmployees() {
 function openAddDialog() {
   isEditMode.value = false;
   userForm.value = {
-    name: "",
+    full_name: "",
     username: "",
     email: "",
     password: "",
@@ -781,7 +926,7 @@ function editUser(user) {
   isEditMode.value = true;
   selectedUser.value = user;
   userForm.value = {
-    name: user.name,
+    full_name: user.name || "",
     username: user.username,
     email: user.email,
     password: "",
@@ -816,20 +961,37 @@ async function saveUser() {
   saving.value = true;
   try {
     if (isEditMode.value) {
-      await api.put(`/users/${selectedUser.value.id}`, userForm.value);
+      // Remove full_name before sending - it's not a User model field
+      const { full_name, ...userData } = userForm.value;
+      await api.put(`/users/${selectedUser.value.id}`, userData);
       toast.success("User updated successfully");
+      closeUserDialog();
+      fetchUsers();
+      fetchStats();
     } else {
-      await api.post("/users", userForm.value);
+      // Remove full_name before sending - it's not a User model field
+      const { full_name, ...userData } = userForm.value;
+      const response = await api.post("/users", userData);
+
+      // Store created user data for credentials dialog
+      createdUser.value = response.data.user;
+      createdUsername.value = response.data.username;
+      temporaryPassword.value = response.data.temporary_password;
+
       toast.success("User created successfully");
+      closeUserDialog();
+
+      // Show password dialog if temporary password was generated
+      if (temporaryPassword.value) {
+        showPasswordDialog.value = true;
+      }
+
+      fetchUsers();
+      fetchStats();
     }
-    closeUserDialog();
-    fetchUsers();
-    fetchStats();
   } catch (error) {
     console.error("Error saving user:", error);
-    toast.error(
-      error.response?.data?.message || "Failed to save user"
-    );
+    toast.error(error.response?.data?.message || "Failed to save user");
   } finally {
     saving.value = false;
   }
@@ -839,13 +1001,15 @@ async function toggleUserStatus(user) {
   try {
     await api.post(`/users/${user.id}/toggle-status`);
     toast.success(
-      `User ${user.is_active ? "deactivated" : "activated"} successfully`
+      `User ${user.is_active ? "deactivated" : "activated"} successfully`,
     );
     fetchUsers();
     fetchStats();
   } catch (error) {
     console.error("Error toggling user status:", error);
-    toast.error(error.response?.data?.message || "Failed to update user status");
+    toast.error(
+      error.response?.data?.message || "Failed to update user status",
+    );
   }
 }
 
@@ -871,6 +1035,53 @@ async function deleteUser() {
   }
 }
 
+// Copy credentials to clipboard
+function copyCredentials() {
+  const emailInfo = createdUser.value?.email
+    ? `\nEmail: ${createdUser.value.email}`
+    : "";
+  const credentials = `User Account Created
+Username: ${createdUsername.value || createdUser.value?.username}${emailInfo}
+Temporary Password: ${temporaryPassword.value}
+Role: ${createdUser.value?.role}
+
+⚠️ User must change password on first login`;
+
+  navigator.clipboard
+    .writeText(credentials)
+    .then(() => {
+      toast.success("Credentials copied to clipboard!");
+    })
+    .catch(() => {
+      toast.error("Failed to copy credentials");
+    });
+}
+
+// Watch for employee selection to auto-fill full name, username, and email
+watch(
+  () => userForm.value.employee_id,
+  (newEmployeeId) => {
+    if (newEmployeeId && !isEditMode.value) {
+      const employee = availableEmployees.value.find(
+        (e) => e.id === newEmployeeId,
+      );
+      console.log("Selected employee:", employee);
+      if (employee) {
+        // Auto-fill full name
+        userForm.value.full_name = employee.full_name;
+
+        // Auto-fill username as firstname.lastname
+        const username =
+          `${employee.first_name}.${employee.last_name}`.toLowerCase();
+        userForm.value.username = username;
+
+        // Auto-fill email - use employee email if exists, otherwise firstname.lastname@company.com
+        userForm.value.email = employee.email || `${username}@company.com`;
+      }
+    }
+  },
+);
+
 onMounted(() => {
   fetchUsers();
   fetchStats();
@@ -879,7 +1090,6 @@ onMounted(() => {
 
 <style scoped>
 .user-management-page {
-  padding: 24px;
   max-width: 1600px;
   margin: 0 auto;
 }
@@ -996,18 +1206,39 @@ onMounted(() => {
 
 .stat-card {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+  }
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+  border-color: rgba(237, 152, 95, 0.3);
+
+  &::before {
+    transform: scaleY(1);
+  }
 }
 
 .stat-icon {
@@ -1097,6 +1328,14 @@ onMounted(() => {
   justify-content: center;
   color: white;
   overflow: hidden;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.user-avatar .avatar-text {
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .user-avatar img {
@@ -1284,4 +1523,3 @@ onMounted(() => {
   color: #f44336 !important;
 }
 </style>
-

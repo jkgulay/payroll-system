@@ -91,7 +91,7 @@
 
 <script setup>
 import { ref } from "vue";
-import mealAllowanceService from "@/services/mealAllowanceService";
+import allowanceService from "@/services/allowanceService";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -116,7 +116,7 @@ async function approve() {
   processing.value = true;
   try {
     // First approve the allowance
-    await mealAllowanceService.updateApproval(
+    await allowanceService.updateApproval(
       props.mealAllowance.id,
       "approve",
       form.value.approval_notes,
@@ -130,7 +130,7 @@ async function approve() {
     );
 
     // Then generate PDF
-    await mealAllowanceService.generatePdf(props.mealAllowance.id);
+    await allowanceService.generatePdf(props.mealAllowance.id);
 
     alert("Allowance approved and PDF generated successfully");
     emit("approved");
@@ -148,7 +148,7 @@ async function reject() {
 
   processing.value = true;
   try {
-    await mealAllowanceService.updateApproval(
+    await allowanceService.updateApproval(
       props.mealAllowance.id,
       "reject",
       form.value.approval_notes,

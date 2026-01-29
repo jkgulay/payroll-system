@@ -194,6 +194,28 @@
           </span>
         </template>
 
+        <template v-slot:item.progress="{ item }">
+          <div style="min-width: 120px">
+            <v-progress-linear
+              :model-value="(item.amount_paid / item.total_amount) * 100 || 0"
+              :color="
+                (item.amount_paid / item.total_amount) * 100 >= 100
+                  ? 'success'
+                  : (item.amount_paid / item.total_amount) * 100 >= 50
+                    ? 'primary'
+                    : 'warning'
+              "
+              height="8"
+              rounded
+            ></v-progress-linear>
+            <div class="text-caption text-center mt-1">
+              {{
+                Math.round((item.amount_paid / item.total_amount) * 100) || 0
+              }}%
+            </div>
+          </div>
+        </template>
+
         <template v-slot:item.status="{ item }">
           <v-chip
             :color="getStatusColor(item.status)"
@@ -786,6 +808,89 @@
             </v-col>
           </v-row>
 
+          <!-- Payment Progress -->
+          <div class="section-header mb-3">
+            <div class="section-icon">
+              <v-icon size="18">mdi-chart-line</v-icon>
+            </div>
+            <h3 class="section-title">Payment Progress</h3>
+          </div>
+
+          <div
+            class="mb-4"
+            style="background: #f5f5f5; padding: 20px; border-radius: 12px"
+          >
+            <v-row align="center">
+              <v-col cols="12" md="9">
+                <div
+                  class="mb-2"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                  "
+                >
+                  <span class="text-body-2 font-weight-medium"
+                    >Amount Paid</span
+                  >
+                  <span class="text-h6 font-weight-bold" style="color: #2e7d32">
+                    ₱{{ formatNumber(selectedLoan.amount_paid) }}
+                  </span>
+                </div>
+                <v-progress-linear
+                  :model-value="
+                    (selectedLoan.amount_paid / selectedLoan.total_amount) *
+                      100 || 0
+                  "
+                  :color="
+                    (selectedLoan.amount_paid / selectedLoan.total_amount) *
+                      100 >=
+                    100
+                      ? 'success'
+                      : (selectedLoan.amount_paid / selectedLoan.total_amount) *
+                            100 >=
+                          50
+                        ? 'primary'
+                        : 'warning'
+                  "
+                  height="20"
+                  rounded
+                  striped
+                >
+                  <template v-slot:default="{ value }">
+                    <strong class="text-white">{{ Math.round(value) }}%</strong>
+                  </template>
+                </v-progress-linear>
+                <div
+                  class="mt-2"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 12px;
+                    color: #666;
+                  "
+                >
+                  <span>₱0</span>
+                  <span
+                    >₱{{ formatNumber(selectedLoan.total_amount / 2) }}</span
+                  >
+                  <span>₱{{ formatNumber(selectedLoan.total_amount) }}</span>
+                </div>
+              </v-col>
+              <v-col cols="12" md="3" class="text-center">
+                <div class="text-caption text-medium-emphasis">Remaining</div>
+                <div
+                  class="text-h5 font-weight-bold"
+                  :style="{
+                    color: selectedLoan.balance > 0 ? '#d32f2f' : '#2e7d32',
+                  }"
+                >
+                  ₱{{ formatNumber(selectedLoan.balance) }}
+                </div>
+              </v-col>
+            </v-row>
+          </div>
+
           <!-- Payment Details -->
           <div class="section-header mb-3">
             <div class="section-icon">
@@ -795,15 +900,31 @@
           </div>
 
           <v-row dense class="mb-4">
-            <v-col cols="6">
+            <v-col cols="6" md="4">
               <div class="detail-card">
-                <div class="detail-label">Amount Paid</div>
+                <div class="detail-label">Start Date</div>
+                <div class="detail-value">
+                  {{ formatDate(selectedLoan.loan_date) }}
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="6" md="4" v-if="selectedLoan.maturity_date">
+              <div class="detail-card">
+                <div class="detail-label">End Date</div>
+                <div class="detail-value">
+                  {{ formatDate(selectedLoan.maturity_date) }}
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="6" md="4">
+              <div class="detail-card">
+                <div class="detail-label">Loans Paid</div>
                 <div class="detail-value success">
                   ₱{{ formatNumber(selectedLoan.amount_paid) }}
                 </div>
               </div>
             </v-col>
-            <v-col cols="6">
+            <v-col cols="6" md="4">
               <div class="detail-card">
                 <div class="detail-label">Payment Frequency</div>
                 <div class="detail-value">
@@ -811,7 +932,7 @@
                 </div>
               </div>
             </v-col>
-            <v-col cols="6" v-if="selectedLoan.monthly_amortization">
+            <v-col cols="6" md="4" v-if="selectedLoan.monthly_amortization">
               <div class="detail-card">
                 <div class="detail-label">Monthly Amortization</div>
                 <div class="detail-value">
@@ -819,7 +940,7 @@
                 </div>
               </div>
             </v-col>
-            <v-col cols="6" v-if="selectedLoan.loan_term_months">
+            <v-col cols="6" md="4" v-if="selectedLoan.loan_term_months">
               <div class="detail-card">
                 <div class="detail-label">Loan Term</div>
                 <div class="detail-value">
@@ -965,6 +1086,7 @@ const headers = computed(() => {
     { title: "Principal", key: "principal_amount", sortable: true },
     { title: "Total Amount", key: "total_amount", sortable: true },
     { title: "Balance", key: "balance", sortable: true },
+    { title: "Progress", key: "progress", sortable: false, width: "150px" },
     { title: "Status", key: "status", sortable: true },
     { title: "Actions", key: "actions", sortable: false, align: "center" },
   ];
@@ -996,8 +1118,6 @@ const totalBalance = computed(() => {
 
 // Options
 const loanTypes = [
-  { title: "SSS Loan", value: "sss" },
-  { title: "Pag-IBIG Loan", value: "pag_ibig" },
   { title: "Company Loan", value: "company" },
   { title: "Emergency Loan", value: "emergency" },
   { title: "Salary Advance", value: "salary_advance" },
@@ -1122,8 +1242,6 @@ const closeDialog = () => {
 // Loan type change handler
 const onLoanTypeChange = () => {
   const defaultRates = {
-    sss: 10.0,
-    pag_ibig: 5.5,
     company: 8.0,
     emergency: 5.0,
     salary_advance: 0.0,
@@ -1273,10 +1391,18 @@ const formatFrequency = (frequency) => {
   return frequency === "semi_monthly" ? "Semi-Monthly" : "Monthly";
 };
 
+const formatDate = (date) => {
+  if (!date) return "N/A";
+  const d = new Date(date);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 const getLoanTypeColor = (type) => {
   const colors = {
-    sss: "blue",
-    pag_ibig: "green",
     company: "purple",
     emergency: "orange",
     salary_advance: "cyan",

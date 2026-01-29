@@ -187,7 +187,7 @@ const router = createRouter({
           name: "allowances",
           component: () =>
             import(
-              /* webpackChunkName: "benefits" */ "@/views/benefits/MealAllowanceView.vue"
+              /* webpackChunkName: "benefits" */ "@/views/benefits/AllowanceView.vue"
             ),
           meta: {
             title: "Allowances",
@@ -304,6 +304,15 @@ const router = createRouter({
               /* webpackChunkName: "settings" */ "@/views/settings/UserManagementView.vue"
             ),
           meta: { title: "User Management", roles: ["admin"] },
+        },
+        {
+          path: "company-info",
+          name: "company-info",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/CompanyInfoView.vue"
+            ),
+          meta: { title: "Company Information", roles: ["admin"] },
         },
         {
           path: "maintenance",
@@ -444,4 +453,3 @@ router.beforeEach(async (to, from, next) => {
 });
 
 export default router;
-

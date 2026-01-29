@@ -12,6 +12,9 @@ use App\Models\EmployeeLeave;
 use App\Models\AttendanceCorrection;
 use App\Models\AuditLog;
 use App\Models\Resignation;
+use App\Models\MealAllowance;
+use App\Models\ThirteenthMonthPay;
+use App\Models\EmployeeLoan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -62,6 +65,15 @@ class DashboardController extends Controller
 
         // Pending Resignations
         $pendingResignations = Resignation::where('status', 'pending')->count();
+
+        // Pending Meal Allowances (draft or pending)
+        $pendingMealAllowances = MealAllowance::whereIn('status', ['draft', 'pending'])->count();
+
+        // Pending 13th Month Pay (draft or pending)
+        $pending13thMonthPay = ThirteenthMonthPay::whereIn('status', ['draft', 'pending'])->count();
+
+        // Pending Employee Loans
+        $pendingEmployeeLoans = EmployeeLoan::where('status', 'pending')->count();
 
         // Employees with complete data (has government info)
         $employeesCompleteData = Employee::where('is_active', true)
@@ -116,6 +128,9 @@ class DashboardController extends Controller
                 'pendingAttendanceCorrections' => $pendingAttendanceCorrections,
                 'draftPayrolls' => $draftPayrolls,
                 'pendingResignations' => $pendingResignations,
+                'pendingMealAllowances' => $pendingMealAllowances,
+                'pending13thMonthPay' => $pending13thMonthPay,
+                'pendingEmployeeLoans' => $pendingEmployeeLoans,
                 'employeesCompleteData' => $employeesCompleteData,
                 'monthlyAttendanceRate' => $monthlyAttendanceRate,
                 'lastBiometricImportDate' => $lastBiometricImport ? $lastBiometricImport->created_at : null,
@@ -235,11 +250,16 @@ class DashboardController extends Controller
             'overtime_hours' => $currentMonthAttendance->sum('overtime_hours'),
         ];
 
-        // Get current/latest payslip (most recent paid or finalized)
+        $payrollStatuses = ['paid', 'finalized'];
+        if (in_array($user->role, ['admin', 'hr', 'payrollist'])) {
+            $payrollStatuses[] = 'draft';
+        }
+
+        // Get current/latest payslip
         $currentPayslip = PayrollItem::with(['payroll'])
             ->where('employee_id', $employee->id)
-            ->whereHas('payroll', function ($query) {
-                $query->whereIn('status', ['paid', 'finalized']);
+            ->whereHas('payroll', function ($query) use ($payrollStatuses) {
+                $query->whereIn('status', $payrollStatuses);
             })
             ->latest('id')
             ->first();
@@ -248,8 +268,8 @@ class DashboardController extends Controller
         $oneYearAgo = Carbon::now()->subYear();
         $payslipHistory = PayrollItem::with(['payroll'])
             ->where('employee_id', $employee->id)
-            ->whereHas('payroll', function ($query) use ($oneYearAgo) {
-                $query->whereIn('status', ['paid', 'finalized'])
+            ->whereHas('payroll', function ($query) use ($oneYearAgo, $payrollStatuses) {
+                $query->whereIn('status', $payrollStatuses)
                     ->where('period_start', '>=', $oneYearAgo);
             })
             ->latest('id')
@@ -261,6 +281,10 @@ class DashboardController extends Controller
                 'date_from' => $oneYearAgo->toDateString(),
                 'records_found' => $payslipHistory->count(),
             ]);
+        }
+
+        if ($attendanceSummary['total_hours'] <= 0 && $currentPayslip) {
+            $attendanceSummary['total_hours'] = round(($currentPayslip->days_worked ?? 0) * 8, 2);
         }
 
         return response()->json([

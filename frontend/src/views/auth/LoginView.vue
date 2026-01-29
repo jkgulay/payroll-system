@@ -290,7 +290,7 @@ const errors = reactive({
 
 const roles = [
   { title: "Admin", value: "admin" },
-  { title: "hr", value: "hr" },
+  { title: "HR", value: "hr" },
   { title: "Payrollist", value: "payrollist" },
   { title: "Employee", value: "employee" },
 ];

@@ -54,7 +54,7 @@ export const ALLOWANCE_TYPES = [
   { value: "incentive", title: "Incentive" },
   { value: "ppe", title: "PPE (Personal Protective Equipment)" },
   { value: "transportation", title: "Transportation Allowance" },
-  { value: "meal", title: "Meal Allowance" },
+  { value: "meal", title: "Meal" },
   { value: "communication", title: "Communication Allowance" },
   { value: "housing", title: "Housing Allowance" },
   { value: "clothing", title: "Clothing Allowance" },

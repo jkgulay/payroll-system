@@ -7,7 +7,9 @@ use App\Models\PayrollItem;
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeAllowance;
+use App\Models\MealAllowanceItem;
 use App\Models\EmployeeLoan;
+use App\Models\EmployeeDeduction;
 use App\Models\Holiday;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -197,32 +199,63 @@ class PayrollService
         // Calculate overtime pay with different rates
         // Regular days: rate/8 × 1.25 × hours
         $regularOtPay = $regularOtHours * $hourlyRate * 1.25;
-        
+
         // Sunday: rate/8 × 1.3 × hours
         $sundayOtPay = $sundayOtHours * $hourlyRate * 1.3;
-        
+
         // Regular holiday (weekday): rate/8 × 2 × 1.3 × hours
         $regularHolidayOtPay = $regularHolidayOtHours * $hourlyRate * 2 * 1.3;
-        
+
         // Regular holiday on Sunday: rate/8 × 1.3 × 1.3 × hours
         $regularHolidaySundayOtPay = $regularHolidaySundayOtHours * $hourlyRate * 1.3 * 1.3;
-        
+
         // Special holiday: rate/8 × 1.3 × 1.3 × hours
         $specialHolidayOtPay = $specialHolidayOtHours * $hourlyRate * 1.3 * 1.3;
-        
+
         // Total overtime pay
-        $totalOtPay = $regularOtPay + $sundayOtPay + $regularHolidayOtPay + 
-                      $regularHolidaySundayOtPay + $specialHolidayOtPay;
+        $totalOtPay = $regularOtPay + $sundayOtPay + $regularHolidayOtPay +
+            $regularHolidaySundayOtPay + $specialHolidayOtPay;
 
         // Get allowances - sum allowances that are active and effective during the payroll period
-        $allowances = EmployeeAllowance::where('employee_id', $employee->id)
+        $activeAllowances = EmployeeAllowance::where('employee_id', $employee->id)
             ->where('is_active', true)
             ->where('effective_date', '<=', $payroll->period_end)
             ->where(function ($query) use ($payroll) {
                 $query->whereNull('end_date')
                     ->orWhere('end_date', '>=', $payroll->period_start);
             })
-            ->sum('amount') ?? 0;
+            ->get();
+
+        $allowances = $activeAllowances->sum('amount') ?? 0;
+
+        $allowancesBreakdown = $activeAllowances->map(function ($allowance) {
+            return [
+                'id' => $allowance->id,
+                'type' => $allowance->allowance_type,
+                'name' => $allowance->allowance_name ?: $allowance->allowance_type,
+                'amount' => (float) $allowance->amount,
+            ];
+        })->values()->all();
+
+        // Include approved meal allowances within the payroll period
+        $mealAllowanceTotal = MealAllowanceItem::where('employee_id', $employee->id)
+            ->whereHas('mealAllowance', function ($query) use ($payroll) {
+                $query->where('status', 'approved')
+                    ->where('period_start', '<=', $payroll->period_end)
+                    ->where('period_end', '>=', $payroll->period_start);
+            })
+            ->sum('total_amount') ?? 0;
+
+        if ($mealAllowanceTotal > 0) {
+            $allowancesBreakdown[] = [
+                'id' => null,
+                'type' => 'meal_allowance',
+                'name' => 'Allowance',
+                'amount' => (float) $mealAllowanceTotal,
+            ];
+        }
+
+        $otherAllowances = $allowances + $mealAllowanceTotal;
 
         // Calculate COLA (Cost of Living Allowance) - typically per day
         $totalDaysWorked = $regularDays + $holidayDays;
@@ -233,17 +266,48 @@ class PayrollService
         $undertimeDeduction = $hourlyRate * $totalUndertimeHours;
 
         // Calculate gross pay (include holiday pay, overtime, subtract undertime deduction)
-        $grossPay = $basicPay + $holidayPay + $totalOtPay + $cola + $allowances - $undertimeDeduction;
+        $grossPay = $basicPay + $holidayPay + $totalOtPay + $cola + $otherAllowances - $undertimeDeduction;
 
         // Calculate government deductions (only if enabled for the employee)
         $sss = $employee->has_sss ? $this->calculateSSS($grossPay) : 0;
         $philhealth = $employee->has_philhealth ? $this->calculatePhilHealth($grossPay) : 0;
         $pagibig = $employee->has_pagibig ? $this->calculatePagibig($grossPay) : 0;
 
-        // Get loans deduction for this period
-        $loanDeduction = EmployeeLoan::where('employee_id', $employee->id)
+        // Determine if this is semi-monthly payroll (typically 15 days or less)
+        $periodStart = Carbon::parse($payroll->period_start);
+        $periodEnd = Carbon::parse($payroll->period_end);
+        $periodDays = $periodStart->diffInDays($periodEnd) + 1;
+        $isSemiMonthly = $periodDays <= 16;
+
+        // Get loans deduction for this period (all loan types combined)
+        // Deduct from active loans that have balance remaining and haven't matured
+        // Start deducting immediately once loan is active (ignore first_payment_date for deductions)
+        $activeLoans = EmployeeLoan::where('employee_id', $employee->id)
             ->where('status', 'active')
-            ->sum('monthly_amortization') ?? 0;
+            ->where('balance', '>', 0)
+            ->where(function ($query) use ($payroll) {
+                // Loan hasn't matured yet (maturity date is null or after payroll period starts)
+                $query->whereNull('maturity_date')
+                    ->orWhere('maturity_date', '>=', $payroll->period_start);
+            })
+            ->get();
+
+        $loanDeduction = 0;
+        foreach ($activeLoans as $loan) {
+            // Determine payment amount based on payroll period and loan payment frequency
+            if ($loan->payment_frequency === 'semi_monthly') {
+                // Semi-monthly loans: use semi_monthly_amortization for semi-monthly payrolls
+                // For monthly payrolls, use monthly_amortization (2 payments combined)
+                $loanDeduction += $isSemiMonthly
+                    ? ($loan->semi_monthly_amortization ?? 0)
+                    : ($loan->monthly_amortization ?? 0);
+            } else {
+                // Monthly loans: only deduct on monthly payrolls
+                if (!$isSemiMonthly) {
+                    $loanDeduction += $loan->monthly_amortization ?? 0;
+                }
+            }
+        }
 
         // Employee savings
         $employeeSavings = 0; // Can be configured
@@ -251,12 +315,44 @@ class PayrollService
         // Cash advance
         $cashAdvance = 0; // Can be configured
 
+        // Get active employee deductions for this period
+        $activeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
+            ->where('status', 'active')
+            ->where('balance', '>', 0)
+            ->where('start_date', '<=', $payroll->period_end)
+            ->where(function ($query) use ($payroll) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', $payroll->period_start);
+            })
+            ->get();
+
+        $employeeDeductions = 0;
+        $deductionsBreakdown = [];
+
+        foreach ($activeDeductions as $deduction) {
+            $amountPerCutoff = $deduction->amount_per_cutoff;
+            if (!$amountPerCutoff && $deduction->installments > 0) {
+                $amountPerCutoff = $deduction->total_amount / $deduction->installments;
+            }
+
+            $deductionAmount = min($amountPerCutoff, $deduction->balance);
+            $employeeDeductions += $deductionAmount;
+
+            // Store breakdown by deduction type and name
+            $deductionsBreakdown[] = [
+                'id' => $deduction->id,
+                'type' => $deduction->deduction_type,
+                'name' => $deduction->deduction_name,
+                'amount' => $deductionAmount,
+            ];
+        }
+
         // Other deductions
         $otherDeductions = 0;
 
         // Total deductions
         $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
-            $employeeSavings + $cashAdvance + $otherDeductions;
+            $employeeSavings + $cashAdvance + $employeeDeductions + $otherDeductions;
 
         // Net pay
         $netPay = $grossPay - $totalDeductions;
@@ -275,7 +371,8 @@ class PayrollService
             'special_ot_hours' => 0,
             'special_ot_pay' => 0,
             'cola' => $cola,
-            'other_allowances' => $allowances,
+            'other_allowances' => $otherAllowances,
+            'allowances_breakdown' => $allowancesBreakdown,
             'gross_pay' => $grossPay,
             'undertime_hours' => $totalUndertimeHours,
             'undertime_deduction' => $undertimeDeduction,
@@ -286,6 +383,8 @@ class PayrollService
             'employee_savings' => $employeeSavings,
             'cash_advance' => $cashAdvance,
             'loans' => $loanDeduction,
+            'employee_deductions' => $employeeDeductions,
+            'deductions_breakdown' => $deductionsBreakdown,
             'other_deductions' => $otherDeductions,
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,

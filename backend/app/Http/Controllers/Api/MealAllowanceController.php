@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class MealAllowanceController extends Controller
@@ -91,7 +92,7 @@ class MealAllowanceController extends Controller
                 'name' => $employee->full_name,
                 'employee_number' => $employee->employee_number,
                 'position' => $employee->position,
-                'position_code' => $employee->positionRate->code ?? '',
+                'position_code' => $employee->positionRate?->code ?? '',
                 'department' => $employee->department,
                 'basic_salary' => $employee->getDailyRateAttribute(),
             ];
@@ -114,7 +115,10 @@ class MealAllowanceController extends Controller
             'position_id' => 'nullable|exists:position_rates,id',
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.employee_id' => 'required|exists:employees,id',
+            'items.*.employee_id' => [
+                'required',
+                Rule::exists('employees', 'id')->whereNull('deleted_at'),
+            ],
             'items.*.no_of_days' => 'required|integer|min:1|max:31',
             'items.*.amount_per_day' => 'required|numeric|min:0',
         ]);
@@ -143,7 +147,7 @@ class MealAllowanceController extends Controller
                     'meal_allowance_id' => $mealAllowance->id,
                     'employee_id' => $item['employee_id'],
                     'employee_name' => $employee->full_name,
-                    'position_code' => $employee->positionRate->code ?? '',
+                    'position_code' => $employee->positionRate?->code ?? '',
                     'no_of_days' => $item['no_of_days'],
                     'amount_per_day' => $item['amount_per_day'],
                     'sort_order' => $index,
@@ -158,6 +162,10 @@ class MealAllowanceController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Failed to create meal allowance', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'message' => 'Failed to create meal allowance',
                 'error' => $e->getMessage(),
@@ -219,9 +227,12 @@ class MealAllowanceController extends Controller
             'position_id' => 'nullable|exists:position_rates,id',
             'notes' => 'nullable|string',
             'items' => 'sometimes|array|min:1',
-            'items.*.employee_id' => 'required|exists:employees,id',
-            'items.*.no_of_days' => 'required|integer|min:1|max:31',
-            'items.*.amount_per_day' => 'required|numeric|min:0',
+            'items.*.employee_id' => [
+                'required_with:items',
+                Rule::exists('employees', 'id')->whereNull('deleted_at'),
+            ],
+            'items.*.no_of_days' => 'required_with:items|integer|min:1|max:31',
+            'items.*.amount_per_day' => 'required_with:items|numeric|min:0',
         ]);
 
         try {
@@ -251,7 +262,7 @@ class MealAllowanceController extends Controller
                         'meal_allowance_id' => $mealAllowance->id,
                         'employee_id' => $item['employee_id'],
                         'employee_name' => $employee->full_name,
-                        'position_code' => $employee->positionRate->code ?? '',
+                        'position_code' => $employee->positionRate?->code ?? '',
                         'no_of_days' => $item['no_of_days'],
                         'amount_per_day' => $item['amount_per_day'],
                         'sort_order' => $index,
@@ -267,6 +278,10 @@ class MealAllowanceController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Failed to update meal allowance', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'message' => 'Failed to update meal allowance',
                 'error' => $e->getMessage(),
@@ -463,14 +478,23 @@ class MealAllowanceController extends Controller
         }
 
         try {
+            // Permanently remove previously deleted meal allowances
+            $trashedAllowances = MealAllowance::onlyTrashed()->get();
+            foreach ($trashedAllowances as $trashed) {
+                if ($trashed->pdf_path && Storage::disk('public')->exists($trashed->pdf_path)) {
+                    Storage::disk('public')->delete($trashed->pdf_path);
+                }
+                $trashed->forceDelete();
+            }
+
             // Delete associated PDF file if exists
             if ($mealAllowance->pdf_path && Storage::disk('public')->exists($mealAllowance->pdf_path)) {
                 Storage::disk('public')->delete($mealAllowance->pdf_path);
             }
 
-            $mealAllowance->delete();
+            $mealAllowance->forceDelete();
 
-            return response()->json(['message' => 'Meal allowance deleted successfully']);
+            return response()->json(['message' => 'Meal allowance deleted permanently']);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to delete meal allowance: ' . $e->getMessage()], 500);
         }
@@ -517,7 +541,7 @@ class MealAllowanceController extends Controller
                 'name' => $employee->full_name,
                 'employee_number' => $employee->employee_number,
                 'position' => $employee->position,
-                'position_code' => $employee->positionRate->code ?? '',
+                'position_code' => $employee->positionRate?->code ?? '',
                 'department' => $employee->department,
                 'basic_salary' => $employee->getDailyRateAttribute(),
             ];
@@ -563,7 +587,7 @@ class MealAllowanceController extends Controller
                 'employee_id' => $employee->id,
                 'employee_name' => $employee->full_name,
                 'employee_number' => $employee->employee_number,
-                'position_code' => $employee->positionRate->code ?? '',
+                'position_code' => $employee->positionRate?->code ?? '',
                 'department' => $employee->department,
                 'no_of_days' => $validated['no_of_days'],
                 'amount_per_day' => $validated['amount_per_day'],

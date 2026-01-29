@@ -130,10 +130,17 @@ class EmployeeFieldMapper
             $positionRate = $data['_position_rate'];
             $positionName = strtolower($positionRate->position_name);
 
-            if ($positionName === 'accountant') {
-                return 'accountant';
-            } elseif ($positionName === 'payrollist') {
+            // Check for HR positions
+            if (in_array($positionName, ['hr', 'human resources', 'hr manager', 'hr staff'])) {
+                return 'hr';
+            }
+            // Check for Payroll positions
+            elseif (in_array($positionName, ['payrollist', 'payroll', 'payroll staff'])) {
                 return 'payrollist';
+            }
+            // Check for Accountant
+            elseif ($positionName === 'accountant') {
+                return 'accountant';
             }
         }
 
@@ -141,10 +148,17 @@ class EmployeeFieldMapper
         if (!empty($data['position'])) {
             $positionName = strtolower($data['position']);
 
-            if ($positionName === 'accountant') {
-                return 'accountant';
-            } elseif ($positionName === 'payrollist') {
+            // Check for HR positions
+            if (in_array($positionName, ['hr', 'human resources', 'hr manager', 'hr staff'])) {
+                return 'hr';
+            }
+            // Check for Payroll positions
+            elseif (in_array($positionName, ['payrollist', 'payroll', 'payroll staff'])) {
                 return 'payrollist';
+            }
+            // Check for Accountant
+            elseif ($positionName === 'accountant') {
+                return 'accountant';
             }
         }
 
