@@ -150,7 +150,7 @@ class PayrollService
             // Check if this date is a holiday
             $holiday = Holiday::getHolidayForDate($attendanceDate);
 
-            if ($holiday && $attendance->status === 'present') {
+            if ($holiday && ($attendance->status === 'present' || $attendance->status === 'half_day' || $attendance->status === 'late')) {
                 // This is a holiday with attendance - calculate holiday pay
                 $hoursWorked = $attendance->regular_hours ?? 8; // Default to 8 hours if not specified
                 $payMultiplier = $holiday->getPayMultiplier($attendanceDate);
@@ -158,7 +158,8 @@ class PayrollService
 
                 // Calculate holiday pay for the hours worked
                 $holidayPay += $dayHolidayPay;
-                $holidayDays++;
+                // Half day on holiday counts as 0.5, present/late counts as 1
+                $holidayDays += ($attendance->status === 'half_day') ? 0.5 : 1;
 
                 // Handle holiday overtime with specific rates
                 if ($attendance->overtime_hours > 0) {
@@ -178,8 +179,10 @@ class PayrollService
                 }
             } else {
                 // Regular working day or Sunday
-                if ($attendance->status === 'present' || $attendance->status === 'half_day') {
+                if ($attendance->status === 'present' || $attendance->status === 'late') {
                     $regularDays++;
+                } elseif ($attendance->status === 'half_day') {
+                    $regularDays += 0.5; // Half day counts as 0.5
                 }
 
                 // Add overtime - separate Sunday from regular days
