@@ -7,7 +7,7 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 10mm;
+            margin: 10mm 10mm 60mm 10mm;
         }
 
         body {
@@ -107,41 +107,108 @@
             text-align: center;
         }
 
-        .signature-section {
-            display: table;
-            width: 100%;
-            margin-top: 40px;
-        }
-
-        .signature-box {
-            display: table-cell;
-            width: 25%;
+        /* Fixed footer signature section on every page */
+        .page-footer {
+            position: fixed;
+            bottom: -50mm;
+            left: 0mm;
+            right: 0mm;
+            height: 50mm;
             text-align: center;
-            padding: 0 5px;
+            background-color: white;
         }
 
-        .signature-title {
+        .footer-acknowledgment {
             font-size: 8px;
-            margin-bottom: 5px;
+            font-style: italic;
+            text-align: center;
+            margin-bottom: 8px;
         }
 
-        .signature-line {
-            border-top: 1px solid #000;
-            margin: 30px 10px 5px 10px;
+        .footer-signature-section {
+            width: 100%;
+            margin-top: 5px;
         }
 
-        .signature-name {
-            font-size: 8px;
+        .footer-signature-table {
+            width: 100%;
+            border: none;
+            border-collapse: collapse;
+        }
+
+        .footer-signature-table td {
+            border: none;
+            text-align: center;
+            padding: 2px 5px;
+            vertical-align: top;
+        }
+
+        .footer-signature-title {
+            font-size: 7px;
+            margin-bottom: 12px;
+        }
+
+        .footer-signature-name {
+            font-size: 7px;
             font-weight: bold;
         }
 
-        .signature-position {
-            font-size: 7px;
+        .footer-signature-position {
+            font-size: 6px;
+        }
+
+        /* Hide inline signature section since we have it in footer */
+        .signature-section {
+            display: none;
         }
     </style>
 </head>
 
 <body>
+    <!-- Fixed footer signature section that appears on every page -->
+    <div class="page-footer">
+        <div class="footer-acknowledgment">
+            "I hereby acknowledge that the computation and total of my salary stated above for the given period is correct."
+        </div>
+
+        <table class="footer-signature-table">
+            <tr>
+                <td style="width: 25%;">
+                    <div class="footer-signature-title">PREPARED BY:</div>
+                    <div class="footer-signature-name">MERCIEL LAVASAN</div>
+                </td>
+                <td style="width: 25%;">
+                    <div class="footer-signature-title">CHECKED AND VERIFIED BY:</div>
+                    <div class="footer-signature-name">SAIRAH JENITA</div>
+                </td>
+                <td style="width: 25%;">
+                    <div class="footer-signature-title">RECOMMENDED BY:</div>
+                    <div class="footer-signature-name">ENGR. FRANCIS GIOVANNI C. RIVERA</div>
+                </td>
+                <td style="width: 25%;">
+                    <div class="footer-signature-title">APPROVED BY:</div>
+                    <div class="footer-signature-name">ENGR. OSTRIC R. RIVERA JR.</div>
+                    <div class="footer-signature-position">Proprietor/Manager</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4" style="height: 5px;"></td>
+            </tr>
+            <tr>
+                <td style="width: 25%;"></td>
+                <td style="width: 25%;">
+                    <div class="footer-signature-name">PAICA CRISTEL MAE SUGABO</div>
+                </td>
+                <td style="width: 25%;">
+                    <div class="footer-signature-name">ENGR. OSTRIC C. RIVERA, III</div>
+                </td>
+                <td style="width: 25%;">
+                    <div class="footer-signature-name">ENG. ELISA MAY PARCON</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
     <div class="header">
         <div class="company-name">GIOVANNI CONSTRUCTION</div>
         <div class="company-address">Imadejas Subdivision, Capitol Bonbon</div>
@@ -328,10 +395,6 @@
         </tbody>
     </table>
     @endif
-
-    <div class="acknowledgment">
-        "I hereby acknowledge that the computation and total of my salary stated above for the given period is correct."
-    </div>
 
     <div class="signature-section">
         <div class="signature-box">
