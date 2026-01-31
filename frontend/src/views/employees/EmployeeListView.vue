@@ -1248,7 +1248,7 @@
             class="cancel-btn"
             prepend-icon="mdi-content-copy"
             @click="copyEmployeeCredentials"
-            :disabled="loadingCredentials"
+            :disabled="loadingCredentials || !employeeCredentials?.has_account"
           >
             Copy
           </v-btn>
@@ -1933,6 +1933,10 @@ async function resetEmployeePassword() {
 }
 
 function copyEmployeeCredentials() {
+  if (!employeeCredentials.value?.has_account) {
+    toast.error("No account found for this employee.");
+    return;
+  }
   const emailInfo = employeeCredentials.value?.email
     ? `\nEmail: ${employeeCredentials.value.email}`
     : "";
@@ -2249,15 +2253,15 @@ function formatSalaryDisplay(employee) {
 }
 
 .v-data-table {
-  ::v-deep .v-data-table__wrapper {
+  :deep(.v-data-table__wrapper) {
     border-radius: 0;
   }
 
-  ::v-deep .v-data-table-header {
+  :deep(.v-data-table-header) {
     background-color: rgba(0, 31, 61, 0.02);
   }
 
-  ::v-deep .v-data-table__th {
+  :deep(.v-data-table__th) {
     font-weight: 600;
     color: #001f3d;
     font-size: 13px;
@@ -2265,15 +2269,15 @@ function formatSalaryDisplay(employee) {
     letter-spacing: 0.5px;
   }
 
-  ::v-deep tbody tr {
+  :deep(tbody tr) {
     transition: background-color 0.2s ease;
   }
 
-  ::v-deep tbody tr:hover {
+  :deep(tbody tr:hover) {
     background-color: rgba(237, 152, 95, 0.04) !important;
   }
 
-  ::v-deep .v-data-table__td {
+  :deep(.v-data-table__td) {
     border-bottom: 1px solid rgba(0, 31, 61, 0.06);
   }
 }

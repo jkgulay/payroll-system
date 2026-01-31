@@ -255,11 +255,11 @@ class EmployeeController extends Controller
         }
 
         return response()->json([
+            'has_account' => true,
             'username' => $user->username,
             'email' => $user->email,
             'role' => $user->role,
             'is_active' => $user->is_active,
-            'temporary_password' => $user->temporary_password ?? null, // Include if just created
         ]);
     }
 

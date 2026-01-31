@@ -111,7 +111,7 @@
             </template>
           </v-tooltip>
 
-          <v-tooltip text="Download PDF" location="top">
+          <v-menu location="bottom">
             <template v-slot:activator="{ props }">
               <v-btn
                 v-bind="props"
@@ -119,10 +119,25 @@
                 size="small"
                 variant="text"
                 color="error"
-                @click="downloadPdf(item)"
               ></v-btn>
             </template>
-          </v-tooltip>
+            <v-list density="compact">
+              <v-list-item @click="downloadPdf(item)">
+                <template v-slot:prepend>
+                  <v-icon size="small">mdi-file-document-outline</v-icon>
+                </template>
+                <v-list-item-title>Simple Format</v-list-item-title>
+                <v-list-item-subtitle>Name, Total, Signature</v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item @click="downloadPdfDetailed(item)">
+                <template v-slot:prepend>
+                  <v-icon size="small">mdi-file-document-multiple-outline</v-icon>
+                </template>
+                <v-list-item-title>Detailed Format</v-list-item-title>
+                <v-list-item-subtitle>Rate, Days, Savings, C/A, etc.</v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <v-tooltip text="Approve" location="top">
             <template v-slot:activator="{ props }">
@@ -655,6 +670,28 @@ const downloadPdf = async (item) => {
   } catch (error) {
     console.error("Error downloading PDF:", error);
     showSnackbar("Failed to download PDF", "error");
+  }
+};
+
+const downloadPdfDetailed = async (item) => {
+  try {
+    const response = await api.get(`/thirteenth-month/${item.id}/export-pdf-detailed`, {
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `13th-month-pay-detailed-${item.batch_number}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    showSnackbar("Detailed PDF downloaded successfully", "success");
+  } catch (error) {
+    console.error("Error downloading detailed PDF:", error);
+    showSnackbar("Failed to download detailed PDF", "error");
   }
 };
 
