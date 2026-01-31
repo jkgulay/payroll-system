@@ -147,9 +147,7 @@
                   <span class="table-time">{{ item.time_out || "N/A" }}</span>
                 </template>
                 <template v-slot:item.regular_hours="{ item }">
-                  <span class="table-hours"
-                    >{{ calculateHours(item) }} hrs</span
-                  >
+                  <span class="table-hours">{{ formatHoursDisplay(calculateHours(item)) }}</span>
                 </template>
               </v-data-table>
             </div>
@@ -590,7 +588,7 @@ function calculateHours(record) {
     typeof record.regular_hours === "number" &&
     record.regular_hours > 0
   ) {
-    return record.regular_hours.toFixed(2);
+    return record.regular_hours;
   }
 
   if (record.time_in && record.time_out) {
@@ -598,14 +596,30 @@ function calculateHours(record) {
       const timeIn = new Date(`2000-01-01 ${record.time_in}`);
       const timeOut = new Date(`2000-01-01 ${record.time_out}`);
       const hours = (timeOut - timeIn) / (1000 * 60 * 60);
-      return hours > 0 ? hours.toFixed(2) : "0.00";
+      return hours > 0 ? hours : 0;
     } catch (error) {
       console.error("Error calculating hours:", error);
-      return "0.00";
+      return 0;
     }
   }
 
-  return "0.00";
+  return 0;
+}
+
+function formatHoursDisplay(hours) {
+  if (!hours || hours <= 0) return "0h 0m";
+  
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  
+  if (hrs === 0) {
+    return `${mins}m`;
+  } else if (mins === 0) {
+    return `${hrs}h`;
+  } else {
+    return `${hrs}h ${mins}m`;
+  }
 }
 </script>
 

@@ -130,9 +130,9 @@
       </template>
 
       <template v-slot:item.hours_worked="{ item }">
-        {{ item.regular_hours || 0 }}h
+        <span>{{ formatHoursWorked(item.regular_hours) }}</span>
         <span v-if="item.overtime_hours > 0" class="text-warning">
-          +{{ item.overtime_hours }}h OT
+          +{{ formatHoursWorked(item.overtime_hours) }} OT
         </span>
       </template>
 
@@ -289,6 +289,22 @@ const getStatusColor = (status) => {
     on_leave: "purple",
   };
   return colors[status] || "grey";
+};
+
+const formatHoursWorked = (hours) => {
+  if (!hours || hours <= 0) return "0.00h";
+  
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  
+  if (hrs === 0) {
+    return `${mins}m`;
+  } else if (mins === 0) {
+    return `${hrs}h`;
+  } else {
+    return `${hrs}h ${mins}m`;
+  }
 };
 
 const canEdit = (item) => {
