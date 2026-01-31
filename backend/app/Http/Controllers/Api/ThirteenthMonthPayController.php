@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ThirteenthMonthPay;
 use App\Models\ThirteenthMonthPayItem;
 use App\Models\Employee;
+use App\Models\EmployeeLoan;
 use App\Models\PayrollItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -271,7 +272,7 @@ class ThirteenthMonthPayController extends Controller
     }
 
     /**
-     * Export 13th month pay to PDF with department grouping
+     * Export 13th month pay to PDF with department grouping (Simple format)
      */
     public function exportPdf($id, Request $request)
     {
@@ -308,6 +309,105 @@ class ThirteenthMonthPayController extends Controller
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->download('13th-month-pay-' . $thirteenthMonth->batch_number . '.pdf');
+    }
+
+    /**
+     * Export 13th month pay to detailed PDF with department grouping
+     * Includes: Rate, Days Worked, /12, Employee's Savings, C/A Balance, Gross, Cash Advance, Net
+     */
+    public function exportPdfDetailed($id, Request $request)
+    {
+        $year = null;
+        $thirteenthMonth = ThirteenthMonthPay::with([
+            'items.employee.positionRate',
+            'computedBy',
+            'approvedBy'
+        ])->findOrFail($id);
+
+        $year = $thirteenthMonth->year;
+
+        // Determine date range based on period
+        $startDate = $year . '-01-01';
+        $endDate = $year . '-12-31';
+
+        if ($thirteenthMonth->period === 'first_half') {
+            $endDate = $year . '-06-30';
+        } elseif ($thirteenthMonth->period === 'second_half') {
+            $startDate = $year . '-07-01';
+        }
+
+        // Get all employee IDs from the 13th month pay
+        $employeeIds = $thirteenthMonth->items()->get()->pluck('employee_id')->toArray();
+
+        // Get payroll summary data for each employee
+        $payrollSummary = [];
+        foreach ($thirteenthMonth->items as $item) {
+            $employeeId = $item->employee_id;
+            $employee = $item->employee;
+            
+            $payrollItems = PayrollItem::whereHas('payroll', function ($query) use ($startDate, $endDate) {
+                $query->where(function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('period_start', [$startDate, $endDate])
+                      ->orWhereBetween('period_end', [$startDate, $endDate]);
+                })->whereIn('status', ['paid', 'finalized', 'approved', 'completed']);
+            })
+            ->where('employee_id', $employeeId)
+            ->get();
+
+            $totalDaysWorked = $payrollItems->sum('days_worked');
+            $totalSavings = $payrollItems->sum('employee_savings');
+            $totalCashAdvance = $payrollItems->sum('cash_advance');
+            
+            // Get rate from payroll items, or fallback to employee's position rate
+            $avgRate = $payrollItems->count() > 0 ? $payrollItems->avg('rate') : 0;
+            if ($avgRate <= 0 && $employee) {
+                // Fallback to employee's current rate from position or custom rate
+                $avgRate = $employee->getBasicSalary() ?? 0;
+            }
+            
+            // Get C/A Balance from active loans
+            $caBalance = EmployeeLoan::where('employee_id', $employeeId)
+                ->where('loan_type', 'cash_advance')
+                ->where('status', 'active')
+                ->sum('balance');
+
+            $payrollSummary[$employeeId] = [
+                'rate' => $avgRate,
+                'total_days_worked' => $totalDaysWorked,
+                'total_savings' => $totalSavings,
+                'total_cash_advance' => $totalCashAdvance,
+                'ca_balance' => $caBalance,
+            ];
+        }
+
+        // Group employees by department
+        $employeesByDepartment = $thirteenthMonth->items()
+            ->with('employee')
+            ->get()
+            ->groupBy(function ($item) {
+                return $item->employee->department ?? 'NO DEPARTMENT';
+            })
+            ->sortKeys();
+
+        // Get company info from environment or config
+        $companyName = config('payroll.company.name', env('COMPANY_NAME', 'GIOVANNI CONSTRUCTION'));
+        $companyAddress = env('COMPANY_ADDRESS', 'Imadejas Subdivision, Capitol Bonbon, Butuan City');
+
+        // Prepare data for PDF
+        $data = [
+            'thirteenthMonth' => $thirteenthMonth,
+            'employeesByDepartment' => $employeesByDepartment,
+            'payrollSummary' => $payrollSummary,
+            'companyName' => $companyName,
+            'companyAddress' => $companyAddress,
+            'preparedBy' => $thirteenthMonth->computedBy->name ?? 'N/A',
+            'approvedBy' => $thirteenthMonth->approvedBy->name ?? 'N/A',
+        ];
+
+        $pdf = Pdf::loadView('pdf.thirteenth-month-pay-detailed', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('13th-month-pay-detailed-' . $thirteenthMonth->batch_number . '.pdf');
     }
 
     /**

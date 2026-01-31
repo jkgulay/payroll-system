@@ -273,6 +273,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/thirteenth-month/departments', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'getDepartments']);
     Route::get('/thirteenth-month/{id}', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'show']);
     Route::get('/thirteenth-month/{id}/export-pdf', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'exportPdf']);
+    Route::get('/thirteenth-month/{id}/export-pdf-detailed', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'exportPdfDetailed']);
     Route::post('/thirteenth-month/calculate', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'calculate']);
     Route::post('/thirteenth-month/{id}/approve', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'approve']);
     Route::post('/thirteenth-month/{id}/mark-paid', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'markPaid']);

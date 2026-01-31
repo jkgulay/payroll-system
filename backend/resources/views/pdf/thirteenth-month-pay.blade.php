@@ -5,7 +5,7 @@
     <title>13th Month Pay - {{ $thirteenthMonth->year }}</title>
     <style>
         @page {
-            margin: 20mm;
+            margin: 20mm 20mm 55mm 20mm;
         }
         
         body {
@@ -120,41 +120,81 @@
             padding: 8px 5px !important;
         }
         
-        .footer {
-            margin-top: 40px;
-        }
-        
-        .signature-section {
-            display: table;
-            width: 100%;
-            margin-top: 30px;
-        }
-        
-        .signature-box {
-            display: table-cell;
-            width: 33%;
-            text-align: center;
-            padding: 10px;
-        }
-        
-        .signature-line {
-            border-top: 1px solid #000;
-            margin-top: 50px;
-            padding-top: 5px;
-            font-weight: bold;
-        }
-        
-        .signature-title {
-            font-size: 9pt;
-            margin-top: 3px;
-        }
-        
         .page-break {
             page-break-after: always;
+        }
+
+        /* Fixed footer signature section on every page */
+        .page-footer {
+            position: fixed;
+            bottom: -45mm;
+            left: 0mm;
+            right: 0mm;
+            height: 45mm;
+            text-align: center;
+            background-color: white;
+        }
+
+        .footer-signature-table {
+            width: 100%;
+            border: none;
+            border-collapse: collapse;
+        }
+
+        .footer-signature-table td {
+            border: none;
+            text-align: center;
+            padding: 3px 5px;
+            vertical-align: top;
+            font-size: 8pt;
+        }
+
+        .footer-signature-title {
+            font-size: 8pt;
+            margin-bottom: 15px;
+        }
+
+        .footer-signature-name {
+            font-size: 9pt;
+            font-weight: bold;
+        }
+
+        .footer-signature-position {
+            font-size: 8pt;
         }
     </style>
 </head>
 <body>
+    <!-- Fixed footer signature section that appears on every page -->
+    <div class="page-footer">
+        <table class="footer-signature-table">
+            <tr>
+                <td style="width: 33%;">
+                    <div class="footer-signature-title">Prepared by:</div>
+                    <div class="footer-signature-name">{{ strtoupper($preparedBy) }}</div>
+                </td>
+                <td style="width: 34%;">
+                    <div class="footer-signature-title">Checked by:</div>
+                    <div class="footer-signature-name">JAMAICA/GING/S3</div>
+                </td>
+                <td style="width: 33%;">
+                    <div class="footer-signature-title">Approved by:</div>
+                    <div class="footer-signature-name">ENGR. OSTRIC R. RIVERA JR.</div>
+                    <div class="footer-signature-position">Proprietor/Manager</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="height: 10px;"></td>
+            </tr>
+            <tr>
+                <td colspan="3">
+                    <div class="footer-signature-title">Recommending Approval:</div>
+                    <div class="footer-signature-name">ENGR. FRANCIS GIOVANNI C. RIVERA</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
     <!-- Header -->
     <div class="header">
         <h2>{{ $companyName }}</h2>
@@ -221,35 +261,16 @@
         
         @if($departmentCount < $totalDepartments)
             <div class="page-break"></div>
+            <!-- Repeat Header on new page -->
+            <div class="header">
+                <h2>{{ $companyName }}</h2>
+                <div class="address">{{ $companyAddress }}</div>
+            </div>
+            <div class="title">
+                <h3>13TH MONTH PAY</h3>
+                <div class="subtitle">For the year {{ $thirteenthMonth->year }}</div>
+            </div>
         @endif
     @endforeach
-    
-    <!-- Footer with Signatures -->
-    <div class="footer">
-        <div class="signature-section">
-            <div class="signature-box">
-                <div class="signature-line">{{ strtoupper($preparedBy) }}</div>
-                <div class="signature-title">Prepared by:</div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-line">JAMAICA/GING/S3</div>
-                <div class="signature-title">Checked by:</div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-line">ENGR. OSTRIC R. RIVERA JR.</div>
-                <div class="signature-title">Approved by:</div>
-                <div class="signature-title" style="margin-top: 0;">Proprietor/Manager</div>
-            </div>
-        </div>
-        
-        <div style="margin-top: 30px; text-align: left;">
-            <div style="display: inline-block; width: 48%;">
-                <strong>Recommending Approval:</strong><br>
-                <div style="margin-top: 40px; border-top: 1px solid #000; width: 250px; text-align: center; padding-top: 5px;">
-                    <strong>ENGR. FRANCIS GIOVANNI C. RIVERA</strong>
-                </div>
-            </div>
-        </div>
-    </div>
 </body>
 </html>
