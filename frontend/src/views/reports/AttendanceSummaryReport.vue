@@ -119,7 +119,7 @@
           <v-card-text>
             <div class="text-overline">Total Hours Worked</div>
             <div class="text-h4 font-weight-bold">
-              {{ summary.total_hours_worked?.toFixed(2) || 0 }}
+              {{ formatHoursDisplay(summary.total_hours_worked) }}
             </div>
           </v-card-text>
         </v-card>
@@ -129,7 +129,7 @@
           <v-card-text>
             <div class="text-overline">Overtime Hours</div>
             <div class="text-h4 font-weight-bold">
-              {{ summary.total_overtime_hours?.toFixed(2) || 0 }}
+              {{ formatHoursDisplay(summary.total_overtime_hours) }}
             </div>
           </v-card-text>
         </v-card>
@@ -240,6 +240,22 @@ function getDefaultDateFrom() {
 
 function getDefaultDateTo() {
   return new Date().toISOString().split("T")[0];
+}
+
+function formatHoursDisplay(hours) {
+  if (!hours || hours <= 0) return "0h 0m";
+  
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  
+  if (hrs === 0) {
+    return `${mins}m`;
+  } else if (mins === 0) {
+    return `${hrs}h`;
+  } else {
+    return `${hrs}h ${mins}m`;
+  }
 }
 
 async function fetchSummary() {

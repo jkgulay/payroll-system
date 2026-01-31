@@ -258,7 +258,7 @@
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
                 <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
-                <td>{{ $item->days_worked }}</td>
+                <td>{{ rtrim(rtrim(number_format($item->days_worked, 2), '0'), '.') }}</td>
                 <td class="text-right">{{ number_format($item->basic_pay, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? $item->regular_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
@@ -349,7 +349,7 @@
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
                 <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
-                <td>{{ $item->days_worked }}</td>
+                <td>{{ rtrim(rtrim(number_format($item->days_worked, 2), '0'), '.') }}</td>
                 <td class="text-right">{{ number_format($item->basic_pay, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? $item->regular_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
