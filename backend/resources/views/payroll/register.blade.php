@@ -210,8 +210,8 @@
     </div>
 
     <div class="header">
-        <div class="company-name">GIOVANNI CONSTRUCTION</div>
-        <div class="company-address">Imadejas Subdivision, Capitol Bonbon</div>
+        <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
+        <div class="company-address">{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
         <div class="title">P A Y R O L L</div>
         <div class="period">
             {{ \Carbon\Carbon::parse($payroll->period_start)->format('F d') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('d, Y') }}

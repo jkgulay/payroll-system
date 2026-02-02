@@ -19,7 +19,13 @@
         <transition name="logo-fade" mode="out-in">
           <div v-if="!rail" class="sidebar-logo-expanded" key="expanded">
             <div class="logo-icon-wrapper">
-              <v-icon icon="mdi-hard-hat" size="24"></v-icon>
+              <img
+                v-if="companyInfoStore.hasLogo"
+                :src="companyInfoStore.companyLogo"
+                class="company-logo-img"
+                alt="Company Logo"
+              />
+              <v-icon v-else icon="mdi-hard-hat" size="24"></v-icon>
             </div>
             <div class="logo-text-wrapper">
               <span class="logo-text">GC Payroll</span>
@@ -33,7 +39,13 @@
           </div>
           <div v-else class="sidebar-logo-collapsed" key="collapsed">
             <div class="logo-icon-wrapper-rail">
-              <v-icon icon="mdi-hard-hat" size="22"></v-icon>
+              <img
+                v-if="companyInfoStore.hasLogo"
+                :src="companyInfoStore.companyLogo"
+                class="company-logo-img-rail"
+                alt="Company Logo"
+              />
+              <v-icon v-else icon="mdi-hard-hat" size="22"></v-icon>
             </div>
           </div>
         </transition>
@@ -145,7 +157,13 @@
       <!-- Page Title -->
       <div class="d-flex align-center">
         <div class="appbar-icon-wrapper" v-if="!isMobile">
-          <v-icon icon="mdi-hard-hat" size="24"></v-icon>
+          <img
+            v-if="companyInfoStore.hasLogo"
+            :src="companyInfoStore.companyLogo"
+            class="company-logo-navbar"
+            alt="Company Logo"
+          />
+          <v-icon v-else icon="mdi-hard-hat" size="24"></v-icon>
         </div>
         <div>
           <v-app-bar-title class="appbar-title">
@@ -158,7 +176,7 @@
             }}
           </v-app-bar-title>
           <div v-if="!isMobile" class="appbar-subtitle">
-            Giovanni Construction
+            {{ companyInfoStore.companyName }}
           </div>
         </div>
       </div>
@@ -281,6 +299,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useCompanyInfoStore } from "@/stores/companyInfo";
 import { useToast } from "vue-toastification";
 import { useDisplay } from "vuetify";
 import api from "@/services/api";
@@ -288,6 +307,7 @@ import api from "@/services/api";
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const companyInfoStore = useCompanyInfoStore();
 const toast = useToast();
 const { mobile, mdAndDown } = useDisplay();
 
@@ -308,6 +328,9 @@ onMounted(async () => {
   if (authStore.isAuthenticated) {
     await authStore.fetchUser();
   }
+
+  // Fetch company info for app-wide access
+  await companyInfoStore.fetchCompanyInfo();
 });
 
 const userName = computed(
@@ -1141,6 +1164,13 @@ async function downloadCurrentPayslip() {
   .v-icon {
     color: #001f3d !important;
   }
+
+  .company-logo-img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
 }
 
 .logo-text-wrapper {
@@ -1199,6 +1229,13 @@ async function downloadCurrentPayslip() {
 
   .v-icon {
     color: #001f3d !important;
+  }
+
+  .company-logo-img-rail {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 6px;
   }
 
   .sidebar-header:hover & {
@@ -1352,6 +1389,13 @@ async function downloadCurrentPayslip() {
 
   .v-icon {
     color: #ed985f !important;
+  }
+
+  .company-logo-navbar {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 6px;
   }
 }
 
@@ -1613,4 +1657,3 @@ async function downloadCurrentPayslip() {
   }
 }
 </style>
-

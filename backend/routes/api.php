@@ -159,6 +159,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Company Information
         Route::get('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'show']);
         Route::post('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'store']);
+        Route::delete('/company-info/logo', [App\Http\Controllers\Api\CompanyInfoController::class, 'deleteLogo']);
     });
 
     // Employee Import - MUST come before employees apiResource
