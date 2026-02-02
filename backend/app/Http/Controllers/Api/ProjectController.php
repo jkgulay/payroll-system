@@ -317,4 +317,112 @@ class ProjectController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Transfer employees to different departments (bulk or individual)
+     */
+    public function transferEmployees(Request $request, Project $project): JsonResponse
+    {
+        $validated = $request->validate([
+            'transfers' => 'required|array|min:1',
+            'transfers.*.employee_id' => 'required|exists:employees,id',
+            'transfers.*.target_project_id' => 'required|exists:projects,id',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $transferred = [];
+            $failed = [];
+
+            foreach ($validated['transfers'] as $transfer) {
+                // Verify employee is in the source project
+                if ($project->employees()->where('id', $transfer['employee_id'])->doesntExist()) {
+                    $failed[] = [
+                        'employee_id' => $transfer['employee_id'],
+                        'reason' => 'Employee not in source department'
+                    ];
+                    continue;
+                }
+
+                // Transfer employee
+                DB::table('employees')
+                    ->where('id', $transfer['employee_id'])
+                    ->update([
+                        'project_id' => $transfer['target_project_id'],
+                        'updated_at' => now()
+                    ]);
+
+                $transferred[] = $transfer['employee_id'];
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => count($transferred) . ' employee(s) transferred successfully',
+                'transferred_count' => count($transferred),
+                'failed_count' => count($failed),
+                'transferred' => $transferred,
+                'failed' => $failed
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error transferring employees: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to transfer employees: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Add employees to a department
+     */
+    public function addEmployees(Request $request, Project $project): JsonResponse
+    {
+        $validated = $request->validate([
+            'employee_ids' => 'required|array|min:1',
+            'employee_ids.*' => 'required|exists:employees,id',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $added = [];
+            $alreadyInDept = [];
+
+            foreach ($validated['employee_ids'] as $employeeId) {
+                $employee = DB::table('employees')->where('id', $employeeId)->first();
+
+                // Check if employee is already in this department
+                if ($employee && $employee->project_id == $project->id) {
+                    $alreadyInDept[] = $employeeId;
+                    continue;
+                }
+
+                // Add employee to department
+                DB::table('employees')
+                    ->where('id', $employeeId)
+                    ->update([
+                        'project_id' => $project->id,
+                        'updated_at' => now()
+                    ]);
+
+                $added[] = $employeeId;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => count($added) . ' employee(s) added to department',
+                'added_count' => count($added),
+                'already_in_dept_count' => count($alreadyInDept),
+                'added' => $added,
+                'already_in_dept' => $alreadyInDept
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error adding employees: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to add employees: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

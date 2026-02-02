@@ -189,6 +189,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('projects/{project}/employees', [App\Http\Controllers\Api\ProjectController::class, 'employees']);
     Route::post('projects/{project}/mark-complete', [App\Http\Controllers\Api\ProjectController::class, 'markComplete']);
     Route::post('projects/{project}/reactivate', [App\Http\Controllers\Api\ProjectController::class, 'reactivate']);
+    Route::post('projects/{project}/transfer-employees', [App\Http\Controllers\Api\ProjectController::class, 'transferEmployees']);
+    Route::post('projects/{project}/add-employees', [App\Http\Controllers\Api\ProjectController::class, 'addEmployees']);
 
     Route::get('payroll-config', [App\Http\Controllers\Api\PayrollConfigController::class, 'show']);
     Route::put('payroll-config', [App\Http\Controllers\Api\PayrollConfigController::class, 'update']);
