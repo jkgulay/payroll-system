@@ -370,6 +370,7 @@ class Attendance extends Model
     /**
      * Calculate undertime hours for departments with strict time-in requirements
      * Supports multiple department groups with different time-in schedules
+     * Now prioritizes project grace period setting over config defaults
      */
     private function calculateUndertimeHours(Carbon $timeIn, float $totalHours): float
     {
@@ -387,14 +388,16 @@ class Attendance extends Model
         }
 
         $standardTimeInConfig = $groupConfig['standard_time_in'];
-        $gracePeriodMinutes = $groupConfig['grace_period_minutes'];
-        if ($group === '8am') {
-            $gracePeriodMinutes = (int) app(\App\Services\CompanySettingService::class)
-                ->get('payroll.undertime.group_8am.grace_minutes', $gracePeriodMinutes);
-        } elseif ($group === '730am') {
-            $gracePeriodMinutes = (int) app(\App\Services\CompanySettingService::class)
-                ->get('payroll.undertime.group_730am.grace_minutes', $gracePeriodMinutes);
+
+        // Prioritize project grace period over config default
+        $project = $this->employee?->project;
+        if ($project && $project->grace_period_minutes !== null && $project->grace_period_minutes !== '') {
+            $gracePeriodMinutes = (int) $project->grace_period_minutes;
+        } else {
+            // Fall back to group config default
+            $gracePeriodMinutes = $groupConfig['grace_period_minutes'];
         }
+
         $halfDayThresholdConfig = $groupConfig['half_day_threshold'];
         $standardHours = config('payroll.standard_hours_per_day', 8);
 

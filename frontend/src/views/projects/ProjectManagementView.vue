@@ -1170,7 +1170,7 @@ const formatScheduleTime = (value) => {
 
 const DEFAULT_TIME_IN = "07:30";
 const DEFAULT_TIME_OUT = "17:00";
-const DEFAULT_GRACE = 0;
+const DEFAULT_GRACE = 1;
 
 const viewProject = async (project) => {
   selectedProject.value = project;
