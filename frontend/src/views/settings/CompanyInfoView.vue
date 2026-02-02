@@ -9,82 +9,47 @@
       ></v-progress-circular>
     </v-overlay>
 
-    <!-- Modern Page Header -->
+    <!-- Page Header -->
     <div class="page-header">
-      <div class="header-content">
-        <div class="back-button-wrapper">
-          <button class="back-button" @click="$router.push('/settings')">
-            <v-icon size="20">mdi-arrow-left</v-icon>
-            <span>Back to Settings</span>
-          </button>
-        </div>
+      <div class="back-button-wrapper">
+        <button class="back-button" @click="$router.push('/settings')">
+          <v-icon size="20">mdi-arrow-left</v-icon>
+          <span>Back to Settings</span>
+        </button>
+      </div>
 
-        <div class="header-main">
-          <div class="page-title-section">
-            <div class="page-icon-badge">
-              <v-icon size="22">mdi-office-building</v-icon>
-            </div>
-            <div>
-              <h1 class="page-title">Company Information</h1>
-              <p class="page-subtitle">
-                Configure company details, logo, and contact information for
-                reports and documents
-              </p>
-            </div>
-          </div>
-          <div class="action-buttons">
-            <button
-              class="action-btn action-btn-secondary"
-              @click="resetForm"
-              :disabled="!hasChanges"
-            >
-              <v-icon size="20">mdi-refresh</v-icon>
-              <span>Reset</span>
-            </button>
-            <button
-              class="action-btn action-btn-primary"
-              @click="saveCompanyInfo"
-              :disabled="!hasChanges || saving"
-            >
-              <v-icon size="20">mdi-content-save</v-icon>
-              <span>{{ saving ? "Saving..." : "Save Changes" }}</span>
-            </button>
-          </div>
+      <div class="header-main">
+        <div class="page-icon-badge">
+          <v-icon size="22">mdi-office-building</v-icon>
+        </div>
+        <div class="header-info">
+          <h1 class="page-title">Company Information</h1>
+          <p class="page-subtitle">
+            Manage company details that appear on payroll documents and reports
+          </p>
         </div>
       </div>
     </div>
 
     <!-- Company Info Form -->
-    <div class="content-card">
-      <!-- Company Logo Section -->
-      <div class="form-section">
-        <div class="section-header">
-          <div class="section-icon">
-            <v-icon size="20">mdi-image</v-icon>
-          </div>
-          <div>
-            <h3 class="section-title">Company Logo</h3>
-            <p class="section-description">
-              Upload your company logo for reports and documents
-            </p>
-          </div>
-        </div>
-
-        <div class="logo-upload-area">
-          <div class="logo-preview">
-            <div v-if="logoPreview" class="logo-image-wrapper">
-              <img :src="logoPreview" alt="Company Logo" class="logo-image" />
+    <div class="content-wrapper">
+      <div class="info-card">
+        <!-- Company Logo and Name -->
+        <div class="logo-name-section">
+          <!-- Logo Upload -->
+          <div class="logo-container">
+            <div v-if="logoPreview" class="logo-preview">
+              <img :src="logoPreview" alt="Company Logo" />
               <button class="remove-logo-btn" @click="removeLogo" type="button">
-                <v-icon size="16">mdi-close</v-icon>
+                <v-icon size="18">mdi-close</v-icon>
               </button>
             </div>
             <div v-else class="logo-placeholder">
-              <v-icon size="48" color="#ed985f">mdi-office-building</v-icon>
-              <span class="placeholder-text">No logo uploaded</span>
+              <v-icon size="64" color="rgba(237, 152, 95, 0.3)"
+                >mdi-office-building</v-icon
+              >
             </div>
-          </div>
 
-          <div class="logo-upload-controls">
             <input
               ref="logoInput"
               type="file"
@@ -92,226 +57,112 @@
               @change="handleLogoUpload"
               style="display: none"
             />
-            <button
-              class="upload-btn"
-              @click="$refs.logoInput.click()"
-              type="button"
-            >
-              <v-icon size="20">mdi-upload</v-icon>
-              <span>Upload Logo</span>
-            </button>
-            <p class="upload-hint">
-              PNG, JPG or GIF (Max 2MB, Recommended: 400x400px)
-            </p>
+            <div class="logo-button-group">
+              <button class="upload-logo-btn" @click="$refs.logoInput.click()">
+                <v-icon size="20">mdi-upload</v-icon>
+                <span>{{ logoPreview ? "Change Logo" : "Upload Logo" }}</span>
+              </button>
+              <button
+                v-if="logoPreview"
+                class="reset-logo-btn"
+                @click="resetLogoToDefault"
+                type="button"
+              >
+                <v-icon size="20">mdi-restore</v-icon>
+                <span>Reset to Icon</span>
+              </button>
+            </div>
+            <p class="logo-hint">PNG, JPG (Max 2MB)</p>
           </div>
-        </div>
-      </div>
 
-      <v-divider class="section-divider"></v-divider>
-
-      <!-- Basic Information -->
-      <div class="form-section">
-        <div class="section-header">
-          <div class="section-icon">
-            <v-icon size="20">mdi-information</v-icon>
-          </div>
-          <div>
-            <h3 class="section-title">Basic Information</h3>
-            <p class="section-description">Company name and business details</p>
-          </div>
-        </div>
-
-        <div class="form-grid">
-          <v-text-field
-            v-model="formData.company_name"
-            label="Company Name"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-office-building"
-            :rules="[rules.required]"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.business_type"
-            label="Business Type"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-briefcase"
-            placeholder="e.g., Construction, Retail, Services"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.tin"
-            label="Tax Identification Number (TIN)"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-card-account-details"
-            placeholder="000-000-000-000"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.registration_number"
-            label="Business Registration Number"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-file-document"
-            placeholder="SEC/DTI Number"
-          ></v-text-field>
-        </div>
-      </div>
-
-      <v-divider class="section-divider"></v-divider>
-
-      <!-- Contact Information -->
-      <div class="form-section">
-        <div class="section-header">
-          <div class="section-icon">
-            <v-icon size="20">mdi-contacts</v-icon>
-          </div>
-          <div>
-            <h3 class="section-title">Contact Information</h3>
-            <p class="section-description">
-              Company contact details and location
-            </p>
+          <!-- Company Name -->
+          <div class="name-container">
+            <label class="field-label">Company Name *</label>
+            <v-text-field
+              v-model="formData.company_name"
+              variant="outlined"
+              density="comfortable"
+              placeholder="Enter company name"
+              hide-details
+              :rules="[rules.required]"
+            ></v-text-field>
           </div>
         </div>
 
-        <div class="form-grid">
-          <v-textarea
-            v-model="formData.address"
-            label="Address"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-map-marker"
-            rows="2"
-            class="full-width"
-          ></v-textarea>
+        <v-divider class="section-divider"></v-divider>
 
-          <v-text-field
-            v-model="formData.city"
-            label="City"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-city"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.province"
-            label="Province/State"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-map"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.postal_code"
-            label="Postal Code"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-mailbox"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.country"
-            label="Country"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-flag"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.phone"
-            label="Phone Number"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-phone"
-            placeholder="+63 xxx xxx xxxx"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.mobile"
-            label="Mobile Number"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-cellphone"
-            placeholder="+63 9xx xxx xxxx"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.email"
-            label="Email Address"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-email"
-            type="email"
-            :rules="[rules.email]"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.website"
-            label="Website"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-web"
-            placeholder="https://www.example.com"
-          ></v-text-field>
-        </div>
-      </div>
-
-      <v-divider class="section-divider"></v-divider>
-
-      <!-- Report Settings -->
-      <div class="form-section">
-        <div class="section-header">
-          <div class="section-icon">
-            <v-icon size="20">mdi-file-document-outline</v-icon>
+        <!-- Address -->
+        <div class="info-section">
+          <div class="section-title">
+            <v-icon size="20" color="#ed985f">mdi-map-marker</v-icon>
+            <span>Company Address</span>
           </div>
-          <div>
-            <h3 class="section-title">Report & Document Settings</h3>
-            <p class="section-description">
-              Configure information displayed on reports and documents
-            </p>
+          <div class="field-group">
+            <label class="field-label">Full Address *</label>
+            <v-textarea
+              v-model="formData.address"
+              variant="outlined"
+              density="comfortable"
+              placeholder="Street, Barangay, City"
+              rows="2"
+              hide-details
+              :rules="[rules.required]"
+            ></v-textarea>
           </div>
         </div>
 
-        <div class="form-grid">
-          <v-text-field
-            v-model="formData.report_header"
-            label="Report Header Text"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-format-header-1"
-            placeholder="Will appear at the top of reports"
-            class="full-width"
-          ></v-text-field>
+        <v-divider class="section-divider"></v-divider>
 
-          <v-text-field
-            v-model="formData.report_footer"
-            label="Report Footer Text"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-format-header-pound"
-            placeholder="Will appear at the bottom of reports"
-            class="full-width"
-          ></v-text-field>
+        <!-- Contact Information -->
+        <div class="info-section">
+          <div class="section-title">
+            <v-icon size="20" color="#ed985f">mdi-phone</v-icon>
+            <span>Contact Information</span>
+          </div>
+          <div class="fields-row">
+            <div class="field-group">
+              <label class="field-label">Phone Number</label>
+              <v-text-field
+                v-model="formData.phone"
+                variant="outlined"
+                density="comfortable"
+                placeholder="+63 xxx xxx xxxx"
+                hide-details
+              ></v-text-field>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Email Address</label>
+              <v-text-field
+                v-model="formData.email"
+                variant="outlined"
+                density="comfortable"
+                placeholder="company@example.com"
+                type="email"
+                hide-details
+                :rules="[rules.email]"
+              ></v-text-field>
+            </div>
+          </div>
+        </div>
 
-          <v-text-field
-            v-model="formData.prepared_by_title"
-            label="Prepared By Title"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-account-edit"
-            placeholder="e.g., Payroll Officer"
-          ></v-text-field>
-
-          <v-text-field
-            v-model="formData.approved_by_title"
-            label="Approved By Title"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-account-check"
-            placeholder="e.g., HR Manager"
-          ></v-text-field>
+        <!-- Action Buttons -->
+        <div class="action-bar">
+          <button
+            class="action-btn btn-cancel"
+            @click="resetForm"
+            :disabled="!hasChanges"
+          >
+            <v-icon size="20">mdi-refresh</v-icon>
+            <span>Reset Changes</span>
+          </button>
+          <button
+            class="action-btn btn-save"
+            @click="saveCompanyInfo"
+            :disabled="!hasChanges || saving"
+          >
+            <v-icon size="20">mdi-content-save</v-icon>
+            <span>{{ saving ? "Saving..." : "Save Changes" }}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -322,10 +173,12 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
+import { useCompanyInfoStore } from "@/stores/companyInfo";
 import api from "@/services/api";
 
 const router = useRouter();
 const toast = useToast();
+const companyInfoStore = useCompanyInfoStore();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -336,23 +189,10 @@ const logoFile = ref(null);
 const originalData = ref({});
 const formData = ref({
   company_name: "",
-  business_type: "",
-  tin: "",
-  registration_number: "",
   address: "",
-  city: "",
-  province: "",
-  postal_code: "",
-  country: "Philippines",
   phone: "",
-  mobile: "",
   email: "",
-  website: "",
   logo_path: null,
-  report_header: "",
-  report_footer: "",
-  prepared_by_title: "",
-  approved_by_title: "",
 });
 
 const rules = {
@@ -385,9 +225,16 @@ async function fetchCompanyInfo() {
 
       // Set logo preview if exists
       if (formData.value.logo_path) {
-        logoPreview.value = formData.value.logo_path.startsWith("http")
-          ? formData.value.logo_path
-          : `/storage/${formData.value.logo_path}`;
+        // If it's already a full URL, use it
+        if (formData.value.logo_path.startsWith("http")) {
+          logoPreview.value = formData.value.logo_path;
+        } else {
+          // Otherwise, construct the full URL using the backend API URL
+          const apiUrl = (
+            import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+          ).replace("/api", "");
+          logoPreview.value = `${apiUrl}/storage/${formData.value.logo_path}`;
+        }
       }
     }
   } catch (error) {
@@ -433,6 +280,32 @@ function removeLogo() {
   }
 }
 
+async function resetLogoToDefault() {
+  try {
+    // Send request to delete logo from backend
+    await api.delete("/company-info/logo");
+
+    // Clear local state
+    logoFile.value = null;
+    logoPreview.value = null;
+    formData.value.logo_path = null;
+    if (logoInput.value) {
+      logoInput.value.value = "";
+    }
+
+    // Update original data to reflect the change
+    originalData.value.logo_path = null;
+
+    // Refresh company info store to update navbar/sidebar immediately
+    await companyInfoStore.fetchCompanyInfo(true);
+
+    toast.success("Logo reset to default icon successfully");
+  } catch (error) {
+    console.error("Error resetting logo:", error);
+    toast.error(error.response?.data?.message || "Failed to reset logo");
+  }
+}
+
 async function saveCompanyInfo() {
   saving.value = true;
   try {
@@ -458,6 +331,10 @@ async function saveCompanyInfo() {
 
     toast.success("Company information updated successfully");
     await fetchCompanyInfo();
+
+    // Refresh company info store to update navbar/sidebar
+    await companyInfoStore.fetchCompanyInfo(true);
+
     logoFile.value = null;
   } catch (error) {
     console.error("Error saving company info:", error);
@@ -475,9 +352,16 @@ function resetForm() {
 
   // Reset logo preview
   if (originalData.value.logo_path) {
-    logoPreview.value = originalData.value.logo_path.startsWith("http")
-      ? originalData.value.logo_path
-      : `/storage/${originalData.value.logo_path}`;
+    // If it's already a full URL, use it
+    if (originalData.value.logo_path.startsWith("http")) {
+      logoPreview.value = originalData.value.logo_path;
+    } else {
+      // Otherwise, construct the full URL using the backend API URL
+      const apiUrl = (
+        import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+      ).replace("/api", "");
+      logoPreview.value = `${apiUrl}/storage/${originalData.value.logo_path}`;
+    }
   } else {
     logoPreview.value = null;
   }
@@ -492,9 +376,9 @@ function resetForm() {
 
 <style scoped lang="scss">
 .company-info-page {
+  padding: 0 24px 24px 24px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 16px;
 }
 
 // Page Header
@@ -502,60 +386,38 @@ function resetForm() {
   margin-bottom: 32px;
 }
 
-.header-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .back-button-wrapper {
-  display: flex;
+  margin-bottom: 24px;
 }
 
 .back-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: transparent;
+  padding: 10px 16px;
+  background: #ffffff;
   border: 1px solid rgba(0, 31, 61, 0.12);
-  border-radius: 8px;
-  color: rgba(0, 31, 61, 0.7);
+  border-radius: 10px;
+  color: #001f3d;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 
-  &:hover {
-    background: rgba(237, 152, 95, 0.08);
-    border-color: rgba(237, 152, 95, 0.3);
-    color: #ed985f;
-
-    .v-icon {
-      color: #ed985f !important;
-    }
+  .v-icon {
+    color: #001f3d !important;
   }
 
-  .v-icon {
-    color: rgba(0, 31, 61, 0.5) !important;
-    transition: color 0.2s ease;
+  &:hover {
+    background: rgba(0, 31, 61, 0.04);
+    border-color: rgba(0, 31, 61, 0.2);
   }
 }
 
 .header-main {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.page-title-section {
-  display: flex;
-  align-items: center;
   gap: 16px;
-  flex: 1;
-  min-width: 300px;
 }
 
 .page-icon-badge {
@@ -566,19 +428,23 @@ function resetForm() {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
   flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(237, 152, 95, 0.25);
 
   .v-icon {
     color: #ffffff !important;
   }
 }
 
+.header-info {
+  flex: 1;
+}
+
 .page-title {
   font-size: 28px;
   font-weight: 700;
   color: #001f3d;
-  margin: 0 0 4px 0;
+  margin: 0 0 8px 0;
   letter-spacing: -0.5px;
 }
 
@@ -586,235 +452,120 @@ function resetForm() {
   font-size: 14px;
   color: rgba(0, 31, 61, 0.6);
   margin: 0;
-  line-height: 1.4;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  white-space: nowrap;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.action-btn-primary {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-
-  .v-icon {
-    color: #ffffff !important;
-  }
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(237, 152, 95, 0.4);
-  }
-}
-
-.action-btn-secondary {
-  background: #ffffff;
-  color: #ed985f;
-  border: 1px solid rgba(237, 152, 95, 0.3);
-
-  .v-icon {
-    color: #ed985f !important;
-  }
-
-  &:hover:not(:disabled) {
-    background: rgba(237, 152, 95, 0.08);
-  }
-}
-
-// Content Card
-.content-card {
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  padding: 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.form-section {
-  margin-bottom: 32px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.section-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.section-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(
-    135deg,
-    rgba(237, 152, 95, 0.12) 0%,
-    rgba(247, 185, 128, 0.08) 100%
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  .v-icon {
-    color: #ed985f !important;
-  }
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #001f3d;
-  margin: 0 0 4px 0;
-  letter-spacing: -0.3px;
-}
-
-.section-description {
-  font-size: 13px;
-  color: rgba(0, 31, 61, 0.6);
-  margin: 0;
   line-height: 1.5;
 }
 
-.section-divider {
-  margin: 32px 0;
-  border-color: rgba(0, 31, 61, 0.08);
-}
-
-// Form Grid
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
-
-  .full-width {
-    grid-column: 1 / -1;
-  }
-}
-
-// Logo Upload
-.logo-upload-area {
+// Content
+.content-wrapper {
   display: flex;
-  gap: 32px;
+  justify-content: center;
+}
+
+.info-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 2px 12px rgba(0, 31, 61, 0.06);
+  width: 100%;
+  max-width: 800px;
+}
+
+// Logo and Name Section
+.logo-name-section {
+  display: flex;
+  gap: 40px;
   align-items: flex-start;
 
   @media (max-width: 768px) {
     flex-direction: column;
+    gap: 24px;
   }
 }
 
-.logo-preview {
+.logo-container {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
-.logo-image-wrapper {
+.logo-preview {
   position: relative;
-  width: 200px;
-  height: 200px;
-  border-radius: 12px;
-  border: 2px solid rgba(0, 31, 61, 0.08);
+  width: 180px;
+  height: 180px;
+  border-radius: 16px;
+  border: 3px solid rgba(237, 152, 95, 0.2);
   overflow: hidden;
-  background: #f9f9f9;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 31, 61, 0.08);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+  }
 }
 
-.logo-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.logo-placeholder {
+  width: 180px;
+  height: 180px;
+  border-radius: 16px;
+  border: 3px dashed rgba(237, 152, 95, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(237, 152, 95, 0.05);
 }
 
 .remove-logo-btn {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(244, 67, 54, 0.9);
-  border: none;
+  background: rgba(244, 67, 54, 0.95);
+  border: 2px solid #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
 
+  .v-icon {
+    color: #ffffff !important;
+  }
+
   &:hover {
     background: #f44336;
     transform: scale(1.1);
   }
-
-  .v-icon {
-    color: #ffffff !important;
-  }
 }
 
-.logo-placeholder {
-  width: 200px;
-  height: 200px;
-  border-radius: 12px;
-  border: 2px dashed rgba(0, 31, 61, 0.15);
+.logo-button-group {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: #fafafa;
+  gap: 8px;
+  width: 100%;
 }
 
-.placeholder-text {
-  font-size: 14px;
-  color: rgba(0, 31, 61, 0.5);
-  font-weight: 500;
-}
-
-.logo-upload-controls {
-  flex: 1;
+.upload-logo-btn {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.upload-btn {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 12px 24px;
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-  align-self: flex-start;
 
   .v-icon {
     color: #ffffff !important;
@@ -826,58 +577,209 @@ function resetForm() {
   }
 }
 
-.upload-hint {
+.reset-logo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 31, 61, 0.2);
+  border-radius: 12px;
+  color: #001f3d;
   font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  .v-icon {
+    color: #001f3d !important;
+  }
+
+  &:hover {
+    background: rgba(0, 31, 61, 0.04);
+    border-color: rgba(0, 31, 61, 0.3);
+    transform: translateY(-1px);
+  }
+}
+
+.logo-hint {
+  font-size: 12px;
   color: rgba(0, 31, 61, 0.5);
   margin: 0;
-  line-height: 1.5;
+  text-align: center;
+}
+
+.name-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// Section Divider
+.section-divider {
+  margin: 32px 0;
+  border-color: rgba(0, 31, 61, 0.08);
+}
+
+// Info Sections
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
+
+  span {
+    letter-spacing: -0.3px;
+  }
+}
+
+// Field Styles
+.field-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 8px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.fields-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+// Action Bar
+.action-bar {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+
+  .v-icon {
+    transition: transform 0.2s ease;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover .v-icon {
+    transform: scale(1.1);
+  }
+}
+
+.btn-cancel {
+  background: #ffffff;
+  color: #001f3d;
+  border: 1px solid rgba(0, 31, 61, 0.2);
+
+  .v-icon {
+    color: #001f3d !important;
+  }
+
+  &:not(:disabled):hover {
+    background: rgba(0, 31, 61, 0.04);
+    border-color: rgba(0, 31, 61, 0.3);
+  }
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+
+  .v-icon {
+    color: #ffffff !important;
+  }
+
+  &:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(237, 152, 95, 0.4);
+  }
 }
 
 // Vuetify Overrides
 :deep(.v-field) {
-  border-radius: 10px;
+  border-radius: 12px;
+  font-size: 14px;
 }
 
 :deep(.v-field--variant-outlined .v-field__outline) {
-  color: rgba(0, 31, 61, 0.12);
+  color: rgba(0, 31, 61, 0.15);
 }
 
 :deep(.v-field--focused .v-field__outline) {
   color: #ed985f;
-}
-
-:deep(.v-label) {
-  color: rgba(0, 31, 61, 0.6);
-  font-size: 14px;
+  border-width: 2px;
 }
 
 :deep(.v-field__input) {
   color: #001f3d;
   font-size: 14px;
+  padding: 12px 16px;
+  min-height: 48px;
 }
 
+:deep(.v-field--variant-outlined .v-field__input) {
+  padding: 12px 16px;
+}
+
+:deep(textarea.v-field__input) {
+  padding: 14px 16px;
+}
+
+// Responsive
 @media (max-width: 768px) {
   .company-info-page {
-    padding: 0 8px;
+    padding: 0 16px 16px 16px;
   }
 
-  .content-card {
-    padding: 20px;
+  .info-card {
+    padding: 24px;
   }
 
-  .header-main {
+  .action-bar {
     flex-direction: column;
-  }
-
-  .action-buttons {
-    width: 100%;
 
     .action-btn {
-      flex: 1;
+      width: 100%;
     }
   }
 
-  .form-grid {
+  .fields-row {
     grid-template-columns: 1fr;
   }
 }

@@ -8,6 +8,7 @@ use App\Models\ThirteenthMonthPayItem;
 use App\Models\Employee;
 use App\Models\EmployeeLoan;
 use App\Models\PayrollItem;
+use App\Models\CompanyInfo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -36,127 +37,127 @@ class ThirteenthMonthPayController extends Controller
             }
 
             $year = $request->year;
-        $period = $request->period;
-        $department = $request->department;
+            $period = $request->period;
+            $department = $request->department;
 
-        // Determine date range based on period
-        $startDate = $year . '-01-01';
-        $endDate = $year . '-12-31';
+            // Determine date range based on period
+            $startDate = $year . '-01-01';
+            $endDate = $year . '-12-31';
 
-        if ($period === 'first_half') {
-            $endDate = $year . '-06-30';
-        } elseif ($period === 'second_half') {
-            $startDate = $year . '-07-01';
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Generate batch number
-            $lastBatch = ThirteenthMonthPay::where('year', $year)
-                ->orderBy('id', 'desc')
-                ->first();
-            $batchNum = $lastBatch ? intval(substr($lastBatch->batch_number, -4)) + 1 : 1;
-            $batchNumber = $year . '-13M-' . str_pad($batchNum, 4, '0', STR_PAD_LEFT);
-
-            // Create main record
-            $thirteenthMonth = ThirteenthMonthPay::create([
-                'batch_number' => $batchNumber,
-                'year' => $year,
-                'period' => $period,
-                'computation_date' => now(),
-                'payment_date' => $request->payment_date,
-                'status' => 'computed',
-                'computed_by' => auth()->id() ?? 1,
-                'total_amount' => 0,
-                'department' => $department, // Store department filter
-            ]);
-
-            // Get all active employees (not resigned or terminated)
-            $employeesQuery = Employee::whereNotIn('activity_status', ['resigned', 'terminated']);
-            
-            // Apply department filter if provided
-            if ($department) {
-                $employeesQuery->where('department', $department);
+            if ($period === 'first_half') {
+                $endDate = $year . '-06-30';
+            } elseif ($period === 'second_half') {
+                $startDate = $year . '-07-01';
             }
-            
-            $employees = $employeesQuery->get();
 
-            $totalAmount = 0;
+            DB::beginTransaction();
 
-            foreach ($employees as $employee) {
-                // Get total basic salary from payroll items for the period
-                // Use period_end date (when salary was earned) not payment_date (when salary was paid)
-                $basicSalary = PayrollItem::whereHas('payroll', function ($query) use ($startDate, $endDate) {
-                    $query->where(function($q) use ($startDate, $endDate) {
-                        // Check if payroll period overlaps with the 13th month calculation period
-                        $q->whereBetween('period_start', [$startDate, $endDate])
-                          ->orWhereBetween('period_end', [$startDate, $endDate])
-                          ->orWhere(function($q2) use ($startDate, $endDate) {
-                              $q2->where('period_start', '<=', $startDate)
-                                 ->where('period_end', '>=', $endDate);
-                          });
-                    })->whereIn('status', ['paid', 'finalized']);
-                })
-                    ->where('employee_id', $employee->id)
-                    ->sum('basic_pay');
+            try {
+                // Generate batch number
+                $lastBatch = ThirteenthMonthPay::where('year', $year)
+                    ->orderBy('id', 'desc')
+                    ->first();
+                $batchNum = $lastBatch ? intval(substr($lastBatch->batch_number, -4)) + 1 : 1;
+                $batchNumber = $year . '-13M-' . str_pad($batchNum, 4, '0', STR_PAD_LEFT);
 
-                if ($basicSalary <= 0) {
-                    continue; // Skip employees with no salary for the period
-                }
-
-                // Calculate 13th month pay (basic salary / 12)
-                $thirteenthMonthAmount = $basicSalary / 12;
-
-                // Tax-free limit is 90,000 per year (Philippine law)
-                $taxFreeLimit = 90000;
-                $nonTaxable = min($thirteenthMonthAmount, $taxFreeLimit);
-                $taxable = max($thirteenthMonthAmount - $taxFreeLimit, 0);
-
-                // Calculate withholding tax on taxable amount (using annualized rate)
-                // Simplified: 0% on first 250k, 20% on 250k-400k, 25% on 400k-800k, etc.
-                $withholdingTax = $this->calculateWithholdingTax($taxable);
-
-                $netPay = $thirteenthMonthAmount - $withholdingTax;
-
-                // Create item
-                ThirteenthMonthPayItem::create([
-                    'thirteenth_month_pay_id' => $thirteenthMonth->id,
-                    'employee_id' => $employee->id,
-                    'total_basic_salary' => $basicSalary,
-                    'taxable_thirteenth_month' => $taxable,
-                    'non_taxable_thirteenth_month' => $nonTaxable,
-                    'withholding_tax' => $withholdingTax,
-                    'net_pay' => $netPay,
+                // Create main record
+                $thirteenthMonth = ThirteenthMonthPay::create([
+                    'batch_number' => $batchNumber,
+                    'year' => $year,
+                    'period' => $period,
+                    'computation_date' => now(),
+                    'payment_date' => $request->payment_date,
+                    'status' => 'computed',
+                    'computed_by' => auth()->id() ?? 1,
+                    'total_amount' => 0,
+                    'department' => $department, // Store department filter
                 ]);
 
-                $totalAmount += $netPay;
+                // Get all active employees (not resigned or terminated)
+                $employeesQuery = Employee::whereNotIn('activity_status', ['resigned', 'terminated']);
+
+                // Apply department filter if provided
+                if ($department) {
+                    $employeesQuery->where('department', $department);
+                }
+
+                $employees = $employeesQuery->get();
+
+                $totalAmount = 0;
+
+                foreach ($employees as $employee) {
+                    // Get total basic salary from payroll items for the period
+                    // Use period_end date (when salary was earned) not payment_date (when salary was paid)
+                    $basicSalary = PayrollItem::whereHas('payroll', function ($query) use ($startDate, $endDate) {
+                        $query->where(function ($q) use ($startDate, $endDate) {
+                            // Check if payroll period overlaps with the 13th month calculation period
+                            $q->whereBetween('period_start', [$startDate, $endDate])
+                                ->orWhereBetween('period_end', [$startDate, $endDate])
+                                ->orWhere(function ($q2) use ($startDate, $endDate) {
+                                    $q2->where('period_start', '<=', $startDate)
+                                        ->where('period_end', '>=', $endDate);
+                                });
+                        })->whereIn('status', ['paid', 'finalized']);
+                    })
+                        ->where('employee_id', $employee->id)
+                        ->sum('basic_pay');
+
+                    if ($basicSalary <= 0) {
+                        continue; // Skip employees with no salary for the period
+                    }
+
+                    // Calculate 13th month pay (basic salary / 12)
+                    $thirteenthMonthAmount = $basicSalary / 12;
+
+                    // Tax-free limit is 90,000 per year (Philippine law)
+                    $taxFreeLimit = 90000;
+                    $nonTaxable = min($thirteenthMonthAmount, $taxFreeLimit);
+                    $taxable = max($thirteenthMonthAmount - $taxFreeLimit, 0);
+
+                    // Calculate withholding tax on taxable amount (using annualized rate)
+                    // Simplified: 0% on first 250k, 20% on 250k-400k, 25% on 400k-800k, etc.
+                    $withholdingTax = $this->calculateWithholdingTax($taxable);
+
+                    $netPay = $thirteenthMonthAmount - $withholdingTax;
+
+                    // Create item
+                    ThirteenthMonthPayItem::create([
+                        'thirteenth_month_pay_id' => $thirteenthMonth->id,
+                        'employee_id' => $employee->id,
+                        'total_basic_salary' => $basicSalary,
+                        'taxable_thirteenth_month' => $taxable,
+                        'non_taxable_thirteenth_month' => $nonTaxable,
+                        'withholding_tax' => $withholdingTax,
+                        'net_pay' => $netPay,
+                    ]);
+
+                    $totalAmount += $netPay;
+                }
+
+                // Update total amount
+                $thirteenthMonth->update(['total_amount' => $totalAmount]);
+
+                DB::commit();
+
+                return response()->json([
+                    'message' => '13th month pay calculated successfully',
+                    'batch_number' => $batchNumber,
+                    'total_employees' => $thirteenthMonth->items()->count(),
+                    'total_amount' => $totalAmount,
+                    'thirteenth_month_pay' => $thirteenthMonth->load('items.employee'),
+                ], 201);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('13th Month Pay Calculation Error: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'request' => $request->all()
+                ]);
+                return response()->json([
+                    'message' => 'Failed to calculate 13th month pay',
+                    'error' => $e->getMessage(),
+                    'trace' => config('app.debug') ? $e->getTraceAsString() : null
+                ], 500);
             }
-
-            // Update total amount
-            $thirteenthMonth->update(['total_amount' => $totalAmount]);
-
-            DB::commit();
-
-            return response()->json([
-                'message' => '13th month pay calculated successfully',
-                'batch_number' => $batchNumber,
-                'total_employees' => $thirteenthMonth->items()->count(),
-                'total_amount' => $totalAmount,
-                'thirteenth_month_pay' => $thirteenthMonth->load('items.employee'),
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('13th Month Pay Calculation Error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
-            ]);
-            return response()->json([
-                'message' => 'Failed to calculate 13th month pay',
-                'error' => $e->getMessage(),
-                'trace' => config('app.debug') ? $e->getTraceAsString() : null
-            ], 500);
-        }
         } catch (\Exception $e) {
             Log::error('13th Month Pay Validation Error: ' . $e->getMessage());
             return response()->json([
@@ -291,16 +292,14 @@ class ThirteenthMonthPayController extends Controller
             })
             ->sortKeys();
 
-        // Get company info from environment or config
-        $companyName = config('payroll.company.name', env('COMPANY_NAME', 'GIOVANNI CONSTRUCTION'));
-        $companyAddress = env('COMPANY_ADDRESS', 'Imadejas Subdivision, Capitol Bonbon');
+        // Get company info from database
+        $companyInfo = CompanyInfo::first();
 
         // Prepare data for PDF
         $data = [
             'thirteenthMonth' => $thirteenthMonth,
             'employeesByDepartment' => $employeesByDepartment,
-            'companyName' => $companyName,
-            'companyAddress' => $companyAddress,
+            'companyInfo' => $companyInfo,
             'preparedBy' => $thirteenthMonth->computedBy->name ?? 'N/A',
             'approvedBy' => $thirteenthMonth->approvedBy->name ?? 'N/A',
         ];
@@ -344,27 +343,27 @@ class ThirteenthMonthPayController extends Controller
         foreach ($thirteenthMonth->items as $item) {
             $employeeId = $item->employee_id;
             $employee = $item->employee;
-            
+
             $payrollItems = PayrollItem::whereHas('payroll', function ($query) use ($startDate, $endDate) {
-                $query->where(function($q) use ($startDate, $endDate) {
+                $query->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('period_start', [$startDate, $endDate])
-                      ->orWhereBetween('period_end', [$startDate, $endDate]);
+                        ->orWhereBetween('period_end', [$startDate, $endDate]);
                 })->whereIn('status', ['paid', 'finalized', 'approved', 'completed']);
             })
-            ->where('employee_id', $employeeId)
-            ->get();
+                ->where('employee_id', $employeeId)
+                ->get();
 
             $totalDaysWorked = $payrollItems->sum('days_worked');
             $totalSavings = $payrollItems->sum('employee_savings');
             $totalCashAdvance = $payrollItems->sum('cash_advance');
-            
+
             // Get rate from payroll items, or fallback to employee's position rate
             $avgRate = $payrollItems->count() > 0 ? $payrollItems->avg('rate') : 0;
             if ($avgRate <= 0 && $employee) {
                 // Fallback to employee's current rate from position or custom rate
                 $avgRate = $employee->getBasicSalary() ?? 0;
             }
-            
+
             // Get C/A Balance from active loans
             $caBalance = EmployeeLoan::where('employee_id', $employeeId)
                 ->where('loan_type', 'cash_advance')
@@ -389,17 +388,15 @@ class ThirteenthMonthPayController extends Controller
             })
             ->sortKeys();
 
-        // Get company info from environment or config
-        $companyName = config('payroll.company.name', env('COMPANY_NAME', 'GIOVANNI CONSTRUCTION'));
-        $companyAddress = env('COMPANY_ADDRESS', 'Imadejas Subdivision, Capitol Bonbon, Butuan City');
+        // Get company info from database
+        $companyInfo = CompanyInfo::first();
 
         // Prepare data for PDF
         $data = [
             'thirteenthMonth' => $thirteenthMonth,
             'employeesByDepartment' => $employeesByDepartment,
             'payrollSummary' => $payrollSummary,
-            'companyName' => $companyName,
-            'companyAddress' => $companyAddress,
+            'companyInfo' => $companyInfo,
             'preparedBy' => $thirteenthMonth->computedBy->name ?? 'N/A',
             'approvedBy' => $thirteenthMonth->approvedBy->name ?? 'N/A',
         ];
@@ -444,7 +441,7 @@ class ThirteenthMonthPayController extends Controller
         try {
             // Delete related items first
             $thirteenthMonth->items()->delete();
-            
+
             // Delete the main record
             $thirteenthMonth->delete();
 

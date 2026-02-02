@@ -2,21 +2,36 @@
   <div class="maintenance-page">
     <!-- Modern Page Header -->
     <div class="page-header">
-      <div class="page-title-section">
-        <div class="page-icon-badge">
-          <v-icon size="20">mdi-database-cog</v-icon>
+      <div class="header-content">
+        <div class="back-button-wrapper">
+          <button class="back-button" @click="$router.push('/settings')">
+            <v-icon size="20">mdi-arrow-left</v-icon>
+            <span>Back to Settings</span>
+          </button>
         </div>
-        <div>
-          <h1 class="page-title">System Maintenance</h1>
-          <p class="page-subtitle">
-            Monitor system health and perform maintenance tasks
-          </p>
+
+        <div class="header-main">
+          <div class="page-title-section">
+            <div class="page-icon-badge">
+              <v-icon size="22">mdi-database-cog</v-icon>
+            </div>
+            <div>
+              <h1 class="page-title">System Maintenance</h1>
+              <p class="page-subtitle">
+                Monitor system health and perform maintenance tasks
+              </p>
+            </div>
+          </div>
+          <button
+            class="action-btn action-btn-primary"
+            @click="checkHealth"
+            :disabled="checking"
+          >
+            <v-icon size="20">mdi-refresh</v-icon>
+            <span>{{ checking ? "Checking..." : "Refresh Status" }}</span>
+          </button>
         </div>
       </div>
-      <button class="refresh-btn" @click="checkHealth" :disabled="checking">
-        <v-icon size="18">mdi-refresh</v-icon>
-        <span>{{ checking ? "Checking..." : "Refresh Status" }}</span>
-      </button>
     </div>
 
     <!-- Loading State -->
@@ -504,12 +519,75 @@ async function cleanDatabase() {
   margin: 0 auto;
 }
 
-// Modern Page Header (matching SettingsView)
+// Modern Page Header (matching AttendanceSettingsView)
 .page-header {
+  margin-bottom: 32px;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.back-button-wrapper {
+  margin-bottom: 8px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: #001f3d;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 31, 61, 0.08);
+  }
+}
+
+.header-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 32px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.action-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(237, 152, 95, 0.35);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(237, 152, 95, 0.4);
+  }
+
+  .v-icon {
+    color: #ffffff !important;
+  }
 }
 
 .page-title-section {
@@ -546,36 +624,6 @@ async function cleanDatabase() {
   font-size: 14px;
   color: rgba(0, 31, 61, 0.6);
   margin: 0;
-}
-
-.refresh-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.35);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .v-icon {
-    color: #ffffff !important;
-  }
 }
 
 // Loading State

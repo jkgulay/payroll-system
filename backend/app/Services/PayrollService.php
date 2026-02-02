@@ -14,9 +14,12 @@ use App\Models\Holiday;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Services\CompanySettingService;
 
 class PayrollService
 {
+    public function __construct(private CompanySettingService $settings) {}
+
     /**
      * Create a new payroll period
      */
@@ -201,23 +204,41 @@ class PayrollService
 
         // Calculate overtime pay with different rates
         // Regular days: rate/8 × 1.25 × hours
-        $regularOtPay = $regularOtHours * $hourlyRate * 1.25;
+        $regularOtMultiplier = (float) $this->settings->get(
+            'payroll.overtime.regularDay',
+            config('payroll.overtime.regular_multiplier', 1.25)
+        );
+        $regularOtPay = $regularOtHours * $hourlyRate * $regularOtMultiplier;
 
         // Sunday: rate/8 × 1.3 × hours
-        $sundayOtPay = $sundayOtHours * $hourlyRate * 1.3;
+        $sundayOtMultiplier = (float) $this->settings->get('payroll.overtime.sunday', 1.3);
+        $sundayOtPay = $sundayOtHours * $hourlyRate * $sundayOtMultiplier;
 
         // Regular holiday (weekday): rate/8 × 2 × 1.3 × hours
-        $regularHolidayOtPay = $regularHolidayOtHours * $hourlyRate * 2 * 1.3;
+        $regularHolidayMultiplier = (float) $this->settings->get(
+            'payroll.holidays.regularHoliday',
+            1.3
+        );
+        $regularHolidayOtPay = $regularHolidayOtHours * $hourlyRate * 2 * $regularHolidayMultiplier;
 
         // Regular holiday on Sunday: rate/8 × 1.3 × 1.3 × hours
-        $regularHolidaySundayOtPay = $regularHolidaySundayOtHours * $hourlyRate * 1.3 * 1.3;
+        $regularHolidaySundayMultiplier = (float) $this->settings->get(
+            'payroll.holidays.regularHolidaySunday',
+            1.3
+        );
+        $regularHolidaySundayOtPay = $regularHolidaySundayOtHours * $hourlyRate * 1.3 * $regularHolidaySundayMultiplier;
 
         // Special holiday: rate/8 × 1.3 × 1.3 × hours
-        $specialHolidayOtPay = $specialHolidayOtHours * $hourlyRate * 1.3 * 1.3;
+        $specialHolidayMultiplier = (float) $this->settings->get(
+            'payroll.holidays.specialHoliday',
+            1.3
+        );
+        $specialHolidayOtPay = $specialHolidayOtHours * $hourlyRate * 1.3 * $specialHolidayMultiplier;
 
         // Total overtime pay
-        $totalOtPay = $regularOtPay + $sundayOtPay + $regularHolidayOtPay +
-            $regularHolidaySundayOtPay + $specialHolidayOtPay;
+        $specialOtHours = $sundayOtHours + $regularHolidayOtHours + $regularHolidaySundayOtHours + $specialHolidayOtHours;
+        $specialOtPay = $sundayOtPay + $regularHolidayOtPay + $regularHolidaySundayOtPay + $specialHolidayOtPay;
+        $totalOtPay = $regularOtPay + $specialOtPay;
 
         // Get allowances - sum allowances that are active and effective during the payroll period
         $activeAllowances = EmployeeAllowance::where('employee_id', $employee->id)
@@ -279,21 +300,21 @@ class PayrollService
 
         if ($employee->has_sss) {
             // Use custom SSS if set (already semi-monthly amount), otherwise calculate
-            $sss = $employee->custom_sss !== null 
+            $sss = $employee->custom_sss !== null
                 ? (float) $employee->custom_sss
                 : $this->calculateSSS($grossPay);
         }
 
         if ($employee->has_philhealth) {
             // Use custom PhilHealth if set (already semi-monthly amount), otherwise calculate
-            $philhealth = $employee->custom_philhealth !== null 
+            $philhealth = $employee->custom_philhealth !== null
                 ? (float) $employee->custom_philhealth
                 : $this->calculatePhilHealth($grossPay);
         }
 
         if ($employee->has_pagibig) {
             // Use custom Pag-IBIG if set (already semi-monthly amount), otherwise calculate
-            $pagibig = $employee->custom_pagibig !== null 
+            $pagibig = $employee->custom_pagibig !== null
                 ? (float) $employee->custom_pagibig
                 : $this->calculatePagibig($grossPay);
         }
@@ -391,10 +412,10 @@ class PayrollService
             'holiday_days' => $holidayDays,
             'holiday_pay' => $holidayPay,
             'basic_pay' => $basicPay,
-            'regular_ot_hours' => $regularOtHours + $sundayOtHours, // Combined for compatibility
-            'regular_ot_pay' => $totalOtPay, // Combined overtime pay
-            'special_ot_hours' => 0,
-            'special_ot_pay' => 0,
+            'regular_ot_hours' => $regularOtHours,
+            'regular_ot_pay' => $regularOtPay,
+            'special_ot_hours' => $specialOtHours,
+            'special_ot_pay' => $specialOtPay,
             'cola' => $cola,
             'other_allowances' => $otherAllowances,
             'allowances_breakdown' => $allowancesBreakdown,

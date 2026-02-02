@@ -54,7 +54,7 @@
         { value: 25, title: '25' },
         { value: 50, title: '50' },
         { value: 100, title: '100' },
-        { value: -1, title: 'All' }
+        { value: -1, title: 'All' },
       ]"
       class="elevation-0"
     >
@@ -170,37 +170,45 @@
       </template>
 
       <template v-slot:item.actions="{ item }">
-        <v-btn
-          icon="mdi-pencil"
-          size="small"
-          variant="text"
-          @click="$emit('edit', item)"
-          v-if="canEdit(item)"
-        ></v-btn>
-        <v-btn
-          icon="mdi-check"
-          size="small"
-          variant="text"
-          color="success"
-          @click="$emit('approve', item)"
-          v-if="canApprove(item)"
-        ></v-btn>
-        <v-btn
-          icon="mdi-close"
-          size="small"
-          variant="text"
-          color="error"
-          @click="$emit('reject', item)"
-          v-if="canApprove(item)"
-        ></v-btn>
-        <v-btn
-          icon="mdi-delete"
-          size="small"
-          variant="text"
-          color="error"
-          @click="$emit('delete', item)"
-          v-if="canDelete(item)"
-        ></v-btn>
+        <v-menu location="bottom end">
+          <template v-slot:activator="{ props }">
+            <v-btn
+              v-bind="props"
+              icon="mdi-dots-vertical"
+              size="small"
+              variant="text"
+            ></v-btn>
+          </template>
+          <v-list density="compact">
+            <v-list-item v-if="canEdit(item)" @click="$emit('edit', item)">
+              <template v-slot:prepend>
+                <v-icon size="18">mdi-pencil</v-icon>
+              </template>
+              <v-list-item-title>Edit</v-list-item-title>
+            </v-list-item>
+            <v-list-item
+              v-if="canApprove(item)"
+              @click="$emit('approve', item)"
+            >
+              <template v-slot:prepend>
+                <v-icon size="18" color="success">mdi-check</v-icon>
+              </template>
+              <v-list-item-title>Approve</v-list-item-title>
+            </v-list-item>
+            <v-list-item v-if="canApprove(item)" @click="$emit('reject', item)">
+              <template v-slot:prepend>
+                <v-icon size="18" color="error">mdi-close</v-icon>
+              </template>
+              <v-list-item-title>Reject</v-list-item-title>
+            </v-list-item>
+            <v-list-item v-if="canDelete(item)" @click="$emit('delete', item)">
+              <template v-slot:prepend>
+                <v-icon size="18" color="error">mdi-delete</v-icon>
+              </template>
+              <v-list-item-title>Delete</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </template>
     </v-data-table>
   </div>
@@ -262,7 +270,7 @@ const loadAttendance = async () => {
   try {
     const response = await attendanceService.getAttendance({
       ...filters,
-      per_page: 10000 // Fetch all records
+      per_page: 10000, // Fetch all records
     });
     attendance.value = response.data || [];
   } catch (error) {
@@ -293,11 +301,11 @@ const getStatusColor = (status) => {
 
 const formatHoursWorked = (hours) => {
   if (!hours || hours <= 0) return "0.00h";
-  
+
   const totalMinutes = Math.round(hours * 60);
   const hrs = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-  
+
   if (hrs === 0) {
     return `${mins}m`;
   } else if (mins === 0) {
@@ -346,4 +354,3 @@ onUnmounted(() => {
 
 defineExpose({ loadAttendance });
 </script>
-

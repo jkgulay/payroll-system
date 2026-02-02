@@ -159,6 +159,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Company Information
         Route::get('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'show']);
         Route::post('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'store']);
+        Route::delete('/company-info/logo', [App\Http\Controllers\Api\CompanyInfoController::class, 'deleteLogo']);
     });
 
     // Employee Import - MUST come before employees apiResource
@@ -184,9 +185,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Projects & Locations
     Route::apiResource('projects', App\Http\Controllers\Api\ProjectController::class);
+    Route::post('projects/bulk-schedule', [App\Http\Controllers\Api\ProjectController::class, 'bulkSchedule']);
     Route::get('projects/{project}/employees', [App\Http\Controllers\Api\ProjectController::class, 'employees']);
     Route::post('projects/{project}/mark-complete', [App\Http\Controllers\Api\ProjectController::class, 'markComplete']);
     Route::post('projects/{project}/reactivate', [App\Http\Controllers\Api\ProjectController::class, 'reactivate']);
+    Route::post('projects/{project}/transfer-employees', [App\Http\Controllers\Api\ProjectController::class, 'transferEmployees']);
+    Route::post('projects/{project}/add-employees', [App\Http\Controllers\Api\ProjectController::class, 'addEmployees']);
+
+    Route::get('payroll-config', [App\Http\Controllers\Api\PayrollConfigController::class, 'show']);
+    Route::put('payroll-config', [App\Http\Controllers\Api\PayrollConfigController::class, 'update']);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
     // Biometric Import Routes - Staff Information and Punch Records

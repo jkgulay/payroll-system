@@ -92,7 +92,7 @@
       </div>
 
       <!-- Attendance Settings -->
-      <div class="setting-card">
+      <div class="setting-card" @click="$router.push('/attendance-settings')">
         <div class="setting-icon-wrapper attendance">
           <v-icon size="32">mdi-clock-check</v-icon>
         </div>

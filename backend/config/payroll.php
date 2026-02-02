@@ -25,8 +25,10 @@ return [
     */
 
     'attendance' => [
-        'standard_time_in' => env('PAYROLL_STANDARD_TIME_IN', '08:00'),
-        'grace_period_minutes' => env('PAYROLL_GRACE_PERIOD', 15),
+        'standard_time_in' => env('PAYROLL_STANDARD_TIME_IN', '07:30'),
+        'standard_time_out' => env('PAYROLL_STANDARD_TIME_OUT', '17:00'),
+        'grace_period_minutes' => env('PAYROLL_GRACE_PERIOD', 1),
+        'half_day_late_minutes' => env('PAYROLL_HALF_DAY_LATE_MINUTES', 61),
         'night_shift_start' => env('PAYROLL_NIGHT_START', '22:00'),
         'night_shift_end' => env('PAYROLL_NIGHT_END', '06:00'),
     ],
@@ -48,7 +50,7 @@ return [
         // Group 1: 8:00 AM time-in departments (Admin/Engineers)
         'group_8am' => [
             'standard_time_in' => '08:00',
-            'grace_period_minutes' => 3, // 8:00 - 8:03
+            'grace_period_minutes' => 1, // Default 1 minute, uses project setting if available
             'half_day_threshold' => '09:01',
             'departments' => [
                 'Admin Resign',
@@ -62,7 +64,7 @@ return [
         // Group 2: 7:30 AM time-in departments (Remaining sites/departments)
         'group_730am' => [
             'standard_time_in' => '07:30',
-            'grace_period_minutes' => 3, // 7:30 - 7:33
+            'grace_period_minutes' => 1, // Default 1 minute, uses project setting if available
             'half_day_threshold' => '08:31',
             'departments' => [
                 // All other departments not in group_8am

@@ -60,8 +60,9 @@
 
         .label {
             font-weight: bold;
-            width: 40%;
+            width: 35%;
             background-color: #f9f9f9;
+            white-space: nowrap;
         }
 
         .value {
@@ -116,10 +117,10 @@
 
 <body>
     <div class="header">
-        <div class="company-name">GIOVANNI CONSTRUCTION</div>
-        <div>Imadejas Subdivision, Capitol Bonbon</div>
+        <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
+        <div>{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
         <div class="payroll-title">P A Y R O L L</div>
-        <div class="period-info">{{ $payroll->period_name }} ({{ \Carbon\Carbon::parse($payroll->period_start)->format('F d, Y') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('F d, Y') }})</div>
+        <div class="period-info">({{ \Carbon\Carbon::parse($payroll->period_start)->format('F d, Y') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('F d, Y') }})</div>
     </div>
 
     <!-- Employee Information -->

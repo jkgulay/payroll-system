@@ -315,6 +315,15 @@ const router = createRouter({
           meta: { title: "Company Information", roles: ["admin"] },
         },
         {
+          path: "attendance-settings",
+          name: "attendance-settings",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/AttendanceSettingsView.vue"
+            ),
+          meta: { title: "Attendance Settings", roles: ["admin"] },
+        },
+        {
           path: "maintenance",
           name: "maintenance",
           component: () =>

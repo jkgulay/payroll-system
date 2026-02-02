@@ -2,41 +2,52 @@
   <v-dialog
     :model-value="modelValue"
     @update:model-value="handleClose"
-    max-width="1400"
+    max-width="1200"
     persistent
     scrollable
   >
-    <v-card>
-      <v-card-title class="text-h5 d-flex align-center">
-        <v-icon class="mr-2">mdi-cash-multiple</v-icon>
-        Manage Government Rates
-        <v-spacer></v-spacer>
+    <v-card class="government-rates-dialog">
+      <!-- Header -->
+      <v-card-title class="dialog-header">
+        <div class="header-content">
+          <div class="icon-wrapper">
+            <v-icon size="28" color="white">mdi-cash-multiple</v-icon>
+          </div>
+          <div>
+            <h2 class="dialog-title">Manage Government Rates</h2>
+            <p class="dialog-subtitle">
+              Configure SSS, PhilHealth, Pag-IBIG, and withholding tax tables
+            </p>
+          </div>
+        </div>
+        <v-btn icon variant="text" @click="handleClose" class="close-btn">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-title>
+
+      <v-divider />
+
+      <!-- Clear All Button -->
+      <div v-if="activeTab !== 'employees'" class="action-bar">
         <v-btn
-          v-if="activeTab !== 'employees'"
           color="error"
           variant="outlined"
           @click="clearAllRates"
-          class="mr-2"
           size="small"
           :disabled="loading"
         >
           <v-icon class="mr-1">mdi-delete-sweep</v-icon>
           Clear All
         </v-btn>
-        <v-btn icon @click="handleClose" variant="text">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-      </v-card-title>
+      </div>
 
-      <v-divider></v-divider>
-
-      <v-card-text class="pa-0" style="height: 650px">
+      <v-card-text class="dialog-content">
         <v-progress-linear
           v-if="loading"
           indeterminate
           color="primary"
         ></v-progress-linear>
-        <v-tabs v-model="activeTab" bg-color="primary" show-arrows>
+        <v-tabs v-model="activeTab" class="config-tabs" show-arrows>
           <v-tab value="employees">
             <v-icon class="mr-2">mdi-account-group</v-icon>
             Employee Contributions
@@ -59,14 +70,14 @@
           </v-tab>
         </v-tabs>
 
-        <v-tabs-window v-model="activeTab">
+        <v-window v-model="activeTab" class="config-window">
           <!-- Employee Contributions Tab -->
-          <v-tabs-window-item value="employees">
+          <v-window-item value="employees">
             <employee-contributions-tab ref="employeeContributionsRef" />
-          </v-tabs-window-item>
+          </v-window-item>
 
           <!-- SSS Tab -->
-          <v-tabs-window-item value="sss">
+          <v-window-item value="sss">
             <rate-table-panel
               :rates="rates.sss"
               type="sss"
@@ -76,10 +87,10 @@
               @delete="deleteRate"
               @toggle-active="toggleActive"
             />
-          </v-tabs-window-item>
+          </v-window-item>
 
           <!-- PhilHealth Tab -->
-          <v-tabs-window-item value="philhealth">
+          <v-window-item value="philhealth">
             <rate-table-panel
               :rates="rates.philhealth"
               type="philhealth"
@@ -89,10 +100,10 @@
               @delete="deleteRate"
               @toggle-active="toggleActive"
             />
-          </v-tabs-window-item>
+          </v-window-item>
 
           <!-- Pag-IBIG Tab -->
-          <v-tabs-window-item value="pagibig">
+          <v-window-item value="pagibig">
             <rate-table-panel
               :rates="rates.pagibig"
               type="pagibig"
@@ -102,10 +113,10 @@
               @delete="deleteRate"
               @toggle-active="toggleActive"
             />
-          </v-tabs-window-item>
+          </v-window-item>
 
           <!-- Tax Tab -->
-          <v-tabs-window-item value="tax">
+          <v-window-item value="tax">
             <rate-table-panel
               :rates="rates.tax"
               type="tax"
@@ -115,20 +126,15 @@
               @delete="deleteRate"
               @toggle-active="toggleActive"
             />
-          </v-tabs-window-item>
-        </v-tabs-window>
+          </v-window-item>
+        </v-window>
       </v-card-text>
 
       <v-divider></v-divider>
 
-      <v-card-actions>
+      <v-card-actions class="dialog-actions">
         <v-spacer></v-spacer>
-        <v-btn
-          color="primary"
-          variant="text"
-          @click="handleClose"
-          :disabled="loading"
-        >
+        <v-btn variant="text" @click="handleClose" :disabled="loading">
           Close
         </v-btn>
       </v-card-actions>
@@ -191,7 +197,7 @@ watch(
       // Reset state when closing
       activeTab.value = "employees";
     }
-  }
+  },
 );
 
 const handleClose = () => {
@@ -259,7 +265,7 @@ const saveRate = async (rateData) => {
 const deleteRate = async (rate) => {
   if (
     !confirm(
-      `Are you sure you want to delete this rate? This action cannot be undone.`
+      `Are you sure you want to delete this rate? This action cannot be undone.`,
     )
   ) {
     return;
@@ -299,7 +305,7 @@ const clearAllRates = async () => {
 
   if (
     !confirm(
-      `Are you sure you want to delete ALL ${totalRates} government rates? This action cannot be undone.`
+      `Are you sure you want to delete ALL ${totalRates} government rates? This action cannot be undone.`,
     )
   ) {
     return;
@@ -320,10 +326,85 @@ const clearAllRates = async () => {
 };
 </script>
 
-<style scoped>
-.v-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+<style scoped lang="scss">
+.government-rates-dialog {
+  border-radius: 16px;
+}
+
+.dialog-header {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  padding: 24px 28px;
+  position: relative;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.icon-wrapper {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dialog-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: white;
+}
+
+.dialog-subtitle {
+  font-size: 14px;
+  margin: 4px 0 0 0;
+  opacity: 0.9;
+}
+
+.close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+
+  :deep(.v-icon) {
+    color: white !important;
+  }
+}
+
+.action-bar {
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dialog-content {
+  padding: 0;
+  max-height: 600px;
+}
+
+.config-tabs {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 0 24px;
+
+  :deep(.v-tab) {
+    text-transform: none;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+}
+
+.dialog-actions {
+  padding: 20px 28px;
+  background: rgba(0, 0, 0, 0.02);
 }
 </style>

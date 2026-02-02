@@ -15,12 +15,16 @@ class Project extends Model
         'code',
         'name',
         'description',
+        'time_in',
+        'time_out',
+        'grace_period_minutes',
         'head_employee_id',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'grace_period_minutes' => 'integer',
     ];
 
     public function employees(): HasMany

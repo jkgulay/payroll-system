@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\EmployeeLeave;
+use App\Models\Resignation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -136,6 +138,16 @@ class AttendanceService
     {
         $requiresApproval = $data['requires_approval'] ?? true;
 
+        $employee = Employee::find($data['employee_id']);
+        $computedStatus = $employee
+            ? $this->determineStatus(
+                $employee,
+                $data['attendance_date'],
+                $data['time_in'] ?? null,
+                $data['time_out'] ?? null
+            )
+            : 'absent';
+
         $attendance = Attendance::create([
             'employee_id' => $data['employee_id'],
             'attendance_date' => $data['attendance_date'],
@@ -143,7 +155,7 @@ class AttendanceService
             'time_out' => $data['time_out'] ?? null,
             'break_start' => $data['break_start'] ?? null,
             'break_end' => $data['break_end'] ?? null,
-            'status' => $data['status'] ?? 'present',
+            'status' => $computedStatus,
             'is_manual_entry' => true,
             'manual_reason' => $data['reason'] ?? null,
             'approval_status' => $requiresApproval ? 'pending' : 'approved',
@@ -164,6 +176,19 @@ class AttendanceService
     {
         $oldData = $attendance->toArray();
 
+        $timeIn = $data['time_in'] ?? $attendance->time_in;
+        $timeOut = $data['time_out'] ?? $attendance->time_out;
+        $computedStatus = $attendance->employee
+            ? $this->determineStatus(
+                $attendance->employee,
+                $attendance->attendance_date,
+                $timeIn,
+                $timeOut
+            )
+            : 'absent';
+
+        $data['status'] = $computedStatus;
+
         $attendance->update($data);
         $attendance->is_edited = true;
         $attendance->edited_by = $userId;
@@ -181,6 +206,43 @@ class AttendanceService
         ]);
 
         return $attendance;
+    }
+
+    private function determineStatus(
+        Employee $employee,
+        string $attendanceDate,
+        ?string $timeIn,
+        ?string $timeOut
+    ): string {
+        $date = Carbon::parse($attendanceDate)->toDateString();
+
+        $hasApprovedLeave = EmployeeLeave::where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->whereDate('leave_date_from', '<=', $date)
+            ->whereDate('leave_date_to', '>=', $date)
+            ->exists();
+
+        if ($hasApprovedLeave) {
+            return 'leave';
+        }
+
+        $hasResignation = Resignation::where('employee_id', $employee->id)
+            ->whereIn('status', ['approved', 'completed'])
+            ->where(function ($query) use ($date) {
+                $query->whereDate('effective_date', '<=', $date)
+                    ->orWhereDate('last_working_day', '<=', $date);
+            })
+            ->exists();
+
+        if ($hasResignation) {
+            return 'absent';
+        }
+
+        if ($timeIn || $timeOut) {
+            return 'present';
+        }
+
+        return 'absent';
     }
 
     /**

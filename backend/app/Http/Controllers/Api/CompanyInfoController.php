@@ -88,4 +88,31 @@ class CompanyInfoController extends Controller
             'data' => $companyInfo
         ]);
     }
+
+    public function deleteLogo()
+    {
+        $companyInfo = CompanyInfo::first();
+
+        if (!$companyInfo) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Company information not found'
+            ], 404);
+        }
+
+        // Delete logo file from storage if exists
+        if ($companyInfo->logo_path && Storage::disk('public')->exists($companyInfo->logo_path)) {
+            Storage::disk('public')->delete($companyInfo->logo_path);
+        }
+
+        // Clear logo_path in database
+        $companyInfo->logo_path = null;
+        $companyInfo->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logo reset to default successfully',
+            'data' => $companyInfo
+        ]);
+    }
 }

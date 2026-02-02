@@ -12,6 +12,7 @@ use App\Models\LoanPayment;
 use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
 use App\Models\User;
+use App\Models\CompanyInfo;
 use App\Exports\PayrollExport;
 use App\Exports\PayrollWordExport;
 use App\Services\PayrollService;
@@ -245,7 +246,7 @@ class PayrollController extends Controller
             $this->reverseLoanPaymentsForPayroll($payroll);
             $this->reverseDeductionPaymentsForPayroll($payroll);
 
-            $payrollService = new \App\Services\PayrollService();
+            $payrollService = app(\App\Services\PayrollService::class);
             $payrollService->reprocessPayroll($payroll);
 
             // Log payroll reprocessing
@@ -305,10 +306,14 @@ class PayrollController extends Controller
             return response()->json(['message' => 'Payroll item not found'], 404);
         }
 
+        // Get company info from database
+        $companyInfo = CompanyInfo::first();
+
         $pdf = Pdf::loadView('payroll.payslip', [
             'payroll' => $payroll,
             'item' => $item,
             'employee' => $item->employee,
+            'companyInfo' => $companyInfo,
         ]);
 
         return $pdf->download("payslip_{$item->employee->employee_number}_{$payroll->period_name}.pdf");
@@ -423,7 +428,10 @@ class PayrollController extends Controller
             }
         }
 
-        $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType'));
+        // Get company info from database
+        $companyInfo = CompanyInfo::first();
+
+        $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'));
         return $pdf->download($filenameBase . '.pdf');
     }
 
