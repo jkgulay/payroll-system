@@ -245,7 +245,7 @@ class PayrollController extends Controller
             $this->reverseLoanPaymentsForPayroll($payroll);
             $this->reverseDeductionPaymentsForPayroll($payroll);
 
-            $payrollService = new \App\Services\PayrollService();
+            $payrollService = app(\App\Services\PayrollService::class);
             $payrollService->reprocessPayroll($payroll);
 
             // Log payroll reprocessing

@@ -69,7 +69,6 @@ class AttendanceController extends Controller
             'time_out' => 'nullable|date_format:H:i:s|after:time_in',
             'break_start' => 'nullable|date_format:H:i:s',
             'break_end' => 'nullable|date_format:H:i:s|after:break_start',
-            'status' => 'required|in:present,absent,late,half_day,on_leave',
             'notes' => 'nullable|string|max:500',
             'requires_approval' => 'boolean',
         ]);
@@ -97,7 +96,6 @@ class AttendanceController extends Controller
                 'time_out' => $validated['time_out'] ?? null,
                 'break_start' => $validated['break_start'] ?? null,
                 'break_end' => $validated['break_end'] ?? null,
-                'status' => $validated['status'],
                 'reason' => $validated['notes'] ?? 'Manual entry by ' . $request->user()->name,
                 'created_by' => $request->user()->id,
                 'requires_approval' => $validated['requires_approval'] ?? true,
@@ -150,7 +148,6 @@ class AttendanceController extends Controller
             'time_out' => 'nullable|date_format:H:i:s|after:time_in',
             'break_start' => 'nullable|date_format:H:i:s',
             'break_end' => 'nullable|date_format:H:i:s|after:break_start',
-            'status' => 'in:present,absent,late,half_day,on_leave',
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -162,7 +159,6 @@ class AttendanceController extends Controller
                 'time_out' => $validated['time_out'] ?? null,
                 'break_start' => $validated['break_start'] ?? null,
                 'break_end' => $validated['break_end'] ?? null,
-                'status' => $validated['status'] ?? null,
                 'edit_reason' => $validated['notes'] ?? null,
             ], function ($value) {
                 return !is_null($value);

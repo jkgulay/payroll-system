@@ -106,10 +106,10 @@
             <div class="description-section">
               <div class="section-label">
                 <v-icon size="14">mdi-text</v-icon>
-                Description
+                Designation
               </div>
               <div class="section-value">
-                {{ project.description || "No description provided" }}
+                {{ project.description || "No designation provided" }}
               </div>
             </div>
 
@@ -302,22 +302,74 @@
                 </div>
               </v-col>
 
-              <!-- Description -->
+              <!-- Designation -->
               <v-col cols="12">
                 <div class="form-field-wrapper">
                   <label class="form-label">
                     <v-icon size="small" color="primary">mdi-text-box</v-icon>
-                    Description
+                    Designation
                   </label>
                   <v-textarea
                     v-model="formData.description"
-                    placeholder="Enter department description"
+                    placeholder="Enter department designation"
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-text"
                     color="primary"
                     rows="3"
                   ></v-textarea>
+                </div>
+              </v-col>
+
+              <!-- Schedule Settings -->
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary"
+                      >mdi-clock-time-four</v-icon
+                    >
+                    Schedule Settings
+                  </label>
+                  <v-row>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model="formData.time_in"
+                        label="Time In"
+                        type="time"
+                        variant="outlined"
+                        density="comfortable"
+                        prepend-inner-icon="mdi-clock-in"
+                        color="primary"
+                        clearable
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model="formData.time_out"
+                        label="Time Out"
+                        type="time"
+                        variant="outlined"
+                        density="comfortable"
+                        prepend-inner-icon="mdi-clock-out"
+                        color="primary"
+                        clearable
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model.number="formData.grace_period_minutes"
+                        label="Grace Period (minutes)"
+                        type="number"
+                        min="0"
+                        max="180"
+                        variant="outlined"
+                        density="comfortable"
+                        prepend-inner-icon="mdi-timer-outline"
+                        color="primary"
+                        clearable
+                      ></v-text-field>
+                    </v-col>
+                  </v-row>
                 </div>
               </v-col>
 
@@ -425,10 +477,10 @@
               <v-icon size="small" color="#ED985F" class="mr-1"
                 >mdi-text-box</v-icon
               >
-              Description
+              Designation
             </div>
             <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8)">
-              {{ selectedProject.description || "No description" }}
+              {{ selectedProject.description || "No designation" }}
             </div>
           </div>
 
@@ -448,6 +500,42 @@
                   ? `${selectedProject.head_employee.first_name} ${selectedProject.head_employee.last_name} (${selectedProject.head_employee.position})`
                   : "Not assigned"
               }}
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <div
+              class="text-subtitle-2 font-weight-bold mb-2"
+              style="color: #001f3d"
+            >
+              <v-icon size="small" color="#ED985F" class="mr-1"
+                >mdi-clock-time-four</v-icon
+              >
+              Schedule
+            </div>
+            <div class="text-body-2" style="color: rgba(0, 31, 61, 0.8)">
+              <div>
+                <strong>Time In:</strong>
+                {{
+                  formatScheduleTime(selectedProject.time_in) || DEFAULT_TIME_IN
+                }}
+              </div>
+              <div>
+                <strong>Time Out:</strong>
+                {{
+                  formatScheduleTime(selectedProject.time_out) ||
+                  DEFAULT_TIME_OUT
+                }}
+              </div>
+              <div>
+                <strong>Grace Period:</strong>
+                {{
+                  selectedProject.grace_period_minutes !== null &&
+                  selectedProject.grace_period_minutes !== undefined
+                    ? `${selectedProject.grace_period_minutes} mins`
+                    : `${DEFAULT_GRACE} mins`
+                }}
+              </div>
             </div>
           </div>
 
@@ -552,6 +640,9 @@ const formData = ref({
   code: "",
   name: "",
   description: "",
+  time_in: null,
+  time_out: null,
+  grace_period_minutes: null,
   head_employee_id: null,
   is_active: true,
 });
@@ -629,6 +720,9 @@ const openCreateDialog = () => {
     code: "",
     name: "",
     description: "",
+    time_in: DEFAULT_TIME_IN,
+    time_out: DEFAULT_TIME_OUT,
+    grace_period_minutes: DEFAULT_GRACE,
     head_employee_id: null,
     is_active: true,
   };
@@ -645,6 +739,13 @@ const editProject = (project) => {
     code: project.code,
     name: project.name,
     description: project.description,
+    time_in: formatScheduleTime(project.time_in) || DEFAULT_TIME_IN,
+    time_out: formatScheduleTime(project.time_out) || DEFAULT_TIME_OUT,
+    grace_period_minutes:
+      project.grace_period_minutes !== undefined &&
+      project.grace_period_minutes !== null
+        ? project.grace_period_minutes
+        : DEFAULT_GRACE,
     head_employee_id: project.head_employee_id,
     is_active: project.is_active,
   };
@@ -662,11 +763,12 @@ const saveProject = async () => {
 
   saving.value = true;
   try {
+    const payload = normalizeSchedulePayload(formData.value);
     if (editMode.value) {
-      await api.put(`/projects/${formData.value.id}`, formData.value);
+      await api.put(`/projects/${formData.value.id}`, payload);
       showSnackbar("Project updated successfully", "success");
     } else {
-      await api.post("/projects", formData.value);
+      await api.post("/projects", payload);
       showSnackbar("Project created successfully", "success");
     }
     await fetchProjects();
@@ -686,10 +788,24 @@ const closeDialog = () => {
     code: "",
     name: "",
     description: "",
+    time_in: DEFAULT_TIME_IN,
+    time_out: DEFAULT_TIME_OUT,
+    grace_period_minutes: DEFAULT_GRACE,
     head_employee_id: null,
     is_active: true,
   };
 };
+
+const formatScheduleTime = (value) => {
+  if (!value) return null;
+  const [hours, minutes] = value.split(":");
+  if (!hours || !minutes) return value;
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
+};
+
+const DEFAULT_TIME_IN = "07:30";
+const DEFAULT_TIME_OUT = "17:00";
+const DEFAULT_GRACE = 0;
 
 const viewProject = async (project) => {
   selectedProject.value = project;
@@ -752,6 +868,17 @@ const showSnackbar = (text, color = "success") => {
   snackbarColor.value = color;
   snackbar.value = true;
 };
+
+const normalizeSchedulePayload = (payload) => ({
+  ...payload,
+  time_in: payload.time_in || null,
+  time_out: payload.time_out || null,
+  grace_period_minutes:
+    payload.grace_period_minutes === "" ||
+    payload.grace_period_minutes === undefined
+      ? null
+      : payload.grace_period_minutes,
+});
 
 // Lifecycle
 onMounted(() => {

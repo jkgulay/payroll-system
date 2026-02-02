@@ -138,6 +138,12 @@
                 <td class="label">DEPARTMENT</td>
                 <td>{{ $employee->department ?? 'N/A' }}</td>
             </tr>
+            <tr>
+                <td class="label">DESIGNATION</td>
+                <td>{{ $employee->position ?? 'N/A' }}</td>
+                <td class="label">&nbsp;</td>
+                <td>&nbsp;</td>
+            </tr>
         </table>
     </div>
 

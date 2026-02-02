@@ -224,6 +224,7 @@
     @foreach($groupedItems as $groupName => $items)
     <div class="project-info" @if(!$loop->first) style="margin-top: 30px; page-break-before: always;" @endif>
         <div><strong>{{ $filterType === 'staff_type' ? 'STAFF TYPE' : 'DEPARTMENT' }}:</strong> {{ $groupName }}</div>
+        <div><strong>DESIGNATION:</strong> {{ $items->first()?->employee?->project?->description ?? 'N/A' }}</div>
     </div>
 
     <table>
@@ -309,11 +310,12 @@
     @if($filterInfo)
     <div class="project-info">
         <div><strong>{{ strtoupper(explode(':', $filterInfo)[0]) }}:</strong> {{ explode(':', $filterInfo)[1] ?? '' }}</div>
+        <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee?->project?->description ?? 'N/A' }}</div>
     </div>
     @else
     <div class="project-info">
         <div><strong>DEPARTMENT:</strong> {{ $payroll->items->first()?->employee->department ?? 'N/A' }}</div>
-        <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee->position->position_name ?? 'N/A' }}</div>
+        <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee?->project?->description ?? 'N/A' }}</div>
     </div>
     @endif
 

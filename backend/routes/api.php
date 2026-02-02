@@ -184,9 +184,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Projects & Locations
     Route::apiResource('projects', App\Http\Controllers\Api\ProjectController::class);
+    Route::post('projects/bulk-schedule', [App\Http\Controllers\Api\ProjectController::class, 'bulkSchedule']);
     Route::get('projects/{project}/employees', [App\Http\Controllers\Api\ProjectController::class, 'employees']);
     Route::post('projects/{project}/mark-complete', [App\Http\Controllers\Api\ProjectController::class, 'markComplete']);
     Route::post('projects/{project}/reactivate', [App\Http\Controllers\Api\ProjectController::class, 'reactivate']);
+
+    Route::get('payroll-config', [App\Http\Controllers\Api\PayrollConfigController::class, 'show']);
+    Route::put('payroll-config', [App\Http\Controllers\Api\PayrollConfigController::class, 'update']);
     Route::apiResource('locations', App\Http\Controllers\Api\LocationController::class);
 
     // Biometric Import Routes - Staff Information and Punch Records

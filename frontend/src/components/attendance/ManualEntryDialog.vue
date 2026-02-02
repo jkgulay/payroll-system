@@ -136,18 +136,6 @@
             </v-col>
 
             <v-col cols="12">
-              <v-select
-                v-model="formData.status"
-                :items="statusOptions"
-                label="Status *"
-                :rules="[rules.required]"
-                variant="outlined"
-                density="comfortable"
-                prepend-inner-icon="mdi-clipboard-check"
-              ></v-select>
-            </v-col>
-
-            <v-col cols="12">
               <v-textarea
                 v-model="formData.notes"
                 label="Notes / Reason"
@@ -224,18 +212,9 @@ const formData = reactive({
   time_out: "",
   break_start: "",
   break_end: "",
-  status: "present",
   notes: "",
   requires_approval: true,
 });
-
-const statusOptions = [
-  { title: "Present", value: "present" },
-  { title: "Absent", value: "absent" },
-  { title: "Late", value: "late" },
-  { title: "Half Day", value: "half_day" },
-  { title: "On Leave", value: "on_leave" },
-];
 
 const rules = {
   required: (v) => !!v || "This field is required",
@@ -244,8 +223,22 @@ const rules = {
 const loadEmployees = async () => {
   loadingEmployees.value = true;
   try {
-    const response = await api.get("/employees");
-    employees.value = response.data.data || response.data || [];
+    const perPage = 200;
+    let page = 1;
+    let allEmployees = [];
+    let lastPage = 1;
+
+    do {
+      const response = await api.get("/employees", {
+        params: { per_page: perPage, page },
+      });
+      const data = response.data?.data || response.data || [];
+      allEmployees = allEmployees.concat(data);
+      lastPage = response.data?.last_page || 1;
+      page += 1;
+    } while (page <= lastPage);
+
+    employees.value = allEmployees;
   } catch (error) {
     toast.error("Failed to load employees");
   } finally {
@@ -347,7 +340,6 @@ watch(
           time_out: props.attendance.time_out?.substring(0, 5) || "",
           break_start: props.attendance.break_start?.substring(0, 5) || "",
           break_end: props.attendance.break_end?.substring(0, 5) || "",
-          status: props.attendance.status,
           notes:
             props.attendance.manual_reason ||
             props.attendance.edit_reason ||
@@ -362,7 +354,6 @@ watch(
           time_out: "",
           break_start: "",
           break_end: "",
-          status: "present",
           notes: "",
           requires_approval: true,
         });

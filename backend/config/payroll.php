@@ -25,8 +25,10 @@ return [
     */
 
     'attendance' => [
-        'standard_time_in' => env('PAYROLL_STANDARD_TIME_IN', '08:00'),
-        'grace_period_minutes' => env('PAYROLL_GRACE_PERIOD', 15),
+        'standard_time_in' => env('PAYROLL_STANDARD_TIME_IN', '07:30'),
+        'standard_time_out' => env('PAYROLL_STANDARD_TIME_OUT', '17:00'),
+        'grace_period_minutes' => env('PAYROLL_GRACE_PERIOD', 0),
+        'half_day_late_minutes' => env('PAYROLL_HALF_DAY_LATE_MINUTES', 61),
         'night_shift_start' => env('PAYROLL_NIGHT_START', '22:00'),
         'night_shift_end' => env('PAYROLL_NIGHT_END', '06:00'),
     ],

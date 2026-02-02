@@ -160,8 +160,9 @@ class Attendance extends Model
         $totalMinutes = $timeIn->diffInMinutes($timeOut) - $breakMinutes;
         $totalHours = $totalMinutes / 60;
 
-        // Standard hours from config
-        $standardHours = config('payroll.standard_hours_per_day', 8);
+        // Schedule settings (project overrides if available)
+        $schedule = $this->getScheduleConfig($timeIn);
+        $standardHours = $schedule['standard_hours'];
 
         // Calculate regular and overtime hours
         if ($totalHours <= $standardHours) {
@@ -176,24 +177,52 @@ class Attendance extends Model
         $this->night_differential_hours = $this->calculateNightDifferentialHours($timeIn, $timeOut);
 
         // Calculate late hours
-        $this->late_hours = $this->calculateLateHours($timeIn);
+        $this->late_hours = $this->calculateLateHours(
+            $timeIn,
+            $schedule['standard_time_in'],
+            $schedule['grace_period_minutes']
+        );
 
-        // Calculate undertime - use department-specific logic if applicable
-        $undertimeGroup = $this->getUndertimeGroup();
-        if ($undertimeGroup) {
-            // Use strict undertime calculation for tracked departments
-            $this->undertime_hours = $this->calculateUndertimeHours($timeIn, $totalHours);
-        } else {
-            // Default undertime calculation for non-tracked departments
-            if ($totalHours < $standardHours && $this->status === 'present') {
-                $this->undertime_hours = $standardHours - $totalHours;
-            } else {
-                $this->undertime_hours = 0;
-            }
+        // Force half-day status if late exceeds threshold (e.g., 1 hour and 1 minute)
+        $halfDayLateMinutes = (int) config('payroll.attendance.half_day_late_minutes', 61);
+        if ($this->late_hours > 0 && ($this->late_hours * 60) >= $halfDayLateMinutes) {
+            $this->status = 'half_day';
+        } elseif ($this->late_hours > 0 && in_array($this->status, ['present', 'late'])) {
+            $this->status = 'late';
         }
 
-        // Apply undertime-overtime offset
-        $this->applyUndertimeOvertimeOffset();
+        // If half-day, cap regular hours to half-day and treat excess as overtime
+        if ($this->status === 'half_day') {
+            $halfDayHours = $standardHours / 2;
+            $this->regular_hours = min($totalHours, $halfDayHours);
+            $this->overtime_hours = max(0, $totalHours - $halfDayHours);
+        }
+
+        // Calculate undertime - use project schedule if available, otherwise department-specific logic
+        if ($this->status === 'half_day') {
+            // Half-day already handled by status; avoid double deduction
+            $this->undertime_hours = 0;
+        } else {
+            if ($schedule['use_project']) {
+                $this->undertime_hours = $this->calculateUndertimeHoursForSchedule(
+                    $timeIn,
+                    $schedule
+                );
+            } else {
+                $undertimeGroup = $this->getUndertimeGroup();
+                if ($undertimeGroup) {
+                    // Use strict undertime calculation for tracked departments
+                    $this->undertime_hours = $this->calculateUndertimeHours($timeIn, $totalHours);
+                } else {
+                    // Default undertime calculation for non-tracked departments
+                    if ($totalHours < $standardHours && $this->status === 'present') {
+                        $this->undertime_hours = $standardHours - $totalHours;
+                    } else {
+                        $this->undertime_hours = 0;
+                    }
+                }
+            }
+        }
 
         $this->save();
     }
@@ -206,17 +235,7 @@ class Attendance extends Model
      */
     private function applyUndertimeOvertimeOffset(): void
     {
-        // Only apply offset if both undertime and overtime exist
-        if ($this->undertime_hours > 0 && $this->overtime_hours > 0) {
-            $offset = min($this->undertime_hours, $this->overtime_hours);
-            
-            $this->undertime_hours -= $offset;
-            $this->overtime_hours -= $offset;
-            
-            // Adjust regular hours to reflect the offset
-            // When we offset, we're essentially saying those hours count as regular work
-            $this->regular_hours += $offset;
-        }
+        // Offset disabled to keep late undertime and overtime independent.
     }
 
     private function calculateNightDifferentialHours(Carbon $timeIn, Carbon $timeOut): float
@@ -241,16 +260,81 @@ class Attendance extends Model
         return round($ndHours, 2);
     }
 
-    private function calculateLateHours(Carbon $timeIn): float
+    private function getScheduleConfig(Carbon $timeIn): array
     {
-        $standardTimeInConfig = config('payroll.attendance.standard_time_in', '08:00');
-        $gracePeriod = config('payroll.attendance.grace_period_minutes', 15);
+        $defaultTimeIn = config('payroll.attendance.standard_time_in', '08:00');
+        $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 0);
+        $defaultHours = (float) config('payroll.standard_hours_per_day', 8);
+
+        $project = $this->employee?->project;
+        if (!$project) {
+            return [
+                'use_project' => false,
+                'standard_time_in' => $defaultTimeIn,
+                'standard_time_out' => $defaultTimeOut,
+                'grace_period_minutes' => $defaultGrace,
+                'standard_hours' => $defaultHours,
+            ];
+        }
+
+        $projectTimeIn = $project->time_in;
+        $projectTimeOut = $project->time_out;
+        $projectGrace = $project->grace_period_minutes;
+
+        $hasProjectSchedule = $projectTimeIn || $projectTimeOut || $projectGrace !== null;
+        if (!$hasProjectSchedule) {
+            return [
+                'use_project' => false,
+                'standard_time_in' => $defaultTimeIn,
+                'standard_time_out' => $defaultTimeOut,
+                'grace_period_minutes' => $defaultGrace,
+                'standard_hours' => $defaultHours,
+            ];
+        }
+
+        $standardTimeIn = $projectTimeIn ?: $defaultTimeIn;
+        $standardTimeOut = $projectTimeOut ?: $defaultTimeOut;
+        $gracePeriod = $projectGrace !== null ? (int) $projectGrace : $defaultGrace;
+        $standardHours = $defaultHours;
+
+        return [
+            'use_project' => true,
+            'standard_time_in' => $standardTimeIn,
+            'standard_time_out' => $standardTimeOut,
+            'grace_period_minutes' => $gracePeriod,
+            'standard_hours' => $standardHours,
+        ];
+    }
+
+    private function calculateLateHours(
+        Carbon $timeIn,
+        string $standardTimeInConfig,
+        int $gracePeriod
+    ): float {
         $standardTimeIn = Carbon::parse($timeIn->toDateString() . ' ' . $standardTimeInConfig)
             ->addMinutes($gracePeriod);
 
         if ($timeIn->gt($standardTimeIn)) {
             $lateMinutes = $standardTimeIn->diffInMinutes($timeIn);
             return round($lateMinutes / 60, 2);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Calculate undertime hours based on project schedule overrides
+     */
+    private function calculateUndertimeHoursForSchedule(Carbon $timeIn, array $schedule): float
+    {
+        $standardTimeIn = Carbon::parse($timeIn->toDateString() . ' ' . $schedule['standard_time_in']);
+        $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
+
+        $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
+        if ($timeIn->gt($allowedTimeIn)) {
+            $minutesLate = $allowedTimeIn->diffInMinutes($timeIn);
+            return round($minutesLate / 60, 4);
         }
 
         return 0;
@@ -291,7 +375,7 @@ class Attendance extends Model
     {
         // Get the undertime group this employee belongs to
         $group = $this->getUndertimeGroup();
-        
+
         if (!$group) {
             return 0; // No undertime tracking for this department
         }
@@ -304,6 +388,13 @@ class Attendance extends Model
 
         $standardTimeInConfig = $groupConfig['standard_time_in'];
         $gracePeriodMinutes = $groupConfig['grace_period_minutes'];
+        if ($group === '8am') {
+            $gracePeriodMinutes = (int) app(\App\Services\CompanySettingService::class)
+                ->get('payroll.undertime.group_8am.grace_minutes', $gracePeriodMinutes);
+        } elseif ($group === '730am') {
+            $gracePeriodMinutes = (int) app(\App\Services\CompanySettingService::class)
+                ->get('payroll.undertime.group_730am.grace_minutes', $gracePeriodMinutes);
+        }
         $halfDayThresholdConfig = $groupConfig['half_day_threshold'];
         $standardHours = config('payroll.standard_hours_per_day', 8);
 
@@ -313,13 +404,13 @@ class Attendance extends Model
         // Check if time-in is at or after half-day threshold - mark as half day
         if ($timeIn->gte($halfDayThreshold)) {
             $this->status = 'half_day';
-            // Undertime is 4 hours (half of 8 hours)
-            return $standardHours / 2;
+            // Half-day handled via status; no extra undertime deduction
+            return 0;
         }
 
         // Calculate undertime based on late time-in beyond grace period
         $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
-        
+
         if ($timeIn->gt($allowedTimeIn)) {
             // Calculate minutes late
             $minutesLate = $allowedTimeIn->diffInMinutes($timeIn);
@@ -350,11 +441,11 @@ class Attendance extends Model
     public function checkAndMarkHoliday(): void
     {
         $holiday = Holiday::getHolidayForDate($this->attendance_date);
-        
+
         if ($holiday) {
             $this->is_holiday = true;
             $this->holiday_type = $holiday->type;
-            
+
             // If no status is set yet, mark as holiday
             if (!$this->status || $this->status === 'present') {
                 // Keep present status if already marked, otherwise set as holiday

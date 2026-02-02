@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Payroll;
+use App\Models\Attendance;
 use App\Services\PayrollService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -37,9 +38,14 @@ class ProjectController extends Controller
             'code' => 'nullable|string|max:50|unique:projects',
             'name' => 'required|string|max:100|unique:projects',
             'description' => 'nullable|string',
+            'time_in' => 'nullable|date_format:H:i',
+            'time_out' => 'nullable|date_format:H:i',
+            'grace_period_minutes' => 'nullable|integer|min:0|max:180',
             'head_employee_id' => 'nullable|exists:employees,id',
             'is_active' => 'boolean',
         ]);
+
+        $validated = $this->applyDefaultSchedule($validated);
 
         // Generate code if not provided
         if (empty($validated['code'])) {
@@ -74,14 +80,61 @@ class ProjectController extends Controller
             'code' => 'nullable|string|max:50|unique:projects,code,' . $project->id,
             'name' => 'required|string|max:100|unique:projects,name,' . $project->id,
             'description' => 'nullable|string',
+            'time_in' => 'nullable|date_format:H:i',
+            'time_out' => 'nullable|date_format:H:i',
+            'grace_period_minutes' => 'nullable|integer|min:0|max:180',
             'head_employee_id' => 'nullable|exists:employees,id',
             'is_active' => 'boolean',
         ]);
 
+        $validated = $this->applyDefaultSchedule($validated);
+
         $project->update($validated);
+        if ($project->wasChanged(['time_in', 'time_out', 'grace_period_minutes'])) {
+            $this->recalculateProjectAttendances($project);
+        }
         $project->load(['headEmployee', 'employees']);
 
         return response()->json($project);
+    }
+
+    private function recalculateProjectAttendances(Project $project): void
+    {
+        $employeeIds = $project->employees()->pluck('id');
+        if ($employeeIds->isEmpty()) {
+            return;
+        }
+
+        Attendance::with(['employee.project'])
+            ->whereIn('employee_id', $employeeIds)
+            ->whereNotNull('time_in')
+            ->whereNotNull('time_out')
+            ->chunkById(200, function ($attendances) {
+                foreach ($attendances as $attendance) {
+                    $attendance->calculateHours();
+                }
+            });
+    }
+
+    private function applyDefaultSchedule(array $validated): array
+    {
+        $defaultTimeIn = config('payroll.attendance.standard_time_in', '08:00');
+        $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 0);
+
+        if (!array_key_exists('time_in', $validated) || $validated['time_in'] === null) {
+            $validated['time_in'] = $defaultTimeIn;
+        }
+
+        if (!array_key_exists('time_out', $validated) || $validated['time_out'] === null) {
+            $validated['time_out'] = $defaultTimeOut;
+        }
+
+        if (!array_key_exists('grace_period_minutes', $validated) || $validated['grace_period_minutes'] === null) {
+            $validated['grace_period_minutes'] = $defaultGrace;
+        }
+
+        return $validated;
     }
 
     public function destroy(Project $project)
@@ -149,6 +202,53 @@ class ProjectController extends Controller
         return response()->json([
             'message' => 'Project reactivated',
             'project' => $project
+        ]);
+    }
+
+    /**
+     * Bulk update schedules for all projects except excluded IDs
+     */
+    public function bulkSchedule(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'time_in' => 'nullable|date_format:H:i',
+            'time_out' => 'nullable|date_format:H:i',
+            'grace_period_minutes' => 'nullable|integer|min:0|max:180',
+            'exclude_project_ids' => 'array',
+            'exclude_project_ids.*' => 'integer|exists:projects,id',
+        ]);
+
+        $validated = $this->applyDefaultSchedule($validated);
+
+        $excludeIds = $validated['exclude_project_ids'] ?? [];
+        $payload = [
+            'time_in' => $validated['time_in'],
+            'time_out' => $validated['time_out'],
+            'grace_period_minutes' => $validated['grace_period_minutes'],
+        ];
+
+        $projectIds = Project::query()
+            ->when(!empty($excludeIds), fn($q) => $q->whereNotIn('id', $excludeIds))
+            ->pluck('id');
+
+        if ($projectIds->isEmpty()) {
+            return response()->json([
+                'message' => 'No departments to update',
+            ], 200);
+        }
+
+        Project::whereIn('id', $projectIds)->update($payload);
+
+        $projectIds->each(function ($projectId) {
+            $project = Project::find($projectId);
+            if ($project) {
+                $this->recalculateProjectAttendances($project);
+            }
+        });
+
+        return response()->json([
+            'message' => 'Schedules updated successfully',
+            'updated_count' => $projectIds->count(),
         ]);
     }
 
