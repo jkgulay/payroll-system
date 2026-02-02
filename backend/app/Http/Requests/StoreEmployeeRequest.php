@@ -52,6 +52,12 @@ class StoreEmployeeRequest extends FormRequest
             'has_sss' => ['nullable', 'boolean'],
             'has_philhealth' => ['nullable', 'boolean'],
             'has_pagibig' => ['nullable', 'boolean'],
+
+            // Custom Contribution Overrides
+            'custom_sss' => ['nullable', 'numeric', 'min:0', 'max:99999.99'],
+            'custom_philhealth' => ['nullable', 'numeric', 'min:0', 'max:99999.99'],
+            'custom_pagibig' => ['nullable', 'numeric', 'min:0', 'max:99999.99'],
+            'contribution_notes' => ['nullable', 'string', 'max:500'],
         ];
     }
 
