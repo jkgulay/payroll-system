@@ -2,7 +2,7 @@
   <v-dialog
     :model-value="modelValue"
     @update:model-value="handleClose"
-    max-width="1200"
+    max-width="1400"
     persistent
     scrollable
   >
@@ -12,6 +12,7 @@
         Manage Government Rates
         <v-spacer></v-spacer>
         <v-btn
+          v-if="activeTab !== 'employees'"
           color="error"
           variant="outlined"
           @click="clearAllRates"
@@ -29,13 +30,17 @@
 
       <v-divider></v-divider>
 
-      <v-card-text class="pa-0" style="height: 600px">
+      <v-card-text class="pa-0" style="height: 650px">
         <v-progress-linear
           v-if="loading"
           indeterminate
           color="primary"
         ></v-progress-linear>
         <v-tabs v-model="activeTab" bg-color="primary" show-arrows>
+          <v-tab value="employees">
+            <v-icon class="mr-2">mdi-account-group</v-icon>
+            Employee Contributions
+          </v-tab>
           <v-tab value="sss">
             <v-icon class="mr-2">mdi-shield-account</v-icon>
             SSS
@@ -55,6 +60,11 @@
         </v-tabs>
 
         <v-tabs-window v-model="activeTab">
+          <!-- Employee Contributions Tab -->
+          <v-tabs-window-item value="employees">
+            <employee-contributions-tab ref="employeeContributionsRef" />
+          </v-tabs-window-item>
+
           <!-- SSS Tab -->
           <v-tabs-window-item value="sss">
             <rate-table-panel
@@ -141,6 +151,7 @@ import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import RateTablePanel from "./RateTablePanel.vue";
 import RateFormDialog from "./RateFormDialog.vue";
+import EmployeeContributionsTab from "./EmployeeContributionsTab.vue";
 
 const props = defineProps({
   modelValue: {
@@ -152,11 +163,12 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 const toast = useToast();
 
-const activeTab = ref("sss");
+const activeTab = ref("employees");
 const formDialog = ref(false);
 const editingRate = ref(null);
 const currentType = ref("sss");
 const loading = ref(false);
+const employeeContributionsRef = ref(null);
 
 const rates = ref({
   sss: [],
@@ -171,9 +183,13 @@ watch(
   (newVal) => {
     if (newVal) {
       loadRates();
+      // Refresh employee contributions when dialog opens
+      if (employeeContributionsRef.value) {
+        employeeContributionsRef.value.loadData();
+      }
     } else {
       // Reset state when closing
-      activeTab.value = "sss";
+      activeTab.value = "employees";
     }
   }
 );

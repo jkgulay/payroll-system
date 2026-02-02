@@ -379,6 +379,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/government-rates/for-salary', [App\Http\Controllers\Api\GovernmentRateController::class, 'getForSalary']);
     Route::post('/government-rates/bulk-delete', [App\Http\Controllers\Api\GovernmentRateController::class, 'bulkDelete']);
 
+    // Employee Contributions
+    Route::get('/employee-contributions', [App\Http\Controllers\Api\EmployeeContributionController::class, 'index']);
+    Route::get('/employee-contributions/summary', [App\Http\Controllers\Api\EmployeeContributionController::class, 'summary']);
+    Route::put('/employee-contributions/{employee}', [App\Http\Controllers\Api\EmployeeContributionController::class, 'update']);
+    Route::post('/employee-contributions/bulk-update', [App\Http\Controllers\Api\EmployeeContributionController::class, 'bulkUpdate']);
+    Route::post('/employee-contributions/{employee}/reset', [App\Http\Controllers\Api\EmployeeContributionController::class, 'reset']);
+
     // Audit Logs
     Route::get('/audit-logs', [App\Http\Controllers\Api\AuditLogController::class, 'index']);
     Route::get('/audit-logs/module/{module}', [App\Http\Controllers\Api\AuditLogController::class, 'byModule']);

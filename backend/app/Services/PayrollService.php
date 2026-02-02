@@ -272,9 +272,31 @@ class PayrollService
         $grossPay = $basicPay + $holidayPay + $totalOtPay + $cola + $otherAllowances - $undertimeDeduction;
 
         // Calculate government deductions (only if enabled for the employee)
-        $sss = $employee->has_sss ? $this->calculateSSS($grossPay) : 0;
-        $philhealth = $employee->has_philhealth ? $this->calculatePhilHealth($grossPay) : 0;
-        $pagibig = $employee->has_pagibig ? $this->calculatePagibig($grossPay) : 0;
+        // Use custom contributions if set, otherwise calculate based on salary
+        $sss = 0;
+        $philhealth = 0;
+        $pagibig = 0;
+
+        if ($employee->has_sss) {
+            // Use custom SSS if set (already semi-monthly amount), otherwise calculate
+            $sss = $employee->custom_sss !== null 
+                ? (float) $employee->custom_sss
+                : $this->calculateSSS($grossPay);
+        }
+
+        if ($employee->has_philhealth) {
+            // Use custom PhilHealth if set (already semi-monthly amount), otherwise calculate
+            $philhealth = $employee->custom_philhealth !== null 
+                ? (float) $employee->custom_philhealth
+                : $this->calculatePhilHealth($grossPay);
+        }
+
+        if ($employee->has_pagibig) {
+            // Use custom Pag-IBIG if set (already semi-monthly amount), otherwise calculate
+            $pagibig = $employee->custom_pagibig !== null 
+                ? (float) $employee->custom_pagibig
+                : $this->calculatePagibig($grossPay);
+        }
 
         // Determine if this is semi-monthly payroll (typically 15 days or less)
         $periodStart = Carbon::parse($payroll->period_start);
