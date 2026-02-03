@@ -198,6 +198,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeLeave::class);
     }
 
+    public function salaryAdjustments(): HasMany
+    {
+        return $this->hasMany(SalaryAdjustment::class);
+    }
+
     public function leaveCredits(): HasMany
     {
         return $this->hasMany(EmployeeLeaveCredit::class);

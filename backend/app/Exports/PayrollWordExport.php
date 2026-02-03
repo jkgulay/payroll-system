@@ -96,8 +96,8 @@ class PayrollWordExport
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('RATE', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("No. of\nDays", $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('AMOUNT', $headerStyle, ['alignment' => Jc::CENTER]);
-        $table->addCell(2400, array_merge($headerCellStyle, ['gridSpan' => 4]))->addText('OVERTIME', $headerStyle, ['alignment' => Jc::CENTER]);
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('COLA', $headerStyle, ['alignment' => Jc::CENTER]);
+        $table->addCell(2600, array_merge($headerCellStyle, ['gridSpan' => 4]))->addText('OVERTIME', $headerStyle, ['alignment' => Jc::CENTER]);
+        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Adj. Prev.\nSalary", $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Allowance', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("GROSS\nAMOUNT", $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Employee's\nSavings", $headerStyle, ['alignment' => Jc::CENTER]);
@@ -118,7 +118,7 @@ class PayrollWordExport
         $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600, $headerCellStyle)->addText('REG OT', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => Jc::CENTER]);
-        $table->addCell(600, $headerCellStyle)->addText('SPE OT', $headerStyle, ['alignment' => Jc::CENTER]);
+        $table->addCell(800, $headerCellStyle)->addText('SUN/SPL. HOL.', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
@@ -143,7 +143,7 @@ class PayrollWordExport
         $totalRegOtPay = 0;
         $totalSpeOtHours = 0;
         $totalSpeOtPay = 0;
-        $totalCola = 0;
+        $totalSalaryAdjustment = 0;
         $totalAllowances = 0;
         $totalEmployeeSavings = 0;
         $totalLoans = 0;
@@ -163,7 +163,7 @@ class PayrollWordExport
             $table->addCell(600)->addText($item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(600)->addText($item->special_ot_hours > 0 ? $item->special_ot_hours : '', $cellStyle, ['alignment' => Jc::CENTER]);
             $table->addCell(600)->addText($item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
-            $table->addCell(700)->addText($item->cola > 0 ? number_format($item->cola, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
+            $table->addCell(900)->addText($item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(800)->addText($item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(900)->addText(number_format($item->gross_pay ?? 0, 2), $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(900)->addText($item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
@@ -180,7 +180,7 @@ class PayrollWordExport
             $totalRegOtPay += $item->regular_ot_pay ?? 0;
             $totalSpeOtHours += $item->special_ot_hours ?? 0;
             $totalSpeOtPay += $item->special_ot_pay ?? 0;
-            $totalCola += $item->cola ?? 0;
+            $totalSalaryAdjustment += $item->salary_adjustment ?? 0;
             $totalAllowances += $item->other_allowances ?? 0;
             $totalGross += $item->gross_pay ?? 0;
             $totalEmployeeSavings += $item->employee_savings ?? 0;
@@ -212,7 +212,7 @@ class PayrollWordExport
         $table->addCell(600)->addText(number_format($totalRegOtPay, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(600)->addText($totalSpeOtHours > 0 ? $totalSpeOtHours : '', $totalStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600)->addText(number_format($totalSpeOtPay, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
-        $table->addCell(700)->addText(number_format($totalCola, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
+        $table->addCell(900)->addText(number_format($totalSalaryAdjustment, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(800)->addText(number_format($totalAllowances, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(900)->addText(number_format($totalGross, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(900)->addText(number_format($totalEmployeeSavings, 2), $totalStyle, ['alignment' => Jc::RIGHT]);

@@ -273,6 +273,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 
+    // Salary Adjustments - specific routes MUST come before apiResource
+    Route::get('/salary-adjustments/employees', [App\Http\Controllers\SalaryAdjustmentController::class, 'getEmployees']);
+    Route::post('/salary-adjustments/bulk', [App\Http\Controllers\SalaryAdjustmentController::class, 'bulkStore'])->middleware('role:admin,payrollist');
+    Route::get('/salary-adjustments/employee/{employee}', [App\Http\Controllers\SalaryAdjustmentController::class, 'getEmployeeAdjustments']);
+    Route::apiResource('salary-adjustments', App\Http\Controllers\SalaryAdjustmentController::class)->middleware('role:admin,payrollist');
+
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);
 
     // 13th Month Pay

@@ -519,6 +519,13 @@ const menuItems = computed(() => {
           value: "cash-bonds",
           to: "/cash-bonds",
         },
+        {
+          title: "Salary Adjustments",
+          icon: "mdi-cash-sync",
+          value: "salary-adjustments",
+          to: "/salary-adjustments",
+          roles: ["admin", "payrollist"],
+        },
       ],
     },
     {
@@ -798,6 +805,13 @@ const menuSections = computed(() => {
           icon: "mdi-cash-lock",
           value: "cash-bonds",
           to: "/cash-bonds",
+          roles: ["admin", "payrollist"],
+        },
+        {
+          title: "Salary Adjustments",
+          icon: "mdi-cash-sync",
+          value: "salary-adjustments",
+          to: "/salary-adjustments",
           roles: ["admin", "payrollist"],
         },
       ],

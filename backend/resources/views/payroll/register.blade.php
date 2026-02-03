@@ -235,7 +235,7 @@
                 <th rowspan="2">No. of<br>Days</th>
                 <th rowspan="2">AMOUNT</th>
                 <th colspan="4">OVERTIME</th>
-                <th rowspan="2">COLA</th>
+                <th rowspan="2">Adj. Prev.<br>Salary</th>
                 <th rowspan="2">Allowance</th>
                 <th rowspan="2">GROSS<br>AMOUNT</th>
                 <th rowspan="2">Employee's<br>Savings</th>
@@ -251,7 +251,7 @@
                 <th>HRS</th>
                 <th>REG OT</th>
                 <th>HRS</th>
-                <th>SPE OT</th>
+                <th>SUN/SPL. HOL.</th>
             </tr>
         </thead>
         <tbody>
@@ -265,7 +265,7 @@
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
                 <td>{{ $item->special_ot_hours > 0 ? $item->special_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '' }}</td>
-                <td class="text-right">{{ $item->cola > 0 ? number_format($item->cola, 2) : '' }}</td>
+                <td class="text-right">{{ $item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->gross_pay, 2) }}</td>
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
@@ -290,7 +290,7 @@
                 <td class="text-right">{{ number_format($items->sum('regular_ot_pay'), 2) }}</td>
                 <td>{{ $items->sum('special_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($items->sum('special_ot_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('cola'), 2) }}</td>
+                <td class="text-right">{{ number_format($items->sum('salary_adjustment'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('other_allowances'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('gross_pay'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('employee_savings'), 2) }}</td>
@@ -327,7 +327,7 @@
                 <th rowspan="2">No. of<br>Days</th>
                 <th rowspan="2">AMOUNT</th>
                 <th colspan="4">OVERTIME</th>
-                <th rowspan="2">COLA</th>
+                <th rowspan="2">Adj. Prev.<br>Salary</th>
                 <th rowspan="2">Allowance</th>
                 <th rowspan="2">GROSS<br>AMOUNT</th>
                 <th rowspan="2">Employee's<br>Savings</th>
@@ -343,7 +343,7 @@
                 <th>HRS</th>
                 <th>REG OT</th>
                 <th>HRS</th>
-                <th>SPE OT</th>
+                <th>SUN/SPL. HOL.</th>
             </tr>
         </thead>
         <tbody>
@@ -357,7 +357,7 @@
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
                 <td>{{ $item->special_ot_hours > 0 ? $item->special_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '' }}</td>
-                <td class="text-right">{{ $item->cola > 0 ? number_format($item->cola, 2) : '' }}</td>
+                <td class="text-right">{{ $item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->gross_pay, 2) }}</td>
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
@@ -382,7 +382,7 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('regular_ot_pay'), 2) }}</td>
                 <td>{{ $payroll->items->sum('special_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('special_ot_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('cola'), 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('salary_adjustment'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('other_allowances'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->total_gross, 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>

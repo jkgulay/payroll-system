@@ -44,7 +44,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 'No. of Days',
                 'AMOUNT',
                 'OVERTIME', '', '', '',  // This will be merged
-                'COLA',
+                'Adj. Prev. Salary',
                 'Allowance',
                 'GROSS AMOUNT',
                 'Employee\'s Savings',
@@ -58,7 +58,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             ],
             [
                 '', '', '', '',
-                'HRS', 'REG OT', 'HRS', 'SPE OT',  // OVERTIME subheaders
+                'HRS', 'REG OT', 'HRS', 'SUN/SPL. HOL.',  // OVERTIME subheaders
                 '', '', '', '', '', '', '', '', '', '', '',
             ],
         ];
@@ -78,8 +78,8 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             $item->regular_ot_pay > 0 ? $item->regular_ot_pay : '',
             $item->special_ot_hours > 0 ? $item->special_ot_hours : '',
             $item->special_ot_pay > 0 ? $item->special_ot_pay : '',
-            $item->cola > 0 ? $item->cola : '',
-            $item->other_allowances > 0 ? $item->other_allowances : '',
+            $item->salary_adjustment != 0 ? $item->salary_adjustment : '',
+            $item->other_allowances > 0 ? $item->other_allowances : '',,
             $item->gross_pay ?? 0,
             $item->employee_savings > 0 ? $item->employee_savings : '',
             $item->loans > 0 ? $item->loans : '',
@@ -145,7 +145,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->mergeCells('B7:B8');  // RATE
                 $sheet->mergeCells('C7:C8');  // No. of Days
                 $sheet->mergeCells('D7:D8');  // AMOUNT
-                $sheet->mergeCells('I7:I8');  // COLA
+                $sheet->mergeCells('I7:I8');  // Adj. Prev. Salary
                 $sheet->mergeCells('J7:J8');  // Allowance
                 $sheet->mergeCells('K7:K8');  // GROSS AMOUNT
                 $sheet->mergeCells('L7:L8');  // Employee's Savings
@@ -205,7 +205,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->setCellValue("F{$totalRow}", $this->items->sum('regular_ot_pay'));
                 $sheet->setCellValue("G{$totalRow}", $this->items->sum('special_ot_hours'));
                 $sheet->setCellValue("H{$totalRow}", $this->items->sum('special_ot_pay'));
-                $sheet->setCellValue("I{$totalRow}", $this->items->sum('cola'));
+                $sheet->setCellValue("I{$totalRow}", $this->items->sum('salary_adjustment'));
                 $sheet->setCellValue("J{$totalRow}", $this->items->sum('other_allowances'));
                 $sheet->setCellValue("K{$totalRow}", $this->items->sum('gross_pay'));
                 $sheet->setCellValue("L{$totalRow}", $this->items->sum('employee_savings'));
@@ -257,8 +257,8 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->getColumnDimension('E')->setWidth(6);   // OT HRS
                 $sheet->getColumnDimension('F')->setWidth(10);  // REG OT
                 $sheet->getColumnDimension('G')->setWidth(6);   // SPE HRS
-                $sheet->getColumnDimension('H')->setWidth(10);  // SPE OT
-                $sheet->getColumnDimension('I')->setWidth(10);  // COLA
+                $sheet->getColumnDimension('H')->setWidth(12);  // SUN/SPL. HOL.
+                $sheet->getColumnDimension('I')->setWidth(14);  // Adj. Prev. Salary
                 $sheet->getColumnDimension('J')->setWidth(10);  // Allowance
                 $sheet->getColumnDimension('K')->setWidth(12);  // GROSS AMOUNT
                 $sheet->getColumnDimension('L')->setWidth(12);  // Employee's Savings
@@ -291,7 +291,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             'B' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Rate
             'D' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Basic Pay
             'F' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // REG OT
-            'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // SPE OT
+            'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // SUN/SPL. HOL.
             'I' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // COLA
             'J' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Allowance
             'K' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Gross Pay
