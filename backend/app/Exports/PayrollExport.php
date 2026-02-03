@@ -58,7 +58,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             ],
             [
                 '', '', '', '',
-                'HRS', 'REG OT', 'HRS', 'SPE OT',  // OVERTIME subheaders
+                'HRS', 'REG OT', 'HRS', 'SUN/SPL. HOL.',  // OVERTIME subheaders
                 '', '', '', '', '', '', '', '', '', '', '',
             ],
         ];
@@ -257,7 +257,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->getColumnDimension('E')->setWidth(6);   // OT HRS
                 $sheet->getColumnDimension('F')->setWidth(10);  // REG OT
                 $sheet->getColumnDimension('G')->setWidth(6);   // SPE HRS
-                $sheet->getColumnDimension('H')->setWidth(10);  // SPE OT
+                $sheet->getColumnDimension('H')->setWidth(12);  // SUN/SPL. HOL.
                 $sheet->getColumnDimension('I')->setWidth(10);  // COLA
                 $sheet->getColumnDimension('J')->setWidth(10);  // Allowance
                 $sheet->getColumnDimension('K')->setWidth(12);  // GROSS AMOUNT
@@ -291,7 +291,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             'B' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Rate
             'D' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Basic Pay
             'F' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // REG OT
-            'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // SPE OT
+            'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // SUN/SPL. HOL.
             'I' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // COLA
             'J' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Allowance
             'K' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Gross Pay

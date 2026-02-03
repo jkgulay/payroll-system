@@ -96,7 +96,7 @@ class PayrollWordExport
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('RATE', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("No. of\nDays", $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('AMOUNT', $headerStyle, ['alignment' => Jc::CENTER]);
-        $table->addCell(2400, array_merge($headerCellStyle, ['gridSpan' => 4]))->addText('OVERTIME', $headerStyle, ['alignment' => Jc::CENTER]);
+        $table->addCell(2600, array_merge($headerCellStyle, ['gridSpan' => 4]))->addText('OVERTIME', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('COLA', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Allowance', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("GROSS\nAMOUNT", $headerStyle, ['alignment' => Jc::CENTER]);
@@ -118,7 +118,7 @@ class PayrollWordExport
         $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600, $headerCellStyle)->addText('REG OT', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => Jc::CENTER]);
-        $table->addCell(600, $headerCellStyle)->addText('SPE OT', $headerStyle, ['alignment' => Jc::CENTER]);
+        $table->addCell(800, $headerCellStyle)->addText('SUN/SPL. HOL.', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));

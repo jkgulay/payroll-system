@@ -221,12 +221,12 @@ class PayrollService
         );
         $regularHolidayOtPay = $regularHolidayOtHours * $hourlyRate * 2 * $regularHolidayMultiplier;
 
-        // Regular holiday on Sunday: rate/8 × 1.3 × 1.3 × hours
+        // Regular holiday on Sunday: rate/8 × 2 × 1.3 × 1.3 × hours
         $regularHolidaySundayMultiplier = (float) $this->settings->get(
             'payroll.holidays.regularHolidaySunday',
             1.3
         );
-        $regularHolidaySundayOtPay = $regularHolidaySundayOtHours * $hourlyRate * 1.3 * $regularHolidaySundayMultiplier;
+        $regularHolidaySundayOtPay = $regularHolidaySundayOtHours * $hourlyRate * 2 * 1.3 * $regularHolidaySundayMultiplier;
 
         // Special holiday: rate/8 × 1.3 × 1.3 × hours
         $specialHolidayMultiplier = (float) $this->settings->get(

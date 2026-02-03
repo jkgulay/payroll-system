@@ -251,7 +251,7 @@
                 <th>HRS</th>
                 <th>REG OT</th>
                 <th>HRS</th>
-                <th>SPE OT</th>
+                <th>SUN/SPL. HOL.</th>
             </tr>
         </thead>
         <tbody>
@@ -343,7 +343,7 @@
                 <th>HRS</th>
                 <th>REG OT</th>
                 <th>HRS</th>
-                <th>SPE OT</th>
+                <th>SUN/SPL. HOL.</th>
             </tr>
         </thead>
         <tbody>
