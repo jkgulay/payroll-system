@@ -10,6 +10,7 @@ use App\Models\EmployeeAllowance;
 use App\Models\MealAllowanceItem;
 use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
+use App\Models\SalaryAdjustment;
 use App\Models\Holiday;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -281,16 +282,33 @@ class PayrollService
 
         $otherAllowances = $allowances + $mealAllowanceTotal;
 
-        // Calculate COLA (Cost of Living Allowance) - typically per day
+        // Calculate salary adjustment from pending adjustments (previous salary corrections)
         $totalDaysWorked = $regularDays + $holidayDays;
-        $cola = $totalDaysWorked * 0; // Set to 0, can be configured
+        
+        // Get pending salary adjustments for this employee
+        $pendingAdjustments = SalaryAdjustment::where('employee_id', $employee->id)
+            ->where('status', 'pending')
+            ->get();
+
+        $salaryAdjustment = 0;
+        $adjustmentIds = [];
+        foreach ($pendingAdjustments as $adjustment) {
+            // Deductions are negative, additions are positive
+            if ($adjustment->adjustment_type === 'deduction') {
+                $salaryAdjustment -= abs($adjustment->amount);
+            } else {
+                $salaryAdjustment += abs($adjustment->amount);
+            }
+            $adjustmentIds[] = $adjustment->id;
+        }
 
         // Calculate undertime deduction
         // Formula: (rate / 8) * undertime_hours
         $undertimeDeduction = $hourlyRate * $totalUndertimeHours;
 
-        // Calculate gross pay (include holiday pay, overtime, subtract undertime deduction)
-        $grossPay = $basicPay + $holidayPay + $totalOtPay + $cola + $otherAllowances - $undertimeDeduction;
+        // Calculate gross pay (include holiday pay, overtime, salary adjustment, subtract undertime deduction)
+        // Note: COLA removed, salary adjustment added (can be negative for deductions)
+        $grossPay = $basicPay + $holidayPay + $totalOtPay + $otherAllowances + $salaryAdjustment - $undertimeDeduction;
 
         // Calculate government deductions (only if enabled for the employee)
         // Use custom contributions if set, otherwise calculate based on salary
@@ -403,6 +421,16 @@ class PayrollService
         // Net pay
         $netPay = $grossPay - $totalDeductions;
 
+        // Mark salary adjustments as applied
+        if (!empty($adjustmentIds)) {
+            SalaryAdjustment::whereIn('id', $adjustmentIds)
+                ->update([
+                    'status' => 'applied',
+                    'payroll_id' => $payroll->id,
+                    'applied_date' => now(),
+                ]);
+        }
+
         return [
             'payroll_id' => $payroll->id,
             'employee_id' => $employee->id,
@@ -416,8 +444,9 @@ class PayrollService
             'regular_ot_pay' => $regularOtPay,
             'special_ot_hours' => $specialOtHours,
             'special_ot_pay' => $specialOtPay,
-            'cola' => $cola,
+            'cola' => 0, // COLA removed, kept for backward compatibility
             'other_allowances' => $otherAllowances,
+            'salary_adjustment' => $salaryAdjustment,
             'allowances_breakdown' => $allowancesBreakdown,
             'gross_pay' => $grossPay,
             'undertime_hours' => $totalUndertimeHours,

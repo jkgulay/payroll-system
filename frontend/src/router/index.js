@@ -237,6 +237,18 @@ const router = createRouter({
           },
         },
         {
+          path: "salary-adjustments",
+          name: "salary-adjustments",
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/SalaryAdjustmentView.vue"
+            ),
+          meta: {
+            title: "Salary Adjustments",
+            roles: ["admin", "payrollist"],
+          },
+        },
+        {
           path: "reports",
           name: "reports",
           component: () =>
