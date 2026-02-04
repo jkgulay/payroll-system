@@ -325,19 +325,46 @@ class Attendance extends Model
 
     /**
      * Calculate undertime hours based on project schedule overrides
+     * Includes both late arrivals AND early departures
      */
     private function calculateUndertimeHoursForSchedule(Carbon $timeIn, array $schedule): float
     {
-        $standardTimeIn = Carbon::parse($timeIn->toDateString() . ' ' . $schedule['standard_time_in']);
+        $dateString = $this->attendance_date instanceof Carbon 
+            ? $this->attendance_date->format('Y-m-d') 
+            : $this->attendance_date;
+            
+        $standardTimeIn = Carbon::parse($dateString . ' ' . $schedule['standard_time_in']);
+        $standardTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
         $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
 
-        $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
-        if ($timeIn->gt($allowedTimeIn)) {
-            $minutesLate = $allowedTimeIn->diffInMinutes($timeIn);
-            return round($minutesLate / 60, 4);
+        // Handle overnight shifts
+        if ($standardTimeOut->lt($standardTimeIn)) {
+            $standardTimeOut->addDay();
         }
 
-        return 0;
+        $undertimeMinutes = 0;
+
+        // Calculate late arrival undertime (after grace period)
+        $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
+        if ($timeIn->gt($allowedTimeIn)) {
+            $undertimeMinutes += $allowedTimeIn->diffInMinutes($timeIn);
+        }
+
+        // Calculate early departure undertime
+        if ($this->time_out) {
+            $timeOut = Carbon::parse($dateString . ' ' . $this->time_out);
+            // Handle overnight shifts
+            if ($timeOut->lt($timeIn)) {
+                $timeOut->addDay();
+            }
+            
+            // If employee left before standard time out
+            if ($timeOut->lt($standardTimeOut)) {
+                $undertimeMinutes += $timeOut->diffInMinutes($standardTimeOut);
+            }
+        }
+
+        return round($undertimeMinutes / 60, 4);
     }
 
     /**
@@ -370,6 +397,7 @@ class Attendance extends Model
     /**
      * Calculate undertime hours for departments with strict time-in requirements
      * Supports multiple department groups with different time-in schedules
+     * Includes both late arrivals AND early departures
      * Now prioritizes project grace period setting over config defaults
      */
     private function calculateUndertimeHours(Carbon $timeIn, float $totalHours): float
@@ -388,6 +416,7 @@ class Attendance extends Model
         }
 
         $standardTimeInConfig = $groupConfig['standard_time_in'];
+        $standardHours = config('payroll.standard_hours_per_day', 8);
 
         // Prioritize project grace period over config default
         $project = $this->employee?->project;
@@ -399,10 +428,25 @@ class Attendance extends Model
         }
 
         $halfDayThresholdConfig = $groupConfig['half_day_threshold'];
-        $standardHours = config('payroll.standard_hours_per_day', 8);
+        $dateString = $timeIn->toDateString();
 
-        $standardTimeIn = Carbon::parse($timeIn->toDateString() . ' ' . $standardTimeInConfig);
-        $halfDayThreshold = Carbon::parse($timeIn->toDateString() . ' ' . $halfDayThresholdConfig);
+        $standardTimeIn = Carbon::parse($dateString . ' ' . $standardTimeInConfig);
+        $halfDayThreshold = Carbon::parse($dateString . ' ' . $halfDayThresholdConfig);
+
+        // Calculate standard time out based on time in + standard hours
+        // For 8am group: 8:00 AM + 8 hours = 4:00 PM (assuming 1 hour break taken separately)
+        // For 7:30am group: 7:30 AM + 8 hours = 3:30 PM (assuming 1 hour break)
+        // Using config standard_time_out as reference
+        $standardTimeOutConfig = config('payroll.attendance.standard_time_out', '17:00');
+        
+        // Adjust standard time out based on group's time in
+        if ($group === '8am') {
+            $standardTimeOutConfig = '17:00'; // 8 AM + 8 hours + 1 hour break = 5 PM
+        } else {
+            $standardTimeOutConfig = '16:30'; // 7:30 AM + 8 hours + 1 hour break = 4:30 PM
+        }
+        
+        $standardTimeOut = Carbon::parse($dateString . ' ' . $standardTimeOutConfig);
 
         // Check if time-in is at or after half-day threshold - mark as half day
         if ($timeIn->gte($halfDayThreshold)) {
@@ -411,16 +455,32 @@ class Attendance extends Model
             return 0;
         }
 
+        $undertimeMinutes = 0;
+
         // Calculate undertime based on late time-in beyond grace period
         $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
 
         if ($timeIn->gt($allowedTimeIn)) {
             // Calculate minutes late
-            $minutesLate = $allowedTimeIn->diffInMinutes($timeIn);
-            return round($minutesLate / 60, 4); // Return in hours with precision
+            $undertimeMinutes += $allowedTimeIn->diffInMinutes($timeIn);
         }
 
-        return 0;
+        // Calculate early departure undertime
+        if ($this->time_out) {
+            $timeOut = Carbon::parse($dateString . ' ' . $this->time_out);
+            
+            // Handle overnight shifts
+            if ($timeOut->lt($timeIn)) {
+                $timeOut->addDay();
+            }
+            
+            // If employee left before standard time out
+            if ($timeOut->lt($standardTimeOut)) {
+                $undertimeMinutes += $timeOut->diffInMinutes($standardTimeOut);
+            }
+        }
+
+        return round($undertimeMinutes / 60, 4); // Return in hours with precision
     }
 
     public function isPresent(): bool

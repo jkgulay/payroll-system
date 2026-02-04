@@ -44,6 +44,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 'No. of Days',
                 'AMOUNT',
                 'OVERTIME', '', '', '',  // This will be merged
+                'UT',
                 'Adj. Prev. Salary',
                 'Allowance',
                 'GROSS AMOUNT',
@@ -59,7 +60,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             [
                 '', '', '', '',
                 'HRS', 'REG OT', 'HRS', 'SUN/SPL. HOL.',  // OVERTIME subheaders
-                '', '', '', '', '', '', '', '', '', '', '',
+                '', '', '', '', '', '', '', '', '', '', '', '',
             ],
         ];
     }
@@ -68,6 +69,18 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
     {
         static $index = 0;
         $index++;
+
+        // Format undertime display
+        $utHours = floor($item->undertime_hours ?? 0);
+        $utMinutes = round((($item->undertime_hours ?? 0) - $utHours) * 60);
+        $utDisplay = '';
+        if ($utHours > 0 && $utMinutes > 0) {
+            $utDisplay = $utHours . 'h ' . $utMinutes . 'm';
+        } elseif ($utHours > 0) {
+            $utDisplay = $utHours . 'h';
+        } elseif ($utMinutes > 0) {
+            $utDisplay = $utMinutes . 'm';
+        }
 
         return [
             $index . '. ' . ($item->employee->full_name ?? ''),
@@ -78,8 +91,9 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             $item->regular_ot_pay > 0 ? $item->regular_ot_pay : '',
             $item->special_ot_hours > 0 ? $item->special_ot_hours : '',
             $item->special_ot_pay > 0 ? $item->special_ot_pay : '',
+            $utDisplay,
             $item->salary_adjustment != 0 ? $item->salary_adjustment : '',
-            $item->other_allowances > 0 ? $item->other_allowances : '',,
+            $item->other_allowances > 0 ? $item->other_allowances : '',
             $item->gross_pay ?? 0,
             $item->employee_savings > 0 ? $item->employee_savings : '',
             $item->loans > 0 ? $item->loans : '',
@@ -119,21 +133,21 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
 
                 // Add company header
                 $sheet->setCellValue('A1', $companyName);
-                $sheet->mergeCells('A1:S1');
+                $sheet->mergeCells('A1:T1');
                 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
                 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A2', $companyAddress);
-                $sheet->mergeCells('A2:S2');
+                $sheet->mergeCells('A2:T2');
                 $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A4', 'P A Y R O L L');
-                $sheet->mergeCells('A4:S4');
+                $sheet->mergeCells('A4:T4');
                 $sheet->getStyle('A4')->getFont()->setBold(true)->setSize(14);
                 $sheet->getStyle('A4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A5', $periodStart . ' - ' . $periodEnd);
-                $sheet->mergeCells('A5:S5');
+                $sheet->mergeCells('A5:T5');
                 $sheet->getStyle('A5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 // Merge header rows (row 7 is first header row, row 8 is second header row)
@@ -145,17 +159,18 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->mergeCells('B7:B8');  // RATE
                 $sheet->mergeCells('C7:C8');  // No. of Days
                 $sheet->mergeCells('D7:D8');  // AMOUNT
-                $sheet->mergeCells('I7:I8');  // Adj. Prev. Salary
-                $sheet->mergeCells('J7:J8');  // Allowance
-                $sheet->mergeCells('K7:K8');  // GROSS AMOUNT
-                $sheet->mergeCells('L7:L8');  // Employee's Savings
-                $sheet->mergeCells('M7:M8');  // Loans
-                $sheet->mergeCells('N7:N8');  // Deductions
-                $sheet->mergeCells('O7:O8');  // Phic Prem
-                $sheet->mergeCells('P7:P8');  // HDMF Prem
-                $sheet->mergeCells('Q7:Q8');  // SSS Prem
-                $sheet->mergeCells('R7:R8');  // NET AMOUNT
-                $sheet->mergeCells('S7:S8');  // SIGNATURE
+                $sheet->mergeCells('I7:I8');  // UT (Undertime)
+                $sheet->mergeCells('J7:J8');  // Adj. Prev. Salary
+                $sheet->mergeCells('K7:K8');  // Allowance
+                $sheet->mergeCells('L7:L8');  // GROSS AMOUNT
+                $sheet->mergeCells('M7:M8');  // Employee's Savings
+                $sheet->mergeCells('N7:N8');  // Loans
+                $sheet->mergeCells('O7:O8');  // Deductions
+                $sheet->mergeCells('P7:P8');  // Phic Prem
+                $sheet->mergeCells('Q7:Q8');  // HDMF Prem
+                $sheet->mergeCells('R7:R8');  // SSS Prem
+                $sheet->mergeCells('S7:S8');  // NET AMOUNT
+                $sheet->mergeCells('T7:T8');  // SIGNATURE
 
                 // Style header rows
                 $headerStyle = [
@@ -169,7 +184,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                         'allBorders' => ['borderStyle' => Border::BORDER_THIN],
                     ],
                 ];
-                $sheet->getStyle('A7:S8')->applyFromArray($headerStyle);
+                $sheet->getStyle('A7:T8')->applyFromArray($headerStyle);
 
                 // Calculate data range (starts at row 9, after headers)
                 $dataStartRow = 9;
@@ -182,15 +197,15 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                     ],
                     'font' => ['size' => 9],
                 ];
-                $sheet->getStyle("A{$dataStartRow}:S{$dataEndRow}")->applyFromArray($dataStyle);
+                $sheet->getStyle("A{$dataStartRow}:T{$dataEndRow}")->applyFromArray($dataStyle);
 
                 // Add "nothing follows" row
                 $nothingFollowsRow = $dataEndRow + 1;
                 $sheet->setCellValue("A{$nothingFollowsRow}", 'nothing follows');
-                $sheet->mergeCells("A{$nothingFollowsRow}:S{$nothingFollowsRow}");
+                $sheet->mergeCells("A{$nothingFollowsRow}:T{$nothingFollowsRow}");
                 $sheet->getStyle("A{$nothingFollowsRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle("A{$nothingFollowsRow}")->getFont()->setItalic(true)->setSize(9);
-                $sheet->getStyle("A{$nothingFollowsRow}:S{$nothingFollowsRow}")->applyFromArray([
+                $sheet->getStyle("A{$nothingFollowsRow}:T{$nothingFollowsRow}")->applyFromArray([
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
 
@@ -205,27 +220,41 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->setCellValue("F{$totalRow}", $this->items->sum('regular_ot_pay'));
                 $sheet->setCellValue("G{$totalRow}", $this->items->sum('special_ot_hours'));
                 $sheet->setCellValue("H{$totalRow}", $this->items->sum('special_ot_pay'));
-                $sheet->setCellValue("I{$totalRow}", $this->items->sum('salary_adjustment'));
-                $sheet->setCellValue("J{$totalRow}", $this->items->sum('other_allowances'));
-                $sheet->setCellValue("K{$totalRow}", $this->items->sum('gross_pay'));
-                $sheet->setCellValue("L{$totalRow}", $this->items->sum('employee_savings'));
-                $sheet->setCellValue("M{$totalRow}", $this->items->sum('loans'));
-                $sheet->setCellValue("N{$totalRow}", $this->items->sum('employee_deductions'));
-                $sheet->setCellValue("O{$totalRow}", $this->items->sum('philhealth'));
-                $sheet->setCellValue("P{$totalRow}", $this->items->sum('pagibig'));
-                $sheet->setCellValue("Q{$totalRow}", $this->items->sum('sss'));
-                $sheet->setCellValue("R{$totalRow}", $this->items->sum('net_pay'));
+                
+                // Format total undertime
+                $totalUtHours = floor($this->items->sum('undertime_hours'));
+                $totalUtMinutes = round(($this->items->sum('undertime_hours') - $totalUtHours) * 60);
+                $totalUtDisplay = '';
+                if ($totalUtHours > 0 && $totalUtMinutes > 0) {
+                    $totalUtDisplay = $totalUtHours . 'h ' . $totalUtMinutes . 'm';
+                } elseif ($totalUtHours > 0) {
+                    $totalUtDisplay = $totalUtHours . 'h';
+                } elseif ($totalUtMinutes > 0) {
+                    $totalUtDisplay = $totalUtMinutes . 'm';
+                }
+                $sheet->setCellValue("I{$totalRow}", $totalUtDisplay);
+                
+                $sheet->setCellValue("J{$totalRow}", $this->items->sum('salary_adjustment'));
+                $sheet->setCellValue("K{$totalRow}", $this->items->sum('other_allowances'));
+                $sheet->setCellValue("L{$totalRow}", $this->items->sum('gross_pay'));
+                $sheet->setCellValue("M{$totalRow}", $this->items->sum('employee_savings'));
+                $sheet->setCellValue("N{$totalRow}", $this->items->sum('loans'));
+                $sheet->setCellValue("O{$totalRow}", $this->items->sum('employee_deductions'));
+                $sheet->setCellValue("P{$totalRow}", $this->items->sum('philhealth'));
+                $sheet->setCellValue("Q{$totalRow}", $this->items->sum('pagibig'));
+                $sheet->setCellValue("R{$totalRow}", $this->items->sum('sss'));
+                $sheet->setCellValue("S{$totalRow}", $this->items->sum('net_pay'));
 
                 $totalStyle = [
                     'font' => ['bold' => true, 'size' => 9],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ];
-                $sheet->getStyle("A{$totalRow}:S{$totalRow}")->applyFromArray($totalStyle);
+                $sheet->getStyle("A{$totalRow}:T{$totalRow}")->applyFromArray($totalStyle);
 
                 // Add acknowledgment
                 $ackRow = $totalRow + 2;
                 $sheet->setCellValue("A{$ackRow}", '"I hereby acknowledge that the computation and total of my salary stated above for the given period is correct."');
-                $sheet->mergeCells("A{$ackRow}:S{$ackRow}");
+                $sheet->mergeCells("A{$ackRow}:T{$ackRow}");
                 $sheet->getStyle("A{$ackRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle("A{$ackRow}")->getFont()->setItalic(true)->setSize(8);
 
@@ -233,21 +262,21 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sigRow = $ackRow + 2;
                 $sheet->setCellValue("A{$sigRow}", 'PREPARED BY:');
                 $sheet->setCellValue("F{$sigRow}", 'CHECKED AND VERIFIED BY:');
-                $sheet->setCellValue("K{$sigRow}", 'RECOMMENDED BY:');
-                $sheet->setCellValue("P{$sigRow}", 'APPROVED BY:');
+                $sheet->setCellValue("L{$sigRow}", 'RECOMMENDED BY:');
+                $sheet->setCellValue("Q{$sigRow}", 'APPROVED BY:');
 
                 $sigNameRow = $sigRow + 1;
                 $sheet->setCellValue("A{$sigNameRow}", 'MERCIEL LAVASAN');
                 $sheet->setCellValue("F{$sigNameRow}", 'SAIRAH JENITA');
-                $sheet->setCellValue("K{$sigNameRow}", 'ENGR. FRANCIS GIOVANNI C. RIVERA');
-                $sheet->setCellValue("P{$sigNameRow}", 'ENGR. OSTRIC R. RIVERA JR.');
-                $sheet->getStyle("A{$sigNameRow}:S{$sigNameRow}")->getFont()->setBold(true)->setSize(8);
+                $sheet->setCellValue("L{$sigNameRow}", 'ENGR. FRANCIS GIOVANNI C. RIVERA');
+                $sheet->setCellValue("Q{$sigNameRow}", 'ENGR. OSTRIC R. RIVERA JR.');
+                $sheet->getStyle("A{$sigNameRow}:T{$sigNameRow}")->getFont()->setBold(true)->setSize(8);
 
                 $sigNameRow2 = $sigNameRow + 1;
                 $sheet->setCellValue("F{$sigNameRow2}", 'PAICA CRISTEL MAE SUGABO');
-                $sheet->setCellValue("K{$sigNameRow2}", 'ENGR. OSTRIC C. RIVERA, III');
-                $sheet->setCellValue("P{$sigNameRow2}", 'ENG. ELISA MAY PARCON');
-                $sheet->getStyle("A{$sigNameRow2}:S{$sigNameRow2}")->getFont()->setBold(true)->setSize(8);
+                $sheet->setCellValue("L{$sigNameRow2}", 'ENGR. OSTRIC C. RIVERA, III');
+                $sheet->setCellValue("Q{$sigNameRow2}", 'ENG. ELISA MAY PARCON');
+                $sheet->getStyle("A{$sigNameRow2}:T{$sigNameRow2}")->getFont()->setBold(true)->setSize(8);
 
                 // Set column widths
                 $sheet->getColumnDimension('A')->setWidth(25);  // NAME
@@ -258,17 +287,18 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->getColumnDimension('F')->setWidth(10);  // REG OT
                 $sheet->getColumnDimension('G')->setWidth(6);   // SPE HRS
                 $sheet->getColumnDimension('H')->setWidth(12);  // SUN/SPL. HOL.
-                $sheet->getColumnDimension('I')->setWidth(14);  // Adj. Prev. Salary
-                $sheet->getColumnDimension('J')->setWidth(10);  // Allowance
-                $sheet->getColumnDimension('K')->setWidth(12);  // GROSS AMOUNT
-                $sheet->getColumnDimension('L')->setWidth(12);  // Employee's Savings
-                $sheet->getColumnDimension('M')->setWidth(10);  // Loans
-                $sheet->getColumnDimension('N')->setWidth(10);  // Deductions
-                $sheet->getColumnDimension('O')->setWidth(10);  // Phic Prem
-                $sheet->getColumnDimension('P')->setWidth(10);  // HDMF Prem
-                $sheet->getColumnDimension('Q')->setWidth(10);  // SSS Prem
-                $sheet->getColumnDimension('R')->setWidth(12);  // NET AMOUNT
-                $sheet->getColumnDimension('S')->setWidth(12);  // SIGNATURE
+                $sheet->getColumnDimension('I')->setWidth(8);   // UT (Undertime)
+                $sheet->getColumnDimension('J')->setWidth(14);  // Adj. Prev. Salary
+                $sheet->getColumnDimension('K')->setWidth(10);  // Allowance
+                $sheet->getColumnDimension('L')->setWidth(12);  // GROSS AMOUNT
+                $sheet->getColumnDimension('M')->setWidth(12);  // Employee's Savings
+                $sheet->getColumnDimension('N')->setWidth(10);  // Loans
+                $sheet->getColumnDimension('O')->setWidth(10);  // Deductions
+                $sheet->getColumnDimension('P')->setWidth(10);  // Phic Prem
+                $sheet->getColumnDimension('Q')->setWidth(10);  // HDMF Prem
+                $sheet->getColumnDimension('R')->setWidth(10);  // SSS Prem
+                $sheet->getColumnDimension('S')->setWidth(12);  // NET AMOUNT
+                $sheet->getColumnDimension('T')->setWidth(12);  // SIGNATURE
 
                 // Set page to landscape
                 $sheet->getPageSetup()->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE);
@@ -292,16 +322,17 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             'D' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Basic Pay
             'F' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // REG OT
             'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // SUN/SPL. HOL.
-            'I' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // COLA
-            'J' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Allowance
-            'K' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Gross Pay
-            'L' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Employee's Savings
-            'M' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Loans
-            'N' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Deductions
-            'O' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // PhilHealth
-            'P' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Pag-IBIG
-            'Q' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // SSS
-            'R' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Net Pay
+            // I is UT (text format - no number format needed)
+            'J' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Adj. Prev. Salary
+            'K' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Allowance
+            'L' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Gross Pay
+            'M' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Employee's Savings
+            'N' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Loans
+            'O' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Deductions
+            'P' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // PhilHealth
+            'Q' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Pag-IBIG
+            'R' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // SSS
+            'S' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Net Pay
         ];
     }
 }

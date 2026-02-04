@@ -705,14 +705,6 @@ const menuSections = computed(() => {
       roles: ["admin", "payrollist"],
     },
     {
-      title: "Leave Requests",
-      icon: "mdi-calendar-check",
-      value: "leave-approval",
-      to: "/leave-approval",
-      roles: ["admin", "hr"],
-    },
-
-    {
       title: "Departments",
       icon: "mdi-office-building",
       value: "projects",
