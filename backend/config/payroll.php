@@ -35,42 +35,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Undertime Department Configuration
+    | Undertime Configuration
     |--------------------------------------------------------------------------
     |
-    | Departments that require strict undertime tracking with specific
-    | time-in requirements and grace periods.
+    | Undertime tracking is now managed per-department through the
+    | Attendance Settings UI. Each project/department can have its own
+    | time_in, time_out, and grace_period_minutes settings.
     |
     */
 
     'undertime' => [
-        // Enable/disable undertime tracking
+        // Enable/disable undertime tracking globally
         'enabled' => env('PAYROLL_UNDERTIME_ENABLED', true),
-
-        // Group 1: 8:00 AM time-in departments (Admin/Engineers)
-        'group_8am' => [
-            'standard_time_in' => '08:00',
-            'grace_period_minutes' => 1, // Default 1 minute, uses project setting if available
-            'half_day_threshold' => '09:01',
-            'departments' => [
-                'Admin Resign',
-                'Sur admin',
-                'Weekly Admin (mix)',
-                'ENGINEER SA SITE',
-                'Giovanni Construction and Power On Enterprise Co',
-            ],
-        ],
-
-        // Group 2: 7:30 AM time-in departments (Remaining sites/departments)
-        'group_730am' => [
-            'standard_time_in' => '07:30',
-            'grace_period_minutes' => 1, // Default 1 minute, uses project setting if available
-            'half_day_threshold' => '08:31',
-            'departments' => [
-                // All other departments not in group_8am
-                // Will be determined dynamically
-            ],
-        ],
     ],
 
     /*
