@@ -198,30 +198,16 @@ class Attendance extends Model
             $this->overtime_hours = max(0, $totalHours - $halfDayHours);
         }
 
-        // Calculate undertime - use project schedule if available, otherwise department-specific logic
+        // Calculate undertime based on project/department schedule settings
         if ($this->status === 'half_day') {
             // Half-day already handled by status; avoid double deduction
             $this->undertime_hours = 0;
         } else {
-            if ($schedule['use_project']) {
-                $this->undertime_hours = $this->calculateUndertimeHoursForSchedule(
-                    $timeIn,
-                    $schedule
-                );
-            } else {
-                $undertimeGroup = $this->getUndertimeGroup();
-                if ($undertimeGroup) {
-                    // Use strict undertime calculation for tracked departments
-                    $this->undertime_hours = $this->calculateUndertimeHours($timeIn, $totalHours);
-                } else {
-                    // Default undertime calculation for non-tracked departments
-                    if ($totalHours < $standardHours && $this->status === 'present') {
-                        $this->undertime_hours = $standardHours - $totalHours;
-                    } else {
-                        $this->undertime_hours = 0;
-                    }
-                }
-            }
+            // Always use schedule-based calculation (project settings from Attendance Settings UI)
+            $this->undertime_hours = $this->calculateUndertimeHoursForSchedule(
+                $timeIn,
+                $schedule
+            );
         }
 
         $this->save();
@@ -260,17 +246,22 @@ class Attendance extends Model
         return round($ndHours, 2);
     }
 
+    /**
+     * Get schedule configuration for attendance calculation
+     * Priority: Project/Department settings (from Attendance Settings UI) -> System defaults
+     */
     private function getScheduleConfig(Carbon $timeIn): array
     {
-        $defaultTimeIn = config('payroll.attendance.standard_time_in', '08:00');
+        $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
         $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
         $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 0);
         $defaultHours = (float) config('payroll.standard_hours_per_day', 8);
 
         $project = $this->employee?->project;
+        
+        // If no project assigned, use system defaults
         if (!$project) {
             return [
-                'use_project' => false,
                 'standard_time_in' => $defaultTimeIn,
                 'standard_time_out' => $defaultTimeOut,
                 'grace_period_minutes' => $defaultGrace,
@@ -278,32 +269,14 @@ class Attendance extends Model
             ];
         }
 
-        $projectTimeIn = $project->time_in;
-        $projectTimeOut = $project->time_out;
-        $projectGrace = $project->grace_period_minutes;
-
-        $hasProjectSchedule = $projectTimeIn || $projectTimeOut || $projectGrace !== null;
-        if (!$hasProjectSchedule) {
-            return [
-                'use_project' => false,
-                'standard_time_in' => $defaultTimeIn,
-                'standard_time_out' => $defaultTimeOut,
-                'grace_period_minutes' => $defaultGrace,
-                'standard_hours' => $defaultHours,
-            ];
-        }
-
-        $standardTimeIn = $projectTimeIn ?: $defaultTimeIn;
-        $standardTimeOut = $projectTimeOut ?: $defaultTimeOut;
-        $gracePeriod = $projectGrace !== null ? (int) $projectGrace : $defaultGrace;
-        $standardHours = $defaultHours;
-
+        // Use project settings with fallback to defaults for any missing values
         return [
-            'use_project' => true,
-            'standard_time_in' => $standardTimeIn,
-            'standard_time_out' => $standardTimeOut,
-            'grace_period_minutes' => $gracePeriod,
-            'standard_hours' => $standardHours,
+            'standard_time_in' => $project->time_in ?: $defaultTimeIn,
+            'standard_time_out' => $project->time_out ?: $defaultTimeOut,
+            'grace_period_minutes' => $project->grace_period_minutes !== null 
+                ? (int) $project->grace_period_minutes 
+                : $defaultGrace,
+            'standard_hours' => $defaultHours,
         ];
     }
 
@@ -368,120 +341,9 @@ class Attendance extends Model
     }
 
     /**
-     * Check if employee's department requires strict undertime tracking
-     * Returns the group ('8am', '730am', or null)
+     * @deprecated No longer used - schedules are now managed per-department via Attendance Settings UI
+     * Kept for reference but can be safely removed in future cleanup
      */
-    private function getUndertimeGroup(): ?string
-    {
-        if (!$this->employee) {
-            return null;
-        }
-
-        $department = $this->employee->department;
-
-        // Check if in 8:00 AM group
-        $group8am = config('payroll.undertime.group_8am.departments', []);
-        if (in_array($department, $group8am)) {
-            return '8am';
-        }
-
-        // Check if in 7:30 AM group (all other departments)
-        // Excluding null/empty departments
-        if (!empty($department)) {
-            return '730am';
-        }
-
-        return null;
-    }
-
-    /**
-     * Calculate undertime hours for departments with strict time-in requirements
-     * Supports multiple department groups with different time-in schedules
-     * Includes both late arrivals AND early departures
-     * Now prioritizes project grace period setting over config defaults
-     */
-    private function calculateUndertimeHours(Carbon $timeIn, float $totalHours): float
-    {
-        // Get the undertime group this employee belongs to
-        $group = $this->getUndertimeGroup();
-
-        if (!$group) {
-            return 0; // No undertime tracking for this department
-        }
-
-        // Get configuration for the specific group
-        $groupConfig = config("payroll.undertime.group_{$group}");
-        if (!$groupConfig) {
-            return 0;
-        }
-
-        $standardTimeInConfig = $groupConfig['standard_time_in'];
-        $standardHours = config('payroll.standard_hours_per_day', 8);
-
-        // Prioritize project grace period over config default
-        $project = $this->employee?->project;
-        if ($project && $project->grace_period_minutes !== null && $project->grace_period_minutes !== '') {
-            $gracePeriodMinutes = (int) $project->grace_period_minutes;
-        } else {
-            // Fall back to group config default
-            $gracePeriodMinutes = $groupConfig['grace_period_minutes'];
-        }
-
-        $halfDayThresholdConfig = $groupConfig['half_day_threshold'];
-        $dateString = $timeIn->toDateString();
-
-        $standardTimeIn = Carbon::parse($dateString . ' ' . $standardTimeInConfig);
-        $halfDayThreshold = Carbon::parse($dateString . ' ' . $halfDayThresholdConfig);
-
-        // Calculate standard time out based on time in + standard hours
-        // For 8am group: 8:00 AM + 8 hours = 4:00 PM (assuming 1 hour break taken separately)
-        // For 7:30am group: 7:30 AM + 8 hours = 3:30 PM (assuming 1 hour break)
-        // Using config standard_time_out as reference
-        $standardTimeOutConfig = config('payroll.attendance.standard_time_out', '17:00');
-        
-        // Adjust standard time out based on group's time in
-        if ($group === '8am') {
-            $standardTimeOutConfig = '17:00'; // 8 AM + 8 hours + 1 hour break = 5 PM
-        } else {
-            $standardTimeOutConfig = '16:30'; // 7:30 AM + 8 hours + 1 hour break = 4:30 PM
-        }
-        
-        $standardTimeOut = Carbon::parse($dateString . ' ' . $standardTimeOutConfig);
-
-        // Check if time-in is at or after half-day threshold - mark as half day
-        if ($timeIn->gte($halfDayThreshold)) {
-            $this->status = 'half_day';
-            // Half-day handled via status; no extra undertime deduction
-            return 0;
-        }
-
-        $undertimeMinutes = 0;
-
-        // Calculate undertime based on late time-in beyond grace period
-        $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
-
-        if ($timeIn->gt($allowedTimeIn)) {
-            // Calculate minutes late
-            $undertimeMinutes += $allowedTimeIn->diffInMinutes($timeIn);
-        }
-
-        // Calculate early departure undertime
-        if ($this->time_out) {
-            $timeOut = Carbon::parse($dateString . ' ' . $this->time_out);
-            
-            // Handle overnight shifts
-            if ($timeOut->lt($timeIn)) {
-                $timeOut->addDay();
-            }
-            
-            // If employee left before standard time out
-            if ($timeOut->lt($standardTimeOut)) {
-                $undertimeMinutes += $timeOut->diffInMinutes($standardTimeOut);
-            }
-        }
-
-        return round($undertimeMinutes / 60, 4); // Return in hours with precision
-    }
 
     public function isPresent(): bool
     {

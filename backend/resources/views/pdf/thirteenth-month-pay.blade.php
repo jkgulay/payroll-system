@@ -266,8 +266,8 @@
         </div>
         <!-- Repeat Header on new page -->
         <div class="header">
-            <h2>{{ $companyName }}</h2>
-            <div class="address">{{ $companyAddress }}</div>
+            <h2>{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</h2>
+            <div class="address">{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
         </div>
         <div class="title">
             <h3>13TH MONTH PAY</h3>
