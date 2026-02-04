@@ -235,6 +235,7 @@
                 <th rowspan="2">No. of<br>Days</th>
                 <th rowspan="2">AMOUNT</th>
                 <th colspan="4">OVERTIME</th>
+                <th rowspan="2">UT</th>
                 <th rowspan="2">Adj. Prev.<br>Salary</th>
                 <th rowspan="2">Allowance</th>
                 <th rowspan="2">GROSS<br>AMOUNT</th>
@@ -256,6 +257,18 @@
         </thead>
         <tbody>
             @foreach($items as $index => $item)
+            @php
+                $utHours = floor($item->undertime_hours ?? 0);
+                $utMinutes = round((($item->undertime_hours ?? 0) - $utHours) * 60);
+                $utDisplay = '';
+                if ($utHours > 0 && $utMinutes > 0) {
+                    $utDisplay = $utHours . 'h ' . $utMinutes . 'm';
+                } elseif ($utHours > 0) {
+                    $utDisplay = $utHours . 'h';
+                } elseif ($utMinutes > 0) {
+                    $utDisplay = $utMinutes . 'm';
+                }
+            @endphp
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
                 <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
@@ -265,6 +278,7 @@
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
                 <td>{{ $item->special_ot_hours > 0 ? $item->special_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '' }}</td>
+                <td>{{ $utDisplay }}</td>
                 <td class="text-right">{{ $item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->gross_pay, 2) }}</td>
@@ -279,8 +293,20 @@
             </tr>
             @endforeach
             <tr>
-                <td colspan="19" class="nothing-follows"><em>nothing follows</em></td>
+                <td colspan="21" class="nothing-follows"><em>nothing follows</em></td>
             </tr>
+            @php
+                $totalUtHours = floor($items->sum('undertime_hours'));
+                $totalUtMinutes = round(($items->sum('undertime_hours') - $totalUtHours) * 60);
+                $totalUtDisplay = '';
+                if ($totalUtHours > 0 && $totalUtMinutes > 0) {
+                    $totalUtDisplay = $totalUtHours . 'h ' . $totalUtMinutes . 'm';
+                } elseif ($totalUtHours > 0) {
+                    $totalUtDisplay = $totalUtHours . 'h';
+                } elseif ($totalUtMinutes > 0) {
+                    $totalUtDisplay = $totalUtMinutes . 'm';
+                }
+            @endphp
             <tr class="total-row">
                 <td class="text-left"><strong>T O T A L</strong></td>
                 <td></td>
@@ -290,6 +316,7 @@
                 <td class="text-right">{{ number_format($items->sum('regular_ot_pay'), 2) }}</td>
                 <td>{{ $items->sum('special_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($items->sum('special_ot_pay'), 2) }}</td>
+                <td>{{ $totalUtDisplay }}</td>
                 <td class="text-right">{{ number_format($items->sum('salary_adjustment'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('other_allowances'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('gross_pay'), 2) }}</td>
@@ -327,6 +354,7 @@
                 <th rowspan="2">No. of<br>Days</th>
                 <th rowspan="2">AMOUNT</th>
                 <th colspan="4">OVERTIME</th>
+                <th rowspan="2">UT</th>
                 <th rowspan="2">Adj. Prev.<br>Salary</th>
                 <th rowspan="2">Allowance</th>
                 <th rowspan="2">GROSS<br>AMOUNT</th>
@@ -348,6 +376,18 @@
         </thead>
         <tbody>
             @foreach($payroll->items as $index => $item)
+            @php
+                $utHours = floor($item->undertime_hours ?? 0);
+                $utMinutes = round((($item->undertime_hours ?? 0) - $utHours) * 60);
+                $utDisplay = '';
+                if ($utHours > 0 && $utMinutes > 0) {
+                    $utDisplay = $utHours . 'h ' . $utMinutes . 'm';
+                } elseif ($utHours > 0) {
+                    $utDisplay = $utHours . 'h';
+                } elseif ($utMinutes > 0) {
+                    $utDisplay = $utMinutes . 'm';
+                }
+            @endphp
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
                 <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
@@ -357,6 +397,7 @@
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
                 <td>{{ $item->special_ot_hours > 0 ? $item->special_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '' }}</td>
+                <td>{{ $utDisplay }}</td>
                 <td class="text-right">{{ $item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->gross_pay, 2) }}</td>
@@ -371,8 +412,20 @@
             </tr>
             @endforeach
             <tr>
-                <td colspan="19" class="nothing-follows"><em>nothing follows</em></td>
+                <td colspan="21" class="nothing-follows"><em>nothing follows</em></td>
             </tr>
+            @php
+                $totalUtHours = floor($payroll->items->sum('undertime_hours'));
+                $totalUtMinutes = round(($payroll->items->sum('undertime_hours') - $totalUtHours) * 60);
+                $totalUtDisplay = '';
+                if ($totalUtHours > 0 && $totalUtMinutes > 0) {
+                    $totalUtDisplay = $totalUtHours . 'h ' . $totalUtMinutes . 'm';
+                } elseif ($totalUtHours > 0) {
+                    $totalUtDisplay = $totalUtHours . 'h';
+                } elseif ($totalUtMinutes > 0) {
+                    $totalUtDisplay = $totalUtMinutes . 'm';
+                }
+            @endphp
             <tr class="total-row">
                 <td class="text-left"><strong>T O T A L</strong></td>
                 <td></td>
@@ -382,6 +435,7 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('regular_ot_pay'), 2) }}</td>
                 <td>{{ $payroll->items->sum('special_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('special_ot_pay'), 2) }}</td>
+                <td>{{ $totalUtDisplay }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('salary_adjustment'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('other_allowances'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->total_gross, 2) }}</td>

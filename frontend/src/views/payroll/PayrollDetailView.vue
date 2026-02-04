@@ -224,6 +224,16 @@
               </div>
             </template>
 
+            <!-- Undertime -->
+            <template v-slot:item.undertime="{ item }">
+              <div class="text-center">
+                <div v-if="item.undertime_hours > 0" class="text-caption text-warning">
+                  {{ formatUndertime(item.undertime_hours) }}
+                </div>
+                <div v-else class="text-caption text-medium-emphasis">-</div>
+              </div>
+            </template>
+
             <!-- Gross Pay -->
             <template v-slot:item.gross_pay="{ item }">
               <div class="text-right font-weight-bold" style="color: #ed985f">
@@ -554,6 +564,7 @@ const headers = [
   { title: "Rate & Days", key: "rate_days", sortable: false },
   { title: "Basic Pay", key: "basic_pay", sortable: true, align: "end" },
   { title: "Overtime", key: "overtime", sortable: false },
+  { title: "UT", key: "undertime", sortable: false },
   { title: "Gross Pay", key: "gross_pay", sortable: true, align: "end" },
   { title: "Deductions", key: "deductions", sortable: false },
   { title: "Net Pay", key: "net_pay", sortable: true, align: "end" },
@@ -807,6 +818,20 @@ function formatCurrency(amount) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function formatUndertime(hours) {
+  if (!hours || hours <= 0) return "";
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  if (h > 0 && m > 0) {
+    return `${h}h ${m}m`;
+  } else if (h > 0) {
+    return `${h}h`;
+  } else if (m > 0) {
+    return `${m}m`;
+  }
+  return "";
 }
 </script>
 
