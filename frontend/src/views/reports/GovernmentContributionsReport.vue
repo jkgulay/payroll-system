@@ -4,10 +4,10 @@
       <v-col cols="12">
         <!-- Page Header -->
         <div class="page-header mb-6">
-          <v-btn 
-            icon 
-            variant="text" 
-            @click="$router.back()" 
+          <v-btn
+            icon
+            variant="text"
+            @click="$router.back()"
             class="back-btn mr-4"
             size="large"
           >
@@ -18,7 +18,9 @@
               <v-icon size="32" color="orange-darken-2">mdi-file-chart</v-icon>
             </v-avatar>
             <div>
-              <h1 class="text-h4 font-weight-bold mb-1">Government Contributions Report</h1>
+              <h1 class="text-h4 font-weight-bold mb-1">
+                Government Contributions Report
+              </h1>
               <p class="text-body-1 text-medium-emphasis">
                 Create, manage and process payroll for all employees
               </p>
@@ -32,7 +34,9 @@
             <v-row align="center" class="mb-2">
               <v-col cols="12">
                 <div class="d-flex align-center mb-4">
-                  <v-icon color="primary" class="mr-2">mdi-filter-variant</v-icon>
+                  <v-icon color="primary" class="mr-2"
+                    >mdi-filter-variant</v-icon
+                  >
                   <span class="text-h6 font-weight-medium">Report Filters</span>
                 </div>
               </v-col>
@@ -92,7 +96,7 @@
                 </v-btn>
               </v-col>
             </v-row>
-            
+
             <!-- Action Buttons Row -->
             <v-row class="mt-4">
               <v-col cols="12">
@@ -132,7 +136,7 @@
                     variant="tonal"
                     color="primary"
                   >
-                    {{ showChart ? 'Show Table' : 'Show Chart' }}
+                    {{ showChart ? "Show Table" : "Show Chart" }}
                   </v-btn>
                 </div>
               </v-col>
@@ -144,7 +148,12 @@
         <v-slide-y-transition group>
           <v-row v-if="reportData" class="mb-6" key="summary-cards">
             <!-- Warning Alert for Zero Contributions -->
-            <v-col cols="12" v-if="reportData.grand_total === 0 && reportData.employee_count > 0">
+            <v-col
+              cols="12"
+              v-if="
+                reportData.grand_total === 0 && reportData.employee_count > 0
+              "
+            >
               <v-alert
                 type="warning"
                 variant="tonal"
@@ -158,24 +167,32 @@
                   No Contributions Calculated
                 </v-alert-title>
                 <div class="mt-2">
-                  Found {{ reportData.employee_count }} employees for {{ reportData.period }}, but no government contributions were calculated.
-                  <br><br>
+                  Found {{ reportData.employee_count }} employees for
+                  {{ reportData.period }}, but no government contributions were
+                  calculated. <br /><br />
                   <strong>Possible reasons:</strong>
                   <ul class="mt-2 ml-4">
                     <li>No payroll has been processed for this period</li>
-                    <li>Payroll exists but government contributions (SSS, PhilHealth, Pag-IBIG) were not calculated</li>
-                    <li>Employee salaries may be below the minimum threshold for contributions</li>
+                    <li>
+                      Payroll exists but government contributions (SSS,
+                      PhilHealth, Pag-IBIG) were not calculated
+                    </li>
+                    <li>
+                      Employee salaries may be below the minimum threshold for
+                      contributions
+                    </li>
                   </ul>
-                  <br>
-                  <strong>To fix:</strong> Generate or regenerate payroll for {{ reportData.period }} to calculate government contributions.
+                  <br />
+                  <strong>To fix:</strong> Generate or regenerate payroll for
+                  {{ reportData.period }} to calculate government contributions.
                 </div>
               </v-alert>
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card 
-                class="summary-card sss-card h-100" 
-                elevation="2" 
+              <v-card
+                class="summary-card sss-card h-100"
+                elevation="2"
                 rounded="lg"
                 hover
               >
@@ -183,11 +200,15 @@
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-avatar color="blue-lighten-5" size="48" class="mr-3">
-                        <v-icon color="blue-darken-2" size="28">mdi-shield-account</v-icon>
+                        <v-icon color="blue-darken-2" size="28"
+                          >mdi-shield-account</v-icon
+                        >
                       </v-avatar>
                       <span class="text-h6 font-weight-medium">SSS</span>
                     </div>
-                    <v-chip size="small" color="blue" variant="tonal">Social Security</v-chip>
+                    <v-chip size="small" color="blue" variant="tonal"
+                      >Social Security</v-chip
+                    >
                   </div>
                   <div class="text-h3 font-weight-bold mb-3 text-primary">
                     ₱{{ formatNumber(reportData.sss_total) }}
@@ -196,15 +217,22 @@
                   <div class="contribution-breakdown">
                     <div class="d-flex justify-space-between mb-2">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-account</v-icon>Employee Share
+                        <v-icon size="16" class="mr-1">mdi-account</v-icon
+                        >Employee Share
                       </span>
-                      <span class="font-weight-medium">₱{{ formatNumber(reportData.sss_employee) }}</span>
+                      <span class="font-weight-medium"
+                        >₱{{ formatNumber(reportData.sss_employee) }}</span
+                      >
                     </div>
                     <div class="d-flex justify-space-between">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-office-building</v-icon>Employer Share
+                        <v-icon size="16" class="mr-1"
+                          >mdi-office-building</v-icon
+                        >Employer Share
                       </span>
-                      <span class="font-weight-medium">₱{{ formatNumber(reportData.sss_employer) }}</span>
+                      <span class="font-weight-medium"
+                        >₱{{ formatNumber(reportData.sss_employer) }}</span
+                      >
                     </div>
                   </div>
                 </v-card-text>
@@ -212,9 +240,9 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card 
-                class="summary-card philhealth-card h-100" 
-                elevation="2" 
+              <v-card
+                class="summary-card philhealth-card h-100"
+                elevation="2"
                 rounded="lg"
                 hover
               >
@@ -222,11 +250,15 @@
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-avatar color="green-lighten-5" size="48" class="mr-3">
-                        <v-icon color="green-darken-2" size="28">mdi-hospital-box</v-icon>
+                        <v-icon color="green-darken-2" size="28"
+                          >mdi-hospital-box</v-icon
+                        >
                       </v-avatar>
                       <span class="text-h6 font-weight-medium">PhilHealth</span>
                     </div>
-                    <v-chip size="small" color="green" variant="tonal">Healthcare</v-chip>
+                    <v-chip size="small" color="green" variant="tonal"
+                      >Healthcare</v-chip
+                    >
                   </div>
                   <div class="text-h3 font-weight-bold mb-3 text-success">
                     ₱{{ formatNumber(reportData.philhealth_total) }}
@@ -235,15 +267,26 @@
                   <div class="contribution-breakdown">
                     <div class="d-flex justify-space-between mb-2">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-account</v-icon>Employee Share
+                        <v-icon size="16" class="mr-1">mdi-account</v-icon
+                        >Employee Share
                       </span>
-                      <span class="font-weight-medium">₱{{ formatNumber(reportData.philhealth_employee) }}</span>
+                      <span class="font-weight-medium"
+                        >₱{{
+                          formatNumber(reportData.philhealth_employee)
+                        }}</span
+                      >
                     </div>
                     <div class="d-flex justify-space-between">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-office-building</v-icon>Employer Share
+                        <v-icon size="16" class="mr-1"
+                          >mdi-office-building</v-icon
+                        >Employer Share
                       </span>
-                      <span class="font-weight-medium">₱{{ formatNumber(reportData.philhealth_employer) }}</span>
+                      <span class="font-weight-medium"
+                        >₱{{
+                          formatNumber(reportData.philhealth_employer)
+                        }}</span
+                      >
                     </div>
                   </div>
                 </v-card-text>
@@ -251,9 +294,9 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card 
-                class="summary-card pagibig-card h-100" 
-                elevation="2" 
+              <v-card
+                class="summary-card pagibig-card h-100"
+                elevation="2"
                 rounded="lg"
                 hover
               >
@@ -261,11 +304,15 @@
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-avatar color="orange-lighten-5" size="48" class="mr-3">
-                        <v-icon color="orange-darken-2" size="28">mdi-home-city</v-icon>
+                        <v-icon color="orange-darken-2" size="28"
+                          >mdi-home-city</v-icon
+                        >
                       </v-avatar>
                       <span class="text-h6 font-weight-medium">Pag-IBIG</span>
                     </div>
-                    <v-chip size="small" color="orange" variant="tonal">Housing</v-chip>
+                    <v-chip size="small" color="orange" variant="tonal"
+                      >Housing</v-chip
+                    >
                   </div>
                   <div class="text-h3 font-weight-bold mb-3 text-orange">
                     ₱{{ formatNumber(reportData.pagibig_total) }}
@@ -274,15 +321,22 @@
                   <div class="contribution-breakdown">
                     <div class="d-flex justify-space-between mb-2">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-account</v-icon>Employee Share
+                        <v-icon size="16" class="mr-1">mdi-account</v-icon
+                        >Employee Share
                       </span>
-                      <span class="font-weight-medium">₱{{ formatNumber(reportData.pagibig_employee) }}</span>
+                      <span class="font-weight-medium"
+                        >₱{{ formatNumber(reportData.pagibig_employee) }}</span
+                      >
                     </div>
                     <div class="d-flex justify-space-between">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-office-building</v-icon>Employer Share
+                        <v-icon size="16" class="mr-1"
+                          >mdi-office-building</v-icon
+                        >Employer Share
                       </span>
-                      <span class="font-weight-medium">₱{{ formatNumber(reportData.pagibig_employer) }}</span>
+                      <span class="font-weight-medium"
+                        >₱{{ formatNumber(reportData.pagibig_employer) }}</span
+                      >
                     </div>
                   </div>
                 </v-card-text>
@@ -290,9 +344,9 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card 
-                class="summary-card total-card h-100" 
-                elevation="2" 
+              <v-card
+                class="summary-card total-card h-100"
+                elevation="2"
                 rounded="lg"
                 hover
               >
@@ -300,11 +354,15 @@
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-avatar color="purple-lighten-5" size="48" class="mr-3">
-                        <v-icon color="purple-darken-2" size="28">mdi-cash-multiple</v-icon>
+                        <v-icon color="purple-darken-2" size="28"
+                          >mdi-cash-multiple</v-icon
+                        >
                       </v-avatar>
                       <span class="text-h6 font-weight-medium">Total</span>
                     </div>
-                    <v-chip size="small" color="purple" variant="tonal">Overall</v-chip>
+                    <v-chip size="small" color="purple" variant="tonal"
+                      >Overall</v-chip
+                    >
                   </div>
                   <div class="text-h3 font-weight-bold mb-3 text-purple">
                     ₱{{ formatNumber(reportData.grand_total) }}
@@ -313,15 +371,26 @@
                   <div class="contribution-breakdown">
                     <div class="d-flex justify-space-between mb-2">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-account-multiple</v-icon>Total Employees
+                        <v-icon size="16" class="mr-1"
+                          >mdi-account-multiple</v-icon
+                        >Total Employees
                       </span>
-                      <span class="font-weight-bold text-h6">{{ reportData.employee_count }}</span>
+                      <span class="font-weight-bold text-h6">{{
+                        reportData.employee_count
+                      }}</span>
                     </div>
                     <div class="d-flex justify-space-between">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-calendar-month</v-icon>Period
+                        <v-icon size="16" class="mr-1"
+                          >mdi-calendar-month</v-icon
+                        >Period
                       </span>
-                      <span class="font-weight-medium">{{ months.find(m => m.value === selectedMonth)?.label }} {{ selectedYear }}</span>
+                      <span class="font-weight-medium"
+                        >{{
+                          months.find((m) => m.value === selectedMonth)?.label
+                        }}
+                        {{ selectedYear }}</span
+                      >
                     </div>
                   </div>
                 </v-card-text>
@@ -331,7 +400,12 @@
         </v-slide-y-transition>
 
         <!-- Chart View -->
-        <v-card v-if="reportData && showChart" class="mb-6" elevation="2" rounded="lg">
+        <v-card
+          v-if="reportData && showChart"
+          class="mb-6"
+          elevation="2"
+          rounded="lg"
+        >
           <v-card-title class="pa-6 d-flex align-center">
             <v-icon class="mr-3" color="primary">mdi-chart-bar</v-icon>
             <span class="text-h5 font-weight-bold">Contributions Overview</span>
@@ -354,30 +428,61 @@
               <v-col cols="12">
                 <v-card variant="outlined" rounded="lg">
                   <v-card-text>
-                    <div class="text-h6 mb-4 font-weight-medium">Quick Statistics</div>
+                    <div class="text-h6 mb-4 font-weight-medium">
+                      Quick Statistics
+                    </div>
                     <v-row>
                       <v-col cols="6" sm="3">
                         <div class="stat-box">
-                          <div class="text-caption text-medium-emphasis mb-1">Average per Employee</div>
-                          <div class="text-h6 font-weight-bold">₱{{ formatNumber(reportData.grand_total / reportData.employee_count) }}</div>
+                          <div class="text-caption text-medium-emphasis mb-1">
+                            Average per Employee
+                          </div>
+                          <div class="text-h6 font-weight-bold">
+                            ₱{{
+                              formatNumber(
+                                reportData.grand_total /
+                                  reportData.employee_count,
+                              )
+                            }}
+                          </div>
                         </div>
                       </v-col>
                       <v-col cols="6" sm="3">
                         <div class="stat-box">
-                          <div class="text-caption text-medium-emphasis mb-1">Employee Share</div>
-                          <div class="text-h6 font-weight-bold text-primary">₱{{ formatNumber(reportData.total_employee_contributions) }}</div>
+                          <div class="text-caption text-medium-emphasis mb-1">
+                            Employee Share
+                          </div>
+                          <div class="text-h6 font-weight-bold text-primary">
+                            ₱{{
+                              formatNumber(
+                                reportData.total_employee_contributions,
+                              )
+                            }}
+                          </div>
                         </div>
                       </v-col>
                       <v-col cols="6" sm="3">
                         <div class="stat-box">
-                          <div class="text-caption text-medium-emphasis mb-1">Employer Share</div>
-                          <div class="text-h6 font-weight-bold text-success">₱{{ formatNumber(reportData.total_employer_contributions) }}</div>
+                          <div class="text-caption text-medium-emphasis mb-1">
+                            Employer Share
+                          </div>
+                          <div class="text-h6 font-weight-bold text-success">
+                            ₱{{
+                              formatNumber(
+                                reportData.total_employer_contributions,
+                              )
+                            }}
+                          </div>
                         </div>
                       </v-col>
                       <v-col cols="6" sm="3">
                         <div class="stat-box">
-                          <div class="text-caption text-medium-emphasis mb-1">Total Remittance</div>
-                          <div class="text-h6 font-weight-bold text-secondary">₱{{ formatNumber(reportData.grand_total) }}</div>
+                          <div class="text-caption text-medium-emphasis mb-1">
+                            Total Remittance
+                          </div>
+                          <div class="text-h6 font-weight-bold text-secondary">
+                            ₱{{ formatNumber(reportData.grand_total) }}
+                          </div>
                         </div>
                       </v-col>
                     </v-row>
@@ -392,8 +497,12 @@
         <v-card v-if="reportData && !showChart" elevation="2" rounded="lg">
           <v-card-title class="pa-6 d-flex align-center">
             <v-icon class="mr-3" color="primary">mdi-table-large</v-icon>
-            <span class="text-h5 font-weight-bold">Detailed Employee Breakdown</span>
-            <v-chip class="ml-3" color="primary" variant="tonal">{{ reportData.period }}</v-chip>
+            <span class="text-h5 font-weight-bold"
+              >Detailed Employee Breakdown</span
+            >
+            <v-chip class="ml-3" color="primary" variant="tonal">{{
+              reportData.period
+            }}</v-chip>
           </v-card-title>
           <v-divider></v-divider>
           <v-card-text class="pa-0">
@@ -406,7 +515,7 @@
                 { value: 50, title: '50' },
                 { value: 100, title: '100' },
                 { value: 200, title: '200' },
-                { value: -1, title: 'All' }
+                { value: -1, title: 'All' },
               ]"
               class="elevation-0 enhanced-table"
               :loading="loading"
@@ -415,8 +524,14 @@
               <template v-slot:top>
                 <v-toolbar flat class="px-6 py-4">
                   <div class="d-flex align-center">
-                    <v-icon class="mr-2" color="primary">mdi-account-multiple</v-icon>
-                    <span class="text-h6 font-weight-medium">{{ filteredEmployees.length }} Employee{{ filteredEmployees.length !== 1 ? 's' : '' }}</span>
+                    <v-icon class="mr-2" color="primary"
+                      >mdi-account-multiple</v-icon
+                    >
+                    <span class="text-h6 font-weight-medium"
+                      >{{ filteredEmployees.length }} Employee{{
+                        filteredEmployees.length !== 1 ? "s" : ""
+                      }}</span
+                    >
                   </div>
                   <v-spacer></v-spacer>
                   <v-text-field
@@ -428,7 +543,7 @@
                     variant="outlined"
                     density="compact"
                     clearable
-                    style="max-width: 400px;"
+                    style="max-width: 400px"
                   ></v-text-field>
                 </v-toolbar>
               </template>
@@ -436,34 +551,49 @@
               <template v-slot:item.employee_number="{ item }">
                 <div class="d-flex align-center">
                   <v-avatar color="primary" size="32" class="mr-2">
-                    <span class="text-caption font-weight-bold">{{ item.employee_number.substring(0, 2) }}</span>
+                    <span class="text-caption font-weight-bold">{{
+                      item.employee_number.substring(0, 2)
+                    }}</span>
                   </v-avatar>
-                  <span class="font-weight-medium">{{ item.employee_number }}</span>
+                  <span class="font-weight-medium">{{
+                    item.employee_number
+                  }}</span>
                 </div>
               </template>
 
               <template v-slot:item.full_name="{ item }">
                 <div class="py-2">
-                  <div class="font-weight-bold text-body-1">{{ item.full_name }}</div>
+                  <div class="font-weight-bold text-body-1">
+                    {{ item.full_name }}
+                  </div>
                   <div class="text-caption text-medium-emphasis">
-                    <v-icon size="14" class="mr-1">mdi-briefcase</v-icon>{{ item.position }}
+                    <v-icon size="14" class="mr-1">mdi-briefcase</v-icon
+                    >{{ item.position }}
                   </div>
                 </div>
               </template>
 
               <template v-slot:item.department="{ item }">
-                <v-chip size="small" :color="getDepartmentColor(item.department)" variant="tonal">
+                <v-chip
+                  size="small"
+                  :color="getDepartmentColor(item.department)"
+                  variant="tonal"
+                >
                   <v-icon start size="14">mdi-office-building</v-icon>
                   {{ item.department }}
                 </v-chip>
               </template>
 
               <template v-slot:item.sss_employee="{ item }">
-                <span class="text-body-2">₱{{ formatNumber(item.sss_employee) }}</span>
+                <span class="text-body-2"
+                  >₱{{ formatNumber(item.sss_employee) }}</span
+                >
               </template>
 
               <template v-slot:item.sss_employer="{ item }">
-                <span class="text-body-2">₱{{ formatNumber(item.sss_employer) }}</span>
+                <span class="text-body-2"
+                  >₱{{ formatNumber(item.sss_employer) }}</span
+                >
               </template>
 
               <template v-slot:item.sss_total="{ item }">
@@ -473,11 +603,15 @@
               </template>
 
               <template v-slot:item.philhealth_employee="{ item }">
-                <span class="text-body-2">₱{{ formatNumber(item.philhealth_employee) }}</span>
+                <span class="text-body-2"
+                  >₱{{ formatNumber(item.philhealth_employee) }}</span
+                >
               </template>
 
               <template v-slot:item.philhealth_employer="{ item }">
-                <span class="text-body-2">₱{{ formatNumber(item.philhealth_employer) }}</span>
+                <span class="text-body-2"
+                  >₱{{ formatNumber(item.philhealth_employer) }}</span
+                >
               </template>
 
               <template v-slot:item.philhealth_total="{ item }">
@@ -487,11 +621,15 @@
               </template>
 
               <template v-slot:item.pagibig_employee="{ item }">
-                <span class="text-body-2">₱{{ formatNumber(item.pagibig_employee) }}</span>
+                <span class="text-body-2"
+                  >₱{{ formatNumber(item.pagibig_employee) }}</span
+                >
               </template>
 
               <template v-slot:item.pagibig_employer="{ item }">
-                <span class="text-body-2">₱{{ formatNumber(item.pagibig_employer) }}</span>
+                <span class="text-body-2"
+                  >₱{{ formatNumber(item.pagibig_employer) }}</span
+                >
               </template>
 
               <template v-slot:item.pagibig_total="{ item }">
@@ -501,7 +639,12 @@
               </template>
 
               <template v-slot:item.grand_total="{ item }">
-                <v-chip size="small" color="purple" variant="flat" class="font-weight-bold">
+                <v-chip
+                  size="small"
+                  color="purple"
+                  variant="flat"
+                  class="font-weight-bold"
+                >
                   ₱{{ formatNumber(item.grand_total) }}
                 </v-chip>
               </template>
@@ -512,15 +655,21 @@
                   <v-row align="center">
                     <v-col cols="12" md="6">
                       <div class="d-flex align-center">
-                        <v-icon class="mr-2" color="primary">mdi-information</v-icon>
+                        <v-icon class="mr-2" color="primary"
+                          >mdi-information</v-icon
+                        >
                         <span class="text-body-1 text-medium-emphasis">
-                          Showing {{ filteredEmployees.length }} of {{ reportData.employees?.length || 0 }} employee(s) for {{ reportData.period }}
+                          Showing {{ filteredEmployees.length }} of
+                          {{ reportData.employees?.length || 0 }} employee(s)
+                          for {{ reportData.period }}
                         </span>
                       </div>
                     </v-col>
                     <v-col cols="12" md="6" class="text-right">
                       <div class="total-remittance-box">
-                        <span class="text-h6 font-weight-medium mr-3">Total Remittance:</span>
+                        <span class="text-h6 font-weight-medium mr-3"
+                          >Total Remittance:</span
+                        >
                         <span class="text-h4 font-weight-bold text-purple">
                           ₱{{ formatNumber(calculateFilteredTotal()) }}
                         </span>
@@ -532,11 +681,16 @@
 
               <template v-slot:no-data>
                 <div class="text-center pa-12">
-                  <v-icon size="64" color="grey-lighten-2">mdi-file-document-alert-outline</v-icon>
-                  <div class="text-h6 mt-4 mb-2 font-weight-medium">No Payroll Data Found</div>
+                  <v-icon size="64" color="grey-lighten-2"
+                    >mdi-file-document-alert-outline</v-icon
+                  >
+                  <div class="text-h6 mt-4 mb-2 font-weight-medium">
+                    No Payroll Data Found
+                  </div>
                   <div class="text-body-1 text-medium-emphasis">
-                    There are no payroll records for {{ reportData?.period || 'this period' }}.
-                    <br>Generate a payroll for this period to see contribution data.
+                    There are no payroll records for
+                    {{ reportData?.period || "this period" }}. <br />Generate a
+                    payroll for this period to see contribution data.
                   </div>
                 </div>
               </template>
@@ -547,10 +701,15 @@
         <!-- Empty State -->
         <v-card v-if="!reportData && !loading" elevation="2" rounded="lg">
           <v-card-text class="text-center pa-16">
-            <v-icon size="96" color="primary" class="mb-4">mdi-chart-box-outline</v-icon>
-            <h3 class="text-h4 font-weight-bold mb-3">No Report Generated Yet</h3>
+            <v-icon size="96" color="primary" class="mb-4"
+              >mdi-chart-box-outline</v-icon
+            >
+            <h3 class="text-h4 font-weight-bold mb-3">
+              No Report Generated Yet
+            </h3>
             <p class="text-h6 text-medium-emphasis mb-6">
-              Select a month and year from the filters above, then click "Generate Report" to view government contributions.
+              Select a month and year from the filters above, then click
+              "Generate Report" to view government contributions.
             </p>
             <v-btn
               color="primary"
@@ -600,7 +759,12 @@
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="showEmailDialog = false">Cancel</v-btn>
-          <v-btn color="primary" variant="elevated" @click="sendEmail" :loading="sendingEmail">
+          <v-btn
+            color="primary"
+            variant="elevated"
+            @click="sendEmail"
+            :loading="sendingEmail"
+          >
             <v-icon start>mdi-send</v-icon>
             Send Report
           </v-btn>
@@ -609,16 +773,22 @@
     </v-dialog>
 
     <!-- Success Snackbar -->
-    <v-snackbar 
-      v-model="snackbar" 
-      :color="snackbarColor" 
+    <v-snackbar
+      v-model="snackbar"
+      :color="snackbarColor"
       :timeout="4000"
       location="top right"
       elevation="6"
     >
       <div class="d-flex align-center">
         <v-icon class="mr-2">
-          {{ snackbarColor === 'success' ? 'mdi-check-circle' : snackbarColor === 'error' ? 'mdi-alert-circle' : 'mdi-information' }}
+          {{
+            snackbarColor === "success"
+              ? "mdi-check-circle"
+              : snackbarColor === "error"
+                ? "mdi-alert-circle"
+                : "mdi-information"
+          }}
         </v-icon>
         <span>{{ snackbarText }}</span>
       </div>
@@ -632,214 +802,243 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
-import api from '@/services/api'
-import ExcelJS from 'exceljs'
+import { ref, onMounted, computed, watch, nextTick } from "vue";
+import api from "@/services/api";
+import ExcelJS from "exceljs";
 
-const loading = ref(false)
-const reportData = ref(null)
-const selectedMonth = ref(new Date().getMonth() + 1)
-const selectedYear = ref(new Date().getFullYear())
-const selectedDepartment = ref(null)
-const search = ref('')
-const showChart = ref(false)
-const itemsPerPage = ref(50)
+const loading = ref(false);
+const reportData = ref(null);
+const selectedMonth = ref(new Date().getMonth() + 1);
+const selectedYear = ref(new Date().getFullYear());
+const selectedDepartment = ref(null);
+const search = ref("");
+const showChart = ref(false);
+const itemsPerPage = ref(50);
 
-const snackbar = ref(false)
-const snackbarText = ref('')
-const snackbarColor = ref('success')
+const snackbar = ref(false);
+const snackbarText = ref("");
+const snackbarColor = ref("success");
 
-const showEmailDialog = ref(false)
-const emailAddress = ref('')
-const emailMessage = ref('')
-const sendingEmail = ref(false)
+const showEmailDialog = ref(false);
+const emailAddress = ref("");
+const emailMessage = ref("");
+const sendingEmail = ref(false);
 
-const contributionChart = ref(null)
-const shareChart = ref(null)
+const contributionChart = ref(null);
+const shareChart = ref(null);
 
 const months = [
-  { label: 'January', value: 1 },
-  { label: 'February', value: 2 },
-  { label: 'March', value: 3 },
-  { label: 'April', value: 4 },
-  { label: 'May', value: 5 },
-  { label: 'June', value: 6 },
-  { label: 'July', value: 7 },
-  { label: 'August', value: 8 },
-  { label: 'September', value: 9 },
-  { label: 'October', value: 10 },
-  { label: 'November', value: 11 },
-  { label: 'December', value: 12 }
-]
+  { label: "January", value: 1 },
+  { label: "February", value: 2 },
+  { label: "March", value: 3 },
+  { label: "April", value: 4 },
+  { label: "May", value: 5 },
+  { label: "June", value: 6 },
+  { label: "July", value: 7 },
+  { label: "August", value: 8 },
+  { label: "September", value: 9 },
+  { label: "October", value: 10 },
+  { label: "November", value: 11 },
+  { label: "December", value: 12 },
+];
 
-const years = []
-const currentYear = new Date().getFullYear()
+const years = [];
+const currentYear = new Date().getFullYear();
 for (let i = currentYear; i >= currentYear - 5; i--) {
-  years.push(i)
+  years.push(i);
 }
 
 const departments = computed(() => {
-  if (!reportData.value?.employees) return ['All Departments']
-  const depts = [...new Set(reportData.value.employees.map(e => e.department))]
-  return ['All Departments', ...depts.sort()]
-})
+  if (!reportData.value?.employees) return ["All Departments"];
+  const depts = [
+    ...new Set(reportData.value.employees.map((e) => e.department)),
+  ];
+  return ["All Departments", ...depts.sort()];
+});
 
 const filteredEmployees = computed(() => {
-  if (!reportData.value?.employees) return []
-  
-  let filtered = reportData.value.employees
+  if (!reportData.value?.employees) return [];
+
+  let filtered = reportData.value.employees;
 
   // Filter by department
-  if (selectedDepartment.value && selectedDepartment.value !== 'All Departments') {
-    filtered = filtered.filter(emp => emp.department === selectedDepartment.value)
+  if (
+    selectedDepartment.value &&
+    selectedDepartment.value !== "All Departments"
+  ) {
+    filtered = filtered.filter(
+      (emp) => emp.department === selectedDepartment.value,
+    );
   }
 
   // Filter by search
   if (search.value) {
-    const searchLower = search.value.toLowerCase()
-    filtered = filtered.filter(emp =>
-      emp.full_name.toLowerCase().includes(searchLower) ||
-      emp.employee_number.toLowerCase().includes(searchLower) ||
-      emp.department.toLowerCase().includes(searchLower) ||
-      emp.position.toLowerCase().includes(searchLower)
-    )
+    const searchLower = search.value.toLowerCase();
+    filtered = filtered.filter(
+      (emp) =>
+        emp.full_name.toLowerCase().includes(searchLower) ||
+        emp.employee_number.toLowerCase().includes(searchLower) ||
+        emp.department.toLowerCase().includes(searchLower) ||
+        emp.position.toLowerCase().includes(searchLower),
+    );
   }
 
-  return filtered
-})
+  return filtered;
+});
 
 const headers = [
-  { title: 'Employee #', key: 'employee_number', sortable: true },
-  { title: 'Employee Name', key: 'full_name', sortable: true },
-  { title: 'Department', key: 'department', sortable: true },
-  { title: 'SSS (EE)', key: 'sss_employee', align: 'end' },
-  { title: 'SSS (ER)', key: 'sss_employer', align: 'end' },
-  { title: 'SSS Total', key: 'sss_total', align: 'end' },
-  { title: 'PhilHealth (EE)', key: 'philhealth_employee', align: 'end' },
-  { title: 'PhilHealth (ER)', key: 'philhealth_employer', align: 'end' },
-  { title: 'PhilHealth Total', key: 'philhealth_total', align: 'end' },
-  { title: 'Pag-IBIG (EE)', key: 'pagibig_employee', align: 'end' },
-  { title: 'Pag-IBIG (ER)', key: 'pagibig_employer', align: 'end' },
-  { title: 'Pag-IBIG Total', key: 'pagibig_total', align: 'end' },
-  { title: 'Grand Total', key: 'grand_total', align: 'end' }
-]
+  { title: "Employee #", key: "employee_number", sortable: true },
+  { title: "Employee Name", key: "full_name", sortable: true },
+  { title: "Department", key: "department", sortable: true },
+  { title: "SSS (EE)", key: "sss_employee", align: "end" },
+  { title: "SSS (ER)", key: "sss_employer", align: "end" },
+  { title: "SSS Total", key: "sss_total", align: "end" },
+  { title: "PhilHealth (EE)", key: "philhealth_employee", align: "end" },
+  { title: "PhilHealth (ER)", key: "philhealth_employer", align: "end" },
+  { title: "PhilHealth Total", key: "philhealth_total", align: "end" },
+  { title: "Pag-IBIG (EE)", key: "pagibig_employee", align: "end" },
+  { title: "Pag-IBIG (ER)", key: "pagibig_employer", align: "end" },
+  { title: "Pag-IBIG Total", key: "pagibig_total", align: "end" },
+  { title: "Grand Total", key: "grand_total", align: "end" },
+];
 
 const formatNumber = (value) => {
-  if (value === null || value === undefined || value === '') return '0.00'
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return '0.00'
-  return num.toLocaleString('en-US', {
+  if (value === null || value === undefined || value === "") return "0.00";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "0.00";
+  return num.toLocaleString("en-US", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })
-}
+    maximumFractionDigits: 2,
+  });
+};
 
 const getDepartmentColor = (department) => {
-  const colors = ['primary', 'success', 'warning', 'info', 'error', 'secondary']
-  const hash = department.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return colors[hash % colors.length]
-}
+  const colors = [
+    "primary",
+    "success",
+    "warning",
+    "info",
+    "error",
+    "secondary",
+  ];
+  const hash = department
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
+};
 
 const calculateFilteredTotal = () => {
-  if (!filteredEmployees.value.length) return 0
-  return filteredEmployees.value.reduce((sum, emp) => sum + parseFloat(emp.grand_total || 0), 0)
-}
+  if (!filteredEmployees.value.length) return 0;
+  return filteredEmployees.value.reduce(
+    (sum, emp) => sum + parseFloat(emp.grand_total || 0),
+    0,
+  );
+};
 
 const loadReport = async () => {
   try {
-    loading.value = true
-    const response = await api.get('/reports/government-remittance', {
+    loading.value = true;
+    const response = await api.get("/reports/government-remittance", {
       params: {
         month: selectedMonth.value,
-        year: selectedYear.value
-      }
-    })
-    reportData.value = response.data
-    
+        year: selectedYear.value,
+      },
+    });
+    reportData.value = response.data;
+
     // Log the response for debugging
-    console.log('Government Contributions Report Data:', response.data)
-    
+    console.log("Government Contributions Report Data:", response.data);
+
     // Check if there's actual contribution data
     if (response.data.employee_count === 0) {
-      showSnackbar('No employees found for this period', 'warning')
+      showSnackbar("No employees found for this period", "warning");
     } else if (response.data.grand_total === 0) {
-      showSnackbar(`Report generated for ${response.data.employee_count} employees, but no contributions found. Ensure payroll has been processed with government deductions.`, 'warning')
+      showSnackbar(
+        `Report generated for ${response.data.employee_count} employees, but no contributions found. Ensure payroll has been processed with government deductions.`,
+        "warning",
+      );
     } else {
-      showSnackbar('Report generated successfully', 'success')
+      showSnackbar("Report generated successfully", "success");
     }
   } catch (error) {
-    console.error('Error loading report:', error)
-    showSnackbar(error.response?.data?.message || 'Failed to load report', 'error')
+    console.error("Error loading report:", error);
+    showSnackbar(
+      error.response?.data?.message || "Failed to load report",
+      "error",
+    );
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const printReport = () => {
-  window.print()
-}
+  window.print();
+};
 
 const sendEmail = async () => {
   if (!emailAddress.value) {
-    showSnackbar('Please enter an email address', 'error')
-    return
+    showSnackbar("Please enter an email address", "error");
+    return;
   }
 
-  sendingEmail.value = true
+  sendingEmail.value = true;
   try {
     // Simulate email sending - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    showSnackbar(`Report sent successfully to ${emailAddress.value}`, 'success')
-    showEmailDialog.value = false
-    emailAddress.value = ''
-    emailMessage.value = ''
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    showSnackbar(
+      `Report sent successfully to ${emailAddress.value}`,
+      "success",
+    );
+    showEmailDialog.value = false;
+    emailAddress.value = "";
+    emailMessage.value = "";
   } catch (error) {
-    showSnackbar('Failed to send email', 'error')
+    showSnackbar("Failed to send email", "error");
   } finally {
-    sendingEmail.value = false
+    sendingEmail.value = false;
   }
-}
+};
 
 const createCharts = async () => {
-  await nextTick()
-  
-  if (!reportData.value || !showChart.value) return
+  await nextTick();
+
+  if (!reportData.value || !showChart.value) return;
 
   // Dynamically import Chart.js only when needed
-  const { Chart, registerables } = await import('chart.js')
-  Chart.register(...registerables)
+  const { Chart, registerables } = await import("chart.js");
+  Chart.register(...registerables);
 
   // Contribution Chart
   if (contributionChart.value) {
-    const ctx = contributionChart.value.getContext('2d')
+    const ctx = contributionChart.value.getContext("2d");
     new Chart(ctx, {
-      type: 'bar',
+      type: "bar",
       data: {
-        labels: ['SSS', 'PhilHealth', 'Pag-IBIG'],
+        labels: ["SSS", "PhilHealth", "Pag-IBIG"],
         datasets: [
           {
-            label: 'Employee Share',
+            label: "Employee Share",
             data: [
               reportData.value.sss_employee,
               reportData.value.philhealth_employee,
-              reportData.value.pagibig_employee
+              reportData.value.pagibig_employee,
             ],
-            backgroundColor: 'rgba(33, 150, 243, 0.8)',
-            borderColor: 'rgba(33, 150, 243, 1)',
-            borderWidth: 2
+            backgroundColor: "rgba(33, 150, 243, 0.8)",
+            borderColor: "rgba(33, 150, 243, 1)",
+            borderWidth: 2,
           },
           {
-            label: 'Employer Share',
+            label: "Employer Share",
             data: [
               reportData.value.sss_employer,
               reportData.value.philhealth_employer,
-              reportData.value.pagibig_employer
+              reportData.value.pagibig_employer,
             ],
-            backgroundColor: 'rgba(76, 175, 80, 0.8)',
-            borderColor: 'rgba(76, 175, 80, 1)',
-            borderWidth: 2
-          }
-        ]
+            backgroundColor: "rgba(76, 175, 80, 0.8)",
+            borderColor: "rgba(76, 175, 80, 1)",
+            borderWidth: 2,
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -847,50 +1046,52 @@ const createCharts = async () => {
         plugins: {
           title: {
             display: true,
-            text: 'Contributions by Type',
-            font: { size: 16, weight: 'bold' }
+            text: "Contributions by Type",
+            font: { size: 16, weight: "bold" },
           },
           legend: {
-            position: 'bottom'
-          }
+            position: "bottom",
+          },
         },
         scales: {
           y: {
             beginAtZero: true,
             ticks: {
-              callback: value => '₱' + value.toLocaleString()
-            }
-          }
-        }
-      }
-    })
+              callback: (value) => "₱" + value.toLocaleString(),
+            },
+          },
+        },
+      },
+    });
   }
 
   // Share Chart
   if (shareChart.value) {
-    const ctx = shareChart.value.getContext('2d')
+    const ctx = shareChart.value.getContext("2d");
     new Chart(ctx, {
-      type: 'doughnut',
+      type: "doughnut",
       data: {
-        labels: ['SSS', 'PhilHealth', 'Pag-IBIG'],
-        datasets: [{
-          data: [
-            reportData.value.sss_total,
-            reportData.value.philhealth_total,
-            reportData.value.pagibig_total
-          ],
-          backgroundColor: [
-            'rgba(33, 150, 243, 0.8)',
-            'rgba(76, 175, 80, 0.8)',
-            'rgba(255, 152, 0, 0.8)'
-          ],
-          borderColor: [
-            'rgba(33, 150, 243, 1)',
-            'rgba(76, 175, 80, 1)',
-            'rgba(255, 152, 0, 1)'
-          ],
-          borderWidth: 2
-        }]
+        labels: ["SSS", "PhilHealth", "Pag-IBIG"],
+        datasets: [
+          {
+            data: [
+              reportData.value.sss_total,
+              reportData.value.philhealth_total,
+              reportData.value.pagibig_total,
+            ],
+            backgroundColor: [
+              "rgba(33, 150, 243, 0.8)",
+              "rgba(76, 175, 80, 0.8)",
+              "rgba(255, 152, 0, 0.8)",
+            ],
+            borderColor: [
+              "rgba(33, 150, 243, 1)",
+              "rgba(76, 175, 80, 1)",
+              "rgba(255, 152, 0, 1)",
+            ],
+            borderWidth: 2,
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -898,102 +1099,140 @@ const createCharts = async () => {
         plugins: {
           title: {
             display: true,
-            text: 'Total Contributions Distribution',
-            font: { size: 16, weight: 'bold' }
+            text: "Total Contributions Distribution",
+            font: { size: 16, weight: "bold" },
           },
           legend: {
-            position: 'bottom'
+            position: "bottom",
           },
           tooltip: {
             callbacks: {
-              label: context => {
-                const label = context.label || ''
-                const value = context.parsed || 0
-                const total = context.dataset.data.reduce((a, b) => a + b, 0)
-                const percentage = ((value / total) * 100).toFixed(1)
-                return `${label}: ₱${value.toLocaleString()} (${percentage}%)`
-              }
-            }
-          }
-        }
-      }
-    })
+              label: (context) => {
+                const label = context.label || "";
+                const value = context.parsed || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${label}: ₱${value.toLocaleString()} (${percentage}%)`;
+              },
+            },
+          },
+        },
+      },
+    });
   }
-}
+};
 
 watch(showChart, () => {
   if (showChart.value) {
-    createCharts()
+    createCharts();
   }
-})
+});
 
 const exportReport = async () => {
-  if (!reportData.value) return
+  if (!reportData.value) return;
 
   try {
     // Create workbook
-    const workbook = new ExcelJS.Workbook()
-    workbook.creator = 'Giovanni Construction'
-    workbook.created = new Date()
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Giovanni Construction";
+    workbook.created = new Date();
 
     // Summary sheet
-    const summarySheet = workbook.addWorksheet('Summary')
-    
+    const summarySheet = workbook.addWorksheet("Summary");
+
     // Add header styling
-    summarySheet.getCell('A1').value = 'Government Contributions Report'
-    summarySheet.getCell('A1').font = { bold: true, size: 14 }
-    summarySheet.getCell('A2').value = 'Period:'
-    summarySheet.getCell('B2').value = reportData.value.period
-    summarySheet.getCell('A3').value = 'Total Employees:'
-    summarySheet.getCell('B3').value = reportData.value.employee_count
-    
+    summarySheet.getCell("A1").value = "Government Contributions Report";
+    summarySheet.getCell("A1").font = { bold: true, size: 14 };
+    summarySheet.getCell("A2").value = "Period:";
+    summarySheet.getCell("B2").value = reportData.value.period;
+    summarySheet.getCell("A3").value = "Total Employees:";
+    summarySheet.getCell("B3").value = reportData.value.employee_count;
+
     // Add summary table
-    summarySheet.addRow([])
-    const summaryHeaders = summarySheet.addRow(['Contribution Type', 'Employee Share', 'Employer Share', 'Total Amount'])
-    summaryHeaders.font = { bold: true }
+    summarySheet.addRow([]);
+    const summaryHeaders = summarySheet.addRow([
+      "Contribution Type",
+      "Employee Share",
+      "Employer Share",
+      "Total Amount",
+    ]);
+    summaryHeaders.font = { bold: true };
     summaryHeaders.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    }
-    
-    summarySheet.addRow(['SSS', reportData.value.sss_employee, reportData.value.sss_employer, reportData.value.sss_total])
-    summarySheet.addRow(['PhilHealth', reportData.value.philhealth_employee, reportData.value.philhealth_employer, reportData.value.philhealth_total])
-    summarySheet.addRow(['Pag-IBIG', reportData.value.pagibig_employee, reportData.value.pagibig_employer, reportData.value.pagibig_total])
-    summarySheet.addRow([])
-    summarySheet.addRow(['Total Employee Contributions:', reportData.value.total_employee_contributions])
-    summarySheet.addRow(['Total Employer Contributions:', reportData.value.total_employer_contributions])
-    const grandTotalRow = summarySheet.addRow(['Grand Total Remittance:', reportData.value.grand_total])
-    grandTotalRow.font = { bold: true }
-    
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    };
+
+    summarySheet.addRow([
+      "SSS",
+      reportData.value.sss_employee,
+      reportData.value.sss_employer,
+      reportData.value.sss_total,
+    ]);
+    summarySheet.addRow([
+      "PhilHealth",
+      reportData.value.philhealth_employee,
+      reportData.value.philhealth_employer,
+      reportData.value.philhealth_total,
+    ]);
+    summarySheet.addRow([
+      "Pag-IBIG",
+      reportData.value.pagibig_employee,
+      reportData.value.pagibig_employer,
+      reportData.value.pagibig_total,
+    ]);
+    summarySheet.addRow([]);
+    summarySheet.addRow([
+      "Total Employee Contributions:",
+      reportData.value.total_employee_contributions,
+    ]);
+    summarySheet.addRow([
+      "Total Employer Contributions:",
+      reportData.value.total_employer_contributions,
+    ]);
+    const grandTotalRow = summarySheet.addRow([
+      "Grand Total Remittance:",
+      reportData.value.grand_total,
+    ]);
+    grandTotalRow.font = { bold: true };
+
     // Format currency columns
-    summarySheet.getColumn(2).numFmt = '₱#,##0.00'
-    summarySheet.getColumn(3).numFmt = '₱#,##0.00'
-    summarySheet.getColumn(4).numFmt = '₱#,##0.00'
-    
+    summarySheet.getColumn(2).numFmt = "₱#,##0.00";
+    summarySheet.getColumn(3).numFmt = "₱#,##0.00";
+    summarySheet.getColumn(4).numFmt = "₱#,##0.00";
+
     // Auto-fit columns
-    summarySheet.columns.forEach(column => {
-      column.width = 25
-    })
+    summarySheet.columns.forEach((column) => {
+      column.width = 25;
+    });
 
     // Detailed breakdown sheet
-    const detailSheet = workbook.addWorksheet('Detailed Breakdown')
+    const detailSheet = workbook.addWorksheet("Detailed Breakdown");
     const detailHeaders = detailSheet.addRow([
-      'Employee #', 'Employee Name', 'Department', 'Position',
-      'SSS (EE)', 'SSS (ER)', 'SSS Total',
-      'PhilHealth (EE)', 'PhilHealth (ER)', 'PhilHealth Total',
-      'Pag-IBIG (EE)', 'Pag-IBIG (ER)', 'Pag-IBIG Total',
-      'Grand Total'
-    ])
-    
-    detailHeaders.font = { bold: true }
-    detailHeaders.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    }
+      "Employee #",
+      "Employee Name",
+      "Department",
+      "Position",
+      "SSS (EE)",
+      "SSS (ER)",
+      "SSS Total",
+      "PhilHealth (EE)",
+      "PhilHealth (ER)",
+      "PhilHealth Total",
+      "Pag-IBIG (EE)",
+      "Pag-IBIG (ER)",
+      "Pag-IBIG Total",
+      "Grand Total",
+    ]);
 
-    reportData.value.employees.forEach(emp => {
+    detailHeaders.font = { bold: true };
+    detailHeaders.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    };
+
+    reportData.value.employees.forEach((emp) => {
       detailSheet.addRow([
         emp.employee_number,
         emp.full_name,
@@ -1008,49 +1247,53 @@ const exportReport = async () => {
         emp.pagibig_employee,
         emp.pagibig_employer,
         emp.pagibig_total,
-        emp.grand_total
-      ])
-    })
-    
+        emp.grand_total,
+      ]);
+    });
+
     // Format currency columns (columns 5-14)
     for (let i = 5; i <= 14; i++) {
-      detailSheet.getColumn(i).numFmt = '₱#,##0.00'
+      detailSheet.getColumn(i).numFmt = "₱#,##0.00";
     }
-    
+
     // Auto-fit columns
     detailSheet.columns.forEach((column, index) => {
-      if (index === 1) column.width = 30 // Employee Name
-      else if (index === 2 || index === 3) column.width = 20 // Department, Position
-      else column.width = 15
-    })
+      if (index === 1)
+        column.width = 30; // Employee Name
+      else if (index === 2 || index === 3)
+        column.width = 20; // Department, Position
+      else column.width = 15;
+    });
 
     // Generate and download file
-    const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `Government_Contributions_${reportData.value.period.replace(' ', '_')}.xlsx`
-    link.click()
-    window.URL.revokeObjectURL(url)
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Government_Contributions_${reportData.value.period.replace(" ", "_")}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
 
-    showSnackbar('Report exported successfully', 'success')
+    showSnackbar("Report exported successfully", "success");
   } catch (error) {
-    console.error('Error exporting report:', error)
-    showSnackbar('Failed to export report', 'error')
+    console.error("Error exporting report:", error);
+    showSnackbar("Failed to export report", "error");
   }
-}
+};
 
-const showSnackbar = (text, color = 'success') => {
-  snackbarText.value = text
-  snackbarColor.value = color
-  snackbar.value = true
-}
+const showSnackbar = (text, color = "success") => {
+  snackbarText.value = text;
+  snackbarColor.value = color;
+  snackbar.value = true;
+};
 
 onMounted(() => {
   // Auto-load report for current month
-  loadReport()
-})
+  loadReport();
+});
 </script>
 
 <style scoped lang="scss">
@@ -1083,7 +1326,7 @@ onMounted(() => {
   letter-spacing: 0.5px;
   text-transform: uppercase;
   transition: all 0.3s ease;
-  
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
@@ -1098,7 +1341,7 @@ onMounted(() => {
   background: white;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -1120,26 +1363,26 @@ onMounted(() => {
   }
 
   .text-primary {
-    color: #2196F3 !important;
+    color: #2196f3 !important;
   }
 
   .text-success {
-    color: #4CAF50 !important;
+    color: #4caf50 !important;
   }
 
   .text-orange {
-    color: #FF9800 !important;
+    color: #ff9800 !important;
   }
 
   .text-purple {
-    color: #9C27B0 !important;
+    color: #9c27b0 !important;
   }
 
   .contribution-breakdown {
     background: rgba(0, 0, 0, 0.02);
     padding: 12px;
     border-radius: 8px;
-    
+
     span {
       color: rgba(0, 0, 0, 0.87);
     }
@@ -1147,19 +1390,19 @@ onMounted(() => {
 }
 
 .sss-card::before {
-  background: linear-gradient(180deg, #2196F3 0%, #1976D2 100%);
+  background: linear-gradient(180deg, #2196f3 0%, #1976d2 100%);
 }
 
 .philhealth-card::before {
-  background: linear-gradient(180deg, #4CAF50 0%, #388E3C 100%);
+  background: linear-gradient(180deg, #4caf50 0%, #388e3c 100%);
 }
 
 .pagibig-card::before {
-  background: linear-gradient(180deg, #FF9800 0%, #F57C00 100%);
+  background: linear-gradient(180deg, #ff9800 0%, #f57c00 100%);
 }
 
 .total-card::before {
-  background: linear-gradient(180deg, #9C27B0 0%, #7B1FA2 100%);
+  background: linear-gradient(180deg, #9c27b0 0%, #7b1fa2 100%);
 }
 
 .alert-animated {
@@ -1200,7 +1443,7 @@ onMounted(() => {
 .enhanced-table {
   :deep(.v-data-table-header) {
     background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
-    
+
     th {
       font-weight: 700 !important;
       font-size: 0.875rem !important;
@@ -1280,5 +1523,4 @@ onMounted(() => {
     height: 250px;
   }
 }
-
 </style>
