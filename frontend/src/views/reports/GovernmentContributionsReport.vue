@@ -634,7 +634,7 @@
 <script setup>
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import api from '@/services/api'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 const loading = ref(false)
 const reportData = ref(null)
@@ -927,42 +927,74 @@ watch(showChart, () => {
   }
 })
 
-const exportReport = () => {
+const exportReport = async () => {
   if (!reportData.value) return
 
   try {
     // Create workbook
-    const wb = XLSX.utils.book_new()
+    const workbook = new ExcelJS.Workbook()
+    workbook.creator = 'Giovanni Construction'
+    workbook.created = new Date()
 
     // Summary sheet
-    const summaryData = [
-      ['Government Contributions Report'],
-      ['Period:', reportData.value.period],
-      ['Total Employees:', reportData.value.employee_count],
-      [],
-      ['Contribution Type', 'Employee Share', 'Employer Share', 'Total Amount'],
-      ['SSS', reportData.value.sss_employee, reportData.value.sss_employer, reportData.value.sss_total],
-      ['PhilHealth', reportData.value.philhealth_employee, reportData.value.philhealth_employer, reportData.value.philhealth_total],
-      ['Pag-IBIG', reportData.value.pagibig_employee, reportData.value.pagibig_employer, reportData.value.pagibig_total],
-      [],
-      ['Total Employee Contributions:', reportData.value.total_employee_contributions],
-      ['Total Employer Contributions:', reportData.value.total_employer_contributions],
-      ['Grand Total Remittance:', reportData.value.grand_total]
-    ]
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData)
-    XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary')
+    const summarySheet = workbook.addWorksheet('Summary')
+    
+    // Add header styling
+    summarySheet.getCell('A1').value = 'Government Contributions Report'
+    summarySheet.getCell('A1').font = { bold: true, size: 14 }
+    summarySheet.getCell('A2').value = 'Period:'
+    summarySheet.getCell('B2').value = reportData.value.period
+    summarySheet.getCell('A3').value = 'Total Employees:'
+    summarySheet.getCell('B3').value = reportData.value.employee_count
+    
+    // Add summary table
+    summarySheet.addRow([])
+    const summaryHeaders = summarySheet.addRow(['Contribution Type', 'Employee Share', 'Employer Share', 'Total Amount'])
+    summaryHeaders.font = { bold: true }
+    summaryHeaders.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+    
+    summarySheet.addRow(['SSS', reportData.value.sss_employee, reportData.value.sss_employer, reportData.value.sss_total])
+    summarySheet.addRow(['PhilHealth', reportData.value.philhealth_employee, reportData.value.philhealth_employer, reportData.value.philhealth_total])
+    summarySheet.addRow(['Pag-IBIG', reportData.value.pagibig_employee, reportData.value.pagibig_employer, reportData.value.pagibig_total])
+    summarySheet.addRow([])
+    summarySheet.addRow(['Total Employee Contributions:', reportData.value.total_employee_contributions])
+    summarySheet.addRow(['Total Employer Contributions:', reportData.value.total_employer_contributions])
+    const grandTotalRow = summarySheet.addRow(['Grand Total Remittance:', reportData.value.grand_total])
+    grandTotalRow.font = { bold: true }
+    
+    // Format currency columns
+    summarySheet.getColumn(2).numFmt = '₱#,##0.00'
+    summarySheet.getColumn(3).numFmt = '₱#,##0.00'
+    summarySheet.getColumn(4).numFmt = '₱#,##0.00'
+    
+    // Auto-fit columns
+    summarySheet.columns.forEach(column => {
+      column.width = 25
+    })
 
     // Detailed breakdown sheet
-    const detailedData = [
-      ['Employee #', 'Employee Name', 'Department', 'Position', 
-       'SSS (EE)', 'SSS (ER)', 'SSS Total',
-       'PhilHealth (EE)', 'PhilHealth (ER)', 'PhilHealth Total',
-       'Pag-IBIG (EE)', 'Pag-IBIG (ER)', 'Pag-IBIG Total',
-       'Grand Total']
-    ]
+    const detailSheet = workbook.addWorksheet('Detailed Breakdown')
+    const detailHeaders = detailSheet.addRow([
+      'Employee #', 'Employee Name', 'Department', 'Position',
+      'SSS (EE)', 'SSS (ER)', 'SSS Total',
+      'PhilHealth (EE)', 'PhilHealth (ER)', 'PhilHealth Total',
+      'Pag-IBIG (EE)', 'Pag-IBIG (ER)', 'Pag-IBIG Total',
+      'Grand Total'
+    ])
+    
+    detailHeaders.font = { bold: true }
+    detailHeaders.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
 
     reportData.value.employees.forEach(emp => {
-      detailedData.push([
+      detailSheet.addRow([
         emp.employee_number,
         emp.full_name,
         emp.department,
@@ -979,13 +1011,28 @@ const exportReport = () => {
         emp.grand_total
       ])
     })
+    
+    // Format currency columns (columns 5-14)
+    for (let i = 5; i <= 14; i++) {
+      detailSheet.getColumn(i).numFmt = '₱#,##0.00'
+    }
+    
+    // Auto-fit columns
+    detailSheet.columns.forEach((column, index) => {
+      if (index === 1) column.width = 30 // Employee Name
+      else if (index === 2 || index === 3) column.width = 20 // Department, Position
+      else column.width = 15
+    })
 
-    const wsDetailed = XLSX.utils.aoa_to_sheet(detailedData)
-    XLSX.utils.book_append_sheet(wb, wsDetailed, 'Detailed Breakdown')
-
-    // Generate file
-    const fileName = `Government_Contributions_${reportData.value.period.replace(' ', '_')}.xlsx`
-    XLSX.writeFile(wb, fileName)
+    // Generate and download file
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `Government_Contributions_${reportData.value.period.replace(' ', '_')}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
 
     showSnackbar('Report exported successfully', 'success')
   } catch (error) {
