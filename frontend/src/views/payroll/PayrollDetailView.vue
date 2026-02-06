@@ -199,10 +199,10 @@
               </div>
             </template>
 
-            <!-- Basic Pay -->
-            <template v-slot:item.basic_pay="{ item }">
+            <!-- Amount = Rate × Days -->
+            <template v-slot:item.amount="{ item }">
               <div class="text-right">
-                <div>₱{{ formatCurrency(item.basic_pay) }}</div>
+                <div>₱{{ formatCurrency((item.effective_rate || item.rate || 0) * (item.days_worked || 0)) }}</div>
                 <div
                   v-if="item.holiday_pay > 0"
                   class="text-caption text-success"
@@ -562,7 +562,7 @@ const filteredItems = computed(() => {
 const headers = [
   { title: "Employee", key: "employee", sortable: true },
   { title: "Rate & Days", key: "rate_days", sortable: false },
-  { title: "Basic Pay", key: "basic_pay", sortable: true, align: "end" },
+  { title: "Amount", key: "amount", sortable: true, align: "end" },
   { title: "Overtime", key: "overtime", sortable: false },
   { title: "UT", key: "undertime", sortable: false },
   { title: "Gross Pay", key: "gross_pay", sortable: true, align: "end" },
@@ -606,10 +606,14 @@ async function fetchPayroll() {
     const response = await api.get(`/payrolls/${route.params.id}`);
     payroll.value = response.data;
 
-    // Extract unique departments from payroll items
+    // Extract unique departments from payroll items (from project relationship)
     const departments = new Set();
     payroll.value.items.forEach((item) => {
-      if (item.employee?.department) {
+      // Use project name (from Departments) as the department
+      if (item.employee?.project?.name) {
+        departments.add(item.employee.project.name);
+      } else if (item.employee?.department) {
+        // Fallback to department text field
         departments.add(item.employee.department);
       }
     });

@@ -272,7 +272,7 @@
                     <div class="requirement-content">
                       <div class="requirement-label">Required Fields</div>
                       <div class="requirement-value">
-                        Staff Code, Name, Date columns (MM-DD)
+                        Staff Code, Name, Date columns (DD or MM-DD)
                       </div>
                     </div>
                   </div>
@@ -516,7 +516,7 @@
                     <ul class="info-list">
                       <li>Staff Code</li>
                       <li>Name</li>
-                      <li>Date columns in MM-DD format (e.g., 12-01, 12-02)</li>
+                      <li>Date columns (DD format like 01, 02, or MM-DD like 01-15)</li>
                     </ul>
                   </div>
                   <div class="info-section">

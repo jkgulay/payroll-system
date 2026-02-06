@@ -228,8 +228,8 @@
 
             <template v-slot:item.hours="{ item }">
               {{ item.regular_hours || 0 }}h
-              <span v-if="item.overtime_hours > 0" class="text-warning">
-                +{{ item.overtime_hours }}h
+              <span v-if="item.overtime_hours >= 1" class="text-warning">
+                +{{ Math.floor(item.overtime_hours) }}h
               </span>
             </template>
 

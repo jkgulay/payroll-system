@@ -242,9 +242,7 @@
                 <th rowspan="2">Employee's<br>Savings</th>
                 <th rowspan="2">Loans</th>
                 <th rowspan="2">Deductions</th>
-                <th rowspan="2">Phic<br>Prem</th>
-                <th rowspan="2">HDMF<br>Prem</th>
-                <th rowspan="2">SSS<br>Prem</th>
+                <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
                 <th rowspan="2">SIGNATURE</th>
             </tr>
@@ -253,41 +251,38 @@
                 <th>REG OT</th>
                 <th>HRS</th>
                 <th>SUN/SPL. HOL.</th>
+                <th>SSS</th>
+                <th>PHIC</th>
+                <th>HDMF</th>
             </tr>
         </thead>
         <tbody>
             @foreach($items as $index => $item)
             @php
-                $utHours = floor($item->undertime_hours ?? 0);
-                $utMinutes = round((($item->undertime_hours ?? 0) - $utHours) * 60);
-                $utDisplay = '';
-                if ($utHours > 0 && $utMinutes > 0) {
-                    $utDisplay = $utHours . 'h ' . $utMinutes . 'm';
-                } elseif ($utHours > 0) {
-                    $utDisplay = $utHours . 'h';
-                } elseif ($utMinutes > 0) {
-                    $utDisplay = $utMinutes . 'm';
-                }
+                // Calculate undertime deduction amount (rate/8 * undertime_hours)
+                $hourlyRate = ($item->effective_rate ?? 0) / 8;
+                $undertimeDeduction = $hourlyRate * ($item->undertime_hours ?? 0);
+                $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             @endphp
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
                 <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
                 <td>{{ rtrim(rtrim(number_format($item->days_worked, 2), '0'), '.') }}</td>
-                <td class="text-right">{{ number_format($item->basic_pay, 2) }}</td>
+                <td class="text-right">{{ number_format($amount, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? $item->regular_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
                 <td>{{ $item->special_ot_hours > 0 ? $item->special_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '' }}</td>
-                <td>{{ $utDisplay }}</td>
+                <td class="text-right">{{ $undertimeDeduction > 0 ? number_format($undertimeDeduction, 2) : '' }}</td>
                 <td class="text-right">{{ $item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->gross_pay, 2) }}</td>
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
                 <td class="text-right">{{ $item->loans > 0 ? number_format($item->loans, 2) : '' }}</td>
                 <td class="text-right">{{ $item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '' }}</td>
+                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
-                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
                 <td></td>
             </tr>
@@ -296,36 +291,36 @@
                 <td colspan="21" class="nothing-follows"><em>nothing follows</em></td>
             </tr>
             @php
-                $totalUtHours = floor($items->sum('undertime_hours'));
-                $totalUtMinutes = round(($items->sum('undertime_hours') - $totalUtHours) * 60);
-                $totalUtDisplay = '';
-                if ($totalUtHours > 0 && $totalUtMinutes > 0) {
-                    $totalUtDisplay = $totalUtHours . 'h ' . $totalUtMinutes . 'm';
-                } elseif ($totalUtHours > 0) {
-                    $totalUtDisplay = $totalUtHours . 'h';
-                } elseif ($totalUtMinutes > 0) {
-                    $totalUtDisplay = $totalUtMinutes . 'm';
-                }
+                // Calculate total undertime deduction
+                $totalUndertimeDeduction = $items->sum(function($item) {
+                    $hourlyRate = ($item->effective_rate ?? 0) / 8;
+                    return $hourlyRate * ($item->undertime_hours ?? 0);
+                });
+            @endphp
+            @php
+                $totalAmount = $items->sum(function($item) {
+                    return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+                });
             @endphp
             <tr class="total-row">
                 <td class="text-left"><strong>T O T A L</strong></td>
                 <td></td>
                 <td></td>
-                <td class="text-right">{{ number_format($items->sum('basic_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
                 <td>{{ $items->sum('regular_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($items->sum('regular_ot_pay'), 2) }}</td>
                 <td>{{ $items->sum('special_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($items->sum('special_ot_pay'), 2) }}</td>
-                <td>{{ $totalUtDisplay }}</td>
+                <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($items->sum('salary_adjustment'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('other_allowances'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('gross_pay'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('employee_savings'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('net_pay'), 2) }}</td>
                 <td></td>
             </tr>
@@ -361,9 +356,7 @@
                 <th rowspan="2">Employee's<br>Savings</th>
                 <th rowspan="2">Loans</th>
                 <th rowspan="2">Deductions</th>
-                <th rowspan="2">Phic<br>Prem</th>
-                <th rowspan="2">HDMF<br>Prem</th>
-                <th rowspan="2">SSS<br>Prem</th>
+                <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
                 <th rowspan="2">SIGNATURE</th>
             </tr>
@@ -372,41 +365,38 @@
                 <th>REG OT</th>
                 <th>HRS</th>
                 <th>SUN/SPL. HOL.</th>
+                <th>SSS</th>
+                <th>PHIC</th>
+                <th>HDMF</th>
             </tr>
         </thead>
         <tbody>
             @foreach($payroll->items as $index => $item)
             @php
-                $utHours = floor($item->undertime_hours ?? 0);
-                $utMinutes = round((($item->undertime_hours ?? 0) - $utHours) * 60);
-                $utDisplay = '';
-                if ($utHours > 0 && $utMinutes > 0) {
-                    $utDisplay = $utHours . 'h ' . $utMinutes . 'm';
-                } elseif ($utHours > 0) {
-                    $utDisplay = $utHours . 'h';
-                } elseif ($utMinutes > 0) {
-                    $utDisplay = $utMinutes . 'm';
-                }
+                // Calculate undertime deduction amount (rate/8 * undertime_hours)
+                $hourlyRate = ($item->effective_rate ?? 0) / 8;
+                $undertimeDeduction = $hourlyRate * ($item->undertime_hours ?? 0);
+                $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             @endphp
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
                 <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
                 <td>{{ rtrim(rtrim(number_format($item->days_worked, 2), '0'), '.') }}</td>
-                <td class="text-right">{{ number_format($item->basic_pay, 2) }}</td>
+                <td class="text-right">{{ number_format($amount, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? $item->regular_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
                 <td>{{ $item->special_ot_hours > 0 ? $item->special_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '' }}</td>
-                <td>{{ $utDisplay }}</td>
+                <td class="text-right">{{ $undertimeDeduction > 0 ? number_format($undertimeDeduction, 2) : '' }}</td>
                 <td class="text-right">{{ $item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->gross_pay, 2) }}</td>
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
                 <td class="text-right">{{ $item->loans > 0 ? number_format($item->loans, 2) : '' }}</td>
                 <td class="text-right">{{ $item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '' }}</td>
+                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
-                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
                 <td></td>
             </tr>
@@ -415,36 +405,36 @@
                 <td colspan="21" class="nothing-follows"><em>nothing follows</em></td>
             </tr>
             @php
-                $totalUtHours = floor($payroll->items->sum('undertime_hours'));
-                $totalUtMinutes = round(($payroll->items->sum('undertime_hours') - $totalUtHours) * 60);
-                $totalUtDisplay = '';
-                if ($totalUtHours > 0 && $totalUtMinutes > 0) {
-                    $totalUtDisplay = $totalUtHours . 'h ' . $totalUtMinutes . 'm';
-                } elseif ($totalUtHours > 0) {
-                    $totalUtDisplay = $totalUtHours . 'h';
-                } elseif ($totalUtMinutes > 0) {
-                    $totalUtDisplay = $totalUtMinutes . 'm';
-                }
+                // Calculate total undertime deduction
+                $totalUndertimeDeduction = $payroll->items->sum(function($item) {
+                    $hourlyRate = ($item->effective_rate ?? 0) / 8;
+                    return $hourlyRate * ($item->undertime_hours ?? 0);
+                });
+            @endphp
+            @php
+                $totalAmount = $payroll->items->sum(function($item) {
+                    return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+                });
             @endphp
             <tr class="total-row">
                 <td class="text-left"><strong>T O T A L</strong></td>
                 <td></td>
                 <td></td>
-                <td class="text-right">{{ number_format($payroll->items->sum('basic_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
                 <td>{{ $payroll->items->sum('regular_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('regular_ot_pay'), 2) }}</td>
                 <td>{{ $payroll->items->sum('special_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('special_ot_pay'), 2) }}</td>
-                <td>{{ $totalUtDisplay }}</td>
+                <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('salary_adjustment'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('other_allowances'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->total_gross, 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->total_net, 2) }}</td>
                 <td></td>
             </tr>

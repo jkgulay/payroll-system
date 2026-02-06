@@ -164,14 +164,28 @@ class Attendance extends Model
         $schedule = $this->getScheduleConfig($timeIn);
         $standardHours = $schedule['standard_hours'];
 
-        // Calculate regular and overtime hours
-        if ($totalHours <= $standardHours) {
-            $this->regular_hours = $totalHours;
-            $this->overtime_hours = 0;
-        } else {
-            $this->regular_hours = $standardHours;
-            $this->overtime_hours = $totalHours - $standardHours;
+        // Parse scheduled time out for overtime calculation
+        $scheduledTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
+        // Handle overnight shifts for scheduled time out
+        if ($scheduledTimeOut->lt(Carbon::parse($dateString . ' ' . $schedule['standard_time_in']))) {
+            $scheduledTimeOut->addDay();
         }
+
+        // Calculate overtime ONLY for time worked AFTER scheduled time out
+        // Early time-in does NOT count as overtime
+        // Overtime is only counted in WHOLE HOURS (minutes are ignored)
+        $overtimeMinutes = 0;
+        if ($timeOut->gt($scheduledTimeOut)) {
+            $overtimeMinutes = $scheduledTimeOut->diffInMinutes($timeOut);
+        }
+        // Floor to whole hours only - minutes don't count as overtime
+        // e.g., 1h 59m = 1 hour OT, 59m = 0 hours OT
+        $this->overtime_hours = floor($overtimeMinutes / 60);
+
+        // Calculate regular hours (total hours minus overtime)
+        // Regular hours are capped at standard hours
+        $regularHoursWorked = $totalHours - $this->overtime_hours;
+        $this->regular_hours = min($regularHoursWorked, $standardHours);
 
         // Calculate night differential hours (10 PM - 6 AM)
         $this->night_differential_hours = $this->calculateNightDifferentialHours($timeIn, $timeOut);
@@ -185,17 +199,28 @@ class Attendance extends Model
 
         // Force half-day status if late exceeds threshold (e.g., 1 hour and 1 minute)
         $halfDayLateMinutes = (int) config('payroll.attendance.half_day_late_minutes', 61);
-        if ($this->late_hours > 0 && ($this->late_hours * 60) >= $halfDayLateMinutes) {
+        $halfDayHoursThreshold = (float) config('payroll.attendance.half_day_hours_threshold', 5.0);
+        
+        // Detect half-day based on:
+        // 1. Late arrival exceeds threshold OR
+        // 2. Total hours worked is less than half-day threshold (e.g., less than 5 hours)
+        $isHalfDayDueToLate = $this->late_hours > 0 && ($this->late_hours * 60) >= $halfDayLateMinutes;
+        $isHalfDayDueToShortHours = $totalHours > 0 && $totalHours < $halfDayHoursThreshold;
+        
+        if ($isHalfDayDueToLate || $isHalfDayDueToShortHours) {
             $this->status = 'half_day';
         } elseif ($this->late_hours > 0 && in_array($this->status, ['present', 'late'])) {
             $this->status = 'late';
         }
 
-        // If half-day, cap regular hours to half-day and treat excess as overtime
+        // If half-day, cap regular hours to half-day
+        // Overtime is still only calculated from time worked after scheduled time out
         if ($this->status === 'half_day') {
             $halfDayHours = $standardHours / 2;
-            $this->regular_hours = min($totalHours, $halfDayHours);
-            $this->overtime_hours = max(0, $totalHours - $halfDayHours);
+            // Regular hours for half-day is capped at half the standard hours
+            // But overtime remains based on actual time worked after scheduled time out
+            $this->regular_hours = min($regularHoursWorked, $halfDayHours);
+            // Overtime already correctly calculated above (only time after scheduled time out)
         }
 
         // Calculate undertime based on project/department schedule settings

@@ -29,6 +29,8 @@ return [
         'standard_time_out' => env('PAYROLL_STANDARD_TIME_OUT', '17:00'),
         'grace_period_minutes' => env('PAYROLL_GRACE_PERIOD', 1),
         'half_day_late_minutes' => env('PAYROLL_HALF_DAY_LATE_MINUTES', 61),
+        // Hours threshold below which attendance is considered half-day (e.g., less than 5 hours = half day)
+        'half_day_hours_threshold' => env('PAYROLL_HALF_DAY_HOURS_THRESHOLD', 5.0),
         'night_shift_start' => env('PAYROLL_NIGHT_START', '22:00'),
         'night_shift_end' => env('PAYROLL_NIGHT_END', '06:00'),
     ],

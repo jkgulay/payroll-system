@@ -229,12 +229,12 @@ class BiometricImportController extends Controller
             'punch_records_template' => [
                 'description' => 'Import attendance punch records with date-based columns',
                 'required_columns' => ['Staff Code', 'Name'],
-                'date_columns' => 'Columns with format MM-DD (e.g., 12-01, 12-02) containing time entries',
+                'date_columns' => 'Columns with format DD (e.g., 01, 02, 15) or MM-DD (e.g., 01-15) containing time entries',
                 'time_format' => 'HH:MM (e.g., 08:30, 17:00), multiple entries separated by newlines',
                 'format' => 'Excel (.xls, .xlsx) or CSV',
                 'parameters' => [
                     'year' => 'Year of the records (default: current year)',
-                    'month' => 'Optional: Override the month from date columns',
+                    'month' => 'Month of the records (required when using DD format columns)',
                 ],
             ],
         ]);
