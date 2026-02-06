@@ -18,6 +18,11 @@ class StaffImportService
      * Expected columns: User ID, Staff Code, Name, ID No, Card No, Mobile No, Punch Pwd,
      * Department, Staff Type, Entry Date, Entry Status, Gender, Position, Degree, Address, Email, Phone, Remark
      * 
+     * BEHAVIOR:
+     * - For EXISTING employees (matched by Staff Code): Only updates contact info and biometric_id
+     * - For NEW employees: Creates with all data including position, department, salary
+     * - This preserves existing employees' position, benefits, deductions, and allowances
+     * 
      * @param array $staffData Array of staff records
      * @param array $defaults Optional default values ['position' => string, 'project_id' => int]
      */
@@ -90,6 +95,13 @@ class StaffImportService
     /**
      * Process a single staff record
      * 
+     * IMPORTANT: For existing employees (matched by Staff Code):
+     * - ONLY updates: biometric_id, email, mobile_number, phone_number, staff_type
+     * - PRESERVES: position, department/project, salary, benefits, deductions, allowances
+     * 
+     * For new employees:
+     * - Creates with all provided data including position, department, salary, etc.
+     * 
      * @param array $data Staff record data
      * @param array $defaults Default values for missing data
      */
@@ -153,11 +165,21 @@ class StaffImportService
         ];
 
         if ($employee) {
-            // Update existing employee
-            $employee->update($employeeData);
+            // Update existing employee - ONLY update contact info and biometric_id
+            // DO NOT overwrite position, project, salary, benefits, or deductions
+            $updateData = [
+                'biometric_id' => !empty($data['User ID']) ? $data['User ID'] : $employee->biometric_id,
+                'email' => !empty($data['Email']) ? trim($data['Email']) : $employee->email,
+                'mobile_number' => $this->formatMobileNumber($data['Mobile No'] ?? null) ?? $employee->mobile_number,
+                'phone_number' => !empty($data['Phone']) ? trim($data['Phone']) : $employee->phone_number,
+                // Only update staff_type for reference, but don't change position_id or project_id
+                'staff_type' => !empty($data['Staff Type']) ? trim($data['Staff Type']) : $employee->staff_type,
+            ];
+
+            $employee->update($updateData);
             return ['action' => 'updated', 'employee' => $employee];
         } else {
-            // Create new employee
+            // Create new employee with all data
             $employeeData['username'] = $this->generateUsername($staffCode, $nameParts['first_name']);
             $employeeData['created_by'] = auth()->id() ?? 1;
 

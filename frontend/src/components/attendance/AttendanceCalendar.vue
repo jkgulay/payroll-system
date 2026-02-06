@@ -223,7 +223,7 @@
             </template>
 
             <template v-slot:item.time_out="{ item }">
-              {{ item.time_out || "--:--" }}
+              {{ item.actual_time_out || "--:--" }}
             </template>
 
             <template v-slot:item.hours="{ item }">

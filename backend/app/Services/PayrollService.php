@@ -12,10 +12,12 @@ use App\Models\EmployeeLoan;
 use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\Holiday;
+use App\Models\GovernmentRate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Services\CompanySettingService;
+use Illuminate\Support\Facades\Cache;
 
 class PayrollService
 {
@@ -60,44 +62,36 @@ class PayrollService
     }
 
     /**
-     * Process payroll for specific employees
+     * Process payroll for specific employees (OPTIMIZED with eager loading)
      */
     public function processPayroll(Payroll $payroll, ?array $employeeIds = null)
     {
         try {
-            // If no employee IDs provided, process employees who were working during the payroll period
-            if (empty($employeeIds)) {
-                $employees = Employee::where(function ($q) use ($payroll) {
-                    $q->whereIn('activity_status', ['active', 'on_leave'])
-                        ->orWhereHas('attendances', function ($subQ) use ($payroll) {
-                            $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-                                ->where('status', '!=', 'absent');
-                        });
-                })->get();
-            } else {
-                $employees = Employee::whereIn('id', $employeeIds)
-                    ->where(function ($q) use ($payroll) {
-                        $q->whereIn('activity_status', ['active', 'on_leave'])
-                            ->orWhereHas('attendances', function ($subQ) use ($payroll) {
-                                $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-                                    ->where('status', '!=', 'absent');
-                            });
-                    })
-                    ->get();
-            }
+            // OPTIMIZATION: Load all employees with ALL payroll-related data in minimal queries
+            $employees = $this->getEmployeesWithPayrollData($payroll, $employeeIds);
+
+            // OPTIMIZATION: Load holidays ONCE for entire period (cached)
+            $holidays = $this->getHolidaysForPeriod($payroll->period_start, $payroll->period_end);
 
             $totalGross = 0;
             $totalDeductions = 0;
             $totalNet = 0;
+            $payrollItems = []; // OPTIMIZATION: Collect items for batch insert
 
             foreach ($employees as $employee) {
-                $item = $this->calculatePayrollItem($payroll, $employee);
+                $item = $this->calculatePayrollItem($payroll, $employee, $holidays);
 
-                PayrollItem::create($item);
+                // OPTIMIZATION: Collect items instead of individual inserts
+                $payrollItems[] = $item;
 
                 $totalGross += $item['gross_pay'];
                 $totalDeductions += $item['total_deductions'];
                 $totalNet += $item['net_pay'];
+            }
+
+            // OPTIMIZATION: Batch insert all payroll items at once (1 query vs 100+)
+            if (!empty($payrollItems)) {
+                PayrollItem::insert($payrollItems);
             }
 
             $payroll->update([
@@ -114,18 +108,149 @@ class PayrollService
     }
 
     /**
-     * Calculate payroll item for a specific employee
+     * OPTIMIZATION: Load all employees with payroll-related data in minimal queries
+     * Uses eager loading to prevent N+1 query problem
      */
-    public function calculatePayrollItem(Payroll $payroll, Employee $employee)
+    private function getEmployeesWithPayrollData(Payroll $payroll, ?array $employeeIds = null)
     {
-        // Get attendance records for the period
-        // Only include records with BOTH time_in and time_out (complete attendance)
-        $attendances = Attendance::where('employee_id', $employee->id)
-            ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-            ->where('status', '!=', 'absent')
-            ->whereNotNull('time_in')
-            ->whereNotNull('time_out')
+        $query = Employee::query();
+
+        if (!empty($employeeIds)) {
+            $query->whereIn('id', $employeeIds);
+        }
+
+        return $query
+            // Eager load ALL relationships at once - prevents N+1 queries
+            ->with([
+                // Attendances for payroll period only (with needed columns)
+                'attendances' => function ($q) use ($payroll) {
+                    $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                        ->where('status', '!=', 'absent')
+                        ->whereNotNull('time_in')
+                        ->whereNotNull('time_out')
+                        ->select(
+                            'id',
+                            'employee_id',
+                            'attendance_date',
+                            'status',
+                            'regular_hours',
+                            'overtime_hours',
+                            'undertime_hours',
+                            'time_in',
+                            'time_out',
+                            'ot_time_out',
+                            'ot_time_out_2'
+                        );
+                },
+                // Active allowances for period
+                'allowances' => function ($q) use ($payroll) {
+                    $q->where('is_active', true)
+                        ->where('effective_date', '<=', $payroll->period_end)
+                        ->where(function ($query) use ($payroll) {
+                            $query->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $payroll->period_start);
+                        })
+                        ->select(
+                            'id',
+                            'employee_id',
+                            'allowance_type',
+                            'allowance_name',
+                            'amount'
+                        );
+                },
+                // Pending salary adjustments
+                'salaryAdjustments' => function ($q) {
+                    $q->where('status', 'pending')
+                        ->select('id', 'employee_id', 'adjustment_type', 'amount');
+                },
+                // Active loans with balance
+                'loans' => function ($q) use ($payroll) {
+                    $q->where('status', 'active')
+                        ->where('balance', '>', 0)
+                        ->where(function ($query) use ($payroll) {
+                            $query->whereNull('maturity_date')
+                                ->orWhere('maturity_date', '>=', $payroll->period_start);
+                        })
+                        ->select(
+                            'id',
+                            'employee_id',
+                            'payment_frequency',
+                            'semi_monthly_amortization',
+                            'monthly_amortization'
+                        );
+                },
+                // Active deductions
+                'deductions' => function ($q) use ($payroll) {
+                    $q->where('status', 'active')
+                        ->where('balance', '>', 0)
+                        ->where('start_date', '<=', $payroll->period_end)
+                        ->where(function ($query) use ($payroll) {
+                            $query->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $payroll->period_start);
+                        })
+                        ->select(
+                            'id',
+                            'employee_id',
+                            'deduction_type',
+                            'deduction_name',
+                            'description',
+                            'amount_per_cutoff',
+                            'balance',
+                            'total_amount',
+                            'installments'
+                        );
+                },
+            ])
+            ->where(function ($q) use ($payroll) {
+                $q->whereIn('activity_status', ['active', 'on_leave'])
+                    ->orWhereHas('attendances', function ($subQ) use ($payroll) {
+                        $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                            ->where('status', '!=', 'absent');
+                    });
+            })
+            ->select(
+                'id',
+                'employee_number',
+                'first_name',
+                'last_name',
+                'basic_salary',
+                'custom_pay_rate',
+                'position_id',
+                'has_sss',
+                'has_philhealth',
+                'has_pagibig',
+                'custom_sss',
+                'custom_philhealth',
+                'custom_pagibig'
+            )
             ->get();
+    }
+
+    /**
+     * OPTIMIZATION: Load holidays ONCE for entire period with caching
+     */
+    private function getHolidaysForPeriod(string $startDate, string $endDate): array
+    {
+        $cacheKey = "holidays:{$startDate}:{$endDate}";
+
+        return Cache::remember($cacheKey, 3600, function () use ($startDate, $endDate) {
+            return Holiday::whereBetween('date', [$startDate, $endDate])
+                ->where('is_active', true)
+                ->get()
+                ->keyBy(function ($holiday) {
+                    return Carbon::parse($holiday->date)->format('Y-m-d');
+                })
+                ->toArray();
+        });
+    }
+
+    /**
+     * Calculate payroll item for a specific employee (OPTIMIZED)
+     */
+    public function calculatePayrollItem(Payroll $payroll, Employee $employee, array $holidays = [])
+    {
+        // OPTIMIZATION: Use preloaded attendances (already eager loaded)
+        $attendances = $employee->attendances;
 
         // Calculate days worked and hours
         $regularDays = 0;
@@ -154,8 +279,9 @@ class PayrollService
             // Check if this date is Sunday (0 = Sunday in Carbon)
             $isSunday = $attendanceDate->dayOfWeek === 0;
 
-            // Check if this date is a holiday
-            $holiday = Holiday::getHolidayForDate($attendanceDate);
+            // OPTIMIZATION: Check holiday from preloaded array (O(1) lookup - no query)
+            $dateKey = $attendanceDate->format('Y-m-d');
+            $holiday = isset($holidays[$dateKey]) ? (object) $holidays[$dateKey] : null;
 
             if ($holiday && ($attendance->status === 'present' || $attendance->status === 'half_day' || $attendance->status === 'late')) {
                 // This is a holiday with attendance - calculate holiday pay
@@ -244,16 +370,8 @@ class PayrollService
         $specialOtPay = $sundayOtPay + $regularHolidayOtPay + $regularHolidaySundayOtPay + $specialHolidayOtPay;
         $totalOtPay = $regularOtPay + $specialOtPay;
 
-        // Get allowances - sum allowances that are active and effective during the payroll period
-        $activeAllowances = EmployeeAllowance::where('employee_id', $employee->id)
-            ->where('is_active', true)
-            ->where('effective_date', '<=', $payroll->period_end)
-            ->where(function ($query) use ($payroll) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', $payroll->period_start);
-            })
-            ->get();
-
+        // OPTIMIZATION: Use preloaded relationships (no queries)
+        $activeAllowances = $employee->allowances;
         $allowances = $activeAllowances->sum('amount') ?? 0;
 
         $allowancesBreakdown = $activeAllowances->map(function ($allowance) {
@@ -285,13 +403,11 @@ class PayrollService
 
         $otherAllowances = $allowances + $mealAllowanceTotal;
 
-        // Calculate salary adjustment from pending adjustments (previous salary corrections)
+        // Calculate salary adjustment from pending adjustments (OPTIMIZED - preloaded)
         $totalDaysWorked = $regularDays + $holidayDays;
-        
-        // Get pending salary adjustments for this employee
-        $pendingAdjustments = SalaryAdjustment::where('employee_id', $employee->id)
-            ->where('status', 'pending')
-            ->get();
+
+        // OPTIMIZATION: Use preloaded salary adjustments
+        $pendingAdjustments = $employee->salaryAdjustments;
 
         $salaryAdjustment = 0;
         $adjustmentIds = [];
@@ -346,18 +462,8 @@ class PayrollService
         $periodDays = $periodStart->diffInDays($periodEnd) + 1;
         $isSemiMonthly = $periodDays <= 16;
 
-        // Get loans deduction for this period (all loan types combined)
-        // Deduct from active loans that have balance remaining and haven't matured
-        // Start deducting immediately once loan is active (ignore first_payment_date for deductions)
-        $activeLoans = EmployeeLoan::where('employee_id', $employee->id)
-            ->where('status', 'active')
-            ->where('balance', '>', 0)
-            ->where(function ($query) use ($payroll) {
-                // Loan hasn't matured yet (maturity date is null or after payroll period starts)
-                $query->whereNull('maturity_date')
-                    ->orWhere('maturity_date', '>=', $payroll->period_start);
-            })
-            ->get();
+        // OPTIMIZATION: Use preloaded loans
+        $activeLoans = $employee->loans;
 
         $loanDeduction = 0;
         foreach ($activeLoans as $loan) {
@@ -382,16 +488,8 @@ class PayrollService
         // Cash advance
         $cashAdvance = 0; // Can be configured
 
-        // Get active employee deductions for this period
-        $activeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
-            ->where('status', 'active')
-            ->where('balance', '>', 0)
-            ->where('start_date', '<=', $payroll->period_end)
-            ->where(function ($query) use ($payroll) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', $payroll->period_start);
-            })
-            ->get();
+        // OPTIMIZATION: Use preloaded deductions
+        $activeDeductions = $employee->deductions;
 
         $employeeDeductions = 0;
         $deductionsBreakdown = [];
@@ -470,94 +568,115 @@ class PayrollService
     }
 
     /**
-     * Calculate SSS contribution
-     */
-    /**
-     * Calculate SSS contribution based on 2025 SSS Contribution Table
-     * Employee share: 4.5% of monthly salary credit
+     * Calculate SSS contribution using GovernmentRate settings from /settings dialog
+     * Falls back to 2025 hardcoded table if settings not configured
      */
     private function calculateSSS($grossPay)
     {
-        // Convert semi-monthly to monthly salary credit for SSS calculation
+        // Convert semi-monthly to monthly salary for lookup
         $monthlySalary = $grossPay * 2;
 
-        // 2025 SSS Contribution Table - Employee Share (4.5%)
-        // Using monthly salary credit brackets
-        if ($monthlySalary < 4250) return 180.00;
-        if ($monthlySalary < 4750) return 202.50;
-        if ($monthlySalary < 5250) return 225.00;
-        if ($monthlySalary < 5750) return 247.50;
-        if ($monthlySalary < 6250) return 270.00;
-        if ($monthlySalary < 6750) return 292.50;
-        if ($monthlySalary < 7250) return 315.00;
-        if ($monthlySalary < 7750) return 337.50;
-        if ($monthlySalary < 8250) return 360.00;
-        if ($monthlySalary < 8750) return 382.50;
-        if ($monthlySalary < 9250) return 405.00;
-        if ($monthlySalary < 9750) return 427.50;
-        if ($monthlySalary < 10250) return 450.00;
-        if ($monthlySalary < 10750) return 472.50;
-        if ($monthlySalary < 11250) return 495.00;
-        if ($monthlySalary < 11750) return 517.50;
-        if ($monthlySalary < 12250) return 540.00;
-        if ($monthlySalary < 12750) return 562.50;
-        if ($monthlySalary < 13250) return 585.00;
-        if ($monthlySalary < 13750) return 607.50;
-        if ($monthlySalary < 14250) return 630.00;
-        if ($monthlySalary < 14750) return 652.50;
-        if ($monthlySalary < 15250) return 675.00;
-        if ($monthlySalary < 15750) return 697.50;
-        if ($monthlySalary < 16250) return 720.00;
-        if ($monthlySalary < 16750) return 742.50;
-        if ($monthlySalary < 17250) return 765.00;
-        if ($monthlySalary < 17750) return 787.50;
-        if ($monthlySalary < 18250) return 810.00;
-        if ($monthlySalary < 18750) return 832.50;
-        if ($monthlySalary < 19250) return 855.00;
-        if ($monthlySalary < 19750) return 877.50;
-        if ($monthlySalary < 20250) return 900.00;
-        if ($monthlySalary < 20750) return 922.50;
-        if ($monthlySalary < 21250) return 945.00;
-        if ($monthlySalary < 21750) return 967.50;
-        if ($monthlySalary < 22250) return 990.00;
-        if ($monthlySalary < 22750) return 1012.50;
-        if ($monthlySalary < 23250) return 1035.00;
-        if ($monthlySalary < 23750) return 1057.50;
-        if ($monthlySalary < 24250) return 1080.00;
-        if ($monthlySalary < 24750) return 1102.50;
-        if ($monthlySalary >= 25000) return 1125.00; // Maximum employee share
+        // Try to get from settings dialog configuration
+        $contribution = GovernmentRate::getContributionForSalary('sss', $monthlySalary);
 
-        return 1125.00; // Maximum
+        if ($contribution && $contribution['employee'] > 0) {
+            // Found in settings - use monthly amount, divide by 2 for semi-monthly
+            return round($contribution['employee'] / 2, 2);
+        }
+
+        // FALLBACK: 2025 SSS hardcoded table if settings not configured
+        // This ensures backward compatibility
+        if ($monthlySalary < 4250) return 180.00 / 2;
+        if ($monthlySalary < 4750) return 202.50 / 2;
+        if ($monthlySalary < 5250) return 225.00 / 2;
+        if ($monthlySalary < 5750) return 247.50 / 2;
+        if ($monthlySalary < 6250) return 270.00 / 2;
+        if ($monthlySalary < 6750) return 292.50 / 2;
+        if ($monthlySalary < 7250) return 315.00 / 2;
+        if ($monthlySalary < 7750) return 337.50 / 2;
+        if ($monthlySalary < 8250) return 360.00 / 2;
+        if ($monthlySalary < 8750) return 382.50 / 2;
+        if ($monthlySalary < 9250) return 405.00 / 2;
+        if ($monthlySalary < 9750) return 427.50 / 2;
+        if ($monthlySalary < 10250) return 450.00 / 2;
+        if ($monthlySalary < 10750) return 472.50 / 2;
+        if ($monthlySalary < 11250) return 495.00 / 2;
+        if ($monthlySalary < 11750) return 517.50 / 2;
+        if ($monthlySalary < 12250) return 540.00 / 2;
+        if ($monthlySalary < 12750) return 562.50 / 2;
+        if ($monthlySalary < 13250) return 585.00 / 2;
+        if ($monthlySalary < 13750) return 607.50 / 2;
+        if ($monthlySalary < 14250) return 630.00 / 2;
+        if ($monthlySalary < 14750) return 652.50 / 2;
+        if ($monthlySalary < 15250) return 675.00 / 2;
+        if ($monthlySalary < 15750) return 697.50 / 2;
+        if ($monthlySalary < 16250) return 720.00 / 2;
+        if ($monthlySalary < 16750) return 742.50 / 2;
+        if ($monthlySalary < 17250) return 765.00 / 2;
+        if ($monthlySalary < 17750) return 787.50 / 2;
+        if ($monthlySalary < 18250) return 810.00 / 2;
+        if ($monthlySalary < 18750) return 832.50 / 2;
+        if ($monthlySalary < 19250) return 855.00 / 2;
+        if ($monthlySalary < 19750) return 877.50 / 2;
+        if ($monthlySalary < 20250) return 900.00 / 2;
+        if ($monthlySalary < 20750) return 922.50 / 2;
+        if ($monthlySalary < 21250) return 945.00 / 2;
+        if ($monthlySalary < 21750) return 967.50 / 2;
+        if ($monthlySalary < 22250) return 990.00 / 2;
+        if ($monthlySalary < 22750) return 1012.50 / 2;
+        if ($monthlySalary < 23250) return 1035.00 / 2;
+        if ($monthlySalary < 23750) return 1057.50 / 2;
+        if ($monthlySalary < 24250) return 1080.00 / 2;
+        if ($monthlySalary < 24750) return 1102.50 / 2;
+        if ($monthlySalary >= 25000) return 1125.00 / 2;
+
+        return 1125.00 / 2; // Maximum
     }
 
     /**
-     * Calculate PhilHealth contribution
-     * 2024-2026 rates: 4.5% of basic salary (2.25% employee share)
+     * Calculate PhilHealth contribution using GovernmentRate settings from /settings dialog
+     * Falls back to 2025 hardcoded formula if settings not configured
      */
     private function calculatePhilHealth($grossPay)
     {
-        // PhilHealth 2024-2026: 4.5% of monthly salary (2.25% employee share)
-        // Semi-monthly computation: divide by 2 for twice-a-month payroll
-        $monthlyGross = $grossPay * 2; // Assuming semi-monthly payroll
+        // Convert semi-monthly to monthly salary for lookup
+        $monthlyGross = $grossPay * 2;
+
+        // Try to get from settings dialog configuration
+        $contribution = GovernmentRate::getContributionForSalary('philhealth', $monthlyGross);
+
+        if ($contribution && $contribution['employee'] > 0) {
+            // Found in settings - use monthly amount, divide by 2 for semi-monthly
+            return round($contribution['employee'] / 2, 2);
+        }
+
+        // FALLBACK: 2024-2026 PhilHealth hardcoded formula if settings not configured
         $contribution = $monthlyGross * 0.045;
         $employeeShare = $contribution / 2;
-
-        // For semi-monthly, divide by 2
         $semiMonthlyShare = $employeeShare / 2;
 
-        // Minimum: ₱225, Maximum: ₱1,800 per month (₱900 semi-monthly)
-        return round(min(max($semiMonthlyShare, 225 / 2), 900), 2);
+        // Minimum: ₱225, Maximum: ₱1,800 per month (₱112.5 to ₱900 semi-monthly)
+        return round(min(max($semiMonthlyShare, 112.50), 900), 2);
     }
 
     /**
-     * Calculate Pag-IBIG contribution
-     * 2024 rates: 2% of monthly salary (1% employee, 1% employer)
+     * Calculate Pag-IBIG contribution using GovernmentRate settings from /settings dialog
+     * Falls back to 2024 hardcoded formula if settings not configured
      */
     private function calculatePagibig($grossPay)
     {
-        // Pag-IBIG: Employee share is 2% of monthly salary
-        // Semi-monthly computation
-        $monthlyGross = $grossPay * 2; // Assuming semi-monthly payroll
+        // Convert semi-monthly to monthly salary for lookup
+        $monthlyGross = $grossPay * 2;
+
+        // Try to get from settings dialog configuration
+        $contribution = GovernmentRate::getContributionForSalary('pagibig', $monthlyGross);
+
+        if ($contribution && $contribution['employee'] > 0) {
+            // Found in settings - use monthly amount, divide by 2 for semi-monthly
+            return round($contribution['employee'] / 2, 2);
+        }
+
+        // FALLBACK: 2024 Pag-IBIG hardcoded formula if settings not configured
         $contribution = $monthlyGross * 0.02;
         $semiMonthlyContribution = $contribution / 2;
 

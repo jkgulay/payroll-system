@@ -135,6 +135,37 @@
               ></v-text-field>
             </v-col>
 
+            <v-col cols="12" class="pb-0 pt-2">
+              <v-divider></v-divider>
+              <div class="text-subtitle-2 font-weight-bold my-2">
+                Overtime (Optional)
+              </div>
+            </v-col>
+
+            <v-col cols="6">
+              <v-text-field
+                v-model="formData.ot_time_in"
+                label="OT Time In"
+                type="time"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-clock-plus"
+                hint="Optional"
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="6">
+              <v-text-field
+                v-model="formData.ot_time_out"
+                label="OT Time Out"
+                type="time"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-clock-alert"
+                hint="Optional"
+              ></v-text-field>
+            </v-col>
+
             <v-col cols="12">
               <v-textarea
                 v-model="formData.notes"
@@ -212,6 +243,8 @@ const formData = reactive({
   time_out: "",
   break_start: "",
   break_end: "",
+  ot_time_in: "",
+  ot_time_out: "",
   notes: "",
   requires_approval: true,
 });
@@ -258,6 +291,8 @@ const save = async () => {
       time_out: formData.time_out ? formData.time_out + ":00" : null,
       break_start: formData.break_start ? formData.break_start + ":00" : null,
       break_end: formData.break_end ? formData.break_end + ":00" : null,
+      ot_time_in: formData.ot_time_in ? formData.ot_time_in + ":00" : null,
+      ot_time_out: formData.ot_time_out ? formData.ot_time_out + ":00" : null,
       notes: formData.notes || null,
     };
 
@@ -340,6 +375,8 @@ watch(
           time_out: props.attendance.time_out?.substring(0, 5) || "",
           break_start: props.attendance.break_start?.substring(0, 5) || "",
           break_end: props.attendance.break_end?.substring(0, 5) || "",
+          ot_time_in: props.attendance.ot_time_in?.substring(0, 5) || "",
+          ot_time_out: props.attendance.ot_time_out?.substring(0, 5) || "",
           notes:
             props.attendance.manual_reason ||
             props.attendance.edit_reason ||
@@ -354,6 +391,8 @@ watch(
           time_out: "",
           break_start: "",
           break_end: "",
+          ot_time_in: "",
+          ot_time_out: "",
           notes: "",
           requires_approval: true,
         });

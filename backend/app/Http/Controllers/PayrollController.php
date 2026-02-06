@@ -110,10 +110,14 @@ class PayrollController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error creating payroll: ' . $e->getMessage());
+            Log::error('Error creating payroll: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'message' => 'Failed to create payroll',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'details' => config('app.debug') ? $e->getTraceAsString() : null
             ], 500);
         }
     }
@@ -478,6 +482,9 @@ class PayrollController extends Controller
     {
         if (config('app.debug')) {
             Log::debug('Payroll Generation', [
+                'payroll_id' => $payroll->id,
+                'period_start' => $payroll->period_start,
+                'period_end' => $payroll->period_end,
                 'filters' => $filters,
                 'has_attendance' => $filters['has_attendance'] ?? 'not set'
             ]);
@@ -506,6 +513,10 @@ class PayrollController extends Controller
 
         $employees = $query->get();
 
+        if (config('app.debug')) {
+            Log::debug('Employees found: ' . $employees->count());
+        }
+
         if ($employees->isEmpty()) {
             $errorMsg = 'No employees found for this payroll period';
 
@@ -516,14 +527,8 @@ class PayrollController extends Controller
                 $errorMsg .= '. No active or on-leave employees found with activity during this period.';
             }
 
-            // Throw a validation exception instead of generic exception
-            throw new \Illuminate\Validation\ValidationException(
-                validator([], []),
-                response()->json([
-                    'message' => 'Validation failed',
-                    'error' => $errorMsg,
-                ], 422)
-            );
+            // Throw a regular exception with detailed message
+            throw new \Exception($errorMsg);
         }
 
         $totalGross = 0;
@@ -531,20 +536,37 @@ class PayrollController extends Controller
         $totalNet = 0;
 
         foreach ($employees as $employee) {
-            // Use PayrollService for holiday-aware calculation
-            $item = $this->payrollService->calculatePayrollItem($payroll, $employee);
+            try {
+                // Use PayrollService for holiday-aware calculation
+                $item = $this->payrollService->calculatePayrollItem($payroll, $employee);
 
-            $payrollItem = PayrollItem::create($item);
+                // Validate calculated values before creating record
+                if (!is_numeric($item['gross_pay']) || !is_finite($item['gross_pay'])) {
+                    throw new \Exception("Invalid gross_pay calculated for employee {$employee->employee_number}: {$item['gross_pay']}");
+                }
+                if (!is_numeric($item['net_pay']) || !is_finite($item['net_pay'])) {
+                    throw new \Exception("Invalid net_pay calculated for employee {$employee->employee_number}: {$item['net_pay']}");
+                }
 
-            // Record deduction installments for this employee
-            $this->recordDeductionInstallments($payroll, $employee);
+                $payrollItem = PayrollItem::create($item);
 
-            // Record loan payments for this employee
-            $this->recordLoanPayments($payroll, $employee, $payrollItem);
+                // Record deduction installments for this employee
+                $this->recordDeductionInstallments($payroll, $employee);
 
-            $totalGross += $item['gross_pay'];
-            $totalDeductions += $item['total_deductions'];
-            $totalNet += $item['net_pay'];
+                // Record loan payments for this employee
+                $this->recordLoanPayments($payroll, $employee, $payrollItem);
+
+                $totalGross += $item['gross_pay'];
+                $totalDeductions += $item['total_deductions'];
+                $totalNet += $item['net_pay'];
+            } catch (\Exception $e) {
+                Log::error('Error calculating payroll for employee: ' . $employee->employee_number, [
+                    'employee_id' => $employee->id,
+                    'error' => $e->getMessage(),
+                    'item_data' => $item ?? null
+                ]);
+                throw new \Exception("Failed to calculate payroll for employee {$employee->employee_number}: " . $e->getMessage());
+            }
         }
 
         $payroll->update([

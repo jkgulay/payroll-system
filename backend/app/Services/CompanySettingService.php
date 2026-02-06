@@ -3,22 +3,34 @@
 namespace App\Services;
 
 use App\Models\CompanySetting;
+use Illuminate\Support\Facades\Cache;
 
 class CompanySettingService
 {
+    /**
+     * Get setting value with caching (OPTIMIZED)
+     * Cache TTL: 1 hour (3600 seconds)
+     */
     public function get(string $key, $default = null)
     {
-        $setting = CompanySetting::where('setting_key', $key)->first();
-        if (!$setting) {
-            return $default;
-        }
+        $cacheKey = "setting:{$key}";
 
-        return $this->castValue($setting->setting_value, $setting->setting_type, $default);
+        return Cache::remember($cacheKey, 3600, function () use ($key, $default) {
+            $setting = CompanySetting::where('setting_key', $key)->first();
+            if (!$setting) {
+                return $default;
+            }
+
+            return $this->castValue($setting->setting_value, $setting->setting_type, $default);
+        });
     }
 
+    /**
+     * Set setting value and invalidate cache
+     */
     public function set(string $key, $value, string $type = 'string', ?string $category = null, ?string $description = null): CompanySetting
     {
-        return CompanySetting::updateOrCreate(
+        $setting = CompanySetting::updateOrCreate(
             ['setting_key' => $key],
             [
                 'setting_value' => is_array($value) ? json_encode($value) : (string) $value,
@@ -28,6 +40,11 @@ class CompanySettingService
                 'is_editable' => true,
             ]
         );
+
+        // OPTIMIZATION: Invalidate cache when setting is updated
+        Cache::forget("setting:{$key}");
+
+        return $setting;
     }
 
     private function castValue($value, string $type, $default = null)

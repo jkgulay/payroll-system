@@ -33,6 +33,16 @@ return [
         'half_day_hours_threshold' => env('PAYROLL_HALF_DAY_HOURS_THRESHOLD', 5.0),
         'night_shift_start' => env('PAYROLL_NIGHT_START', '22:00'),
         'night_shift_end' => env('PAYROLL_NIGHT_END', '06:00'),
+
+        // Break Detection Settings (for biometric import)
+        'break_detection_min_hours' => env('PAYROLL_BREAK_MIN_HOURS', 3),
+        'break_detection_max_hours' => env('PAYROLL_BREAK_MAX_HOURS', 6),
+
+        // Smart Detection Settings (3-punch scenario detection)
+        'smart_detection_window_minutes' => env('PAYROLL_SMART_DETECTION_MINUTES', 120), // 2 hours
+
+        // OT Grace Period (minimum gap between regular time_out and OT start)
+        'ot_grace_period_minutes' => env('PAYROLL_OT_GRACE_MINUTES', 15),
     ],
 
     /*
