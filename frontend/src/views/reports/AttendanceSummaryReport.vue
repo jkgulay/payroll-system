@@ -129,7 +129,7 @@
           <v-card-text>
             <div class="text-overline">Overtime Hours</div>
             <div class="text-h4 font-weight-bold">
-              {{ formatHoursDisplay(summary.total_overtime_hours) }}
+              {{ Math.floor(summary.total_overtime_hours || 0) }}h
             </div>
           </v-card-text>
         </v-card>

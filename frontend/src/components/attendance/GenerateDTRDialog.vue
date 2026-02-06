@@ -164,7 +164,7 @@
             <strong>Total Hours:</strong> {{ preview.totals.regular_hours }} hrs
           </div>
           <div>
-            <strong>Overtime:</strong> {{ preview.totals.overtime_hours }} hrs
+            <strong>Overtime:</strong> {{ Math.floor(preview.totals.overtime_hours || 0) }} hrs
           </div>
         </v-alert>
       </v-card-text>

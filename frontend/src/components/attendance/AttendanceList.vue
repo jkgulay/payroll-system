@@ -131,8 +131,8 @@
 
       <template v-slot:item.hours_worked="{ item }">
         <span>{{ formatHoursWorked(item.regular_hours) }}</span>
-        <span v-if="item.overtime_hours > 0" class="text-warning">
-          +{{ formatHoursWorked(item.overtime_hours) }} OT
+        <span v-if="item.overtime_hours >= 1" class="text-warning">
+          +{{ Math.floor(item.overtime_hours) }}h OT
         </span>
       </template>
 

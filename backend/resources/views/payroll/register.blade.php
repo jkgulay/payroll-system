@@ -242,9 +242,7 @@
                 <th rowspan="2">Employee's<br>Savings</th>
                 <th rowspan="2">Loans</th>
                 <th rowspan="2">Deductions</th>
-                <th rowspan="2">Phic<br>Prem</th>
-                <th rowspan="2">HDMF<br>Prem</th>
-                <th rowspan="2">SSS<br>Prem</th>
+                <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
                 <th rowspan="2">SIGNATURE</th>
             </tr>
@@ -253,6 +251,9 @@
                 <th>REG OT</th>
                 <th>HRS</th>
                 <th>SUN/SPL. HOL.</th>
+                <th>SSS</th>
+                <th>PHIC</th>
+                <th>HDMF</th>
             </tr>
         </thead>
         <tbody>
@@ -285,9 +286,9 @@
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
                 <td class="text-right">{{ $item->loans > 0 ? number_format($item->loans, 2) : '' }}</td>
                 <td class="text-right">{{ $item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '' }}</td>
+                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
-                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
                 <td></td>
             </tr>
@@ -323,9 +324,9 @@
                 <td class="text-right">{{ number_format($items->sum('employee_savings'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('net_pay'), 2) }}</td>
                 <td></td>
             </tr>
@@ -361,9 +362,7 @@
                 <th rowspan="2">Employee's<br>Savings</th>
                 <th rowspan="2">Loans</th>
                 <th rowspan="2">Deductions</th>
-                <th rowspan="2">Phic<br>Prem</th>
-                <th rowspan="2">HDMF<br>Prem</th>
-                <th rowspan="2">SSS<br>Prem</th>
+                <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
                 <th rowspan="2">SIGNATURE</th>
             </tr>
@@ -372,6 +371,9 @@
                 <th>REG OT</th>
                 <th>HRS</th>
                 <th>SUN/SPL. HOL.</th>
+                <th>SSS</th>
+                <th>PHIC</th>
+                <th>HDMF</th>
             </tr>
         </thead>
         <tbody>
@@ -404,9 +406,9 @@
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
                 <td class="text-right">{{ $item->loans > 0 ? number_format($item->loans, 2) : '' }}</td>
                 <td class="text-right">{{ $item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '' }}</td>
+                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
-                <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
                 <td></td>
             </tr>
@@ -442,9 +444,9 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->total_net, 2) }}</td>
                 <td></td>
             </tr>

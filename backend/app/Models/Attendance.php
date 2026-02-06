@@ -164,14 +164,28 @@ class Attendance extends Model
         $schedule = $this->getScheduleConfig($timeIn);
         $standardHours = $schedule['standard_hours'];
 
-        // Calculate regular and overtime hours
-        if ($totalHours <= $standardHours) {
-            $this->regular_hours = $totalHours;
-            $this->overtime_hours = 0;
-        } else {
-            $this->regular_hours = $standardHours;
-            $this->overtime_hours = $totalHours - $standardHours;
+        // Parse scheduled time out for overtime calculation
+        $scheduledTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
+        // Handle overnight shifts for scheduled time out
+        if ($scheduledTimeOut->lt(Carbon::parse($dateString . ' ' . $schedule['standard_time_in']))) {
+            $scheduledTimeOut->addDay();
         }
+
+        // Calculate overtime ONLY for time worked AFTER scheduled time out
+        // Early time-in does NOT count as overtime
+        // Overtime is only counted in WHOLE HOURS (minutes are ignored)
+        $overtimeMinutes = 0;
+        if ($timeOut->gt($scheduledTimeOut)) {
+            $overtimeMinutes = $scheduledTimeOut->diffInMinutes($timeOut);
+        }
+        // Floor to whole hours only - minutes don't count as overtime
+        // e.g., 1h 59m = 1 hour OT, 59m = 0 hours OT
+        $this->overtime_hours = floor($overtimeMinutes / 60);
+
+        // Calculate regular hours (total hours minus overtime)
+        // Regular hours are capped at standard hours
+        $regularHoursWorked = $totalHours - $this->overtime_hours;
+        $this->regular_hours = min($regularHoursWorked, $standardHours);
 
         // Calculate night differential hours (10 PM - 6 AM)
         $this->night_differential_hours = $this->calculateNightDifferentialHours($timeIn, $timeOut);
@@ -191,11 +205,14 @@ class Attendance extends Model
             $this->status = 'late';
         }
 
-        // If half-day, cap regular hours to half-day and treat excess as overtime
+        // If half-day, cap regular hours to half-day
+        // Overtime is still only calculated from time worked after scheduled time out
         if ($this->status === 'half_day') {
             $halfDayHours = $standardHours / 2;
-            $this->regular_hours = min($totalHours, $halfDayHours);
-            $this->overtime_hours = max(0, $totalHours - $halfDayHours);
+            // Regular hours for half-day is capped at half the standard hours
+            // But overtime remains based on actual time worked after scheduled time out
+            $this->regular_hours = min($regularHoursWorked, $halfDayHours);
+            // Overtime already correctly calculated above (only time after scheduled time out)
         }
 
         // Calculate undertime based on project/department schedule settings

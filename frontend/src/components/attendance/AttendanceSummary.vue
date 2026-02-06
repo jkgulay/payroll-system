@@ -147,7 +147,7 @@
                 <v-card color="teal" variant="tonal">
                   <v-card-text class="text-center">
                     <div class="text-h4">
-                      {{ summary.total_overtime_hours?.toFixed(1) }}
+                      {{ Math.floor(summary.total_overtime_hours || 0) }}
                     </div>
                     <div class="text-caption">Overtime Hours</div>
                   </v-card-text>
