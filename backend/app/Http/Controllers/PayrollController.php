@@ -120,7 +120,7 @@ class PayrollController extends Controller
 
     public function show($id)
     {
-        $payroll = Payroll::with(['items.employee.position', 'creator', 'finalizer'])
+        $payroll = Payroll::with(['items.employee.position', 'items.employee.project', 'creator', 'finalizer'])
             ->findOrFail($id);
 
         return response()->json($payroll);
@@ -339,21 +339,30 @@ class PayrollController extends Controller
         $format = $validated['format'] ?? 'pdf';
 
         // Load payroll items with employee relationship
-        $itemsQuery = $payroll->items()->with('employee.positionRate');
+        $itemsQuery = $payroll->items()->with(['employee.positionRate', 'employee.project']);
 
         // Apply filters if provided
         if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
             if ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
-                // Filter by both department AND position
+                // Filter by both department (project) AND position
                 $itemsQuery->whereHas('employee', function ($q) use ($validated) {
-                    $q->whereIn('department', $validated['departments'])
-                        ->whereHas('positionRate', function ($q2) use ($validated) {
-                            $q2->whereIn('position_name', $validated['positions']);
-                        });
+                    $q->where(function ($q2) use ($validated) {
+                        // Check project name first, then fallback to department text field
+                        $q2->whereHas('project', function ($q3) use ($validated) {
+                            $q3->whereIn('name', $validated['departments']);
+                        })->orWhereIn('department', $validated['departments']);
+                    })->whereHas('positionRate', function ($q2) use ($validated) {
+                        $q2->whereIn('position_name', $validated['positions']);
+                    });
                 });
             } elseif ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
                 $itemsQuery->whereHas('employee', function ($q) use ($validated) {
-                    $q->whereIn('department', $validated['departments']);
+                    // Check project name first, then fallback to department text field
+                    $q->where(function ($q2) use ($validated) {
+                        $q2->whereHas('project', function ($q3) use ($validated) {
+                            $q3->whereIn('name', $validated['departments']);
+                        })->orWhereIn('department', $validated['departments']);
+                    });
                 });
             } elseif ($validated['filter_type'] === 'position' && !empty($validated['positions'])) {
                 $itemsQuery->whereHas('employee.positionRate', function ($q) use ($validated) {

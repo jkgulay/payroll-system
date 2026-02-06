@@ -606,10 +606,14 @@ async function fetchPayroll() {
     const response = await api.get(`/payrolls/${route.params.id}`);
     payroll.value = response.data;
 
-    // Extract unique departments from payroll items
+    // Extract unique departments from payroll items (from project relationship)
     const departments = new Set();
     payroll.value.items.forEach((item) => {
-      if (item.employee?.department) {
+      // Use project name (from Departments) as the department
+      if (item.employee?.project?.name) {
+        departments.add(item.employee.project.name);
+      } else if (item.employee?.department) {
+        // Fallback to department text field
         departments.add(item.employee.department);
       }
     });

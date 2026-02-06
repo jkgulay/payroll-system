@@ -13,6 +13,7 @@ class PunchRecordImportService
     /**
      * Import punch records from biometric device export
      * Format: Staff Code, Name, 12-01, 12-02, ... (dates as columns with time entries)
+     * Also supports: Staff Code, Name, 01, 02, ... (day-only columns with month from parameter)
      * Each date column may contain multiple time entries separated by newlines
      */
     public function importPunchRecords(array $punchData, ?int $year = null, ?int $month = null): array
@@ -27,95 +28,187 @@ class PunchRecordImportService
             $year = now()->year;
         }
 
-        DB::beginTransaction();
+        // Try to detect month from column headers if not provided
+        $detectedMonth = $this->detectMonthFromColumns(array_keys($punchData[0] ?? []));
         
-        try {
-            foreach ($punchData as $index => $row) {
+        // Process each row independently to avoid PostgreSQL transaction abort cascading
+        foreach ($punchData as $index => $row) {
+            try {
+                // Skip if no staff code
+                if (empty($row['Staff Code'])) {
+                    $skipped++;
+                    continue;
+                }
+
+                $staffCode = trim($row['Staff Code']);
+                
+                // Find employee by staff code
+                $employee = Employee::where('employee_number', $staffCode)->first();
+                
+                if (!$employee) {
+                    $errors[] = [
+                        'row' => $index + 1,
+                        'staff_code' => $staffCode,
+                        'error' => 'Employee not found. Please import staff information first.',
+                    ];
+                    continue;
+                }
+
+                // Process each date column for this employee in a single transaction
+                DB::beginTransaction();
+                
                 try {
-                    // Skip if no staff code
-                    if (empty($row['Staff Code'])) {
-                        $skipped++;
-                        continue;
-                    }
-
-                    $staffCode = trim($row['Staff Code']);
+                    $rowImported = 0;
+                    $rowUpdated = 0;
                     
-                    // Find employee by staff code
-                    $employee = Employee::where('employee_number', $staffCode)->first();
-                    
-                    if (!$employee) {
-                        $errors[] = [
-                            'row' => $index + 1,
-                            'staff_code' => $staffCode,
-                            'error' => 'Employee not found. Please import staff information first.',
-                        ];
-                        continue;
-                    }
-
-                    // Process each date column
                     foreach ($row as $key => $value) {
-                        // Skip non-date columns
-                        if ($key === 'Staff Code' || $key === 'Name') {
+                        // Skip non-date columns (case-insensitive check)
+                        $keyLower = strtolower(trim($key ?? ''));
+                        if (in_array($keyLower, ['staff code', 'name', 'staff_code', 'employee_number', 'employee number', ''])) {
                             continue;
                         }
                         
-                        // Parse date from column header (e.g., "12-01" means December 1st)
-                        if (preg_match('/^(\d{1,2})-(\d{1,2})$/', $key, $matches)) {
-                            $monthNum = (int)$matches[1];
-                            $dayNum = (int)$matches[2];
-                            
-                            // Override month if provided
-                            if ($month) {
-                                $monthNum = $month;
-                            }
-                            
+                        // Skip null or empty column headers
+                        if ($key === null || trim($key) === '') {
+                            continue;
+                        }
+                        
+                        $dateInfo = $this->parseDateFromColumnHeader($key, $year, $month, $detectedMonth);
+                        
+                        if ($dateInfo) {
                             try {
-                                $attendanceDate = Carbon::create($year, $monthNum, $dayNum);
+                                $attendanceDate = Carbon::create($dateInfo['year'], $dateInfo['month'], $dateInfo['day']);
                                 
                                 // Skip if no time entries
-                                if (empty($value) || trim($value) === '') {
+                                if (empty($value) || (is_string($value) && trim($value) === '') || $value === null) {
                                     continue;
                                 }
                                 
-                                $result = $this->processPunchRecord($employee, $attendanceDate, $value);
+                                // Convert value to string if it's not already
+                                $timeValue = is_string($value) ? $value : (string)$value;
+                                
+                                $result = $this->processPunchRecord($employee, $attendanceDate, $timeValue);
                                 
                                 if ($result['action'] === 'created') {
-                                    $imported++;
+                                    $rowImported++;
                                 } elseif ($result['action'] === 'updated') {
-                                    $updated++;
+                                    $rowUpdated++;
                                 }
                                 
                             } catch (\Exception $e) {
-                                Log::warning("Invalid date: {$key} for year {$year}");
+                                Log::warning("Invalid date: {$key} for year {$year}, error: " . $e->getMessage());
                             }
                         }
                     }
                     
+                    DB::commit();
+                    $imported += $rowImported;
+                    $updated += $rowUpdated;
+                    
                 } catch (\Exception $e) {
+                    DB::rollBack();
                     $errors[] = [
                         'row' => $index + 1,
-                        'staff_code' => $row['Staff Code'] ?? 'N/A',
+                        'staff_code' => $staffCode,
                         'error' => $e->getMessage(),
                     ];
-                    Log::error('Punch record import error: ' . $e->getMessage(), ['row' => $row]);
+                    Log::error('Punch record import error for row ' . ($index + 1) . ': ' . $e->getMessage());
                 }
+                
+            } catch (\Exception $e) {
+                $errors[] = [
+                    'row' => $index + 1,
+                    'staff_code' => $row['Staff Code'] ?? 'N/A',
+                    'error' => $e->getMessage(),
+                ];
+                Log::error('Punch record import error: ' . $e->getMessage(), ['row' => $row]);
             }
-
-            DB::commit();
+        }
+        
+        return [
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'failed' => count($errors),
+            'error_details' => $errors,
+        ];
+    }
+    
+    /**
+     * Parse date from column header - supports multiple formats:
+     * - "MM-DD" format (e.g., "01-15" means January 15)
+     * - "DD" format (e.g., "15" or "01" means day 15 or day 1, month from parameter)
+     * - Numeric day only (e.g., 1, 2, 15)
+     */
+    protected function parseDateFromColumnHeader(string $key, int $year, ?int $providedMonth, ?int $detectedMonth): ?array
+    {
+        $key = trim($key);
+        
+        // Format 1: "MM-DD" (e.g., "01-15", "12-01")
+        if (preg_match('/^(\d{1,2})-(\d{1,2})$/', $key, $matches)) {
+            $monthNum = (int)$matches[1];
+            $dayNum = (int)$matches[2];
+            
+            // Validate day range
+            if ($dayNum < 1 || $dayNum > 31) {
+                return null;
+            }
+            
+            // Override month if provided
+            if ($providedMonth) {
+                $monthNum = $providedMonth;
+            }
+            
+            // Validate month range
+            if ($monthNum < 1 || $monthNum > 12) {
+                return null;
+            }
             
             return [
-                'imported' => $imported,
-                'updated' => $updated,
-                'skipped' => $skipped,
-                'failed' => count($errors),
-                'error_details' => $errors,
+                'year' => $year,
+                'month' => $monthNum,
+                'day' => $dayNum,
             ];
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Punch record import failed: ' . $e->getMessage());
-            throw $e;
         }
+        
+        // Format 2: Day-only number (e.g., "01", "15", "1", "31")
+        // This handles Yunnat biometric exports that use day numbers as column headers
+        if (preg_match('/^(\d{1,2})$/', $key, $matches)) {
+            $dayNum = (int)$matches[1];
+            
+            // Validate day range (1-31)
+            if ($dayNum < 1 || $dayNum > 31) {
+                return null;
+            }
+            
+            // Month must be provided or detected for day-only format
+            $monthNum = $providedMonth ?? $detectedMonth ?? now()->month;
+            
+            return [
+                'year' => $year,
+                'month' => $monthNum,
+                'day' => $dayNum,
+            ];
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Detect month from column headers if they are in MM-DD format
+     */
+    protected function detectMonthFromColumns(array $headers): ?int
+    {
+        foreach ($headers as $header) {
+            if ($header === null) {
+                continue;
+            }
+            $header = trim((string)$header);
+            if (preg_match('/^(\d{1,2})-(\d{1,2})$/', $header, $matches)) {
+                return (int)$matches[1];
+            }
+        }
+        return null;
     }
 
     /**
@@ -216,15 +309,31 @@ class PunchRecordImportService
     }
 
     /**
-     * Parse date from column header (e.g., "12-01" to month and day)
+     * Parse date from column header - supports multiple formats:
+     * - "MM-DD" format (e.g., "01-15" means January 15)
+     * - "DD" format (e.g., "15" or "01" means day only)
      */
     public function parseDateColumn(string $columnHeader): ?array
     {
+        $columnHeader = trim($columnHeader);
+        
+        // Format 1: "MM-DD" (e.g., "01-15", "12-01")
         if (preg_match('/^(\d{1,2})-(\d{1,2})$/', $columnHeader, $matches)) {
             return [
                 'month' => (int)$matches[1],
                 'day' => (int)$matches[2],
             ];
+        }
+        
+        // Format 2: Day-only number (e.g., "01", "15", "1", "31")
+        if (preg_match('/^(\d{1,2})$/', $columnHeader, $matches)) {
+            $dayNum = (int)$matches[1];
+            if ($dayNum >= 1 && $dayNum <= 31) {
+                return [
+                    'month' => null, // Month needs to be provided separately
+                    'day' => $dayNum,
+                ];
+            }
         }
         
         return null;
