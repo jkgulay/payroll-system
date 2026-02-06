@@ -244,6 +244,12 @@
                 <td class="value">PHP {{ number_format($item->loans, 2) }}</td>
             </tr>
             @endif
+            @if($item->undertime_deduction > 0)
+            <tr>
+                <td class="label">Undertime</td>
+                <td class="value">PHP {{ number_format($item->undertime_deduction, 2) }}</td>
+            </tr>
+            @endif
             @if(!empty($item->deductions_breakdown))
             @foreach($item->deductions_breakdown as $deduction)
             <tr>

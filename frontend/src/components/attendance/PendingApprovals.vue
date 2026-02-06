@@ -37,7 +37,7 @@
       </template>
 
       <template v-slot:item.time_out="{ item }">
-        {{ item.time_out || "--:--" }}
+        {{ item.actual_time_out || "--:--" }}
       </template>
 
       <template v-slot:item.status="{ item }">
@@ -167,7 +167,7 @@ watch(
   () => pendingList.value,
   (newVal) => {
     emit("update-count", newVal.length);
-  }
+  },
 );
 
 defineExpose({ loadPending });

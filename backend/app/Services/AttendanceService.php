@@ -97,38 +97,107 @@ class AttendanceService
 
     /**
      * Update attendance with new timestamp
-     * Determines if it's time in, time out, or break
+     * Determines if it's time in, time out, break, or OT
+     * 
+     * Logic:
+     * 1. First punch = time_in
+     * 2. Punches 3-6 hours after time_in = break_start/break_end
+     * 3. Next punch = time_out (end of regular shift)
+     * 4. Punches AFTER time_out = OT sessions (ot_time_in, ot_time_out, etc.)
      */
     protected function updateAttendanceTime(Attendance $attendance, Carbon $timestamp): void
     {
         $timeString = $timestamp->format('H:i:s');
+        $dateString = $attendance->attendance_date instanceof Carbon
+            ? $attendance->attendance_date->format('Y-m-d')
+            : $attendance->attendance_date;
 
-        // Logic to determine if this is time_in, time_out, break_start, or break_end
+        // Get employee's schedule to determine if punch is during regular shift or OT
+        $schedule = $this->getScheduleForEmployee($attendance->employee, $timestamp);
+        $scheduledTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
+
+        // 1. First punch = time_in
         if (!$attendance->time_in) {
             $attendance->time_in = $timeString;
-        } elseif (!$attendance->time_out) {
-            // Check if this could be break start - parse time_in with date for comparison
-            $timeIn = Carbon::parse($attendance->attendance_date . ' ' . $attendance->time_in);
-            if ($timeIn->diffInHours($timestamp) >= 3 && $timeIn->diffInHours($timestamp) <= 6) {
+        }
+        // 2. Check if this is break time (3-6 hours after time_in, before scheduled time out)
+        elseif (!$attendance->time_out) {
+            $timeIn = Carbon::parse($dateString . ' ' . $attendance->time_in);
+            $hoursAfterTimeIn = $timeIn->diffInHours($timestamp);
+
+            // Break detection: 3-6 hours after time_in AND before scheduled time out
+            if ($hoursAfterTimeIn >= 3 && $hoursAfterTimeIn <= 6 && $timestamp->lte($scheduledTimeOut)) {
                 if (!$attendance->break_start) {
                     $attendance->break_start = $timeString;
                 } elseif (!$attendance->break_end) {
                     $attendance->break_end = $timeString;
                 } else {
+                    // Multiple break sessions, update time_out
                     $attendance->time_out = $timeString;
                 }
             } else {
                 $attendance->time_out = $timeString;
             }
-        } elseif (!$attendance->break_end && $attendance->break_start) {
+        }
+        // 3. Break end punch
+        elseif (!$attendance->break_end && $attendance->break_start) {
             $attendance->break_end = $timeString;
-        } else {
-            // Update time out with latest timestamp
-            $attendance->time_out = $timeString;
+        }
+        // 4. Check if this is OT (punch after regular time_out is set)
+        elseif ($attendance->time_out) {
+            // Compare with scheduled time out to determine if this is OT
+            $actualTimeOut = Carbon::parse($dateString . ' ' . $attendance->time_out);
+
+            // If current punch is AFTER the regular time_out, it's an OT session
+            if ($timestamp->gt($actualTimeOut->addMinutes(15))) { // 15 min grace for leaving
+                // Track OT sessions
+                if (!$attendance->ot_time_in) {
+                    $attendance->ot_time_in = $timeString;
+                } elseif (!$attendance->ot_time_out) {
+                    $attendance->ot_time_out = $timeString;
+                } elseif (!$attendance->ot_time_in_2) {
+                    $attendance->ot_time_in_2 = $timeString;
+                } elseif (!$attendance->ot_time_out_2) {
+                    $attendance->ot_time_out_2 = $timeString;
+                } else {
+                    // More than 2 OT sessions, update last OT out
+                    $attendance->ot_time_out_2 = $timeString;
+                }
+            } else {
+                // Update regular time_out (same day adjustments)
+                $attendance->time_out = $timeString;
+            }
         }
 
         $attendance->save();
         $attendance->calculateHours();
+    }
+
+    /**
+     * Get schedule configuration for an employee
+     */
+    protected function getScheduleForEmployee($employee, Carbon $date): array
+    {
+        $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
+        $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 0);
+
+        if (!$employee || !$employee->project) {
+            return [
+                'standard_time_in' => $defaultTimeIn,
+                'standard_time_out' => $defaultTimeOut,
+                'grace_period_minutes' => $defaultGrace,
+            ];
+        }
+
+        $project = $employee->project;
+        return [
+            'standard_time_in' => $project->time_in ?: $defaultTimeIn,
+            'standard_time_out' => $project->time_out ?: $defaultTimeOut,
+            'grace_period_minutes' => $project->grace_period_minutes !== null
+                ? (int) $project->grace_period_minutes
+                : $defaultGrace,
+        ];
     }
 
     /**

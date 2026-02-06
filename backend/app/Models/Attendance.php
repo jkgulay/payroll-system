@@ -21,6 +21,10 @@ class Attendance extends Model
         'time_out',
         'break_start',
         'break_end',
+        'ot_time_in',
+        'ot_time_out',
+        'ot_time_in_2',
+        'ot_time_out_2',
         'regular_hours',
         'overtime_hours',
         'undertime_hours',
@@ -65,12 +69,35 @@ class Attendance extends Model
         'rejected_at' => 'datetime',
     ];
 
-    protected $appends = ['hours_worked'];
+    protected $appends = ['hours_worked', 'actual_time_out'];
 
     // Accessors
     public function getHoursWorkedAttribute(): float
     {
         return round(($this->regular_hours ?? 0) + ($this->overtime_hours ?? 0), 2);
+    }
+
+    /**
+     * Get the actual last punch time, considering OT sessions
+     * This shows the real clock-out time, not the computed regular shift end
+     */
+    public function getActualTimeOutAttribute(): ?string
+    {
+        // If no time_out at all, return null
+        if (!$this->time_out) {
+            return null;
+        }
+
+        // Check for OT sessions and return the latest punch time
+        if ($this->ot_time_out_2) {
+            return $this->ot_time_out_2;
+        }
+        if ($this->ot_time_out) {
+            return $this->ot_time_out;
+        }
+
+        // No OT, return regular time_out
+        return $this->time_out;
     }
 
     // Relationships
@@ -156,39 +183,65 @@ class Attendance extends Model
             $breakMinutes = $breakStart->diffInMinutes($breakEnd);
         }
 
-        // Total worked minutes (excluding break)
-        $totalMinutes = $timeIn->diffInMinutes($timeOut) - $breakMinutes;
-        $totalHours = $totalMinutes / 60;
+        // REGULAR SHIFT: Calculate hours from time_in to time_out (excluding break)
+        $regularMinutes = $timeIn->diffInMinutes($timeOut) - $breakMinutes;
+        $regularHours = $regularMinutes / 60;
 
         // Schedule settings (project overrides if available)
         $schedule = $this->getScheduleConfig($timeIn);
         $standardHours = $schedule['standard_hours'];
 
-        // Parse scheduled time out for overtime calculation
-        $scheduledTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
-        // Handle overnight shifts for scheduled time out
-        if ($scheduledTimeOut->lt(Carbon::parse($dateString . ' ' . $schedule['standard_time_in']))) {
-            $scheduledTimeOut->addDay();
+        // Cap regular hours at standard hours (8 hours typically)
+        $this->regular_hours = min($regularHours, $standardHours);
+
+        // OVERTIME: Calculate from OT sessions (if employee returned after regular shift)
+        $overtimeMinutes = 0;
+
+        // OT Session 1
+        if ($this->ot_time_in && $this->ot_time_out) {
+            $otTimeIn = Carbon::parse($dateString . ' ' . $this->ot_time_in);
+            $otTimeOut = Carbon::parse($dateString . ' ' . $this->ot_time_out);
+            if ($otTimeOut->lt($otTimeIn)) {
+                $otTimeOut->addDay();
+            }
+            $overtimeMinutes += $otTimeIn->diffInMinutes($otTimeOut);
         }
 
-        // Calculate overtime ONLY for time worked AFTER scheduled time out
-        // Early time-in does NOT count as overtime
-        // Overtime is only counted in WHOLE HOURS (minutes are ignored)
-        $overtimeMinutes = 0;
-        if ($timeOut->gt($scheduledTimeOut)) {
-            $overtimeMinutes = $scheduledTimeOut->diffInMinutes($timeOut);
+        // OT Session 2
+        if ($this->ot_time_in_2 && $this->ot_time_out_2) {
+            $otTimeIn2 = Carbon::parse($dateString . ' ' . $this->ot_time_in_2);
+            $otTimeOut2 = Carbon::parse($dateString . ' ' . $this->ot_time_out_2);
+            if ($otTimeOut2->lt($otTimeIn2)) {
+                $otTimeOut2->addDay();
+            }
+            $overtimeMinutes += $otTimeIn2->diffInMinutes($otTimeOut2);
         }
-        // Floor to whole hours only - minutes don't count as overtime
-        // e.g., 1h 59m = 1 hour OT, 59m = 0 hours OT
+
+        // Convert OT to hours (floor to count only complete hours: 59min = 0h, 60min = 1h, 119min = 1h)
+        // Only use explicit OT sessions tracked via ot_time_in/out fields
+        // Do NOT calculate fallback OT from extended regular shift (causes incorrect OT for late time_out)
         $this->overtime_hours = floor($overtimeMinutes / 60);
 
-        // Calculate regular hours (total hours minus overtime)
-        // Regular hours are capped at standard hours
-        $regularHoursWorked = $totalHours - $this->overtime_hours;
-        $this->regular_hours = min($regularHoursWorked, $standardHours);
-
-        // Calculate night differential hours (10 PM - 6 AM)
+        // Calculate night differential hours (10 PM - 6 AM) - for both regular and OT
         $this->night_differential_hours = $this->calculateNightDifferentialHours($timeIn, $timeOut);
+
+        // Add night differential from OT sessions
+        if ($this->ot_time_in && $this->ot_time_out) {
+            $otTimeIn = Carbon::parse($dateString . ' ' . $this->ot_time_in);
+            $otTimeOut = Carbon::parse($dateString . ' ' . $this->ot_time_out);
+            if ($otTimeOut->lt($otTimeIn)) {
+                $otTimeOut->addDay();
+            }
+            $this->night_differential_hours += $this->calculateNightDifferentialHours($otTimeIn, $otTimeOut);
+        }
+        if ($this->ot_time_in_2 && $this->ot_time_out_2) {
+            $otTimeIn2 = Carbon::parse($dateString . ' ' . $this->ot_time_in_2);
+            $otTimeOut2 = Carbon::parse($dateString . ' ' . $this->ot_time_out_2);
+            if ($otTimeOut2->lt($otTimeIn2)) {
+                $otTimeOut2->addDay();
+            }
+            $this->night_differential_hours += $this->calculateNightDifferentialHours($otTimeIn2, $otTimeOut2);
+        }
 
         // Calculate late hours
         $this->late_hours = $this->calculateLateHours(
@@ -200,13 +253,13 @@ class Attendance extends Model
         // Force half-day status if late exceeds threshold (e.g., 1 hour and 1 minute)
         $halfDayLateMinutes = (int) config('payroll.attendance.half_day_late_minutes', 61);
         $halfDayHoursThreshold = (float) config('payroll.attendance.half_day_hours_threshold', 5.0);
-        
+
         // Detect half-day based on:
         // 1. Late arrival exceeds threshold OR
-        // 2. Total hours worked is less than half-day threshold (e.g., less than 5 hours)
+        // 2. Total regular hours worked is less than half-day threshold (e.g., less than 5 hours)
         $isHalfDayDueToLate = $this->late_hours > 0 && ($this->late_hours * 60) >= $halfDayLateMinutes;
-        $isHalfDayDueToShortHours = $totalHours > 0 && $totalHours < $halfDayHoursThreshold;
-        
+        $isHalfDayDueToShortHours = $regularHours > 0 && $regularHours < $halfDayHoursThreshold;
+
         if ($isHalfDayDueToLate || $isHalfDayDueToShortHours) {
             $this->status = 'half_day';
         } elseif ($this->late_hours > 0 && in_array($this->status, ['present', 'late'])) {
@@ -214,13 +267,9 @@ class Attendance extends Model
         }
 
         // If half-day, cap regular hours to half-day
-        // Overtime is still only calculated from time worked after scheduled time out
         if ($this->status === 'half_day') {
             $halfDayHours = $standardHours / 2;
-            // Regular hours for half-day is capped at half the standard hours
-            // But overtime remains based on actual time worked after scheduled time out
-            $this->regular_hours = min($regularHoursWorked, $halfDayHours);
-            // Overtime already correctly calculated above (only time after scheduled time out)
+            $this->regular_hours = min($regularHours, $halfDayHours);
         }
 
         // Calculate undertime based on project/department schedule settings
@@ -283,7 +332,7 @@ class Attendance extends Model
         $defaultHours = (float) config('payroll.standard_hours_per_day', 8);
 
         $project = $this->employee?->project;
-        
+
         // If no project assigned, use system defaults
         if (!$project) {
             return [
@@ -298,8 +347,8 @@ class Attendance extends Model
         return [
             'standard_time_in' => $project->time_in ?: $defaultTimeIn,
             'standard_time_out' => $project->time_out ?: $defaultTimeOut,
-            'grace_period_minutes' => $project->grace_period_minutes !== null 
-                ? (int) $project->grace_period_minutes 
+            'grace_period_minutes' => $project->grace_period_minutes !== null
+                ? (int) $project->grace_period_minutes
                 : $defaultGrace,
             'standard_hours' => $defaultHours,
         ];
@@ -322,45 +371,30 @@ class Attendance extends Model
     }
 
     /**
-     * Calculate undertime hours based on project schedule overrides
-     * Includes both late arrivals AND early departures
+     * Calculate undertime hours based on late arrivals only
+     * Uses the grace period from project/department schedule (attendance settings)
+     * Early departures do NOT count as undertime
      */
     private function calculateUndertimeHoursForSchedule(Carbon $timeIn, array $schedule): float
     {
-        $dateString = $this->attendance_date instanceof Carbon 
-            ? $this->attendance_date->format('Y-m-d') 
+        $dateString = $this->attendance_date instanceof Carbon
+            ? $this->attendance_date->format('Y-m-d')
             : $this->attendance_date;
-            
-        $standardTimeIn = Carbon::parse($dateString . ' ' . $schedule['standard_time_in']);
-        $standardTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
-        $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
 
-        // Handle overnight shifts
-        if ($standardTimeOut->lt($standardTimeIn)) {
-            $standardTimeOut->addDay();
-        }
+        $standardTimeIn = Carbon::parse($dateString . ' ' . $schedule['standard_time_in']);
+
+        // Use grace period from project/department schedule (from attendance settings)
+        $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
 
         $undertimeMinutes = 0;
 
-        // Calculate late arrival undertime (after grace period)
+        // Calculate late arrival undertime (only if late MORE than grace period)
         $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
         if ($timeIn->gt($allowedTimeIn)) {
-            $undertimeMinutes += $allowedTimeIn->diffInMinutes($timeIn);
+            $undertimeMinutes = $allowedTimeIn->diffInMinutes($timeIn);
         }
 
-        // Calculate early departure undertime
-        if ($this->time_out) {
-            $timeOut = Carbon::parse($dateString . ' ' . $this->time_out);
-            // Handle overnight shifts
-            if ($timeOut->lt($timeIn)) {
-                $timeOut->addDay();
-            }
-            
-            // If employee left before standard time out
-            if ($timeOut->lt($standardTimeOut)) {
-                $undertimeMinutes += $timeOut->diffInMinutes($standardTimeOut);
-            }
-        }
+        // Early departures do NOT count as undertime (removed)
 
         return round($undertimeMinutes / 60, 4);
     }

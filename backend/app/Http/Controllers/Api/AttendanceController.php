@@ -69,6 +69,8 @@ class AttendanceController extends Controller
             'time_out' => 'nullable|date_format:H:i:s|after:time_in',
             'break_start' => 'nullable|date_format:H:i:s',
             'break_end' => 'nullable|date_format:H:i:s|after:break_start',
+            'ot_time_in' => 'nullable|date_format:H:i:s',
+            'ot_time_out' => 'nullable|date_format:H:i:s|after:ot_time_in',
             'notes' => 'nullable|string|max:500',
             'requires_approval' => 'boolean',
         ]);
@@ -96,6 +98,8 @@ class AttendanceController extends Controller
                 'time_out' => $validated['time_out'] ?? null,
                 'break_start' => $validated['break_start'] ?? null,
                 'break_end' => $validated['break_end'] ?? null,
+                'ot_time_in' => $validated['ot_time_in'] ?? null,
+                'ot_time_out' => $validated['ot_time_out'] ?? null,
                 'reason' => $validated['notes'] ?? 'Manual entry by ' . $request->user()->name,
                 'created_by' => $request->user()->id,
                 'requires_approval' => $validated['requires_approval'] ?? true,
@@ -148,6 +152,8 @@ class AttendanceController extends Controller
             'time_out' => 'nullable|date_format:H:i:s|after:time_in',
             'break_start' => 'nullable|date_format:H:i:s',
             'break_end' => 'nullable|date_format:H:i:s|after:break_start',
+            'ot_time_in' => 'nullable|date_format:H:i:s',
+            'ot_time_out' => 'nullable|date_format:H:i:s|after:ot_time_in',
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -159,6 +165,8 @@ class AttendanceController extends Controller
                 'time_out' => $validated['time_out'] ?? null,
                 'break_start' => $validated['break_start'] ?? null,
                 'break_end' => $validated['break_end'] ?? null,
+                'ot_time_in' => $validated['ot_time_in'] ?? null,
+                'ot_time_out' => $validated['ot_time_out'] ?? null,
                 'edit_reason' => $validated['notes'] ?? null,
             ], function ($value) {
                 return !is_null($value);

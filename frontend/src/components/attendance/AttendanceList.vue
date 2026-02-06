@@ -118,13 +118,13 @@
 
       <template v-slot:item.time_out="{ item }">
         <v-chip
-          v-if="item.time_out"
+          v-if="item.actual_time_out"
           size="small"
           color="error"
           variant="tonal"
           prepend-icon="mdi-logout"
         >
-          {{ item.time_out }}
+          {{ item.actual_time_out }}
         </v-chip>
         <span v-else class="text-medium-emphasis">--:--</span>
       </template>
