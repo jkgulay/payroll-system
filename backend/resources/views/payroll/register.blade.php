@@ -269,12 +269,13 @@
                 } elseif ($utMinutes > 0) {
                     $utDisplay = $utMinutes . 'm';
                 }
+                $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             @endphp
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
                 <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
                 <td>{{ rtrim(rtrim(number_format($item->days_worked, 2), '0'), '.') }}</td>
-                <td class="text-right">{{ number_format($item->basic_pay, 2) }}</td>
+                <td class="text-right">{{ number_format($amount, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? $item->regular_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
                 <td>{{ $item->special_ot_hours > 0 ? $item->special_ot_hours : '' }}</td>
@@ -308,11 +309,16 @@
                     $totalUtDisplay = $totalUtMinutes . 'm';
                 }
             @endphp
+            @php
+                $totalAmount = $items->sum(function($item) {
+                    return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+                });
+            @endphp
             <tr class="total-row">
                 <td class="text-left"><strong>T O T A L</strong></td>
                 <td></td>
                 <td></td>
-                <td class="text-right">{{ number_format($items->sum('basic_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
                 <td>{{ $items->sum('regular_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($items->sum('regular_ot_pay'), 2) }}</td>
                 <td>{{ $items->sum('special_ot_hours') }}</td>
@@ -389,12 +395,13 @@
                 } elseif ($utMinutes > 0) {
                     $utDisplay = $utMinutes . 'm';
                 }
+                $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             @endphp
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
                 <td class="text-right">{{ number_format($item->effective_rate, 2) }}</td>
                 <td>{{ rtrim(rtrim(number_format($item->days_worked, 2), '0'), '.') }}</td>
-                <td class="text-right">{{ number_format($item->basic_pay, 2) }}</td>
+                <td class="text-right">{{ number_format($amount, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? $item->regular_ot_hours : '' }}</td>
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
                 <td>{{ $item->special_ot_hours > 0 ? $item->special_ot_hours : '' }}</td>
@@ -428,11 +435,16 @@
                     $totalUtDisplay = $totalUtMinutes . 'm';
                 }
             @endphp
+            @php
+                $totalAmount = $payroll->items->sum(function($item) {
+                    return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+                });
+            @endphp
             <tr class="total-row">
                 <td class="text-left"><strong>T O T A L</strong></td>
                 <td></td>
                 <td></td>
-                <td class="text-right">{{ number_format($payroll->items->sum('basic_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
                 <td>{{ $payroll->items->sum('regular_ot_hours') }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('regular_ot_pay'), 2) }}</td>
                 <td>{{ $payroll->items->sum('special_ot_hours') }}</td>

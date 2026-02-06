@@ -82,11 +82,16 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             $utDisplay = $utMinutes . 'm';
         }
 
+        // Calculate AMOUNT = Rate × No. of Days (includes regular + holiday days)
+        $rate = $item->effective_rate ?? $item->rate ?? 0;
+        $daysWorked = $item->days_worked ?? 0;
+        $amount = $rate * $daysWorked;
+
         return [
             $index . '. ' . ($item->employee->full_name ?? ''),
-            $item->effective_rate ?? $item->rate ?? 0,
-            $this->formatDays($item->days_worked ?? 0),
-            $item->basic_pay ?? 0,
+            $rate,
+            $this->formatDays($daysWorked),
+            $amount,
             $item->regular_ot_hours > 0 ? $item->regular_ot_hours : '',
             $item->regular_ot_pay > 0 ? $item->regular_ot_pay : '',
             $item->special_ot_hours > 0 ? $item->special_ot_hours : '',
@@ -214,8 +219,11 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->setCellValue("A{$totalRow}", 'T O T A L');
                 $sheet->getStyle("A{$totalRow}")->getFont()->setBold(true);
 
-                // Calculate totals
-                $sheet->setCellValue("D{$totalRow}", $this->items->sum('basic_pay'));
+                // Calculate totals - AMOUNT = Rate × No. of Days
+                $totalAmount = $this->items->sum(function($item) {
+                    return ($item->effective_rate ?? $item->rate ?? 0) * ($item->days_worked ?? 0);
+                });
+                $sheet->setCellValue("D{$totalRow}", $totalAmount);
                 $sheet->setCellValue("E{$totalRow}", $this->items->sum('regular_ot_hours'));
                 $sheet->setCellValue("F{$totalRow}", $this->items->sum('regular_ot_pay'));
                 $sheet->setCellValue("G{$totalRow}", $this->items->sum('special_ot_hours'));

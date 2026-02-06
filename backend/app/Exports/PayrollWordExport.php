@@ -138,7 +138,7 @@ class PayrollWordExport
         ];
 
         $totalGross = 0;
-        $totalBasicPay = 0;
+        $totalAmount = 0;
         $totalRegOtHours = 0;
         $totalRegOtPay = 0;
         $totalSpeOtHours = 0;
@@ -154,11 +154,16 @@ class PayrollWordExport
         $totalNet = 0;
 
         foreach ($this->items as $index => $item) {
+            // Calculate AMOUNT = Rate × No. of Days (includes regular + holiday days)
+            $rate = $item->effective_rate ?? $item->rate ?? 0;
+            $daysWorked = $item->days_worked ?? 0;
+            $amount = $rate * $daysWorked;
+
             $table->addRow(280);
             $table->addCell(1800)->addText(($index + 1) . '. ' . ($item->employee->full_name ?? ''), $cellStyle, ['alignment' => Jc::LEFT]);
-            $table->addCell(700)->addText(number_format($item->effective_rate ?? $item->rate ?? 0, 2), $cellStyle, ['alignment' => Jc::RIGHT]);
-            $table->addCell(600)->addText($this->formatDays($item->days_worked ?? 0), $cellStyle, ['alignment' => Jc::CENTER]);
-            $table->addCell(900)->addText(number_format($item->basic_pay ?? 0, 2), $cellStyle, ['alignment' => Jc::RIGHT]);
+            $table->addCell(700)->addText(number_format($rate, 2), $cellStyle, ['alignment' => Jc::RIGHT]);
+            $table->addCell(600)->addText($this->formatDays($daysWorked), $cellStyle, ['alignment' => Jc::CENTER]);
+            $table->addCell(900)->addText(number_format($amount, 2), $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(600)->addText($item->regular_ot_hours > 0 ? $item->regular_ot_hours : '', $cellStyle, ['alignment' => Jc::CENTER]);
             $table->addCell(600)->addText($item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(600)->addText($item->special_ot_hours > 0 ? $item->special_ot_hours : '', $cellStyle, ['alignment' => Jc::CENTER]);
@@ -175,7 +180,7 @@ class PayrollWordExport
             $table->addCell(900)->addText(number_format($item->net_pay ?? 0, 2), $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(800)->addText('', $cellStyle);
 
-            $totalBasicPay += $item->basic_pay ?? 0;
+            $totalAmount += $amount;
             $totalRegOtHours += $item->regular_ot_hours ?? 0;
             $totalRegOtPay += $item->regular_ot_pay ?? 0;
             $totalSpeOtHours += $item->special_ot_hours ?? 0;
@@ -207,7 +212,7 @@ class PayrollWordExport
         $table->addCell(1800)->addText('T O T A L', $totalStyle, ['alignment' => Jc::LEFT]);
         $table->addCell(700)->addText('', $totalStyle);
         $table->addCell(600)->addText('', $totalStyle);
-        $table->addCell(900)->addText(number_format($totalBasicPay, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
+        $table->addCell(900)->addText(number_format($totalAmount, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(600)->addText($totalRegOtHours > 0 ? $totalRegOtHours : '', $totalStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600)->addText(number_format($totalRegOtPay, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(600)->addText($totalSpeOtHours > 0 ? $totalSpeOtHours : '', $totalStyle, ['alignment' => Jc::CENTER]);
