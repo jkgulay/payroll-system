@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class Holiday extends Model
@@ -28,6 +29,23 @@ class Holiday extends Model
         'is_recurring' => 'boolean',
         'is_active' => 'boolean',
     ];
+
+    /**
+     * OPTIMIZATION: Clear holiday cache when holidays change
+     */
+    protected static function booted()
+    {
+        static::saved(function () {
+            Cache::tags(['holidays'])->flush();
+            // Also clear any specific date-range caches
+            Cache::forget('holidays:*');
+        });
+
+        static::deleted(function () {
+            Cache::tags(['holidays'])->flush();
+            Cache::forget('holidays:*');
+        });
+    }
 
     /**
      * Get the user who created this holiday
