@@ -199,7 +199,15 @@ class Attendance extends Model
 
         // Force half-day status if late exceeds threshold (e.g., 1 hour and 1 minute)
         $halfDayLateMinutes = (int) config('payroll.attendance.half_day_late_minutes', 61);
-        if ($this->late_hours > 0 && ($this->late_hours * 60) >= $halfDayLateMinutes) {
+        $halfDayHoursThreshold = (float) config('payroll.attendance.half_day_hours_threshold', 5.0);
+        
+        // Detect half-day based on:
+        // 1. Late arrival exceeds threshold OR
+        // 2. Total hours worked is less than half-day threshold (e.g., less than 5 hours)
+        $isHalfDayDueToLate = $this->late_hours > 0 && ($this->late_hours * 60) >= $halfDayLateMinutes;
+        $isHalfDayDueToShortHours = $totalHours > 0 && $totalHours < $halfDayHoursThreshold;
+        
+        if ($isHalfDayDueToLate || $isHalfDayDueToShortHours) {
             $this->status = 'half_day';
         } elseif ($this->late_hours > 0 && in_array($this->status, ['present', 'late'])) {
             $this->status = 'late';

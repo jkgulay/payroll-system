@@ -119,9 +119,12 @@ class PayrollService
     public function calculatePayrollItem(Payroll $payroll, Employee $employee)
     {
         // Get attendance records for the period
+        // Only include records with BOTH time_in and time_out (complete attendance)
         $attendances = Attendance::where('employee_id', $employee->id)
             ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
             ->where('status', '!=', 'absent')
+            ->whereNotNull('time_in')
+            ->whereNotNull('time_out')
             ->get();
 
         // Calculate days worked and hours

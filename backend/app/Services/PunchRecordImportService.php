@@ -253,33 +253,10 @@ class PunchRecordImportService
         $breakStart = null;
         $breakEnd = null;
         
-        if (count($times) >= 3) {
-            // Simple logic: 2nd time is break start, 3rd is break end
+        if (count($times) >= 4) {
+            // With 4+ punches: 1st=in, 2nd=break start, 3rd=break end, last=out
             $breakStart = $times[1]->format('H:i:s');
             $breakEnd = $times[2]->format('H:i:s');
-        }
-        
-        // Calculate hours worked
-        $regularHours = 0;
-        if ($timeOut) {
-            $workStart = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $timeIn);
-            $workEnd = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $timeOut);
-            $totalMinutes = $workStart->diffInMinutes($workEnd);
-            
-            // Subtract break time if any
-            if ($breakStart && $breakEnd) {
-                $breakStartTime = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $breakStart);
-                $breakEndTime = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $breakEnd);
-                $breakMinutes = $breakStartTime->diffInMinutes($breakEndTime);
-                $totalMinutes -= $breakMinutes;
-            }
-            
-            $regularHours = round($totalMinutes / 60, 2);
-            
-            // Cap at 8 hours for regular, rest is overtime
-            if ($regularHours > 8) {
-                $regularHours = 8;
-            }
         }
         
         $attendanceData = [
@@ -289,7 +266,6 @@ class PunchRecordImportService
             'time_out' => $timeOut,
             'break_start' => $breakStart,
             'break_end' => $breakEnd,
-            'regular_hours' => $regularHours,
             'status' => 'present',
             'is_manual_entry' => false,
             'approval_status' => 'approved',
@@ -299,12 +275,16 @@ class PunchRecordImportService
         if ($attendance) {
             // Update existing record
             $attendance->update($attendanceData);
-            return ['action' => 'updated', 'attendance' => $attendance];
+            // Recalculate hours, undertime, overtime, and half-day status
+            $attendance->calculateHours();
+            return ['action' => 'updated', 'attendance' => $attendance->fresh()];
         } else {
             // Create new record
             $attendanceData['created_by'] = auth()->id() ?? 1;
             $attendance = Attendance::create($attendanceData);
-            return ['action' => 'created', 'attendance' => $attendance];
+            // Calculate hours, undertime, overtime, and half-day status
+            $attendance->calculateHours();
+            return ['action' => 'created', 'attendance' => $attendance->fresh()];
         }
     }
 
