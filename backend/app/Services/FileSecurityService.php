@@ -267,11 +267,23 @@ class FileSecurityService
         $suspicious = false;
         $reason = '';
 
-        // Check file entropy (high entropy might indicate encryption/packing)
-        $entropy = $this->calculateFileEntropy($path);
-        if ($entropy > 7.5) {
-            $suspicious = true;
-            $reason = 'High file entropy detected (possible packed/encrypted content)';
+        // Get file extension and MIME type
+        $extension = strtolower($file->getClientOriginalExtension());
+        $mimeType = $file->getMimeType();
+        
+        // Skip entropy check for image files (they naturally have high entropy due to compression)
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+        $imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
+        
+        $isImage = in_array($extension, $imageExtensions) || in_array($mimeType, $imageMimeTypes);
+        
+        // Check file entropy only for non-image files (high entropy might indicate encryption/packing)
+        if (!$isImage) {
+            $entropy = $this->calculateFileEntropy($path);
+            if ($entropy > 7.5) {
+                $suspicious = true;
+                $reason = 'High file entropy detected (possible packed/encrypted content)';
+            }
         }
 
         return [

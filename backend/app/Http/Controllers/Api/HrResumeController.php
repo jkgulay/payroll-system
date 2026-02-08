@@ -24,6 +24,19 @@ class HrResumeController extends Controller
         $fileSecurityService = new FileSecurityService();
 
         try {
+            // Check for duplicate email - prevent conflicts
+            $existingResume = HrResume::where('email', $request->email)
+                ->where('status', 'pending')
+                ->first();
+            
+            if ($existingResume) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A pending resume with this email already exists. Please wait for the existing application to be reviewed.',
+                    'existing_id' => $existingResume->id
+                ], 422);
+            }
+
             $file = $request->file('resume');
 
             // Additional security validation
@@ -67,6 +80,12 @@ class HrResumeController extends Controller
             // Create resume record
             $resume = HrResume::create([
                 'user_id' => auth()->id(),
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'position_applied' => $request->position_applied,
+                'notes' => $request->notes,
                 'original_filename' => $originalFilename,
                 'stored_filename' => $storedFilename,
                 'file_path' => $filePath,

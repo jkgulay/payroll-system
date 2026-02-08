@@ -339,8 +339,11 @@
               :loading="loadingResumes"
               class="modern-table"
             >
-              <template v-slot:item.applicant_name="{ item }">
-                <span class="table-text">{{ item.first_name }} {{ item.last_name }}</span>
+              <template v-slot:item.full_name="{ item }">
+                <span class="table-text">{{ item.full_name || `${item.first_name} ${item.last_name}` }}</span>
+              </template>
+              <template v-slot:item.email="{ item }">
+                <span class="table-text">{{ item.email }}</span>
               </template>
               <template v-slot:item.position_applied="{ item }">
                 <span class="table-text">{{ item.position_applied }}</span>
@@ -354,7 +357,7 @@
                   {{ item.status }}
                 </v-chip>
               </template>
-              <template v-slot:item.submitted_at="{ item }">
+              <template v-slot:item.created_at="{ item }">
                 <span class="table-date">{{ formatDate(item.created_at) }}</span>
               </template>
               <template v-slot:item.actions="{ item }">
@@ -448,11 +451,11 @@
                 <v-file-input
                   v-model="resumeData.resume_file"
                   label="Resume File"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   variant="outlined"
                   density="comfortable"
                   prepend-icon="mdi-paperclip"
-                  hint="PDF, DOC, or DOCX (Max 5MB)"
+                  hint="PDF, DOC, DOCX, JPG, or PNG (Max 10MB)"
                   persistent-hint
                   show-size
                   :rules="[rules.required]"
@@ -609,10 +612,11 @@ const attendanceHeaders = [
 ];
 
 const resumeHeaders = [
-  { title: "Applicant Name", key: "applicant_name", sortable: true },
+  { title: "Applicant Name", key: "full_name", sortable: true },
+  { title: "Email", key: "email", sortable: true },
   { title: "Position", key: "position_applied", sortable: true },
   { title: "Status", key: "status", sortable: true },
-  { title: "Submitted", key: "submitted_at", sortable: true },
+  { title: "Submitted", key: "created_at", sortable: true },
   { title: "Actions", key: "actions", sortable: false },
 ];
 
