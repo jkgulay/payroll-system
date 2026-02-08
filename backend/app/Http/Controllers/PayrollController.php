@@ -245,6 +245,7 @@ class PayrollController extends Controller
             ], 422);
         }
 
+        DB::beginTransaction();
         try {
             // First, reverse any loan/deduction payments that were recorded for this payroll
             $this->reverseLoanPaymentsForPayroll($payroll);
@@ -252,6 +253,11 @@ class PayrollController extends Controller
 
             $payrollService = app(\App\Services\PayrollService::class);
             $payrollService->reprocessPayroll($payroll);
+
+            // Re-record loan and deduction payments for the reprocessed payroll items
+            $this->recordPaymentsForPayroll($payroll);
+
+            DB::commit();
 
             // Log payroll reprocessing
             AuditLog::create([
@@ -273,6 +279,7 @@ class PayrollController extends Controller
                 'data' => $payroll->fresh()->load(['items.employee', 'creator'])
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to reprocess payroll: ' . $e->getMessage()
@@ -480,6 +487,16 @@ class PayrollController extends Controller
 
     private function generatePayrollItems(Payroll $payroll, array $filters = [])
     {
+        // Safety check: prevent duplicate payroll items
+        $existingItemsCount = PayrollItem::where('payroll_id', $payroll->id)->count();
+        if ($existingItemsCount > 0) {
+            Log::warning('Attempted to generate payroll items for payroll that already has items', [
+                'payroll_id' => $payroll->id,
+                'existing_items' => $existingItemsCount
+            ]);
+            throw new \Exception("Payroll already has {$existingItemsCount} items. Use reprocess to recalculate.");
+        }
+
         if (config('app.debug')) {
             Log::debug('Payroll Generation', [
                 'payroll_id' => $payroll->id,
@@ -508,6 +525,46 @@ class PayrollController extends Controller
             });
         }
 
+        // CRITICAL: Eager load attendances filtered by payroll period
+        // Without this, calculatePayrollItem() would process ALL attendance records
+        $query->with([
+            'attendances' => function ($q) use ($payroll) {
+                $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                    ->where('status', '!=', 'absent')
+                    ->whereNotNull('time_in')
+                    ->whereNotNull('time_out');
+            },
+            'allowances' => function ($q) use ($payroll) {
+                $q->where('is_active', true)
+                    ->where('effective_date', '<=', $payroll->period_end)
+                    ->where(function ($query) use ($payroll) {
+                        $query->whereNull('end_date')
+                            ->orWhere('end_date', '>=', $payroll->period_start);
+                    });
+            },
+            'salaryAdjustments' => function ($q) {
+                $q->where('status', 'pending');
+            },
+            'loans' => function ($q) use ($payroll) {
+                $q->where('status', 'active')
+                    ->where('balance', '>', 0)
+                    ->where(function ($query) use ($payroll) {
+                        $query->whereNull('maturity_date')
+                            ->orWhere('maturity_date', '>=', $payroll->period_start);
+                    });
+            },
+            'deductions' => function ($q) use ($payroll) {
+                $q->where('status', 'active')
+                    ->where('balance', '>', 0)
+                    ->where('start_date', '<=', $payroll->period_end)
+                    ->where(function ($query) use ($payroll) {
+                        $query->whereNull('end_date')
+                            ->orWhere('end_date', '>=', $payroll->period_start);
+                    });
+            },
+            'positionRate',
+        ]);
+
         // Order by employee number for consistent selection
         $query->orderBy('employee_number');
 
@@ -531,6 +588,15 @@ class PayrollController extends Controller
             throw new \Exception($errorMsg);
         }
 
+        // Load holidays for the payroll period (for holiday pay calculations)
+        $holidays = \App\Models\Holiday::whereBetween('date', [$payroll->period_start, $payroll->period_end])
+            ->where('is_active', true)
+            ->get()
+            ->keyBy(function ($holiday) {
+                return \Carbon\Carbon::parse($holiday->date)->format('Y-m-d');
+            })
+            ->toArray();
+
         $totalGross = 0;
         $totalDeductions = 0;
         $totalNet = 0;
@@ -538,7 +604,7 @@ class PayrollController extends Controller
         foreach ($employees as $employee) {
             try {
                 // Use PayrollService for holiday-aware calculation
-                $item = $this->payrollService->calculatePayrollItem($payroll, $employee);
+                $item = $this->payrollService->calculatePayrollItem($payroll, $employee, $holidays);
 
                 // Validate calculated values before creating record
                 if (!is_numeric($item['gross_pay']) || !is_finite($item['gross_pay'])) {
@@ -574,6 +640,28 @@ class PayrollController extends Controller
             'total_deductions' => $totalDeductions,
             'total_net' => $totalNet,
         ]);
+    }
+
+    /**
+     * Record all loan and deduction payments for a payroll
+     * This is used after payroll processing to update loan/deduction balances
+     */
+    private function recordPaymentsForPayroll(Payroll $payroll)
+    {
+        // Load payroll items with employees
+        $payrollItems = PayrollItem::where('payroll_id', $payroll->id)
+            ->with('employee')
+            ->get();
+
+        foreach ($payrollItems as $payrollItem) {
+            if ($payrollItem->employee) {
+                // Record deduction installments for this employee
+                $this->recordDeductionInstallments($payroll, $payrollItem->employee);
+
+                // Record loan payments for this employee
+                $this->recordLoanPayments($payroll, $payrollItem->employee, $payrollItem);
+            }
+        }
     }
 
     /**
