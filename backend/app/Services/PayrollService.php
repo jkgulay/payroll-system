@@ -435,9 +435,10 @@ class PayrollService
         // Formula: (rate / 8) * undertime_hours
         $undertimeDeduction = $hourlyRate * $totalUndertimeHours;
 
-        // Calculate gross pay (include holiday pay, overtime, salary adjustment, subtract undertime deduction)
+        // Calculate gross pay (include holiday pay, overtime, salary adjustment)
         // Note: COLA removed, salary adjustment added (can be negative for deductions)
-        $grossPay = $basicPay + $holidayPay + $totalOtPay + $otherAllowances + $salaryAdjustment - $undertimeDeduction;
+        // Undertime deduction is NOT subtracted here - it's treated as a deduction from gross to net
+        $grossPay = $basicPay + $holidayPay + $totalOtPay + $otherAllowances + $salaryAdjustment;
 
         // Calculate government deductions (only if enabled for the employee)
         // Use custom contributions if set, otherwise calculate based on salary
@@ -525,11 +526,11 @@ class PayrollService
         // Other deductions
         $otherDeductions = 0;
 
-        // Total deductions
+        // Total deductions (including undertime deduction)
         $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
-            $employeeSavings + $cashAdvance + $employeeDeductions + $otherDeductions;
+            $employeeSavings + $cashAdvance + $employeeDeductions + $otherDeductions + $undertimeDeduction;
 
-        // Net pay
+        // Net pay = Gross pay - Total deductions
         $netPay = $grossPay - $totalDeductions;
 
         // Mark salary adjustments as applied
