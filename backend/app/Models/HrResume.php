@@ -15,6 +15,12 @@ class HrResume extends Model
 
     protected $fillable = [
         'user_id',
+        'first_name',
+        'last_name',
+        'email',
+        'phone',
+        'position_applied',
+        'notes',
         'original_filename',
         'stored_filename',
         'file_path',
@@ -26,13 +32,24 @@ class HrResume extends Model
         'reviewed_at',
     ];
 
+    /**
+     * Get the full name of the applicant
+     */
+    public function getFullNameAttribute(): string
+    {
+        if ($this->first_name && $this->last_name) {
+            return trim("{$this->first_name} {$this->last_name}");
+        }
+        return '';
+    }
+
     protected $casts = [
         'reviewed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
-    protected $appends = ['file_url'];
+    protected $appends = ['file_url', 'full_name'];
 
     /**
      * Get the user who uploaded the resume

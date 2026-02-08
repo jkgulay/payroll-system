@@ -76,6 +76,12 @@ class UploadResumeRequest extends FormRequest
                     }
                 },
             ],
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'email' => 'required|email|max:255',
+            'phone' => 'required|string|max:20',
+            'position_applied' => 'required|string|max:255',
+            'notes' => 'nullable|string|max:1000',
         ];
     }
 
@@ -89,6 +95,12 @@ class UploadResumeRequest extends FormRequest
             'resume.file' => 'The uploaded file is invalid',
             'resume.mimes' => 'Only PDF, DOC, DOCX, JPG, and PNG files are allowed',
             'resume.max' => 'The file size must not exceed 10MB',
+            'first_name.required' => 'First name is required',
+            'last_name.required' => 'Last name is required',
+            'email.required' => 'Email is required',
+            'email.email' => 'Please enter a valid email address',
+            'phone.required' => 'Phone number is required',
+            'position_applied.required' => 'Position applied for is required',
         ];
     }
 

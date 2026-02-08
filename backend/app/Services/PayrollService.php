@@ -254,6 +254,7 @@ class PayrollService
 
         // Calculate days worked and hours
         $regularDays = 0;
+        $sundayDays = 0; // Track Sunday regular days separately (paid at 1.3x)
         $holidayDays = 0;
         $regularOtHours = 0;
         $sundayOtHours = 0;
@@ -281,7 +282,7 @@ class PayrollService
 
             // OPTIMIZATION: Check holiday from preloaded array (O(1) lookup - no query)
             $dateKey = $attendanceDate->format('Y-m-d');
-            $holiday = isset($holidays[$dateKey]) ? (object) $holidays[$dateKey] : null;
+            $holiday = $holidays[$dateKey] ?? null;
 
             if ($holiday && ($attendance->status === 'present' || $attendance->status === 'half_day' || $attendance->status === 'late')) {
                 // This is a holiday with attendance - calculate holiday pay
@@ -313,9 +314,17 @@ class PayrollService
             } else {
                 // Regular working day or Sunday
                 if ($attendance->status === 'present' || $attendance->status === 'late') {
-                    $regularDays++;
+                    if ($isSunday) {
+                        $sundayDays++; // Sunday regular hours paid at 1.3x
+                    } else {
+                        $regularDays++;
+                    }
                 } elseif ($attendance->status === 'half_day') {
-                    $regularDays += 0.5; // Half day counts as 0.5
+                    if ($isSunday) {
+                        $sundayDays += 0.5; // Half day on Sunday
+                    } else {
+                        $regularDays += 0.5; // Half day counts as 0.5
+                    }
                 }
 
                 // Add overtime - separate Sunday from regular days
@@ -330,7 +339,8 @@ class PayrollService
         }
 
         // Calculate basic pay (excluding holiday days)
-        $basicPay = $rate * $regularDays;
+        // Weekday regular pay at 1.0x, Sunday regular pay at 1.3x
+        $basicPay = ($rate * $regularDays) + ($rate * $sundayDays * 1.3);
 
         // Calculate overtime pay with different rates
         // Regular days: rate/8 × 1.25 × hours
@@ -404,7 +414,7 @@ class PayrollService
         $otherAllowances = $allowances + $mealAllowanceTotal;
 
         // Calculate salary adjustment from pending adjustments (OPTIMIZED - preloaded)
-        $totalDaysWorked = $regularDays + $holidayDays;
+        $totalDaysWorked = $regularDays + $sundayDays + $holidayDays;
 
         // OPTIMIZATION: Use preloaded salary adjustments
         $pendingAdjustments = $employee->salaryAdjustments;

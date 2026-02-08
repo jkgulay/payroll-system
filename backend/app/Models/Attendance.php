@@ -274,8 +274,10 @@ class Attendance extends Model
 
         // Calculate undertime based on project/department schedule settings
         if ($this->status === 'half_day') {
-            // Half-day already handled by status; avoid double deduction
-            $this->undertime_hours = 0;
+            // Half-day: calculate undertime as shortage from standard hours
+            // This replaces the separate late/early undertime to avoid double penalty
+            $shortage = $standardHours - $this->regular_hours;
+            $this->undertime_hours = max(0, round($shortage, 4));
         } else {
             // Always use schedule-based calculation (project settings from Attendance Settings UI)
             $this->undertime_hours = $this->calculateUndertimeHoursForSchedule(
@@ -283,6 +285,10 @@ class Attendance extends Model
                 $schedule
             );
         }
+
+        // Apply undertime-overtime offset
+        // If employee worked OT, offset their undertime (late arrival or early departure)
+        $this->applyUndertimeOvertimeOffset();
 
         $this->save();
     }
@@ -295,7 +301,16 @@ class Attendance extends Model
      */
     private function applyUndertimeOvertimeOffset(): void
     {
-        // Offset disabled to keep late undertime and overtime independent.
+        $undertime = (float) ($this->undertime_hours ?? 0);
+        $overtime = (float) ($this->overtime_hours ?? 0);
+
+        if ($undertime > 0 && $overtime > 0) {
+            // Offset the lesser amount from both
+            $offsetAmount = min($undertime, $overtime);
+            
+            $this->undertime_hours = round($undertime - $offsetAmount, 4);
+            $this->overtime_hours = round($overtime - $offsetAmount, 4);
+        }
     }
 
     private function calculateNightDifferentialHours(Carbon $timeIn, Carbon $timeOut): float
@@ -371,9 +386,8 @@ class Attendance extends Model
     }
 
     /**
-     * Calculate undertime hours based on late arrivals only
+     * Calculate undertime hours based on late arrivals AND early departures
      * Uses the grace period from project/department schedule (attendance settings)
-     * Early departures do NOT count as undertime
      */
     private function calculateUndertimeHoursForSchedule(Carbon $timeIn, array $schedule): float
     {
@@ -382,6 +396,12 @@ class Attendance extends Model
             : $this->attendance_date;
 
         $standardTimeIn = Carbon::parse($dateString . ' ' . $schedule['standard_time_in']);
+        $standardTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
+
+        // Handle overnight shifts
+        if ($standardTimeOut->lte($standardTimeIn)) {
+            $standardTimeOut->addDay();
+        }
 
         // Use grace period from project/department schedule (from attendance settings)
         $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
@@ -391,10 +411,22 @@ class Attendance extends Model
         // Calculate late arrival undertime (only if late MORE than grace period)
         $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
         if ($timeIn->gt($allowedTimeIn)) {
-            $undertimeMinutes = $allowedTimeIn->diffInMinutes($timeIn);
+            $undertimeMinutes += $allowedTimeIn->diffInMinutes($timeIn);
         }
 
-        // Early departures do NOT count as undertime (removed)
+        // Calculate early departure undertime
+        if ($this->time_out) {
+            $timeOut = Carbon::parse($dateString . ' ' . $this->time_out);
+            // Handle overnight shifts
+            if ($timeOut->lt($timeIn)) {
+                $timeOut->addDay();
+            }
+            // If employee left before scheduled time out, count as undertime
+            if ($timeOut->lt($standardTimeOut)) {
+                $earlyDepartureMinutes = $timeOut->diffInMinutes($standardTimeOut);
+                $undertimeMinutes += $earlyDepartureMinutes;
+            }
+        }
 
         return round($undertimeMinutes / 60, 4);
     }

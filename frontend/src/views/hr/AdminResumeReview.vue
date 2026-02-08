@@ -94,8 +94,11 @@
           class="elevation-1"
         >
           <template v-slot:item.full_name="{ item }">
-            <div v-if="item.is_application && item.first_name">
-              {{ item.first_name }} {{ item.last_name }}
+            <div v-if="item.first_name">
+              <strong>{{ item.first_name }} {{ item.last_name }}</strong>
+              <div v-if="item.position_applied" class="text-caption text-grey">
+                {{ item.position_applied }}
+              </div>
             </div>
             <div v-else>
               <span class="text-grey">N/A</span>
@@ -214,6 +217,34 @@
             This resume is part of an employee application. You can approve or
             reject it directly from here.
           </v-alert>
+
+          <!-- Applicant Info -->
+          <v-row v-if="selectedResume.first_name" class="mb-4">
+            <v-col cols="12">
+              <v-card color="grey-lighten-4" variant="flat">
+                <v-card-text>
+                  <h3 class="text-h6 mb-2">Applicant Information</h3>
+                  <v-row dense>
+                    <v-col cols="12" sm="6">
+                      <strong>Name:</strong> {{ selectedResume.first_name }} {{ selectedResume.last_name }}
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <strong>Email:</strong> {{ selectedResume.email }}
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <strong>Phone:</strong> {{ selectedResume.phone }}
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <strong>Position Applied:</strong> {{ selectedResume.position_applied }}
+                    </v-col>
+                    <v-col v-if="selectedResume.notes" cols="12">
+                      <strong>Notes:</strong> {{ selectedResume.notes }}
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
 
           <v-row>
             <v-col cols="12" sm="6">

@@ -127,8 +127,9 @@ class Holiday extends Model
     /**
      * Calculate holiday pay multiplier based on holiday type and day of week
      * Regular holiday: rate * 2
-     * Regular holiday on Sunday: rate * 2 * 1.3
-     * Special holiday (8hrs): rate * 2 * 1.3
+     * Regular holiday on Sunday: rate * 2 * 1.3 = 2.6x
+     * Special holiday: rate * 1.3
+     * Special holiday on Sunday: rate * 1.3
      */
     public function getPayMultiplier($date = null)
     {
@@ -136,9 +137,11 @@ class Holiday extends Model
         $isSunday = $checkDate->isSunday();
 
         if ($this->type === 'regular') {
-            return $isSunday ? 2.6 : 2.0; // 2 * 1.3 = 2.6 for Sunday
+            // Regular holiday: 200% of daily rate, +30% if on Sunday (rest day)
+            return $isSunday ? 2.6 : 2.0;
         } elseif ($this->type === 'special') {
-            return 2.6; // Special holidays are paid at 2 * 1.3 for 8 hours
+            // Special holiday: 130% of daily rate (same whether on Sunday or not)
+            return 1.3;
         }
 
         return 1.0; // Default
