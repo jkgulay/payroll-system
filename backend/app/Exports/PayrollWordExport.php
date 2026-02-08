@@ -102,6 +102,7 @@ class PayrollWordExport
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("GROSS\nAMOUNT", $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Employee's\nSavings", $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Loans', $headerStyle, ['alignment' => Jc::CENTER]);
+        $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('UT', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Deductions', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Phic\nPrem", $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("HDMF\nPrem", $headerStyle, ['alignment' => Jc::CENTER]);
@@ -119,11 +120,12 @@ class PayrollWordExport
         $table->addCell(600, $headerCellStyle)->addText('REG OT', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => Jc::CENTER]);
         $table->addCell(800, $headerCellStyle)->addText('SUN/SPL. HOL.', $headerStyle, ['alignment' => Jc::CENTER]);
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+        $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
         $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
@@ -147,6 +149,7 @@ class PayrollWordExport
         $totalAllowances = 0;
         $totalEmployeeSavings = 0;
         $totalLoans = 0;
+        $totalUndertimeDeduction = 0;
         $totalEmployeeDeductions = 0;
         $totalPhilhealth = 0;
         $totalPagibig = 0;
@@ -158,6 +161,7 @@ class PayrollWordExport
             $rate = $item->effective_rate ?? $item->rate ?? 0;
             $daysWorked = $item->days_worked ?? 0;
             $amount = $rate * $daysWorked;
+            $undertimeDeduction = $item->undertime_deduction ?? 0;
 
             $table->addRow(280);
             $table->addCell(1800)->addText(($index + 1) . '. ' . ($item->employee->full_name ?? ''), $cellStyle, ['alignment' => Jc::LEFT]);
@@ -173,6 +177,7 @@ class PayrollWordExport
             $table->addCell(900)->addText(number_format($item->gross_pay ?? 0, 2), $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(900)->addText($item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(700)->addText($item->loans > 0 ? number_format($item->loans, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
+            $table->addCell(600)->addText($undertimeDeduction > 0 ? number_format($undertimeDeduction, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(800)->addText($item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(700)->addText($item->philhealth > 0 ? number_format($item->philhealth, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
             $table->addCell(700)->addText($item->pagibig > 0 ? number_format($item->pagibig, 2) : '', $cellStyle, ['alignment' => Jc::RIGHT]);
@@ -190,6 +195,7 @@ class PayrollWordExport
             $totalGross += $item->gross_pay ?? 0;
             $totalEmployeeSavings += $item->employee_savings ?? 0;
             $totalLoans += $item->loans ?? 0;
+            $totalUndertimeDeduction += $undertimeDeduction;
             $totalEmployeeDeductions += $item->employee_deductions ?? 0;
             $totalPhilhealth += $item->philhealth ?? 0;
             $totalPagibig += $item->pagibig ?? 0;
@@ -199,7 +205,7 @@ class PayrollWordExport
 
         // Add "nothing follows" row
         $table->addRow(250);
-        $table->addCell(14600, ['gridSpan' => 19])->addText('nothing follows', ['italic' => true, 'size' => 7, 'name' => 'Arial'], ['alignment' => Jc::CENTER]);
+        $table->addCell(15200, ['gridSpan' => 20])->addText('nothing follows', ['italic' => true, 'size' => 7, 'name' => 'Arial'], ['alignment' => Jc::CENTER]);
 
         // Add TOTAL row
         $totalStyle = [
@@ -222,6 +228,7 @@ class PayrollWordExport
         $table->addCell(900)->addText(number_format($totalGross, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(900)->addText(number_format($totalEmployeeSavings, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(700)->addText(number_format($totalLoans, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
+        $table->addCell(600)->addText($totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '', $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(800)->addText(number_format($totalEmployeeDeductions, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(700)->addText(number_format($totalPhilhealth, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
         $table->addCell(700)->addText(number_format($totalPagibig, 2), $totalStyle, ['alignment' => Jc::RIGHT]);
