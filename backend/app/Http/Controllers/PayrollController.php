@@ -589,13 +589,14 @@ class PayrollController extends Controller
         }
 
         // Load holidays for the payroll period (for holiday pay calculations)
+        // Keep as Holiday models (not arrays) so getPayMultiplier() method is available
         $holidays = \App\Models\Holiday::whereBetween('date', [$payroll->period_start, $payroll->period_end])
             ->where('is_active', true)
             ->get()
             ->keyBy(function ($holiday) {
                 return \Carbon\Carbon::parse($holiday->date)->format('Y-m-d');
             })
-            ->toArray();
+            ->all();
 
         $totalGross = 0;
         $totalDeductions = 0;
