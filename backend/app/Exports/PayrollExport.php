@@ -44,12 +44,12 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 'No. of Days',
                 'AMOUNT',
                 'OVERTIME', '', '', '',  // This will be merged
-                'UT',
                 'Adj. Prev. Salary',
                 'Allowance',
                 'GROSS AMOUNT',
                 'Employee\'s Savings',
                 'Loans',
+                'UT',
                 'Deductions',
                 'Phic Prem',
                 'HDMF Prem',
@@ -96,12 +96,12 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             $item->regular_ot_pay > 0 ? $item->regular_ot_pay : '',
             $item->special_ot_hours > 0 ? $item->special_ot_hours : '',
             $item->special_ot_pay > 0 ? $item->special_ot_pay : '',
-            $utDisplay,
             $item->salary_adjustment != 0 ? $item->salary_adjustment : '',
             $item->other_allowances > 0 ? $item->other_allowances : '',
             $item->gross_pay ?? 0,
             $item->employee_savings > 0 ? $item->employee_savings : '',
             $item->loans > 0 ? $item->loans : '',
+            $utDisplay,
             $item->employee_deductions > 0 ? $item->employee_deductions : '',
             $item->philhealth > 0 ? $item->philhealth : '',
             $item->pagibig > 0 ? $item->pagibig : '',
@@ -164,12 +164,12 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->mergeCells('B7:B8');  // RATE
                 $sheet->mergeCells('C7:C8');  // No. of Days
                 $sheet->mergeCells('D7:D8');  // AMOUNT
-                $sheet->mergeCells('I7:I8');  // UT (Undertime)
-                $sheet->mergeCells('J7:J8');  // Adj. Prev. Salary
-                $sheet->mergeCells('K7:K8');  // Allowance
-                $sheet->mergeCells('L7:L8');  // GROSS AMOUNT
-                $sheet->mergeCells('M7:M8');  // Employee's Savings
-                $sheet->mergeCells('N7:N8');  // Loans
+                $sheet->mergeCells('I7:I8');  // Adj. Prev. Salary
+                $sheet->mergeCells('J7:J8');  // Allowance
+                $sheet->mergeCells('K7:K8');  // GROSS AMOUNT
+                $sheet->mergeCells('L7:L8');  // Employee's Savings
+                $sheet->mergeCells('M7:M8');  // Loans
+                $sheet->mergeCells('N7:N8');  // UT (Undertime)
                 $sheet->mergeCells('O7:O8');  // Deductions
                 $sheet->mergeCells('P7:P8');  // Phic Prem
                 $sheet->mergeCells('Q7:Q8');  // HDMF Prem
@@ -229,6 +229,12 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->setCellValue("G{$totalRow}", $this->items->sum('special_ot_hours'));
                 $sheet->setCellValue("H{$totalRow}", $this->items->sum('special_ot_pay'));
                 
+                $sheet->setCellValue("I{$totalRow}", $this->items->sum('salary_adjustment'));
+                $sheet->setCellValue("J{$totalRow}", $this->items->sum('other_allowances'));
+                $sheet->setCellValue("K{$totalRow}", $this->items->sum('gross_pay'));
+                $sheet->setCellValue("L{$totalRow}", $this->items->sum('employee_savings'));
+                $sheet->setCellValue("M{$totalRow}", $this->items->sum('loans'));
+                
                 // Format total undertime
                 $totalUtHours = floor($this->items->sum('undertime_hours'));
                 $totalUtMinutes = round(($this->items->sum('undertime_hours') - $totalUtHours) * 60);
@@ -240,13 +246,8 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 } elseif ($totalUtMinutes > 0) {
                     $totalUtDisplay = $totalUtMinutes . 'm';
                 }
-                $sheet->setCellValue("I{$totalRow}", $totalUtDisplay);
+                $sheet->setCellValue("N{$totalRow}", $totalUtDisplay);
                 
-                $sheet->setCellValue("J{$totalRow}", $this->items->sum('salary_adjustment'));
-                $sheet->setCellValue("K{$totalRow}", $this->items->sum('other_allowances'));
-                $sheet->setCellValue("L{$totalRow}", $this->items->sum('gross_pay'));
-                $sheet->setCellValue("M{$totalRow}", $this->items->sum('employee_savings'));
-                $sheet->setCellValue("N{$totalRow}", $this->items->sum('loans'));
                 $sheet->setCellValue("O{$totalRow}", $this->items->sum('employee_deductions'));
                 $sheet->setCellValue("P{$totalRow}", $this->items->sum('philhealth'));
                 $sheet->setCellValue("Q{$totalRow}", $this->items->sum('pagibig'));
@@ -295,12 +296,12 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->getColumnDimension('F')->setWidth(10);  // REG OT
                 $sheet->getColumnDimension('G')->setWidth(6);   // SPE HRS
                 $sheet->getColumnDimension('H')->setWidth(12);  // SUN/SPL. HOL.
-                $sheet->getColumnDimension('I')->setWidth(8);   // UT (Undertime)
-                $sheet->getColumnDimension('J')->setWidth(14);  // Adj. Prev. Salary
-                $sheet->getColumnDimension('K')->setWidth(10);  // Allowance
-                $sheet->getColumnDimension('L')->setWidth(12);  // GROSS AMOUNT
-                $sheet->getColumnDimension('M')->setWidth(12);  // Employee's Savings
-                $sheet->getColumnDimension('N')->setWidth(10);  // Loans
+                $sheet->getColumnDimension('I')->setWidth(14);  // Adj. Prev. Salary
+                $sheet->getColumnDimension('J')->setWidth(10);  // Allowance
+                $sheet->getColumnDimension('K')->setWidth(12);  // GROSS AMOUNT
+                $sheet->getColumnDimension('L')->setWidth(12);  // Employee's Savings
+                $sheet->getColumnDimension('M')->setWidth(10);  // Loans
+                $sheet->getColumnDimension('N')->setWidth(8);   // UT (Undertime)
                 $sheet->getColumnDimension('O')->setWidth(10);  // Deductions
                 $sheet->getColumnDimension('P')->setWidth(10);  // Phic Prem
                 $sheet->getColumnDimension('Q')->setWidth(10);  // HDMF Prem
@@ -330,12 +331,12 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
             'D' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Basic Pay
             'F' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // REG OT
             'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // SUN/SPL. HOL.
-            // I is UT (text format - no number format needed)
-            'J' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Adj. Prev. Salary
-            'K' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Allowance
-            'L' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Gross Pay
-            'M' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Employee's Savings
-            'N' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Loans
+            'I' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Adj. Prev. Salary
+            'J' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Allowance
+            'K' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Gross Pay
+            'L' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Employee's Savings
+            'M' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Loans
+            // N is UT (text format - no number format needed)
             'O' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Deductions
             'P' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // PhilHealth
             'Q' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1, // Pag-IBIG
