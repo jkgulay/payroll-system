@@ -61,6 +61,15 @@
           <v-icon size="20">mdi-view-list</v-icon>
           <span>Attendance List</span>
         </button>
+
+        <button
+          class="modern-tab"
+          :class="{ active: tab === 'missing' }"
+          @click="tab = 'missing'"
+        >
+          <v-icon size="20">mdi-alert-circle-outline</v-icon>
+          <span>Missing Attendance</span>
+        </button>
         <button
           class="modern-tab"
           :class="{ active: tab === 'calendar' }"
@@ -89,6 +98,7 @@
           <v-icon size="20">mdi-chart-bar</v-icon>
           <span>Summary</span>
         </button>
+
         <button
           v-if="canManualEntry"
           class="modern-tab"
@@ -139,6 +149,13 @@
         <v-window-item value="summary">
           <div class="tab-content">
             <AttendanceSummary />
+          </div>
+        </v-window-item>
+
+        <!-- Missing Attendance -->
+        <v-window-item value="missing">
+          <div class="tab-content">
+            <MissingAttendance @edit-attendance="openEditDialog" />
           </div>
         </v-window-item>
 
@@ -218,6 +235,7 @@ import AttendanceList from "@/components/attendance/AttendanceList.vue";
 import AttendanceCalendar from "@/components/attendance/AttendanceCalendar.vue";
 import PendingApprovals from "@/components/attendance/PendingApprovals.vue";
 import AttendanceSummary from "@/components/attendance/AttendanceSummary.vue";
+import MissingAttendance from "@/components/attendance/MissingAttendance.vue";
 import DeviceManagement from "@/components/attendance/DeviceManagement.vue";
 import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
 import ImportBiometricDialog from "@/components/attendance/ImportBiometricDialog.vue";
@@ -515,7 +533,6 @@ onMounted(async () => {
   border: 1px solid rgba(0, 31, 61, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
- 
 }
 
 .tab-container {
@@ -731,4 +748,3 @@ onMounted(async () => {
   background: transparent !important;
 }
 </style>
-

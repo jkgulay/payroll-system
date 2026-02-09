@@ -21,7 +21,7 @@
     "dexie": "^3.2.4",
     "dompurify": "^3.3.1",
     "exceljs": "^4.4.0",
-    "jspdf": "^4.0.0",
+    "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "marked": "^17.0.1",
     "pinia": "^2.1.7",
@@ -70,5 +70,8 @@
       "target": "AppImage",
       "icon": "public/icon.png"
     }
+  },
+  "overrides": {
+    "dompurify": "^3.3.1"
   }
 }

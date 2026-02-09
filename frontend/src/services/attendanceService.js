@@ -114,7 +114,7 @@ const attendanceService = {
    */
   async getEmployeeSummary(employeeId) {
     const response = await api.get(
-      `/attendance/employee/${employeeId}/summary`
+      `/attendance/employee/${employeeId}/summary`,
     );
     return response.data;
   },
@@ -124,6 +124,14 @@ const attendanceService = {
    */
   async markAbsent(data) {
     const response = await api.post("/attendance/mark-absent", data);
+    return response.data;
+  },
+
+  /**
+   * Get employees with missing attendance data for a specific date
+   */
+  async getMissingAttendance(params) {
+    const response = await api.get("/attendance/missing", { params });
     return response.data;
   },
 
