@@ -759,6 +759,8 @@ class AttendanceController extends Controller
                     'issues' => $issues,
                     'attendance' => [
                         'id' => $attendance->id,
+                        'employee_id' => $employee->id, // Added for edit dialog
+                        'attendance_date' => $attendance->attendance_date, // Added for edit dialog
                         'time_in' => $attendance->time_in,
                         'time_out' => $attendance->time_out,
                         'break_start' => $attendance->break_start,

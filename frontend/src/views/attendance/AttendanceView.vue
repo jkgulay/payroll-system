@@ -278,9 +278,17 @@ const openManualEntryDialog = () => {
   manualEntryDialog.value = true;
 };
 
-const openEditDialog = (attendance) => {
-  selectedAttendance.value = attendance;
-  prefilledDate.value = null;
+const openEditDialog = (data) => {
+  // Handle both old format (just attendance object) and new format (object with attendance and date)
+  if (data && data.attendance) {
+    // From Missing Attendance tab - has both attendance and selected date
+    selectedAttendance.value = data.attendance;
+    prefilledDate.value = data.date;
+  } else {
+    // From other tabs - just attendance object
+    selectedAttendance.value = data;
+    prefilledDate.value = data?.attendance_date || null;
+  }
   manualEntryDialog.value = true;
 };
 

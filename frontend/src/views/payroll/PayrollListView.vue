@@ -512,6 +512,123 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Validation Warning Dialog -->
+    <v-dialog v-model="validationWarningDialog" max-width="800" persistent>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header warning-header">
+          <div class="dialog-icon-wrapper warning">
+            <v-icon size="28">mdi-alert-circle</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Incomplete Attendance Records</div>
+            <div class="dialog-subtitle">
+              {{ incompleteRecords.length }} record(s) with missing punch data
+            </div>
+          </div>
+        </v-card-title>
+
+        <v-card-text class="dialog-content">
+          <v-alert
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            <template v-slot:prepend>
+              <v-icon icon="mdi-information"></v-icon>
+            </template>
+            <div class="text-caption">
+              <strong>Important:</strong> Employees with incomplete attendance
+              records may receive incorrect pay. Please complete all attendance
+              records before creating payroll, or these records will be excluded
+              from calculations.
+            </div>
+          </v-alert>
+
+          <!-- Incomplete Records Table -->
+          <div class="incomplete-records-table">
+            <v-table density="compact">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Date</th>
+                  <th>Issues</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(record, index) in incompleteRecords" :key="index">
+                  <td>
+                    <div class="employee-info">
+                      <div class="font-weight-medium">
+                        {{ record.employee_name }}
+                      </div>
+                      <div class="text-caption text-medium-emphasis">
+                        {{ record.employee_number }}
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ record.attendance_date }}</td>
+                  <td>
+                    <div class="d-flex flex-wrap gap-1">
+                      <v-chip
+                        v-for="(issue, idx) in record.issues"
+                        :key="idx"
+                        color="warning"
+                        size="small"
+                        variant="tonal"
+                      >
+                        {{ issue }}
+                      </v-chip>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+          </div>
+
+          <!-- Action Recommendations -->
+          <v-alert type="info" variant="tonal" density="compact" class="mt-4">
+            <div class="text-caption">
+              <strong>Recommended:</strong> Fix incomplete attendance records
+              first by going to Attendance Management → Missing Attendance tab.
+            </div>
+          </v-alert>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="dialog-actions">
+          <v-btn
+            variant="outlined"
+            color="#64748b"
+            @click="closeValidationWarning"
+            :disabled="saving"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="tonal"
+            @click="goToMissingAttendance"
+            :disabled="saving"
+          >
+            <v-icon size="18" class="mr-1">mdi-clock-alert-outline</v-icon>
+            Fix Attendance
+          </v-btn>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="warning"
+            variant="flat"
+            @click="forceCreatePayroll"
+            :loading="saving"
+          >
+            <v-icon size="18" class="mr-1">mdi-alert</v-icon>
+            Create Anyway
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -532,6 +649,8 @@ const loadingProjects = ref(false);
 const search = ref("");
 const dialog = ref(false);
 const deleteDialog = ref(false);
+const validationWarningDialog = ref(false);
+const incompleteRecords = ref([]);
 const editMode = ref(false);
 const valid = ref(false);
 const form = ref(null);
@@ -677,9 +796,21 @@ function closeDialog() {
   selectedPayroll.value = null;
 }
 
-async function savePayroll() {
+async function savePayroll(forceCreate = false) {
+  console.log("💾 savePayroll called", {
+    forceCreate,
+    editMode: editMode.value,
+    period_start: formData.value.period_start,
+    period_end: formData.value.period_end,
+  });
+
   const { valid } = await form.value.validate();
-  if (!valid) return;
+  if (!valid) {
+    console.log("❌ Form validation failed");
+    return;
+  }
+
+  console.log("✅ Form is valid, preparing payload");
 
   // Prepare payload - simplified for all employees only
   const payload = {
@@ -695,6 +826,64 @@ async function savePayroll() {
     payload.has_attendance = formData.value.has_attendance;
   }
 
+  // Add force_create flag if bypassing validation
+  if (forceCreate) {
+    payload.force_create = true;
+  }
+
+  // Step 1: Validate attendance completeness (unless forcing OR editing existing payroll)
+  if (!forceCreate && !editMode.value) {
+    console.log("🔍 Will validate attendance...");
+    saving.value = true;
+    try {
+      console.log("🔍 Validating payroll attendance...", {
+        period_start: formData.value.period_start,
+        period_end: formData.value.period_end,
+        has_attendance: formData.value.has_attendance || false,
+        forceCreate: forceCreate,
+      });
+
+      const validationResponse = await api.post("/payrolls/validate", {
+        period_start: formData.value.period_start,
+        period_end: formData.value.period_end,
+        has_attendance: formData.value.has_attendance || false,
+      });
+
+      console.log("✅ Validation passed:", validationResponse.data);
+      // Validation passed, continue to create
+    } catch (error) {
+      console.error("⚠️ Validation error caught:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        errorObject: error,
+      });
+      saving.value = false;
+      if (error.response?.status === 422) {
+        // Show incomplete attendance warning
+        incompleteRecords.value = error.response.data.incomplete_records || [];
+        console.log(
+          "🚨 Found incomplete records:",
+          incompleteRecords.value.length,
+          "records",
+        );
+        console.log("🚨 Opening validation dialog...");
+        validationWarningDialog.value = true;
+        console.log("🚨 Dialog state:", validationWarningDialog.value);
+        return; // Stop here and show warning
+      } else {
+        console.error("❌ Non-422 error, showing toast");
+        toast.error(
+          error.response?.data?.message || "Failed to validate payroll data",
+        );
+        return;
+      }
+    }
+    // Don't set saving.value = false here, continue to step 2
+  } else {
+    console.log("⏭️ Skipping validation (forceCreate = true)");
+  }
+
+  // Step 2: Create payroll
   saving.value = true;
   try {
     if (editMode.value) {
@@ -761,6 +950,23 @@ async function deletePayroll() {
   } finally {
     deleting.value = false;
   }
+}
+
+// Validation Warning Dialog Functions
+function closeValidationWarning() {
+  validationWarningDialog.value = false;
+  incompleteRecords.value = [];
+}
+
+function goToMissingAttendance() {
+  validationWarningDialog.value = false;
+  dialog.value = false;
+  router.push("/attendance?tab=missing");
+}
+
+async function forceCreatePayroll() {
+  validationWarningDialog.value = false;
+  await savePayroll(true); // Call with force flag
 }
 
 function getStatusColor(status) {
@@ -1060,6 +1266,18 @@ function formatCurrency(amount) {
   &.primary {
     background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
     box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  }
+
+  &.warning {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 152, 0, 0.15) 0%,
+      rgba(255, 193, 7, 0.1) 100%
+    );
+
+    .v-icon {
+      color: #ff9800 !important;
+    }
   }
 }
 
@@ -1437,5 +1655,71 @@ function formatCurrency(amount) {
   font-weight: 600;
   color: #001f3d;
   margin-bottom: 8px;
+}
+
+// Validation Warning Dialog
+.warning-header {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 152, 0, 0.05) 0%,
+    rgba(255, 193, 7, 0.03) 100%
+  ) !important;
+}
+
+.incomplete-records-table {
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
+
+  .v-table {
+    background: transparent;
+
+    thead {
+      background: rgba(0, 31, 61, 0.02);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+
+      th {
+        font-weight: 600;
+        color: #001f3d;
+        font-size: 13px;
+        padding: 12px 16px !important;
+        border-bottom: 1px solid rgba(0, 31, 61, 0.1) !important;
+      }
+    }
+
+    tbody {
+      tr {
+        &:hover {
+          background: rgba(237, 152, 95, 0.02);
+        }
+
+        td {
+          padding: 12px 16px !important;
+          border-bottom: 1px solid rgba(0, 31, 61, 0.05) !important;
+        }
+      }
+    }
+  }
+}
+
+.employee-info {
+  .font-weight-medium {
+    color: #001f3d;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .text-caption {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+}
+
+.gap-1 {
+  gap: 4px;
 }
 </style>

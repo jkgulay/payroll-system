@@ -202,7 +202,14 @@
             <!-- Amount = Rate × Days -->
             <template v-slot:item.amount="{ item }">
               <div class="text-right">
-                <div>₱{{ formatCurrency((item.effective_rate || item.rate || 0) * (item.days_worked || 0)) }}</div>
+                <div>
+                  ₱{{
+                    formatCurrency(
+                      (item.effective_rate || item.rate || 0) *
+                        (item.days_worked || 0),
+                    )
+                  }}
+                </div>
                 <div
                   v-if="item.holiday_pay > 0"
                   class="text-caption text-success"
@@ -227,7 +234,10 @@
             <!-- Undertime -->
             <template v-slot:item.undertime="{ item }">
               <div class="text-center">
-                <div v-if="item.undertime_hours > 0" class="text-caption text-warning">
+                <div
+                  v-if="item.undertime_hours > 0"
+                  class="text-caption text-warning"
+                >
                   {{ formatUndertime(item.undertime_hours) }}
                 </div>
                 <div v-else class="text-caption text-medium-emphasis">-</div>
@@ -576,7 +586,9 @@ function customFilter(value, query, item) {
   if (!query) return true;
 
   const searchTerm = query.toLowerCase();
-  const employee = item.raw?.employee;
+
+  // Handle both item.raw (Vuetify 3 internal structure) and direct item
+  const employee = item?.raw?.employee || item?.employee;
 
   if (!employee) return false;
 

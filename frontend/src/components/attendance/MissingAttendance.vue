@@ -231,7 +231,12 @@
           size="small"
           variant="text"
           color="primary"
-          @click="$emit('edit-attendance', item.attendance)"
+          @click="
+            $emit('edit-attendance', {
+              attendance: item.attendance,
+              date: selectedDate,
+            })
+          "
         ></v-btn>
       </template>
 
