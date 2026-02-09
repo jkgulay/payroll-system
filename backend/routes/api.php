@@ -148,6 +148,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/two-factor/disable', [App\Http\Controllers\Api\TwoFactorController::class, 'disable']);
     Route::post('/two-factor/recovery-codes', [App\Http\Controllers\Api\TwoFactorController::class, 'regenerateRecoveryCodes']);
 
+    // Company Information - GET is available to all authenticated users
+    Route::get('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'show']);
+
     // User Management (Admin only)
     Route::middleware('role:admin')->group(function () {
         Route::get('/users/stats', [App\Http\Controllers\Api\UserController::class, 'getStats']);
@@ -156,8 +159,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/users/{id}/reset-password', [App\Http\Controllers\Api\UserController::class, 'resetPassword']);
         Route::apiResource('users', App\Http\Controllers\Api\UserController::class);
 
-        // Company Information
-        Route::get('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'show']);
+        // Company Information - Store/Delete (Admin only)
         Route::post('/company-info', [App\Http\Controllers\Api\CompanyInfoController::class, 'store']);
         Route::delete('/company-info/logo', [App\Http\Controllers\Api\CompanyInfoController::class, 'deleteLogo']);
     });
@@ -335,10 +337,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/approved', [App\Http\Controllers\Api\HrResumeController::class, 'approvedResumes']);
         Route::delete('/{id}', [App\Http\Controllers\Api\HrResumeController::class, 'destroy']);
 
-        // Admin routes
-        Route::middleware(['role:admin'])->group(function () {
+        // View routes (Admin and HR can view)
+        Route::middleware(['role:admin,hr'])->group(function () {
             Route::get('/pending', [App\Http\Controllers\Api\HrResumeController::class, 'pendingResumes']);
             Route::get('/all', [App\Http\Controllers\Api\HrResumeController::class, 'allResumes']);
+        });
+
+        // Admin-only routes (approve/reject)
+        Route::middleware(['role:admin'])->group(function () {
             Route::post('/{id}/approve', [App\Http\Controllers\Api\HrResumeController::class, 'approve']);
             Route::post('/{id}/reject', [App\Http\Controllers\Api\HrResumeController::class, 'reject']);
         });

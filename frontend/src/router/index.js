@@ -174,7 +174,16 @@ const router = createRouter({
             import(
               /* webpackChunkName: "hr" */ "@/views/hr/ResumeManagement.vue"
             ),
-          meta: { title: "My Resumes", roles: ["hr"] },
+          meta: { title: "My Resumes", roles: ["admin"] },
+        },
+        {
+          path: "hr-resume-submissions",
+          name: "hr-resume-submissions",
+          component: () =>
+            import(
+              /* webpackChunkName: "hr" */ "@/views/hr/HRResumeSubmissions.vue"
+            ),
+          meta: { title: "Resume Submissions", roles: ["hr"] },
         },
         {
           path: "resume-review",

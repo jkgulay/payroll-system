@@ -447,10 +447,10 @@ const menuItems = computed(() => {
       roles: ["admin", "hr"],
     },
     {
-      title: "My Resumes",
-      icon: "mdi-file-document-outline",
-      value: "resumes",
-      to: "/resumes",
+      title: "Resume Submissions",
+      icon: "mdi-file-account-outline",
+      value: "hr-resume-submissions",
+      to: "/hr-resume-submissions",
       roles: ["hr"],
     },
     {
@@ -742,10 +742,10 @@ const menuSections = computed(() => {
       ],
     },
     {
-      title: "My Resumes",
-      icon: "mdi-file-document-outline",
-      value: "resumes",
-      to: "/resumes",
+      title: "Resume Submissions",
+      icon: "mdi-file-account-outline",
+      value: "hr-resume-submissions",
+      to: "/hr-resume-submissions",
       roles: ["hr"],
     },
   ];
