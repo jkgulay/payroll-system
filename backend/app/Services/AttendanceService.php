@@ -145,27 +145,19 @@ class AttendanceService
         }
         // 4. Check if this is OT (punch after regular time_out is set)
         elseif ($attendance->time_out) {
-            // Compare with scheduled time out to determine if this is OT
-            $actualTimeOut = Carbon::parse($dateString . ' ' . $attendance->time_out);
-
-            // If current punch is AFTER the regular time_out, it's an OT session
-            if ($timestamp->gt($actualTimeOut->addMinutes(15))) { // 15 min grace for leaving
-                // Track OT sessions
-                if (!$attendance->ot_time_in) {
-                    $attendance->ot_time_in = $timeString;
-                } elseif (!$attendance->ot_time_out) {
-                    $attendance->ot_time_out = $timeString;
-                } elseif (!$attendance->ot_time_in_2) {
-                    $attendance->ot_time_in_2 = $timeString;
-                } elseif (!$attendance->ot_time_out_2) {
-                    $attendance->ot_time_out_2 = $timeString;
-                } else {
-                    // More than 2 OT sessions, update last OT out
-                    $attendance->ot_time_out_2 = $timeString;
-                }
+            // Any punch after time_out is already set is treated as OT session
+            // Track OT sessions (ot_time_in, ot_time_out pairs)
+            if (!$attendance->ot_time_in) {
+                $attendance->ot_time_in = $timeString;
+            } elseif (!$attendance->ot_time_out) {
+                $attendance->ot_time_out = $timeString;
+            } elseif (!$attendance->ot_time_in_2) {
+                $attendance->ot_time_in_2 = $timeString;
+            } elseif (!$attendance->ot_time_out_2) {
+                $attendance->ot_time_out_2 = $timeString;
             } else {
-                // Update regular time_out (same day adjustments)
-                $attendance->time_out = $timeString;
+                // More than 2 OT sessions, update last OT out
+                $attendance->ot_time_out_2 = $timeString;
             }
         }
 
