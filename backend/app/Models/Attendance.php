@@ -286,9 +286,9 @@ class Attendance extends Model
             );
         }
 
-        // Apply undertime-overtime offset
-        // If employee worked OT, offset their undertime (late arrival or early departure)
-        $this->applyUndertimeOvertimeOffset();
+        // NOTE: Undertime-overtime offset is now applied at the PAYROLL PERIOD level,
+        // not per day. This allows total OT across the period to cancel total UT.
+        // See PayrollService::calculatePayrollItem() for the offset logic.
 
         $this->save();
     }
