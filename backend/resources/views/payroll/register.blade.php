@@ -424,7 +424,7 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('special_ot_pay'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('salary_adjustment'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('other_allowances'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->total_gross, 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('gross_pay'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
@@ -432,7 +432,7 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->total_net, 2) }}</td>
+                <td class="text-right">{{ number_format($payroll->items->sum('net_pay'), 2) }}</td>
                 <td style="border-right: 1px solid #000;"></td>
             </tr>
         </tbody>
