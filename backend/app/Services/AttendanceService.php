@@ -254,6 +254,15 @@ class AttendanceService
         $attendance->is_edited = true;
         $attendance->edited_by = $userId;
         $attendance->edited_at = now();
+        $attendance->approval_status = 'pending';
+        $attendance->is_approved = false;
+        $attendance->is_rejected = false;
+        $attendance->approved_by = null;
+        $attendance->approved_at = null;
+        $attendance->rejection_reason = null;
+        $attendance->rejected_by = null;
+        $attendance->rejected_at = null;
+        $attendance->approval_notes = null;
         $attendance->save();
 
         $attendance->calculateHours();
@@ -313,8 +322,13 @@ class AttendanceService
     {
         $attendance->update([
             'approval_status' => 'approved',
+            'is_approved' => true,
+            'is_rejected' => false,
             'approved_by' => $userId,
             'approved_at' => now(),
+            'rejection_reason' => null,
+            'rejected_by' => null,
+            'rejected_at' => null,
         ]);
 
         return true;
@@ -327,6 +341,8 @@ class AttendanceService
     {
         $attendance->update([
             'approval_status' => 'rejected',
+            'is_approved' => false,
+            'is_rejected' => true,
             'rejection_reason' => $reason,
             'approved_by' => $userId,
             'approved_at' => now(),

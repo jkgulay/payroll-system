@@ -132,6 +132,7 @@ class PayrollService
                 'attendances' => function ($q) use ($payroll) {
                     $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                         ->where('status', '!=', 'absent')
+                        ->where('approval_status', 'approved')
                         ->whereNotNull('time_in')
                         ->whereNotNull('time_out')
                         ->select(

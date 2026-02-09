@@ -302,6 +302,7 @@ class AttendanceController extends Controller
         $oldValues = $attendance->toArray();
 
         $attendance->update([
+            'approval_status' => 'approved',
             'is_approved' => true,
             'is_rejected' => false,
             'approved_by' => $request->user()->id,
@@ -345,6 +346,7 @@ class AttendanceController extends Controller
         $oldValues = $attendance->toArray();
 
         $attendance->update([
+            'approval_status' => 'rejected',
             'is_rejected' => true,
             'rejected_by' => $request->user()->id,
             'rejected_at' => now(),

@@ -78,18 +78,31 @@ class PayrollController extends Controller
             });
         }
 
+        // Only include employees who have attendance in the period (warn if only incomplete records exist)
+        $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
+            $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                ->where('status', '!=', 'absent')
+                ->where('approval_status', 'approved');
+        });
+
         $employeeIds = $employeeQuery->pluck('id');
 
         // Step 2: Find incomplete attendance records for these employees
         $incompleteRecords = Attendance::whereBetween('attendance_date', [$periodStart, $periodEnd])
             ->whereIn('employee_id', $employeeIds)
             ->where('status', '!=', 'absent')
+            ->where('approval_status', 'approved')
             ->where(function ($q) {
-                // Missing time_out
+                // Missing time_in for payable statuses
                 $q->where(function ($sq) {
-                    $sq->whereNotNull('time_in')
-                        ->whereNull('time_out');
+                    $sq->whereIn('status', ['present', 'late', 'half_day'])
+                        ->whereNull('time_in');
                 })
+                    // Missing time_out
+                    ->orWhere(function ($sq) {
+                        $sq->whereNotNull('time_in')
+                            ->whereNull('time_out');
+                    })
                     // OR missing break_end when break_start exists
                     ->orWhere(function ($sq) {
                         $sq->whereNotNull('break_start')
@@ -99,6 +112,11 @@ class PayrollController extends Controller
                     ->orWhere(function ($sq) {
                         $sq->whereNotNull('ot_time_in')
                             ->whereNull('ot_time_out');
+                    })
+                    // OR missing ot_time_out_2 when ot_time_in_2 exists
+                    ->orWhere(function ($sq) {
+                        $sq->whereNotNull('ot_time_in_2')
+                            ->whereNull('ot_time_out_2');
                     });
             })
             ->with(['employee:id,employee_number,first_name,last_name'])
@@ -106,18 +124,24 @@ class PayrollController extends Controller
                 'id',
                 'employee_id',
                 'attendance_date',
+                'status',
                 'time_in',
                 'time_out',
                 'break_start',
                 'break_end',
                 'ot_time_in',
-                'ot_time_out'
+                'ot_time_out',
+                'ot_time_in_2',
+                'ot_time_out_2'
             ]);
 
         // Format the incomplete records
         $issues = $incompleteRecords->map(function ($record) {
             $issuesList = [];
 
+            if (!$record->time_in && in_array($record->status, ['present', 'late', 'half_day'], true)) {
+                $issuesList[] = 'Missing time in';
+            }
             if ($record->time_in && !$record->time_out) {
                 $issuesList[] = 'Missing time out';
             }
@@ -126,6 +150,9 @@ class PayrollController extends Controller
             }
             if ($record->ot_time_in && !$record->ot_time_out) {
                 $issuesList[] = 'Missing OT time out';
+            }
+            if ($record->ot_time_in_2 && !$record->ot_time_out_2) {
+                $issuesList[] = 'Missing OT2 time out';
             }
 
             return [
