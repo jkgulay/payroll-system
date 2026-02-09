@@ -65,7 +65,7 @@
             font-weight: bold;
             text-align: center;
             border: 1px solid #000;
-            background-color: #e0e0e0;
+            background-color: #f5deb3;
             font-size: 10pt;
         }
 
@@ -76,7 +76,7 @@
         }
 
         .department-header {
-            background-color: #f0f0f0;
+            background-color: #87ceeb;
             font-weight: bold;
             text-align: center;
             padding: 8px;
@@ -113,7 +113,7 @@
         }
 
         .subtotal-row {
-            background-color: #f5f5f5;
+            background-color: #ffcc80;
             font-weight: bold;
         }
 

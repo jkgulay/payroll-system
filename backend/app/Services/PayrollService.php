@@ -366,6 +366,58 @@ class PayrollService
             }
         }
 
+        // ===== PERIOD-LEVEL UNDERTIME-OVERTIME OFFSET =====
+        // Apply offset across the entire payroll period (not per day)
+        // Total OT cancels total UT: if OT > UT, UT becomes 0 and OT is reduced
+        $totalOtHours = $regularOtHours + $sundayOtHours + $regularHolidayOtHours + 
+                        $regularHolidaySundayOtHours + $specialHolidayOtHours;
+
+        if ($totalUndertimeHours > 0 && $totalOtHours > 0) {
+            $offsetAmount = min($totalUndertimeHours, $totalOtHours);
+            
+            // Reduce undertime first
+            $totalUndertimeHours = round($totalUndertimeHours - $offsetAmount, 4);
+            
+            // Reduce OT starting from regular OT (lowest multiplier), then special types
+            $remainingOffset = $offsetAmount;
+            
+            // 1. Offset from regular OT first
+            if ($remainingOffset > 0 && $regularOtHours > 0) {
+                $reduceBy = min($remainingOffset, $regularOtHours);
+                $regularOtHours = round($regularOtHours - $reduceBy, 4);
+                $remainingOffset -= $reduceBy;
+            }
+            
+            // 2. Offset from Sunday OT
+            if ($remainingOffset > 0 && $sundayOtHours > 0) {
+                $reduceBy = min($remainingOffset, $sundayOtHours);
+                $sundayOtHours = round($sundayOtHours - $reduceBy, 4);
+                $remainingOffset -= $reduceBy;
+            }
+            
+            // 3. Offset from special holiday OT
+            if ($remainingOffset > 0 && $specialHolidayOtHours > 0) {
+                $reduceBy = min($remainingOffset, $specialHolidayOtHours);
+                $specialHolidayOtHours = round($specialHolidayOtHours - $reduceBy, 4);
+                $remainingOffset -= $reduceBy;
+            }
+            
+            // 4. Offset from regular holiday OT
+            if ($remainingOffset > 0 && $regularHolidayOtHours > 0) {
+                $reduceBy = min($remainingOffset, $regularHolidayOtHours);
+                $regularHolidayOtHours = round($regularHolidayOtHours - $reduceBy, 4);
+                $remainingOffset -= $reduceBy;
+            }
+            
+            // 5. Offset from regular holiday Sunday OT
+            if ($remainingOffset > 0 && $regularHolidaySundayOtHours > 0) {
+                $reduceBy = min($remainingOffset, $regularHolidaySundayOtHours);
+                $regularHolidaySundayOtHours = round($regularHolidaySundayOtHours - $reduceBy, 4);
+                $remainingOffset -= $reduceBy;
+            }
+        }
+        // ===== END OFFSET =====
+
         // Calculate basic pay (excluding holiday days)
         // Weekday regular pay at 1.0x, Sunday regular pay at 1.3x
         $basicPay = ($rate * $regularDays) + ($rate * $sundayDays * 1.3);
