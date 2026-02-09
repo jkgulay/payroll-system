@@ -13,6 +13,7 @@ import { Doughnut } from 'vue-chartjs';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import api from '@/services/api';
 import { useToast } from 'vue-toastification';
+import { devLog } from "@/utils/devLog";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -109,7 +110,7 @@ const loadData = async () => {
     distributionData.value = response.data;
     loaded.value = true;
   } catch (error) {
-    console.error('Error loading employee distribution:', error);
+    devLog.error('Error loading employee distribution:', error);
     toast.error('Failed to load employee distribution');
   }
 };

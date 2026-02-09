@@ -209,6 +209,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -279,7 +280,7 @@ async function fetchSummary() {
     summary.value = response.data;
     toast.success("Report generated successfully");
   } catch (error) {
-    console.error("Error fetching attendance summary:", error);
+    devLog.error("Error fetching attendance summary:", error);
     toast.error("Failed to generate report");
   } finally {
     loading.value = false;
@@ -317,7 +318,7 @@ async function exportToExcel() {
 
     toast.success("Report exported successfully");
   } catch (error) {
-    console.error("Error exporting attendance summary:", error);
+    devLog.error("Error exporting attendance summary:", error);
     toast.error("Failed to export report");
   } finally {
     exporting.value = false;
@@ -331,7 +332,7 @@ async function fetchEmployees() {
     });
     employees.value = response.data.data || response.data;
   } catch (error) {
-    console.error("Error fetching employees:", error);
+    devLog.error("Error fetching employees:", error);
   }
 }
 

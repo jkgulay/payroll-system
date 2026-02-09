@@ -9,7 +9,9 @@
           </div>
           <div>
             <h2 class="dialog-title">Backup & Security</h2>
-            <p class="dialog-subtitle">Configure system backups, security settings, and data policies</p>
+            <p class="dialog-subtitle">
+              Configure system backups, security settings, and data policies
+            </p>
           </div>
         </div>
         <v-btn icon variant="text" @click="closeDialog" class="close-btn">
@@ -63,10 +65,15 @@
                   />
                 </div>
 
-                <div v-if="config.backup.autoBackupEnabled" class="group-content">
+                <div
+                  v-if="config.backup.autoBackupEnabled"
+                  class="group-content"
+                >
                   <div class="setting-row">
                     <div class="setting-label">
-                      <v-icon size="20" color="primary">mdi-clock-outline</v-icon>
+                      <v-icon size="20" color="primary"
+                        >mdi-clock-outline</v-icon
+                      >
                       <span>Backup Frequency</span>
                     </div>
                     <v-select
@@ -81,7 +88,9 @@
 
                   <div class="setting-row">
                     <div class="setting-label">
-                      <v-icon size="20" color="success">mdi-clock-time-eight</v-icon>
+                      <v-icon size="20" color="success"
+                        >mdi-clock-time-eight</v-icon
+                      >
                       <span>Backup Time</span>
                     </div>
                     <v-text-field
@@ -111,10 +120,13 @@
                   </div>
 
                   <div class="info-card">
-                    <v-icon color="info" size="18">mdi-information-outline</v-icon>
+                    <v-icon color="info" size="18"
+                      >mdi-information-outline</v-icon
+                    >
                     <div>
-                      Backups older than {{ config.backup.retentionDays }} days will be automatically deleted. 
-                      Recommended minimum: 30 days
+                      Backups older than {{ config.backup.retentionDays }} days
+                      will be automatically deleted. Recommended minimum: 30
+                      days
                     </div>
                   </div>
                 </div>
@@ -164,11 +176,15 @@
               <div class="action-card">
                 <div class="action-content">
                   <div class="action-icon">
-                    <v-icon size="32" color="primary">mdi-database-export</v-icon>
+                    <v-icon size="32" color="primary"
+                      >mdi-database-export</v-icon
+                    >
                   </div>
                   <div>
                     <h4 class="action-title">Create Backup Now</h4>
-                    <p class="action-description">Generate an immediate backup of the database</p>
+                    <p class="action-description">
+                      Generate an immediate backup of the database
+                    </p>
                   </div>
                 </div>
                 <v-btn
@@ -203,7 +219,9 @@
                 <div class="group-content">
                   <div class="setting-row">
                     <div class="setting-label">
-                      <v-icon size="20" color="primary">mdi-form-textbox-password</v-icon>
+                      <v-icon size="20" color="primary"
+                        >mdi-form-textbox-password</v-icon
+                      >
                       <span>Minimum Password Length</span>
                     </div>
                     <v-text-field
@@ -291,8 +309,9 @@
                   <div class="info-card warning">
                     <v-icon color="warning" size="18">mdi-alert</v-icon>
                     <div>
-                      <strong>Important:</strong> Enabling this will require all users to set up 
-                      two-factor authentication on their next login.
+                      <strong>Important:</strong> Enabling this will require all
+                      users to set up two-factor authentication on their next
+                      login.
                     </div>
                   </div>
                 </div>
@@ -360,7 +379,9 @@
                 <div class="group-content">
                   <div class="setting-row">
                     <div class="setting-label">
-                      <v-icon size="20" color="primary">mdi-timer-outline</v-icon>
+                      <v-icon size="20" color="primary"
+                        >mdi-timer-outline</v-icon
+                      >
                       <span>Idle Timeout (minutes)</span>
                     </div>
                     <v-text-field
@@ -391,10 +412,13 @@
                   </div>
 
                   <div class="info-card">
-                    <v-icon color="info" size="18">mdi-information-outline</v-icon>
+                    <v-icon color="info" size="18"
+                      >mdi-information-outline</v-icon
+                    >
                     <div>
-                      Users will be automatically logged out after {{ config.session.idleTimeout }} minutes 
-                      of inactivity or {{ config.session.maxDuration }} hours total session time.
+                      Users will be automatically logged out after
+                      {{ config.session.idleTimeout }} minutes of inactivity or
+                      {{ config.session.maxDuration }} hours total session time.
                     </div>
                   </div>
                 </div>
@@ -417,9 +441,14 @@
                     />
                   </div>
 
-                  <div v-if="config.session.allowMultipleSessions" class="setting-row">
+                  <div
+                    v-if="config.session.allowMultipleSessions"
+                    class="setting-row"
+                  >
                     <div class="setting-label">
-                      <v-icon size="20" color="primary">mdi-account-multiple</v-icon>
+                      <v-icon size="20" color="primary"
+                        >mdi-account-multiple</v-icon
+                      >
                       <span>Max Concurrent Sessions</span>
                     </div>
                     <v-text-field
@@ -443,7 +472,9 @@
                   </div>
                   <div>
                     <h4 class="action-title">Terminate All Sessions</h4>
-                    <p class="action-description">Force logout all users (except admins)</p>
+                    <p class="action-description">
+                      Force logout all users (except admins)
+                    </p>
                   </div>
                 </div>
                 <v-btn
@@ -542,7 +573,9 @@
                 <div class="group-content">
                   <div class="setting-row">
                     <div class="setting-label">
-                      <v-icon size="20" color="primary">mdi-calendar-clock</v-icon>
+                      <v-icon size="20" color="primary"
+                        >mdi-calendar-clock</v-icon
+                      >
                       <span>Retention Period (days)</span>
                     </div>
                     <v-text-field
@@ -557,10 +590,14 @@
                   </div>
 
                   <div class="info-card">
-                    <v-icon color="info" size="18">mdi-information-outline</v-icon>
+                    <v-icon color="info" size="18"
+                      >mdi-information-outline</v-icon
+                    >
                     <div>
-                      Audit logs older than {{ config.audit.retentionDays }} days will be automatically archived. 
-                      Recommended minimum for compliance: 365 days (1 year).
+                      Audit logs older than
+                      {{ config.audit.retentionDays }} days will be
+                      automatically archived. Recommended minimum for
+                      compliance: 365 days (1 year).
                     </div>
                   </div>
                 </div>
@@ -574,7 +611,9 @@
                   </div>
                   <div>
                     <h4 class="action-title">Export Audit Logs</h4>
-                    <p class="action-description">Download audit logs for external analysis</p>
+                    <p class="action-description">
+                      Download audit logs for external analysis
+                    </p>
                   </div>
                 </div>
                 <v-btn
@@ -620,7 +659,8 @@
           Confirm Action
         </v-card-title>
         <v-card-text class="pt-4">
-          Are you sure you want to terminate all user sessions? All users (except admins) will be logged out immediately.
+          Are you sure you want to terminate all user sessions? All users
+          (except admins) will be logged out immediately.
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -637,38 +677,38 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
-import { useToast } from 'vue-toastification';
+import { ref, watch } from "vue";
+import { useToast } from "vue-toastification";
 
 const props = defineProps({
   modelValue: Boolean,
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(["update:modelValue"]);
 
 const toast = useToast();
 
 const isOpen = ref(props.modelValue);
-const activeTab = ref('backup');
+const activeTab = ref("backup");
 const saving = ref(false);
 const backingUp = ref(false);
 const exporting = ref(false);
 const showConfirmDialog = ref(false);
 
 const backupFrequencies = [
-  { title: 'Daily', value: 'daily' },
-  { title: 'Weekly', value: 'weekly' },
-  { title: 'Monthly', value: 'monthly' },
+  { title: "Daily", value: "daily" },
+  { title: "Weekly", value: "weekly" },
+  { title: "Monthly", value: "monthly" },
 ];
 
 // Configuration data
 const config = ref({
   backup: {
     autoBackupEnabled: true,
-    frequency: 'daily',
-    backupTime: '02:00',
+    frequency: "daily",
+    backupTime: "02:00",
     retentionDays: 30,
-    storageLocation: '/storage/backups',
+    storageLocation: "/storage/backups",
     maxBackupSize: 500,
   },
   security: {
@@ -703,11 +743,11 @@ watch(
   () => props.modelValue,
   (newVal) => {
     isOpen.value = newVal;
-  }
+  },
 );
 
 watch(isOpen, (newVal) => {
-  emit('update:modelValue', newVal);
+  emit("update:modelValue", newVal);
 });
 
 const closeDialog = () => {
@@ -719,9 +759,9 @@ const createBackup = async () => {
   try {
     // Simulate backup creation
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    toast.success('Database backup created successfully');
+    toast.success("Database backup created successfully");
   } catch (error) {
-    toast.error('Failed to create backup: ' + error.message);
+    toast.error("Failed to create backup: " + error.message);
   } finally {
     backingUp.value = false;
   }
@@ -736,9 +776,9 @@ const terminateAllSessions = async () => {
   try {
     // Simulate session termination
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success('All user sessions have been terminated');
+    toast.success("All user sessions have been terminated");
   } catch (error) {
-    toast.error('Failed to terminate sessions: ' + error.message);
+    toast.error("Failed to terminate sessions: " + error.message);
   }
 };
 
@@ -747,9 +787,9 @@ const exportAuditLogs = async () => {
   try {
     // Simulate export
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    toast.success('Audit logs exported successfully');
+    toast.success("Audit logs exported successfully");
   } catch (error) {
-    toast.error('Failed to export logs: ' + error.message);
+    toast.error("Failed to export logs: " + error.message);
   } finally {
     exporting.value = false;
   }
@@ -760,10 +800,10 @@ const saveConfiguration = async () => {
   try {
     // Simulate save
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success('Security configuration saved successfully');
+    toast.success("Security configuration saved successfully");
     closeDialog();
   } catch (error) {
-    toast.error('Failed to save configuration: ' + error.message);
+    toast.error("Failed to save configuration: " + error.message);
   } finally {
     saving.value = false;
   }
@@ -785,6 +825,7 @@ const saveConfiguration = async () => {
 .header-content {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 16px;
   width: 100%;
 }

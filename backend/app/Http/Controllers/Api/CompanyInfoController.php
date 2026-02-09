@@ -58,7 +58,7 @@ class CompanyInfoController extends Controller
             ], 422);
         }
 
-        $data = $request->except(['logo']);
+        $data = $request->except(['logo', 'remove_logo']);
 
         // Get or create company info (should only be one record)
         $companyInfo = CompanyInfo::first();
@@ -77,6 +77,12 @@ class CompanyInfoController extends Controller
             $logoFile = $request->file('logo');
             $logoPath = $logoFile->store('company-logos', 'public');
             $data['logo_path'] = $logoPath;
+        } elseif ($request->input('remove_logo')) {
+            // Handle logo removal
+            if ($companyInfo->logo_path && Storage::disk('public')->exists($companyInfo->logo_path)) {
+                Storage::disk('public')->delete($companyInfo->logo_path);
+            }
+            $data['logo_path'] = null;
         }
 
         $companyInfo->fill($data);

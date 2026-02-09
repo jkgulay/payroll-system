@@ -342,6 +342,7 @@ const loadConfiguration = async () => {
 .header-content {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 16px;
   width: 100%;
 }

@@ -467,10 +467,13 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
-import { format } from "date-fns";
+import { formatDateTime as formatDate } from "@/utils/formatters";
 import TwoFactorSetup from "@/components/TwoFactorSetup.vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
+const { confirm: confirmDialog } = useConfirmDialog();
 const authStore = useAuthStore();
 const toast = useToast();
 
@@ -537,7 +540,7 @@ async function fetchProfile() {
     }
   } catch (error) {
     toast.error("Failed to load profile");
-    console.error(error);
+    devLog.error(error);
   }
 }
 
@@ -602,7 +605,7 @@ async function updateProfileInfo() {
       const errorMessages = Object.values(errors).flat().join(", ");
       profileError.value = errorMessages;
     }
-    console.error(error);
+    devLog.error(error);
   } finally {
     updatingProfile.value = false;
   }
@@ -615,7 +618,7 @@ async function check2FAStatus() {
     const response = await api.get("/two-factor/status");
     twoFactorEnabled.value = response.data.enabled;
   } catch (error) {
-    console.error("Failed to check 2FA status:", error);
+    devLog.error("Failed to check 2FA status:", error);
   } finally {
     loading2FA.value = false;
   }
@@ -623,9 +626,9 @@ async function check2FAStatus() {
 
 async function disable2FA() {
   if (
-    !confirm(
+    !(await confirmDialog(
       "Are you sure you want to disable two-factor authentication? This will make your account less secure.",
-    )
+    ))
   ) {
     return;
   }
@@ -637,7 +640,7 @@ async function disable2FA() {
     toast.success("Two-factor authentication disabled");
   } catch (error) {
     toast.error("Failed to disable 2FA");
-    console.error(error);
+    devLog.error(error);
   } finally {
     disabling2FA.value = false;
   }
@@ -657,7 +660,7 @@ async function regenerateRecoveryCodes() {
     toast.success("New recovery codes generated");
   } catch (error) {
     toast.error("Failed to generate recovery codes");
-    console.error(error);
+    devLog.error(error);
   } finally {
     regeneratingCodes.value = false;
   }
@@ -754,14 +757,18 @@ async function uploadAvatar() {
     toast.error(
       error.response?.data?.message || "Failed to upload profile picture",
     );
-    console.error(error);
+    devLog.error(error);
   } finally {
     uploadingAvatar.value = false;
   }
 }
 
 async function removeAvatar() {
-  if (!confirm("Are you sure you want to remove your profile picture?")) {
+  if (
+    !(await confirmDialog(
+      "Are you sure you want to remove your profile picture?",
+    ))
+  ) {
     return;
   }
 
@@ -781,7 +788,7 @@ async function removeAvatar() {
     toast.error(
       error.response?.data?.message || "Failed to remove profile picture",
     );
-    console.error(error);
+    devLog.error(error);
   } finally {
     uploadingAvatar.value = false;
   }
@@ -834,15 +841,10 @@ async function changePassword() {
     passwordError.value =
       error.response?.data?.message || "Failed to change password";
     toast.error(passwordError.value);
-    console.error(error);
+    devLog.error(error);
   } finally {
     changingPassword.value = false;
   }
-}
-
-function formatDate(dateString) {
-  if (!dateString) return "N/A";
-  return format(new Date(dateString), "MMM dd, yyyy hh:mm a");
 }
 </script>
 

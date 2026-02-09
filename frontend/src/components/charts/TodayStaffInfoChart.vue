@@ -14,6 +14,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
+import { devLog } from "@/utils/devLog";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -89,7 +90,7 @@ const loadData = async () => {
     statusData.value = response.data;
     loaded.value = true;
   } catch (error) {
-    console.error("Error loading today staff info:", error);
+    devLog.error("Error loading today staff info:", error);
     toast.error("Failed to load today staff info");
   }
 };

@@ -805,6 +805,8 @@
 import { ref, onMounted, computed, watch, nextTick } from "vue";
 import api from "@/services/api";
 import ExcelJS from "exceljs";
+import { devLog } from "@/utils/devLog";
+import { formatNumber } from "@/utils/formatters";
 
 const loading = ref(false);
 const reportData = ref(null);
@@ -902,16 +904,6 @@ const headers = [
   { title: "Grand Total", key: "grand_total", align: "end" },
 ];
 
-const formatNumber = (value) => {
-  if (value === null || value === undefined || value === "") return "0.00";
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "0.00";
-  return num.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
 const getDepartmentColor = (department) => {
   const colors = [
     "primary",
@@ -946,9 +938,6 @@ const loadReport = async () => {
     });
     reportData.value = response.data;
 
-    // Log the response for debugging
-    console.log("Government Contributions Report Data:", response.data);
-
     // Check if there's actual contribution data
     if (response.data.employee_count === 0) {
       showSnackbar("No employees found for this period", "warning");
@@ -961,7 +950,7 @@ const loadReport = async () => {
       showSnackbar("Report generated successfully", "success");
     }
   } catch (error) {
-    console.error("Error loading report:", error);
+    devLog.error("Error loading report:", error);
     showSnackbar(
       error.response?.data?.message || "Failed to load report",
       "error",
@@ -1279,7 +1268,7 @@ const exportReport = async () => {
 
     showSnackbar("Report exported successfully", "success");
   } catch (error) {
-    console.error("Error exporting report:", error);
+    devLog.error("Error exporting report:", error);
     showSnackbar("Failed to export report", "error");
   }
 };

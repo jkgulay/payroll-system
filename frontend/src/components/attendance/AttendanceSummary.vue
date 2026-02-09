@@ -216,6 +216,7 @@ import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
 import { formatDate } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -318,7 +319,7 @@ const exportToExcel = async () => {
 
     toast.success("Attendance summary exported successfully");
   } catch (error) {
-    console.error("Export error:", error);
+    devLog.error("Export error:", error);
     toast.error("Failed to export attendance summary");
   } finally {
     exporting.value = false;

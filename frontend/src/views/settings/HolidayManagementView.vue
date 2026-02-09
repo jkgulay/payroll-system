@@ -445,6 +445,7 @@
 import { ref, computed, onMounted } from "vue";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -518,7 +519,7 @@ const loadHolidays = async () => {
     const response = await api.get(`/holidays/year/${selectedYear.value}`);
     holidays.value = response.data.data.holidays;
   } catch (error) {
-    console.error("Failed to load holidays:", error);
+    devLog.error("Failed to load holidays:", error);
     toast.error("Failed to load holidays");
   } finally {
     loading.value = false;
@@ -589,7 +590,7 @@ const deleteHoliday = async () => {
     holidayToDelete.value = null;
     await loadHolidays();
   } catch (error) {
-    console.error("Failed to delete holiday:", error);
+    devLog.error("Failed to delete holiday:", error);
     toast.error("Failed to delete holiday");
   } finally {
     deleting.value = false;
@@ -612,7 +613,7 @@ const submitForm = async () => {
     closeModal();
     await loadHolidays();
   } catch (error) {
-    console.error("Failed to save holiday:", error);
+    devLog.error("Failed to save holiday:", error);
     toast.error(error.response?.data?.message || "Failed to save holiday");
   } finally {
     saving.value = false;

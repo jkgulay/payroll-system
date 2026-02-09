@@ -1,3 +1,4 @@
+import { devLog } from "@/utils/devLog";
 // Service Worker Registration and Management
 export function registerServiceWorker() {
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -8,7 +9,7 @@ export function registerServiceWorker() {
           { scope: '/' }
         );
 
-        console.log('Service Worker registered:', registration.scope);
+        devLog.log('Service Worker registered:', registration.scope);
 
         // Check for updates periodically
         setInterval(() => {
@@ -34,7 +35,7 @@ export function registerServiceWorker() {
           }
         });
       } catch (error) {
-        console.error('Service Worker registration failed:', error);
+        devLog.error('Service Worker registration failed:', error);
       }
     });
   }
@@ -47,7 +48,7 @@ export async function unregisterServiceWorker() {
     for (const registration of registrations) {
       await registration.unregister();
     }
-    console.log('Service Workers unregistered');
+    devLog.log('Service Workers unregistered');
   }
 }
 
@@ -94,13 +95,13 @@ export function registerBackgroundSync(tag = 'sync-data') {
 // Check online/offline status
 export function setupOnlineListener(onOnline, onOffline) {
   window.addEventListener('online', () => {
-    console.log('App is online');
+    devLog.log('App is online');
     if (onOnline) onOnline();
     registerBackgroundSync();
   });
 
   window.addEventListener('offline', () => {
-    console.log('App is offline');
+    devLog.log('App is offline');
     if (onOffline) onOffline();
   });
 

@@ -54,7 +54,7 @@
       </div>
 
       <!-- User Management -->
-      <div class="setting-card">
+      <div class="setting-card" @click="$router.push('/user-management')">
         <div class="setting-icon-wrapper users">
           <v-icon size="32">mdi-account-multiple</v-icon>
         </div>
@@ -66,7 +66,7 @@
           </p>
           <button
             class="setting-action-btn"
-            @click="$router.push('/user-management')"
+            @click.stop="$router.push('/user-management')"
           >
             <span>Manage Users</span>
             <v-icon size="18">mdi-arrow-right</v-icon>

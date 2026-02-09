@@ -573,9 +573,12 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import api from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
+import { formatDate, formatCurrency } from "@/utils/formatters";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 // State
 const loading = ref(true);
@@ -741,23 +744,6 @@ const getStatusClass = (status) => {
   return classes[status] || "";
 };
 
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
-
-const formatCurrency = (amount) => {
-  if (!amount) return "0.00";
-  return parseFloat(amount).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
 const formatFileSize = (bytes) => {
   if (!bytes) return "0 B";
   const k = 1024;
@@ -826,7 +812,10 @@ const downloadCurrentAttachment = async () => {
 };
 
 const deleteAttachment = async (index) => {
-  if (!confirm("Are you sure you want to delete this attachment?")) return;
+  if (
+    !(await confirmDialog("Are you sure you want to delete this attachment?"))
+  )
+    return;
 
   try {
     const response = await api.delete(

@@ -75,6 +75,7 @@
 import { ref, onMounted, computed } from 'vue';
 import api from '@/services/api';
 import { useToast } from 'vue-toastification';
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 const loaded = ref(false);
@@ -137,7 +138,7 @@ const loadData = async () => {
     leaveData.value = response.data;
     loaded.value = true;
   } catch (error) {
-    console.error('Error loading leave utilization:', error);
+    devLog.error('Error loading leave utilization:', error);
     toast.error('Failed to load leave utilization');
   }
 };

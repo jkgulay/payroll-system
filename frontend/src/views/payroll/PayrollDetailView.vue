@@ -524,10 +524,12 @@ import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const loading = ref(false);
 const finalizing = ref(false);
@@ -641,9 +643,9 @@ async function fetchPayroll() {
 
 async function finalizePayroll() {
   if (
-    !confirm(
+    !(await confirmDialog(
       "Are you sure you want to finalize this payroll? You will not be able to edit it after finalization.",
-    )
+    ))
   ) {
     return;
   }
@@ -851,6 +853,8 @@ function formatUndertime(hours) {
 .header-content {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 20px;
 }
 

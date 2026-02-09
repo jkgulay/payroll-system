@@ -1008,6 +1008,8 @@ import { useToast } from "vue-toastification";
 import loanService from "@/services/loanService";
 import api from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
+import { formatDate, formatNumber } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 const authStore = useAuthStore();
@@ -1166,7 +1168,7 @@ const fetchLoans = async () => {
     }
   } catch (error) {
     toast.error("Failed to load loans");
-    console.error(error);
+    devLog.error(error);
   } finally {
     loading.value = false;
   }
@@ -1178,7 +1180,7 @@ const fetchEmployees = async () => {
     const response = await api.get("/employees?per_page=1000");
     employees.value = response.data.data || response.data;
   } catch (error) {
-    console.error("Failed to load employees:", error);
+    devLog.error("Failed to load employees:", error);
   }
 };
 
@@ -1279,7 +1281,7 @@ const saveLoan = async () => {
     fetchLoans();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to save loan");
-    console.error(error);
+    devLog.error(error);
   } finally {
     saving.value = false;
   }
@@ -1295,7 +1297,7 @@ const approveLoan = async () => {
     fetchLoans();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to approve loan");
-    console.error(error);
+    devLog.error(error);
   } finally {
     saving.value = false;
   }
@@ -1313,7 +1315,7 @@ const rejectLoan = async () => {
     fetchLoans();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to reject loan");
-    console.error(error);
+    devLog.error(error);
   } finally {
     saving.value = false;
   }
@@ -1334,7 +1336,7 @@ const deleteLoan = async () => {
     fetchLoans();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to delete loan");
-    console.error(error);
+    devLog.error(error);
   } finally {
     deleting.value = false;
   }
@@ -1363,14 +1365,6 @@ const clearFilters = () => {
 };
 
 // Formatters
-const formatNumber = (value) => {
-  if (!value) return "0.00";
-  return Number(value).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
 const formatLoanType = (type) => {
   const types = {
     sss: "SSS Loan",
@@ -1389,16 +1383,6 @@ const formatStatus = (status) => {
 
 const formatFrequency = (frequency) => {
   return frequency === "semi_monthly" ? "Semi-Monthly" : "Monthly";
-};
-
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  const d = new Date(date);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 };
 
 const getLoanTypeColor = (type) => {

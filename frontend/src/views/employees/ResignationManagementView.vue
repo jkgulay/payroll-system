@@ -761,6 +761,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import api from "@/services/api";
+import { formatDate, formatCurrency } from "@/utils/formatters";
 
 // State
 const loading = ref(true);
@@ -991,23 +992,6 @@ const getStatusIcon = (status) => {
     completed: "mdi-checkbox-marked-circle",
   };
   return icons[status] || "mdi-help-circle";
-};
-
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
-
-const formatCurrency = (amount) => {
-  if (!amount) return "0.00";
-  return parseFloat(amount).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 };
 
 const viewAttachment = async (resignationId, index, attachment) => {

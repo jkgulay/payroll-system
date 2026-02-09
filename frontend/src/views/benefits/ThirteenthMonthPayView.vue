@@ -459,24 +459,11 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import api from "@/services/api";
+import { formatDate, formatNumber } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
-
-const formatNumber = (value) => {
-  if (!value) return "0.00";
-  return new Intl.NumberFormat("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-};
-
+const { confirm: confirmDialog } = useConfirmDialog();
 const loading = ref(false);
 const calculating = ref(false);
 const calculateDialog = ref(false);
@@ -584,7 +571,7 @@ const fetchThirteenthMonth = async () => {
     const response = await api.get("/thirteenth-month", { params });
     thirteenthMonthList.value = response.data.data || response.data;
   } catch (error) {
-    console.error("Error fetching 13th month pay:", error);
+    devLog.error("Error fetching 13th month pay:", error);
     showSnackbar("Failed to fetch 13th month pay records", "error");
   } finally {
     loading.value = false;
@@ -632,7 +619,7 @@ const calculate = async () => {
     calculateDialog.value = false;
     fetchThirteenthMonth();
   } catch (error) {
-    console.error("Error calculating 13th month pay:", error);
+    devLog.error("Error calculating 13th month pay:", error);
     showSnackbar(
       error.response?.data?.message || "Failed to calculate 13th month pay",
       "error",
@@ -649,7 +636,7 @@ const viewDetails = async (item) => {
     selectedItem.value = response.data;
     detailsDialog.value = true;
   } catch (error) {
-    console.error("Error fetching details:", error);
+    devLog.error("Error fetching details:", error);
     showSnackbar("Failed to fetch details", "error");
   } finally {
     loading.value = false;
@@ -673,7 +660,7 @@ const downloadPdf = async (item) => {
 
     showSnackbar("PDF downloaded successfully", "success");
   } catch (error) {
-    console.error("Error downloading PDF:", error);
+    devLog.error("Error downloading PDF:", error);
     showSnackbar("Failed to download PDF", "error");
   }
 };
@@ -701,26 +688,32 @@ const downloadPdfDetailed = async (item) => {
 
     showSnackbar("Detailed PDF downloaded successfully", "success");
   } catch (error) {
-    console.error("Error downloading detailed PDF:", error);
+    devLog.error("Error downloading detailed PDF:", error);
     showSnackbar("Failed to download detailed PDF", "error");
   }
 };
 
 const approve = async (item) => {
-  if (!confirm("Are you sure you want to approve this 13th month pay?")) return;
+  if (
+    !(await confirmDialog(
+      "Are you sure you want to approve this 13th month pay?",
+    ))
+  )
+    return;
 
   try {
     const response = await api.post(`/thirteenth-month/${item.id}/approve`);
     showSnackbar(response.data.message || "Approved successfully", "success");
     fetchThirteenthMonth();
   } catch (error) {
-    console.error("Error approving:", error);
+    devLog.error("Error approving:", error);
     showSnackbar(error.response?.data?.message || "Failed to approve", "error");
   }
 };
 
 const markPaid = async (item) => {
-  if (!confirm("Are you sure you want to mark this as paid?")) return;
+  if (!(await confirmDialog("Are you sure you want to mark this as paid?")))
+    return;
 
   try {
     const response = await api.post(`/thirteenth-month/${item.id}/mark-paid`);
@@ -730,7 +723,7 @@ const markPaid = async (item) => {
     );
     fetchThirteenthMonth();
   } catch (error) {
-    console.error("Error marking as paid:", error);
+    devLog.error("Error marking as paid:", error);
     showSnackbar(
       error.response?.data?.message || "Failed to mark as paid",
       "error",
@@ -740,9 +733,9 @@ const markPaid = async (item) => {
 
 const deleteItem = async (item) => {
   if (
-    !confirm(
+    !(await confirmDialog(
       `Are you sure you want to delete batch ${item.batch_number}? This action cannot be undone.`,
-    )
+    ))
   )
     return;
 
@@ -751,7 +744,7 @@ const deleteItem = async (item) => {
     showSnackbar(response.data.message || "Deleted successfully", "success");
     fetchThirteenthMonth();
   } catch (error) {
-    console.error("Error deleting:", error);
+    devLog.error("Error deleting:", error);
     showSnackbar(error.response?.data?.message || "Failed to delete", "error");
   }
 };

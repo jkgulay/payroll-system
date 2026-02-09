@@ -301,29 +301,48 @@ class PayrollController extends Controller
         ]);
 
         $oldValues = $payroll->toArray();
-        $payroll->update($validated);
 
-        // Log payroll update
-        AuditLog::create([
-            'user_id' => auth()->id(),
-            'module' => 'payroll',
-            'action' => 'update_payroll',
-            'description' => "Payroll '{$payroll->period_name}' updated",
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'old_values' => $oldValues,
-            'new_values' => $payroll->fresh()->toArray(),
-        ]);
+        DB::beginTransaction();
+        try {
+            $payroll->update($validated);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Payroll updated successfully',
-            'data' => $payroll->load(['items.employee', 'creator'])
-        ]);
+            // Log payroll update
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'update_payroll',
+                'description' => "Payroll '{$payroll->period_name}' updated",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'old_values' => $oldValues,
+                'new_values' => $payroll->fresh()->toArray(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payroll updated successfully',
+                'data' => $payroll->load(['items.employee', 'creator'])
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating payroll: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to update payroll',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(Payroll $payroll)
     {
+        if ($payroll->status !== 'draft') {
+            return response()->json([
+                'message' => 'Only draft payrolls can be deleted'
+            ], 422);
+        }
+
         $payrollData = $payroll->toArray();
 
         // Reverse loan, deduction, and salary adjustment payments before deleting
@@ -392,9 +411,9 @@ class PayrollController extends Controller
     {
         $payroll = Payroll::findOrFail($id);
 
-        if ($payroll->status === 'paid') {
+        if ($payroll->status !== 'draft') {
             return response()->json([
-                'message' => 'Cannot reprocess paid payrolls'
+                'message' => 'Cannot reprocess finalized or paid payrolls'
             ], 422);
         }
 

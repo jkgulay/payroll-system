@@ -3,6 +3,8 @@
     <router-view />
     <!-- AI ChatBot Component -->
     <ChatBot v-if="authStore.isAuthenticated" />
+    <!-- Global Confirm Dialog -->
+    <ConfirmDialog />
   </v-app>
 </template>
 
@@ -10,6 +12,7 @@
 import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import ChatBot from "@/components/ChatBot.vue";
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
 const authStore = useAuthStore();
 

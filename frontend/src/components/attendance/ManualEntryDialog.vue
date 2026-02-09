@@ -217,6 +217,7 @@ import { ref, reactive, watch, onMounted } from "vue";
 import { useAttendanceStore } from "@/stores/attendance";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -226,6 +227,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "saved"]);
 const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 const attendanceStore = useAttendanceStore();
 
 const form = ref(null);
@@ -322,21 +324,13 @@ const save = async () => {
       error.response?.data?.action === "exists"
     ) {
       const existingRecord = error.response.data.attendance;
-      const confirmed = await new Promise((resolve) => {
-        if (
-          confirm(
-            `An attendance record already exists for this employee on this date.\n\n` +
-              `Existing record: ${existingRecord.status} (${
-                existingRecord.time_in || "No time in"
-              } - ${existingRecord.time_out || "No time out"})\n\n` +
-              `Would you like to update the existing record instead?`,
-          )
-        ) {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      });
+      const confirmed = await confirmDialog(
+        `An attendance record already exists for this employee on this date.\n\n` +
+          `Existing record: ${existingRecord.status} (${
+            existingRecord.time_in || "No time in"
+          } - ${existingRecord.time_out || "No time out"})\n\n` +
+          `Would you like to update the existing record instead?`,
+      );
 
       if (confirmed) {
         try {

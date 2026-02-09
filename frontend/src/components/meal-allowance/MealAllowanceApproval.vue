@@ -91,7 +91,13 @@
 
 <script setup>
 import { ref } from "vue";
+import { useToast } from "vue-toastification";
 import mealAllowanceService from "@/services/mealAllowanceService";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
+
+const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const props = defineProps({
   modelValue: Boolean,
@@ -132,19 +138,20 @@ async function approve() {
     // Then generate PDF
     await mealAllowanceService.generatePdf(props.mealAllowance.id);
 
-    alert("Allowance approved and PDF generated successfully");
+    toast.success("Allowance approved and PDF generated successfully");
     emit("approved");
     close();
   } catch (error) {
-    console.error("Error approving allowance:", error);
-    alert("Failed to approve allowance");
+    devLog.error("Error approving allowance:", error);
+    toast.error("Failed to approve allowance");
   } finally {
     processing.value = false;
   }
 }
 
 async function reject() {
-  if (!confirm("Are you sure you want to reject this allowance?")) return;
+  if (!(await confirmDialog("Are you sure you want to reject this allowance?")))
+    return;
 
   processing.value = true;
   try {
@@ -154,12 +161,12 @@ async function reject() {
       form.value.approval_notes,
     );
 
-    alert("Allowance rejected");
+    toast.success("Allowance rejected");
     emit("approved");
     close();
   } catch (error) {
-    console.error("Error rejecting allowance:", error);
-    alert("Failed to reject allowance");
+    devLog.error("Error rejecting allowance:", error);
+    toast.error("Failed to reject allowance");
   } finally {
     processing.value = false;
   }

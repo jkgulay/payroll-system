@@ -103,6 +103,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 
 const props = defineProps({
   rates: {
@@ -135,21 +136,4 @@ const headers = [
   { title: "Status", key: "is_active", sortable: true },
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
-
-const formatCurrency = (value) => {
-  if (!value) return "0.00";
-  return parseFloat(value).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-const formatDate = (date) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
 </script>

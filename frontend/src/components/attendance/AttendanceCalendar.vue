@@ -264,6 +264,8 @@ import api from "@/services/api";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
+import { devLog } from "@/utils/devLog";
+import { formatDate } from "@/utils/formatters";
 
 const emit = defineEmits(["date-click", "record-click"]);
 const toast = useToast();
@@ -352,7 +354,7 @@ const calendarDays = computed(() => {
 
     // Debug logging for first few days
     if (day <= 3 && dayRecords.length > 0) {
-      console.log(`Day ${day} (${dateStr}):`, {
+      devLog.log(`Day ${day} (${dateStr}):`, {
         totalRecords: dayRecords.length,
         statuses: {
           present: summary.present,
@@ -423,13 +425,13 @@ const loadMonthData = async () => {
     attendanceData.value = response.data?.data || response.data || [];
 
     // Debug: Log what we received
-    console.log("Calendar loaded attendance records:", {
+    devLog.log("Calendar loaded attendance records:", {
       count: attendanceData.value.length,
       sample: attendanceData.value.slice(0, 3),
       params,
     });
   } catch (error) {
-    console.error("Calendar load error:", error);
+    devLog.error("Calendar load error:", error);
     toast.error("Failed to load calendar data");
   } finally {
     loading.value = false;
@@ -511,15 +513,6 @@ const showDayDetails = (day) => {
   selectedDayDate.value = day.date;
   selectedDayRecords.value = day.records;
   dayDetailsDialog.value = true;
-};
-
-const formatDate = (date) => {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
 };
 
 let unsubscribeAttendance = null;

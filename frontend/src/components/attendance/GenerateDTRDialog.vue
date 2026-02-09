@@ -207,6 +207,7 @@
 import { ref, reactive, watch, onMounted } from "vue";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { devLog } from "@/utils/devLog";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -386,7 +387,7 @@ const generate = async () => {
     toast.success("DTR generated successfully!");
     close();
   } catch (error) {
-    console.error("Generation error:", error);
+    devLog.error("Generation error:", error);
     toast.error(error.response?.data?.message || "Failed to generate DTR");
   } finally {
     generating.value = false;

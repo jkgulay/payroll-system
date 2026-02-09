@@ -294,6 +294,10 @@
   &.primary {
     background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
     box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
   }
 
   &.warning {
@@ -398,6 +402,10 @@
   justify-content: center;
   color: white;
   box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+
+  .v-icon {
+    color: #ffffff !important;
+  }
 }
 
 .section-title {

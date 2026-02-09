@@ -477,6 +477,8 @@ import { ref, computed, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import loanService from "@/services/loanService";
 import { useAuthStore } from "@/stores/auth";
+import { formatNumber } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 const authStore = useAuthStore();
@@ -590,7 +592,7 @@ const fetchMyLoans = async () => {
     loans.value = response.data.data || response.data;
   } catch (error) {
     toast.error("Failed to load loans");
-    console.error(error);
+    devLog.error(error);
   } finally {
     loading.value = false;
   }
@@ -642,7 +644,7 @@ const submitRequest = async () => {
     fetchMyLoans();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to submit request");
-    console.error(error);
+    devLog.error(error);
   } finally {
     submitting.value = false;
   }
@@ -670,21 +672,13 @@ const cancelLoan = async () => {
     fetchMyLoans();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to cancel loan");
-    console.error(error);
+    devLog.error(error);
   } finally {
     cancelling.value = false;
   }
 };
 
 // Helpers
-const formatNumber = (num) => {
-  if (num === null || num === undefined) return "0.00";
-  return parseFloat(num).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
 const formatLoanType = (type) => {
   const types = {
     sss: "SSS Loan",

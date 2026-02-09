@@ -379,7 +379,8 @@
 import { ref, computed, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
-import { format } from "date-fns";
+import { formatDateTime as formatDate } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -404,10 +405,10 @@ const stats = computed(() => ({
   pending: applications.value.filter((a) => a.application_status === "pending")
     .length,
   approved: applications.value.filter(
-    (a) => a.application_status === "approved"
+    (a) => a.application_status === "approved",
   ).length,
   rejected: applications.value.filter(
-    (a) => a.application_status === "rejected"
+    (a) => a.application_status === "rejected",
   ).length,
 }));
 
@@ -423,7 +424,7 @@ async function fetchApplications() {
     const data = response.data.data || response.data;
     applications.value = Array.isArray(data) ? data : data.data || [];
   } catch (error) {
-    console.error("Error fetching applications:", error);
+    devLog.error("Error fetching applications:", error);
     toast.error("Failed to load applications");
   } finally {
     loading.value = false;
@@ -462,13 +463,7 @@ function getAlertType(status) {
   return types[status] || "info";
 }
 
-function formatDate(dateString) {
-  if (!dateString) return "N/A";
-  return format(new Date(dateString), "MMM dd, yyyy hh:mm a");
-}
-
 onMounted(() => {
   fetchApplications();
 });
 </script>
-

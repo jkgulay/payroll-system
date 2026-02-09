@@ -87,7 +87,7 @@
 
           <template v-slot:item.daily_rate="{ item }">
             <div class="text-right font-weight-bold">
-              {{ formatCurrency(item.daily_rate) }}
+              ₱{{ formatCurrency(item.daily_rate) }}
             </div>
           </template>
 
@@ -269,13 +269,13 @@
                   <div class="text-subtitle-2 mb-1">Rate Change</div>
                   <div class="text-caption">
                     Previous:
-                    <strong>{{
-                      formatCurrency(rateComparison.oldRate)
-                    }}</strong>
+                    <strong
+                      >₱{{ formatCurrency(rateComparison.oldRate) }}</strong
+                    >
                     → New:
-                    <strong>{{
-                      formatCurrency(rateComparison.newRate)
-                    }}</strong>
+                    <strong
+                      >₱{{ formatCurrency(rateComparison.newRate) }}</strong
+                    >
                   </div>
                 </div>
                 <v-chip :color="rateComparison.chipColor" size="small">
@@ -487,8 +487,12 @@
 import { ref, computed, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import { formatCurrency } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const loading = ref(false);
 const positions = ref([]);
@@ -592,7 +596,7 @@ async function loadPositionRates() {
     const response = await api.get("/position-rates");
     positions.value = response.data || [];
   } catch (error) {
-    console.error("Error loading position rates:", error);
+    devLog.error("Error loading position rates:", error);
     toast.error("Failed to load position rates");
   } finally {
     loading.value = false;
@@ -609,7 +613,7 @@ async function viewEmployees(position) {
     const response = await api.get(`/employees?position=${position.id}`);
     positionEmployees.value = response.data.data || response.data || [];
   } catch (error) {
-    console.error("Error loading employees:", error);
+    devLog.error("Error loading employees:", error);
     toast.error("Failed to load employees for this position");
   } finally {
     loadingEmployees.value = false;
@@ -704,7 +708,7 @@ async function savePosition() {
     await loadPositionRates();
     closeDialog();
   } catch (error) {
-    console.error("Error saving position rate:", error);
+    devLog.error("Error saving position rate:", error);
     const message =
       error.response?.data?.message ||
       error.response?.data?.error ||
@@ -724,9 +728,9 @@ async function deletePosition(position) {
   }
 
   if (
-    !confirm(
+    !(await confirmDialog(
       `Are you sure you want to delete the position "${position.position_name}"?`,
-    )
+    ))
   ) {
     return;
   }
@@ -736,24 +740,13 @@ async function deletePosition(position) {
     toast.success("Position rate deleted successfully!");
     await loadPositionRates();
   } catch (error) {
-    console.error("Error deleting position rate:", error);
+    devLog.error("Error deleting position rate:", error);
     const message =
       error.response?.data?.message ||
       error.response?.data?.error ||
       "Failed to delete position rate";
     toast.error(message);
   }
-}
-
-function formatCurrency(value) {
-  if (!value && value !== 0) return "₱0.00";
-  return (
-    "₱" +
-    Number(value).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  );
 }
 
 function getCategoryColor(category) {

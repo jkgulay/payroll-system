@@ -219,7 +219,7 @@
           <template v-slot:item.pay_rate="{ item }">
             <div class="text-right">
               <div class="font-weight-bold">
-                {{ formatCurrency(getEmployeeEffectiveRate(item)) }}
+                ₱{{ formatCurrency(getEmployeeEffectiveRate(item)) }}
               </div>
               <v-chip
                 v-if="item.custom_pay_rate"
@@ -982,8 +982,14 @@
               </v-col>
 
               <v-col cols="12">
-                <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                  Select which government contributions apply to this employee. Only selected contributions will be calculated in the payroll.
+                <v-alert
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-4"
+                >
+                  Select which government contributions apply to this employee.
+                  Only selected contributions will be calculated in the payroll.
                 </v-alert>
               </v-col>
 
@@ -1306,13 +1312,15 @@
               <div class="mb-2">
                 <span class="text-caption">Position-Based Rate:</span>
                 <span class="text-body-1 font-weight-bold ml-2">
-                  {{ formatCurrency(getEmployeePositionRate(payRateEmployee)) }}
+                  ₱{{
+                    formatCurrency(getEmployeePositionRate(payRateEmployee))
+                  }}
                 </span>
               </div>
               <div v-if="payRateEmployee?.custom_pay_rate" class="mb-2">
                 <span class="text-caption">Current Custom Rate:</span>
                 <span class="text-body-1 font-weight-bold ml-2 text-success">
-                  {{ formatCurrency(payRateEmployee?.custom_pay_rate) }}
+                  ₱{{ formatCurrency(payRateEmployee?.custom_pay_rate) }}
                 </span>
                 <v-chip size="x-small" color="success" class="ml-2"
                   >Active</v-chip
@@ -1321,7 +1329,7 @@
               <div class="mt-2">
                 <span class="text-caption">Effective Rate:</span>
                 <span class="text-h6 font-weight-bold ml-2 text-primary">
-                  {{
+                  ₱{{
                     formatCurrency(getEmployeeEffectiveRate(payRateEmployee))
                   }}/day
                 </span>
@@ -1411,15 +1419,19 @@ import { useEmployeeStore } from "@/stores/employee";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { usePositionRates } from "@/composables/usePositionRates";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import AddEmployeeDialog from "@/components/AddEmployeeDialog.vue";
+import { devLog } from "@/utils/devLog";
 import {
   CONTRACT_TYPES,
   ACTIVITY_STATUSES,
   WORK_SCHEDULES,
 } from "@/utils/constants";
+import { formatDate, formatCurrency } from "@/utils/formatters";
 
 const toast = useToast();
 const employeeStore = useEmployeeStore();
+const { confirm: confirmDialog } = useConfirmDialog();
 const {
   positionOptions,
   getRate,
@@ -1581,7 +1593,7 @@ async function fetchDepartments() {
       (dept) => dept && dept.trim() !== "",
     );
   } catch (error) {
-    console.error("Error fetching departments:", error);
+    devLog.error("Error fetching departments:", error);
     // Fallback: extract departments from current employees if API fails
     const uniqueDepts = [
       ...new Set(
@@ -1599,8 +1611,8 @@ async function fetchProjects() {
     const response = await api.get("/projects");
     projects.value = response.data.data || response.data;
   } catch (error) {
-    console.error("Error fetching projects:", error);
-    toast.error("Failed to load projects");
+    devLog.error("Error fetching projects:", error);
+    toast.error("Failed to load departments");
   }
 }
 
@@ -1631,7 +1643,7 @@ async function viewEmployee(employee) {
     isEditing.value = false;
     showEmployeeDialog.value = true;
   } catch (error) {
-    console.error("Error fetching employee details:", error);
+    devLog.error("Error fetching employee details:", error);
     toast.error("Failed to load employee details");
   }
 }
@@ -1646,16 +1658,16 @@ async function editEmployee(employee) {
     isEditing.value = true;
     showEmployeeDialog.value = true;
   } catch (error) {
-    console.error("Error fetching employee details:", error);
+    devLog.error("Error fetching employee details:", error);
     toast.error("Failed to load employee details");
   }
 }
 
 async function suspendEmployee(employee) {
   if (
-    !confirm(
+    !(await confirmDialog(
       `Are you sure you want to suspend ${employee.first_name} ${employee.last_name}?`,
-    )
+    ))
   ) {
     return;
   }
@@ -1669,7 +1681,7 @@ async function suspendEmployee(employee) {
     toast.success("Employee suspended successfully!");
     await fetchEmployees();
   } catch (error) {
-    console.error("Error suspending employee:", error);
+    devLog.error("Error suspending employee:", error);
     toast.error("Failed to suspend employee");
   }
 }
@@ -1696,7 +1708,7 @@ async function submitResignation() {
     showResignDialog.value = false;
     await fetchEmployees();
   } catch (error) {
-    console.error("Error submitting resignation:", error);
+    devLog.error("Error submitting resignation:", error);
     const message =
       error.response?.data?.message || "Failed to submit resignation";
     toast.error(message);
@@ -1707,9 +1719,9 @@ async function submitResignation() {
 
 async function terminateEmployee(employee) {
   if (
-    !confirm(
+    !(await confirmDialog(
       `Are you sure you want to terminate ${employee.first_name} ${employee.last_name}?`,
-    )
+    ))
   ) {
     return;
   }
@@ -1724,16 +1736,16 @@ async function terminateEmployee(employee) {
     toast.success("Employee terminated successfully!");
     await fetchEmployees();
   } catch (error) {
-    console.error("Error terminating employee:", error);
+    devLog.error("Error terminating employee:", error);
     toast.error("Failed to terminate employee");
   }
 }
 
 async function deleteEmployee(employee) {
   if (
-    !confirm(
+    !(await confirmDialog(
       `Are you sure you want to DELETE ${employee.first_name} ${employee.last_name}? This action cannot be undone!`,
-    )
+    ))
   ) {
     return;
   }
@@ -1743,7 +1755,7 @@ async function deleteEmployee(employee) {
     toast.success("Employee deleted successfully!");
     await fetchEmployees();
   } catch (error) {
-    console.error("Error deleting employee:", error);
+    devLog.error("Error deleting employee:", error);
     toast.error("Failed to delete employee");
   }
 }
@@ -1759,7 +1771,7 @@ async function saveEmployee() {
     await fetchEmployees();
     closeDialog();
   } catch (error) {
-    console.error("Error updating employee:", error);
+    devLog.error("Error updating employee:", error);
     const message =
       error.response?.data?.message || "Failed to update employee";
     toast.error(message);
@@ -1819,17 +1831,6 @@ function formatActivityStatus(status) {
     .join(" ");
 }
 
-// Format date for display
-function formatDate(dateString) {
-  if (!dateString) return "Not provided";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
 // Add Employee Dialog functions
 async function saveNewEmployee(payload) {
   savingNew.value = true;
@@ -1846,9 +1847,9 @@ async function saveNewEmployee(payload) {
     showPasswordDialog.value = true;
     await fetchEmployees();
   } catch (error) {
-    console.error("Error creating employee:", error);
-    console.error("Validation errors:", error.response?.data?.errors);
-    console.error("Sent data:", payload.data);
+    devLog.error("Error creating employee:", error);
+    devLog.error("Validation errors:", error.response?.data?.errors);
+    devLog.error("Sent data:", payload.data);
     const message =
       error.response?.data?.message || "Failed to create employee";
     toast.error(message);
@@ -1895,7 +1896,7 @@ async function viewCredentials(employee) {
     const response = await api.get(`/employees/${employee.id}/credentials`);
     employeeCredentials.value = response.data;
   } catch (error) {
-    console.error("Error fetching credentials:", error);
+    devLog.error("Error fetching credentials:", error);
     toast.error("Failed to load credentials");
     employeeCredentials.value = {
       username: "Error loading",
@@ -1910,9 +1911,9 @@ async function viewCredentials(employee) {
 
 async function resetEmployeePassword() {
   if (
-    !confirm(
+    !(await confirmDialog(
       `Generate new temporary password for ${selectedCredentialsEmployee.value.first_name} ${selectedCredentialsEmployee.value.last_name}?`,
-    )
+    ))
   ) {
     return;
   }
@@ -1925,7 +1926,7 @@ async function resetEmployeePassword() {
     newGeneratedPassword.value = response.data.temporary_password;
     toast.success("New temporary password generated!");
   } catch (error) {
-    console.error("Error resetting password:", error);
+    devLog.error("Error resetting password:", error);
     toast.error("Failed to generate new password");
   } finally {
     resettingPassword.value = false;
@@ -2010,7 +2011,7 @@ async function updatePayRate() {
     await fetchEmployees();
     closePayRateDialog();
   } catch (error) {
-    console.error("Error updating pay rate:", error);
+    devLog.error("Error updating pay rate:", error);
     toast.error(error.response?.data?.message || "Failed to update pay rate");
   } finally {
     updatingPayRate.value = false;
@@ -2019,9 +2020,9 @@ async function updatePayRate() {
 
 async function clearCustomPayRate() {
   if (
-    !confirm(
+    !(await confirmDialog(
       "Are you sure you want to clear the custom pay rate? This will revert to the position-based rate.",
-    )
+    ))
   ) {
     return;
   }
@@ -2043,7 +2044,7 @@ async function clearCustomPayRate() {
     await fetchEmployees();
     closePayRateDialog();
   } catch (error) {
-    console.error("Error clearing custom pay rate:", error);
+    devLog.error("Error clearing custom pay rate:", error);
     toast.error(
       error.response?.data?.message || "Failed to clear custom pay rate",
     );
@@ -2075,17 +2076,6 @@ function getEmployeeEffectiveRate(employee) {
 
   // Priority 2: Position-based rate
   return getEmployeePositionRate(employee);
-}
-
-function formatCurrency(value) {
-  if (!value && value !== 0) return "₱0.00";
-  return (
-    "₱" +
-    Number(value).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  );
 }
 
 // Format salary display based on position rate

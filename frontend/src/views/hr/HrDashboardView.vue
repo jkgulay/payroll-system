@@ -147,7 +147,9 @@
                   <span class="table-time">{{ item.time_out || "N/A" }}</span>
                 </template>
                 <template v-slot:item.regular_hours="{ item }">
-                  <span class="table-hours">{{ formatHoursDisplay(calculateHours(item)) }}</span>
+                  <span class="table-hours">{{
+                    formatHoursDisplay(calculateHours(item))
+                  }}</span>
                 </template>
               </v-data-table>
             </div>
@@ -311,7 +313,10 @@
                 </div>
                 <span>Leave Requests</span>
               </button>
-              <button class="quick-action-btn" @click="$router.push('/resignations')">
+              <button
+                class="quick-action-btn"
+                @click="$router.push('/resignations')"
+              >
                 <div class="quick-action-icon">
                   <v-icon>mdi-briefcase-remove-outline</v-icon>
                 </div>
@@ -340,7 +345,9 @@
               class="modern-table"
             >
               <template v-slot:item.full_name="{ item }">
-                <span class="table-text">{{ item.full_name || `${item.first_name} ${item.last_name}` }}</span>
+                <span class="table-text">{{
+                  item.full_name || `${item.first_name} ${item.last_name}`
+                }}</span>
               </template>
               <template v-slot:item.email="{ item }">
                 <span class="table-text">{{ item.email }}</span>
@@ -358,7 +365,9 @@
                 </v-chip>
               </template>
               <template v-slot:item.created_at="{ item }">
-                <span class="table-date">{{ formatDate(item.created_at) }}</span>
+                <span class="table-date">{{
+                  formatDate(item.created_at)
+                }}</span>
               </template>
               <template v-slot:item.actions="{ item }">
                 <v-btn
@@ -479,7 +488,11 @@
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeResumeDialog" :disabled="uploading">
+          <v-btn
+            variant="text"
+            @click="closeResumeDialog"
+            :disabled="uploading"
+          >
             Cancel
           </v-btn>
           <v-btn
@@ -502,9 +515,13 @@ import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { resumeService } from "@/services/resumeService";
+import { formatDate, formatNumber } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const authStore = useAuthStore();
 const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const refreshing = ref(false);
 const downloading = ref(false);
@@ -640,7 +657,7 @@ async function fetchDashboardData() {
     currentPayslip.value = response.data.current_payslip;
     payslipHistory.value = response.data.payslip_history || [];
   } catch (error) {
-    console.error("Error loading dashboard:", error);
+    devLog.error("Error loading dashboard:", error);
     toast.error("Failed to load dashboard data");
   }
 }
@@ -689,7 +706,7 @@ async function downloadPayslip(payslipId, format) {
 
     toast.success(`Payslip downloaded successfully`);
   } catch (error) {
-    console.error("Error downloading payslip:", error);
+    devLog.error("Error downloading payslip:", error);
     toast.error("Failed to download payslip");
   } finally {
     downloading.value = false;
@@ -702,21 +719,6 @@ function downloadCurrentPayslip() {
   } else {
     toast.warning("No current payslip available");
   }
-}
-
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatNumber(value) {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value || 0);
 }
 
 function getStatusColor(status) {
@@ -746,7 +748,7 @@ function calculateHours(record) {
       const hours = (timeOut - timeIn) / (1000 * 60 * 60);
       return hours > 0 ? hours : 0;
     } catch (error) {
-      console.error("Error calculating hours:", error);
+      devLog.error("Error calculating hours:", error);
       return 0;
     }
   }
@@ -756,11 +758,11 @@ function calculateHours(record) {
 
 function formatHoursDisplay(hours) {
   if (!hours || hours <= 0) return "0h 0m";
-  
+
   const totalMinutes = Math.round(hours * 60);
   const hrs = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-  
+
   if (hrs === 0) {
     return `${mins}m`;
   } else if (mins === 0) {
@@ -776,7 +778,7 @@ async function fetchMyResumes() {
     const response = await resumeService.getMyResumes();
     myResumes.value = response.data || response;
   } catch (error) {
-    console.error("Error loading resumes:", error);
+    devLog.error("Error loading resumes:", error);
     toast.error("Failed to load resumes");
   } finally {
     loadingResumes.value = false;
@@ -804,7 +806,7 @@ async function submitResume() {
     formData.append("phone", resumeData.value.phone);
     formData.append("position_applied", resumeData.value.position_applied);
     formData.append("notes", resumeData.value.notes || "");
-    
+
     // Handle file input - v-file-input returns array
     const file = Array.isArray(resumeData.value.resume_file)
       ? resumeData.value.resume_file[0]
@@ -817,7 +819,7 @@ async function submitResume() {
     closeResumeDialog();
     await fetchMyResumes();
   } catch (error) {
-    console.error("Error uploading resume:", error);
+    devLog.error("Error uploading resume:", error);
     toast.error(error.response?.data?.message || "Failed to upload resume");
   } finally {
     uploading.value = false;
@@ -836,13 +838,13 @@ async function downloadResume(resumeId) {
     link.remove();
     toast.success("Resume downloaded successfully");
   } catch (error) {
-    console.error("Error downloading resume:", error);
+    devLog.error("Error downloading resume:", error);
     toast.error("Failed to download resume");
   }
 }
 
 async function deleteResume(resumeId) {
-  if (!confirm("Are you sure you want to delete this resume?")) {
+  if (!(await confirmDialog("Are you sure you want to delete this resume?"))) {
     return;
   }
 
@@ -851,7 +853,7 @@ async function deleteResume(resumeId) {
     toast.success("Resume deleted successfully");
     await fetchMyResumes();
   } catch (error) {
-    console.error("Error deleting resume:", error);
+    devLog.error("Error deleting resume:", error);
     toast.error("Failed to delete resume");
   }
 }
@@ -955,7 +957,7 @@ function getResumeStatusColor(status) {
   letter-spacing: 0.5px;
 
   .welcome-icon {
-    color: #ED985F;
+    color: #ed985f;
   }
 }
 
@@ -1452,4 +1454,3 @@ function getResumeStatusColor(status) {
   font-weight: 500;
 }
 </style>
-

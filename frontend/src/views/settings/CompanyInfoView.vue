@@ -175,6 +175,7 @@ import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useCompanyInfoStore } from "@/stores/companyInfo";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 const router = useRouter();
 const toast = useToast();
@@ -238,7 +239,7 @@ async function fetchCompanyInfo() {
       }
     }
   } catch (error) {
-    console.error("Error fetching company info:", error);
+    devLog.error("Error fetching company info:", error);
     toast.error("Failed to load company information");
   } finally {
     loading.value = false;
@@ -301,7 +302,7 @@ async function resetLogoToDefault() {
 
     toast.success("Logo reset to default icon successfully");
   } catch (error) {
-    console.error("Error resetting logo:", error);
+    devLog.error("Error resetting logo:", error);
     toast.error(error.response?.data?.message || "Failed to reset logo");
   }
 }
@@ -318,9 +319,14 @@ async function saveCompanyInfo() {
       }
     });
 
-    // Append logo if changed
+    // Append logo if changed, or signal removal if logo was cleared
     if (logoFile.value) {
       formDataToSend.append("logo", logoFile.value);
+    } else if (
+      formData.value.logo_path === null &&
+      originalData.value.logo_path
+    ) {
+      formDataToSend.append("remove_logo", "1");
     }
 
     await api.post("/company-info", formDataToSend, {
@@ -337,7 +343,7 @@ async function saveCompanyInfo() {
 
     logoFile.value = null;
   } catch (error) {
-    console.error("Error saving company info:", error);
+    devLog.error("Error saving company info:", error);
     toast.error(
       error.response?.data?.message || "Failed to save company information",
     );

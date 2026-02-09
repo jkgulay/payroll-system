@@ -58,6 +58,7 @@ import { ref, onMounted } from 'vue';
 import api from '@/services/api';
 import { useToast } from 'vue-toastification';
 import { formatDistanceToNow } from 'date-fns';
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 const activities = ref([]);
@@ -71,7 +72,7 @@ const fetchActivities = async () => {
     });
     activities.value = response.data;
   } catch (error) {
-    console.error('Error fetching activities:', error);
+    devLog.error('Error fetching activities:', error);
     toast.error('Failed to load recent activities');
   } finally {
     loading.value = false;

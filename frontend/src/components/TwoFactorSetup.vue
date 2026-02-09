@@ -407,6 +407,7 @@
 import { ref, onMounted } from "vue";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -438,7 +439,7 @@ async function checkTwoFactorStatus() {
     const response = await api.get("/two-factor/status");
     twoFactorEnabled.value = response.data.enabled;
   } catch (error) {
-    console.error("Error checking 2FA status:", error);
+    devLog.error("Error checking 2FA status:", error);
   }
 }
 
@@ -463,7 +464,7 @@ async function enableTwoFactor() {
     showQrDialog.value = true;
     password.value = "";
   } catch (error) {
-    console.error("2FA Enable Error:", error);
+    devLog.error("2FA Enable Error:", error);
     if (error.response?.status === 401) {
       passwordError.value = "Invalid password";
     } else if (error.response?.status === 500) {

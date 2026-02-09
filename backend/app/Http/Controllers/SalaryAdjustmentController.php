@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SalaryAdjustment;
 use App\Models\Employee;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -33,7 +34,7 @@ class SalaryAdjustmentController extends Controller
             $query->whereHas('employee', function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('employee_id', 'like', "%{$search}%");
+                    ->orWhere('employee_number', 'like', "%{$search}%");
             });
         }
 
@@ -55,9 +56,9 @@ class SalaryAdjustmentController extends Controller
             ->map(function ($employee) {
                 return [
                     'id' => $employee->id,
-                    'employee_id' => $employee->employee_id,
+                    'employee_number' => $employee->employee_number,
                     'full_name' => $employee->full_name,
-                    'department' => $employee->department ?? $employee->project?->name ?? 'N/A',
+                    'department' => $employee->project?->name ?? $employee->department ?? 'N/A',
                     'position' => $employee->positionRate?->position_name ?? $employee->position ?? 'N/A',
                     'basic_salary' => $employee->getBasicSalary(),
                     'pending_adjustments' => $employee->salaryAdjustments()
@@ -100,6 +101,16 @@ class SalaryAdjustmentController extends Controller
             'amount' => $adjustment->amount,
             'type' => $adjustment->adjustment_type,
             'created_by' => Auth::id(),
+        ]);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'module' => 'salary_adjustments',
+            'action' => 'create_adjustment',
+            'description' => "Salary adjustment created for employee #{$adjustment->employee_id}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'new_values' => $adjustment->toArray(),
         ]);
 
         return response()->json([
@@ -159,7 +170,19 @@ class SalaryAdjustmentController extends Controller
             $updateData['status'] = $validated['status'];
         }
 
+        $oldValues = $salaryAdjustment->toArray();
         $salaryAdjustment->update($updateData);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'module' => 'salary_adjustments',
+            'action' => 'update_adjustment',
+            'description' => "Salary adjustment #{$salaryAdjustment->id} updated",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $oldValues,
+            'new_values' => $salaryAdjustment->fresh()->toArray(),
+        ]);
 
         Log::info('Salary adjustment updated', [
             'adjustment_id' => $salaryAdjustment->id,
@@ -184,10 +207,21 @@ class SalaryAdjustmentController extends Controller
             ], 422);
         }
 
+        $adjustmentData = $salaryAdjustment->toArray();
         $salaryAdjustment->delete();
 
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'module' => 'salary_adjustments',
+            'action' => 'delete_adjustment',
+            'description' => "Salary adjustment #{$adjustmentData['id']} deleted",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $adjustmentData,
+        ]);
+
         Log::info('Salary adjustment deleted', [
-            'adjustment_id' => $salaryAdjustment->id,
+            'adjustment_id' => $adjustmentData['id'],
             'deleted_by' => Auth::id(),
         ]);
 
@@ -227,6 +261,15 @@ class SalaryAdjustmentController extends Controller
 
         $created = [];
         foreach ($validated['adjustments'] as $adjustmentData) {
+            // Map frontend field names to model field names
+            if (isset($adjustmentData['type'])) {
+                $adjustmentData['adjustment_type'] = $adjustmentData['type'];
+                unset($adjustmentData['type']);
+            }
+            if (isset($adjustmentData['reference_period'])) {
+                $adjustmentData['description'] = $adjustmentData['reference_period'];
+                unset($adjustmentData['reference_period']);
+            }
             $adjustmentData['created_by'] = Auth::id();
             $adjustmentData['status'] = 'pending';
             $created[] = SalaryAdjustment::create($adjustmentData);

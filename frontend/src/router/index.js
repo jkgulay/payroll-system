@@ -144,7 +144,10 @@ const router = createRouter({
             import(
               /* webpackChunkName: "projects" */ "@/views/projects/ProjectManagementView.vue"
             ),
-          meta: { title: "Project Management", roles: ["admin", "payrollist"] },
+          meta: {
+            title: "Department Management",
+            roles: ["admin", "payrollist"],
+          },
         },
         {
           path: "attendance",
@@ -255,7 +258,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "reports" */ "@/views/reports/ReportsView.vue"
             ),
-          meta: { title: "Reports" },
+          meta: { title: "Reports", roles: ["admin", "hr", "payrollist"] },
         },
         {
           path: "reports/government-contributions",

@@ -510,7 +510,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { format, parseISO } from "date-fns";
+import { formatDate, formatDateTime } from "@/utils/formatters";
 import leaveService from "@/services/leaveService";
 
 // State
@@ -678,24 +678,6 @@ const confirmReject = async () => {
     );
   } finally {
     rejecting.value = false;
-  }
-};
-
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  try {
-    return format(parseISO(date), "MMM dd, yyyy");
-  } catch {
-    return date;
-  }
-};
-
-const formatDateTime = (date) => {
-  if (!date) return "N/A";
-  try {
-    return format(parseISO(date), "MMM dd, yyyy hh:mm a");
-  } catch {
-    return date;
   }
 };
 

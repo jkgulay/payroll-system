@@ -929,6 +929,8 @@ import { useToast } from "vue-toastification";
 import deductionService from "@/services/deductionService";
 import api from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
+import { formatDate, formatNumber } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 const authStore = useAuthStore();
@@ -1124,7 +1126,7 @@ const fetchDeductions = async () => {
     deductions.value = response.data.data || response.data;
   } catch (error) {
     toast.error("Failed to load deductions");
-    console.error(error);
+    devLog.error(error);
   } finally {
     loading.value = false;
   }
@@ -1158,7 +1160,7 @@ const fetchEmployees = async () => {
       employees.value = [];
     }
   } catch (error) {
-    console.error("Failed to load employees:", error);
+    devLog.error("Failed to load employees:", error);
     toast.error("Failed to load employees");
   }
 };
@@ -1170,7 +1172,7 @@ const fetchDepartments = async () => {
     const response = await deductionService.getDepartments();
     departments.value = response.data;
   } catch (error) {
-    console.error("Failed to load departments:", error);
+    devLog.error("Failed to load departments:", error);
     toast.error("Failed to load departments");
   } finally {
     loadingDepartments.value = false;
@@ -1184,7 +1186,7 @@ const fetchPositions = async () => {
     const response = await deductionService.getPositions();
     positions.value = response.data;
   } catch (error) {
-    console.error("Failed to load positions:", error);
+    devLog.error("Failed to load positions:", error);
     toast.error("Failed to load positions");
   } finally {
     loadingPositions.value = false;
@@ -1207,7 +1209,7 @@ const loadEmployeesByFilter = async () => {
     const response = await deductionService.getEmployeesByFilter(filters);
     affectedEmployeesCount.value = response.data.count || 0;
   } catch (error) {
-    console.error("Failed to load employees by filter:", error);
+    devLog.error("Failed to load employees by filter:", error);
     affectedEmployeesCount.value = 0;
   }
 };
@@ -1301,7 +1303,7 @@ const saveDeduction = async () => {
     fetchDeductions();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to save deduction");
-    console.error(error);
+    devLog.error(error);
   } finally {
     saving.value = false;
   }
@@ -1322,7 +1324,7 @@ const deleteDeduction = async () => {
     fetchDeductions();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to delete deduction");
-    console.error(error);
+    devLog.error(error);
   } finally {
     deleting.value = false;
   }
@@ -1347,14 +1349,6 @@ const clearFilters = () => {
 };
 
 // Formatters
-const formatNumber = (value) => {
-  if (!value) return "0.00";
-  return Number(value).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
 const formatDeductionType = (type) => {
   const types = {
     ppe: "PPE",
@@ -1389,15 +1383,6 @@ const normalizeDeductionType = (value) => {
 
 const formatStatus = (status) => {
   return status.charAt(0).toUpperCase() + status.slice(1);
-};
-
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  return new Date(date).toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 };
 
 const getInitials = (name) => {

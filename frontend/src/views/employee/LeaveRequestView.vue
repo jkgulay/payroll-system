@@ -454,6 +454,8 @@ import { ref, computed, onMounted } from "vue";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { useToast } from "vue-toastification";
 import leaveService from "@/services/leaveService";
+import { formatDate, formatDateTime } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -570,7 +572,7 @@ const loadLeaves = async () => {
     leaves.value = response.data || response;
   } catch (error) {
     toast.error("Failed to load leave requests");
-    console.error(error);
+    devLog.error(error);
   } finally {
     loading.value = false;
   }
@@ -582,7 +584,7 @@ const loadLeaveTypes = async () => {
     leaveTypes.value = response.data || response;
   } catch (error) {
     toast.error("Failed to load leave types");
-    console.error(error);
+    devLog.error(error);
   }
 };
 
@@ -591,7 +593,7 @@ const loadLeaveCredits = async () => {
     const response = await leaveService.getMyCredits();
     leaveCredits.value = response.leave_credits || [];
   } catch (error) {
-    console.error("Failed to load leave credits:", error);
+    devLog.error("Failed to load leave credits:", error);
   }
 };
 
@@ -641,7 +643,7 @@ const saveLeave = async () => {
     toast.error(
       error.response?.data?.message || "Failed to save leave request",
     );
-    console.error(error);
+    devLog.error(error);
   } finally {
     saving.value = false;
   }
@@ -679,27 +681,9 @@ const confirmDelete = async () => {
     loadLeaveCredits();
   } catch (error) {
     toast.error("Failed to delete leave request");
-    console.error(error);
+    devLog.error(error);
   } finally {
     deleting.value = false;
-  }
-};
-
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  try {
-    return format(parseISO(date), "MMM dd, yyyy");
-  } catch {
-    return date;
-  }
-};
-
-const formatDateTime = (date) => {
-  if (!date) return "N/A";
-  try {
-    return format(parseISO(date), "MMM dd, yyyy hh:mm a");
-  } catch {
-    return date;
   }
 };
 

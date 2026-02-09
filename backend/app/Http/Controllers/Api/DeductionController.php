@@ -335,6 +335,10 @@ class DeductionController extends Controller
             $newBalance = $deduction->balance - $validated['amount'];
             $newInstallmentsPaid = $deduction->installments_paid + 1;
 
+            // Capture old values BEFORE updating
+            $oldBalance = $deduction->balance;
+            $oldInstallmentsPaid = $deduction->installments_paid;
+
             $updateData = [
                 'installments_paid' => $newInstallmentsPaid,
                 'balance' => $newBalance,
@@ -354,7 +358,7 @@ class DeductionController extends Controller
                 'description' => "Installment payment for {$deduction->deduction_name}: ₱" . number_format($validated['amount'], 2),
                 'user_id' => auth()->id(),
                 'record_id' => $deduction->id,
-                'old_values' => json_encode(['balance' => $deduction->balance, 'installments_paid' => $deduction->installments_paid]),
+                'old_values' => json_encode(['balance' => $oldBalance, 'installments_paid' => $oldInstallmentsPaid]),
                 'new_values' => json_encode(['balance' => $newBalance, 'installments_paid' => $newInstallmentsPaid]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),

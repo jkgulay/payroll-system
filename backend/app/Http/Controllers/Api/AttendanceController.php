@@ -381,7 +381,7 @@ class AttendanceController extends Controller
             'employee' => $employee,
             'total_present' => Attendance::where('employee_id', $employeeId)->where('status', 'present')->count(),
             'total_absent' => Attendance::where('employee_id', $employeeId)->where('status', 'absent')->count(),
-            'total_late' => Attendance::where('employee_id', $employeeId)->where('status', 'late')->count(),
+            'total_late' => Attendance::where('employee_id', $employeeId)->where('status', 'present')->where('late_hours', '>', 0)->count(),
             'total_hours' => Attendance::where('employee_id', $employeeId)->sum('regular_hours'),
         ];
 
@@ -414,8 +414,8 @@ class AttendanceController extends Controller
             'total_records' => $attendances->count(),
             'total_present' => $attendances->where('status', 'present')->count(),
             'total_absent' => $attendances->where('status', 'absent')->count(),
-            'total_late' => $attendances->where('status', 'late')->count(),
-            'total_on_leave' => $attendances->where('status', 'on_leave')->count(),
+            'total_late' => $attendances->where('status', 'present')->filter(fn($a) => $a->late_hours > 0)->count(),
+            'total_on_leave' => $attendances->where('status', 'leave')->count(),
             'total_hours_worked' => $attendances->sum('regular_hours') + $attendances->sum('overtime_hours'),
             'total_regular_hours' => $attendances->sum('regular_hours'),
             'total_overtime_hours' => $attendances->sum('overtime_hours'),
@@ -507,8 +507,8 @@ class AttendanceController extends Controller
             // Check if employee is on leave
             if ($excludeOnLeave) {
                 $onLeave = $employee->leaves()
-                    ->where('start_date', '<=', $date)
-                    ->where('end_date', '>=', $date)
+                    ->where('leave_date_from', '<=', $date)
+                    ->where('leave_date_to', '>=', $date)
                     ->where('status', 'approved')
                     ->exists();
 

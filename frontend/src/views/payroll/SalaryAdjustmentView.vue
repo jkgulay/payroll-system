@@ -698,7 +698,8 @@ const resetForm = () => {
 };
 
 const saveAdjustment = async () => {
-  if (!formRef.value?.validate()) return;
+  const { valid } = await formRef.value.validate();
+  if (!valid) return;
 
   saving.value = true;
   try {

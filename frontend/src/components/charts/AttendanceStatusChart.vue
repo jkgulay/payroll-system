@@ -10,6 +10,7 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from "vue";
 import { Bar } from "vue-chartjs";
+import { devLog } from "@/utils/devLog";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -29,7 +30,7 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 const props = defineProps({
@@ -59,13 +60,13 @@ const chartData = computed(() => ({
       label: "Days",
       data: statusData.value.map((d) => d.value),
       backgroundColor: statusData.value.map(
-        (d) => statusColors[d.label] || "rgba(158, 158, 158, 0.8)"
+        (d) => statusColors[d.label] || "rgba(158, 158, 158, 0.8)",
       ),
       borderColor: statusData.value.map((d) =>
         (statusColors[d.label] || "rgba(158, 158, 158, 0.8)").replace(
           "0.8",
-          "1"
-        )
+          "1",
+        ),
       ),
       borderWidth: 2,
       borderRadius: 8,
@@ -119,12 +120,12 @@ const loadData = async () => {
       "/dashboard/attendance-status-distribution",
       {
         params: { period: props.period },
-      }
+      },
     );
     statusData.value = response.data;
     loaded.value = true;
   } catch (error) {
-    console.error("Error loading attendance status distribution:", error);
+    devLog.error("Error loading attendance status distribution:", error);
     toast.error("Failed to load attendance status distribution");
   }
 };

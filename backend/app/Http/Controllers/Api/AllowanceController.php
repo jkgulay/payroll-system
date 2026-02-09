@@ -4,10 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeAllowance;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class AllowanceController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('role:admin,hr')->only(['store', 'update', 'destroy']);
+    }
+
     public function index(Request $request)
     {
         $query = EmployeeAllowance::with('employee');
@@ -48,12 +54,27 @@ class AllowanceController extends Controller
 
         $allowance = EmployeeAllowance::create($validated);
 
-        return response()->json($allowance->load('employee'), 201);
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'allowances',
+            'action' => 'create_allowance',
+            'description' => "Allowance '{$allowance->allowance_name}' created for employee #{$allowance->employee_id}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'new_values' => $allowance->toArray(),
+        ]);
+
+        return response()->json([
+            'message' => 'Allowance created successfully',
+            'data' => $allowance->load('employee'),
+        ], 201);
     }
 
     public function show(EmployeeAllowance $allowance)
     {
-        return response()->json($allowance->load('employee'));
+        return response()->json([
+            'data' => $allowance->load('employee'),
+        ]);
     }
 
     public function update(Request $request, EmployeeAllowance $allowance)
@@ -70,14 +91,40 @@ class AllowanceController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
+        $oldValues = $allowance->toArray();
         $allowance->update($validated);
 
-        return response()->json($allowance->load('employee'));
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'allowances',
+            'action' => 'update_allowance',
+            'description' => "Allowance '{$allowance->allowance_name}' updated",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $oldValues,
+            'new_values' => $allowance->fresh()->toArray(),
+        ]);
+
+        return response()->json([
+            'message' => 'Allowance updated successfully',
+            'data' => $allowance->load('employee'),
+        ]);
     }
 
     public function destroy(EmployeeAllowance $allowance)
     {
+        $allowanceData = $allowance->toArray();
         $allowance->delete();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'allowances',
+            'action' => 'delete_allowance',
+            'description' => "Allowance '{$allowanceData['allowance_name']}' deleted",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $allowanceData,
+        ]);
 
         return response()->json(['message' => 'Allowance deleted successfully']);
     }

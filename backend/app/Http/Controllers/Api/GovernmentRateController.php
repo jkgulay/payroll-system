@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\GovernmentRate;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -56,6 +57,16 @@ class GovernmentRateController extends Controller
 
         $rate = GovernmentRate::create($validated);
 
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'government_rates',
+            'action' => 'create_rate',
+            'description' => "Government rate '{$rate->name}' ({$rate->type}) created",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'new_values' => $rate->toArray(),
+        ]);
+
         return response()->json($rate, 201);
     }
 
@@ -86,14 +97,38 @@ class GovernmentRateController extends Controller
 
         $validated['updated_by'] = auth()->id();
 
+        $oldValues = $governmentRate->toArray();
         $governmentRate->update($validated);
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'government_rates',
+            'action' => 'update_rate',
+            'description' => "Government rate '{$governmentRate->name}' ({$governmentRate->type}) updated",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $oldValues,
+            'new_values' => $governmentRate->fresh()->toArray(),
+        ]);
 
         return response()->json($governmentRate);
     }
 
     public function destroy(GovernmentRate $governmentRate): JsonResponse
     {
-        $governmentRate->forceDelete(); // Permanent delete
+        $rateData = $governmentRate->toArray();
+        $governmentRate->forceDelete();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'government_rates',
+            'action' => 'delete_rate',
+            'description' => "Government rate '{$rateData['name']}' ({$rateData['type']}) deleted",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $rateData,
+        ]);
+
         return response()->json(['message' => 'Government rate deleted successfully']);
     }
 
@@ -105,6 +140,16 @@ class GovernmentRateController extends Controller
         ]);
 
         GovernmentRate::whereIn('id', $validated['ids'])->forceDelete();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'government_rates',
+            'action' => 'bulk_delete_rates',
+            'description' => 'Bulk deleted ' . count($validated['ids']) . ' government rate(s)',
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => ['deleted_ids' => $validated['ids']],
+        ]);
 
         return response()->json([
             'message' => 'Successfully deleted ' . count($validated['ids']) . ' rate(s)'
