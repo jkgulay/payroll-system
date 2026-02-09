@@ -142,22 +142,6 @@ const attendanceService = {
     const response = await api.post("/attendance/clear-device-logs");
     return response.data;
   },
-
-  /**
-   * Fetch attendance from Yunatt Cloud API
-   */
-  async fetchFromYunatt(params) {
-    const response = await api.post("/attendance/fetch-from-yunatt", params);
-    return response.data;
-  },
-
-  /**
-   * Test Yunatt API connection
-   */
-  async testYunattConnection() {
-    const response = await api.get("/attendance/test-yunatt-connection");
-    return response.data;
-  },
 };
 
 export default attendanceService;

@@ -180,6 +180,7 @@
 import { ref, reactive, watch } from "vue";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 const props = defineProps({
   modelValue: {
@@ -266,7 +267,7 @@ async function handlePasswordChange() {
     // Close dialog
     showDialog.value = false;
   } catch (error) {
-    console.error("Password change error:", error);
+    devLog.error("Password change error:", error);
 
     if (error.response?.status === 422) {
       // Validation errors

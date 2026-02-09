@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import chatService from '@/services/chatService';
+import { devLog } from "@/utils/devLog";
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
@@ -80,7 +81,7 @@ export const useChatStore = defineStore('chat', {
           });
         }
       } catch (error) {
-        console.error('Chat error:', error);
+        devLog.error('Chat error:', error);
         
         let errorMessage = 'I apologize for the inconvenience. ';
         
@@ -116,7 +117,7 @@ export const useChatStore = defineStore('chat', {
           }
         }
       } catch (error) {
-        console.error('Failed to load suggestions:', error);
+        devLog.error('Failed to load suggestions:', error);
       }
     },
 
@@ -125,7 +126,7 @@ export const useChatStore = defineStore('chat', {
         await chatService.clearHistory();
         this.messages = [];
       } catch (error) {
-        console.error('Failed to clear history:', error);
+        devLog.error('Failed to clear history:', error);
       }
     },
 
@@ -136,7 +137,7 @@ export const useChatStore = defineStore('chat', {
         try {
           this.messages = JSON.parse(saved);
         } catch (error) {
-          console.error('Failed to restore messages:', error);
+          devLog.error('Failed to restore messages:', error);
         }
       }
     },
@@ -146,7 +147,7 @@ export const useChatStore = defineStore('chat', {
       try {
         localStorage.setItem('chat_messages', JSON.stringify(this.messages));
       } catch (error) {
-        console.error('Failed to save messages:', error);
+        devLog.error('Failed to save messages:', error);
       }
     },
   },

@@ -5,11 +5,7 @@ namespace App\Services;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\Employee;
-use App\Models\Attendance;
-use App\Models\EmployeeAllowance;
 use App\Models\MealAllowanceItem;
-use App\Models\EmployeeLoan;
-use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\Holiday;
 use App\Models\GovernmentRate;
@@ -76,7 +72,8 @@ class PayrollService
             $totalGross = 0;
             $totalDeductions = 0;
             $totalNet = 0;
-            $payrollItems = []; // OPTIMIZATION: Collect items for batch insert
+            $payrollItems = []; // Collect items for insert
+            $allAdjustmentIds = []; // Collect salary adjustment IDs to mark after successful insert
 
             foreach ($employees as $employee) {
                 $item = $this->calculatePayrollItem($payroll, $employee, $holidays);
@@ -87,17 +84,35 @@ class PayrollService
                     continue;
                 }
 
-                // OPTIMIZATION: Collect items instead of individual inserts
+                // Collect items instead of individual inserts
                 $payrollItems[] = $item;
+
+                // Collect adjustment IDs from this item
+                if (!empty($item['_adjustment_ids'])) {
+                    $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
+                }
 
                 $totalGross += $item['gross_pay'];
                 $totalDeductions += $item['total_deductions'];
                 $totalNet += $item['net_pay'];
             }
 
-            // OPTIMIZATION: Batch insert all payroll items at once (1 query vs 100+)
-            if (!empty($payrollItems)) {
-                PayrollItem::insert($payrollItems);
+            // Insert payroll items using Eloquent create() to respect model casts
+            // (allowances_breakdown and deductions_breakdown are cast to array and need JSON encoding)
+            foreach ($payrollItems as $item) {
+                // Remove internal tracking field before creating
+                unset($item['_adjustment_ids']);
+                PayrollItem::create($item);
+            }
+
+            // Mark salary adjustments as applied AFTER successful inserts
+            if (!empty($allAdjustmentIds)) {
+                SalaryAdjustment::whereIn('id', $allAdjustmentIds)
+                    ->update([
+                        'status' => 'applied',
+                        'payroll_id' => $payroll->id,
+                        'applied_date' => now(),
+                    ]);
             }
 
             $payroll->update([
@@ -165,9 +180,13 @@ class PayrollService
                             'amount'
                         );
                 },
-                // Pending salary adjustments
-                'salaryAdjustments' => function ($q) {
+                // Pending salary adjustments (only those effective within or before the pay period)
+                'salaryAdjustments' => function ($q) use ($payroll) {
                     $q->where('status', 'pending')
+                        ->where(function ($query) use ($payroll) {
+                            $query->whereNull('effective_date')
+                                ->orWhere('effective_date', '<=', $payroll->period_end);
+                        })
                         ->select('id', 'employee_id', 'adjustment_type', 'amount');
                 },
                 // Active loans with balance
@@ -221,6 +240,7 @@ class PayrollService
                 'first_name',
                 'last_name',
                 'basic_salary',
+                'salary_type',
                 'custom_pay_rate',
                 'position_id',
                 'has_sss',
@@ -247,7 +267,7 @@ class PayrollService
                 ->keyBy(function ($holiday) {
                     return Carbon::parse($holiday->date)->format('Y-m-d');
                 })
-                ->toArray();
+                ->all();
         });
     }
 
@@ -273,7 +293,8 @@ class PayrollService
 
         // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
         $rate = $employee->getBasicSalary();
-        $hourlyRate = $rate / 8; // Assuming 8-hour workday
+        $standardHours = config('payroll.standard_hours_per_day', 8);
+        $hourlyRate = $rate / $standardHours;
 
         // Process each attendance record
         foreach ($attendances as $attendance) {
@@ -295,7 +316,7 @@ class PayrollService
                 // This is a holiday with attendance - calculate holiday pay
                 $hoursWorked = $attendance->regular_hours ?? 8; // Default to 8 hours if not specified
                 $payMultiplier = $holiday->getPayMultiplier($attendanceDate);
-                $dayHolidayPay = $rate * $payMultiplier * ($hoursWorked / 8);
+                $dayHolidayPay = $rate * $payMultiplier * ($hoursWorked / $standardHours);
 
                 // Calculate holiday pay for the hours worked
                 $holidayPay += $dayHolidayPay;
@@ -439,7 +460,7 @@ class PayrollService
         }
 
         // Calculate undertime deduction
-        // Formula: (rate / 8) * undertime_hours
+        // Formula: (rate / standard_hours) * undertime_hours
         $undertimeDeduction = $hourlyRate * $totalUndertimeHours;
 
         // Calculate gross pay (include holiday pay, overtime, salary adjustment)
@@ -489,18 +510,22 @@ class PayrollService
         $loanDeduction = 0;
         foreach ($activeLoans as $loan) {
             // Determine payment amount based on payroll period and loan payment frequency
+            $amortization = 0;
             if ($loan->payment_frequency === 'semi_monthly') {
                 // Semi-monthly loans: use semi_monthly_amortization for semi-monthly payrolls
                 // For monthly payrolls, use monthly_amortization (2 payments combined)
-                $loanDeduction += $isSemiMonthly
+                $amortization = $isSemiMonthly
                     ? ($loan->semi_monthly_amortization ?? 0)
                     : ($loan->monthly_amortization ?? 0);
             } else {
                 // Monthly loans: only deduct on monthly payrolls
                 if (!$isSemiMonthly) {
-                    $loanDeduction += $loan->monthly_amortization ?? 0;
+                    $amortization = $loan->monthly_amortization ?? 0;
                 }
             }
+
+            // Cap the deduction to the remaining loan balance
+            $loanDeduction += min($amortization, $loan->balance);
         }
 
         // Employee savings
@@ -543,16 +568,6 @@ class PayrollService
         // Net pay = Gross pay - Total deductions
         $netPay = $grossPay - $totalDeductions;
 
-        // Mark salary adjustments as applied
-        if (!empty($adjustmentIds)) {
-            SalaryAdjustment::whereIn('id', $adjustmentIds)
-                ->update([
-                    'status' => 'applied',
-                    'payroll_id' => $payroll->id,
-                    'applied_date' => now(),
-                ]);
-        }
-
         return [
             'payroll_id' => $payroll->id,
             'employee_id' => $employee->id,
@@ -585,6 +600,7 @@ class PayrollService
             'other_deductions' => $otherDeductions,
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
+            '_adjustment_ids' => $adjustmentIds, // Internal: collected by processPayroll
         ];
     }
 

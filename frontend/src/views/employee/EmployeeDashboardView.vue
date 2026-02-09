@@ -147,7 +147,9 @@
                   <span class="table-time">{{ item.time_out || "N/A" }}</span>
                 </template>
                 <template v-slot:item.regular_hours="{ item }">
-                  <span class="table-hours">{{ formatHoursDisplay(calculateHours(item)) }}</span>
+                  <span class="table-hours">{{
+                    formatHoursDisplay(calculateHours(item))
+                  }}</span>
                 </template>
               </v-data-table>
             </div>
@@ -332,6 +334,8 @@ import { useRouter } from "vue-router";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { useAuthStore } from "@/stores/auth";
+import { formatDate, formatNumber } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const router = useRouter();
 const toast = useToast();
@@ -441,7 +445,7 @@ async function fetchDashboardData() {
     currentPayslip.value = response.data.current_payslip;
     payslipHistory.value = response.data.payslip_history || [];
   } catch (error) {
-    console.error("Error loading dashboard:", error);
+    devLog.error("Error loading dashboard:", error);
     toast.error("Failed to load dashboard data");
   }
 }
@@ -490,7 +494,7 @@ async function downloadPayslip(payslipId, format) {
 
     toast.success(`Payslip downloaded successfully`);
   } catch (error) {
-    console.error("Error downloading payslip:", error);
+    devLog.error("Error downloading payslip:", error);
     toast.error("Failed to download payslip");
   } finally {
     downloading.value = false;
@@ -503,21 +507,6 @@ function downloadCurrentPayslip() {
   } else {
     toast.warning("No current payslip available");
   }
-}
-
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatNumber(value) {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value || 0);
 }
 
 function getStatusColor(status) {
@@ -547,7 +536,7 @@ function calculateHours(record) {
       const hours = (timeOut - timeIn) / (1000 * 60 * 60);
       return hours > 0 ? hours : 0;
     } catch (error) {
-      console.error("Error calculating hours:", error);
+      devLog.error("Error calculating hours:", error);
       return 0;
     }
   }
@@ -557,11 +546,11 @@ function calculateHours(record) {
 
 function formatHoursDisplay(hours) {
   if (!hours || hours <= 0) return "0h 0m";
-  
+
   const totalMinutes = Math.round(hours * 60);
   const hrs = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-  
+
   if (hrs === 0) {
     return `${mins}m`;
   } else if (mins === 0) {

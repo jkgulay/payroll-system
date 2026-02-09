@@ -261,6 +261,7 @@ import { useToast } from "vue-toastification";
 import TwoFactorVerify from "@/components/TwoFactorVerify.vue";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog.vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 const router = useRouter();
 const route = useRoute();
@@ -335,10 +336,10 @@ async function handleLogin() {
     const redirect = route.query.redirect || "/";
     router.push(redirect);
   } catch (error) {
-    console.error("Login error:", error);
-    console.error("Login error response:", error.response?.data);
-    console.error("Login validation errors:", error.response?.data?.errors);
-    console.error("Login credentials sent:", {
+    devLog.error("Login error:", error);
+    devLog.error("Login error response:", error.response?.data);
+    devLog.error("Login validation errors:", error.response?.data?.errors);
+    devLog.error("Login credentials sent:", {
       email: form.email,
       role: form.role,
     });
@@ -410,7 +411,7 @@ async function handleTwoFactorVerified({ userId, code }) {
       await router.push(redirectPath);
     }
   } catch (error) {
-    console.error("2FA verification error:", error);
+    devLog.error("2FA verification error:", error);
 
     if (error.response?.status === 401) {
       twoFactorVerifyRef.value.setError(

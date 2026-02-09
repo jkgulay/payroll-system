@@ -21,7 +21,7 @@
           >
             <v-radio label="All Employees" value="all"></v-radio>
             <v-radio label="By Employee" value="employee"></v-radio>
-            <v-radio label="By Project/Location" value="project"></v-radio>
+            <v-radio label="By Department/Location" value="project"></v-radio>
           </v-radio-group>
 
           <!-- Employee Filter -->
@@ -162,6 +162,7 @@
 import { ref, watch, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -236,8 +237,8 @@ const loadData = async () => {
     employees.value = empResponse.data.data || empResponse.data;
     projects.value = projResponse.data.data || projResponse.data;
   } catch (error) {
-    console.error("Error loading data:", error);
-    toast.error("Failed to load employees and projects");
+    devLog.error("Error loading data:", error);
+    toast.error("Failed to load employees and departments");
   }
 };
 
@@ -318,7 +319,7 @@ const exportPDF = async () => {
     emit("exported");
     closeDialog();
   } catch (error) {
-    console.error("Export error:", error);
+    devLog.error("Export error:", error);
     const message = error.response?.data?.message || "Failed to export PDF";
     toast.error(message);
   } finally {

@@ -321,7 +321,6 @@ const approveAttendance = async (attendance) => {
     const message =
       error.response?.data?.message || "Failed to approve attendance";
     toast.error(message);
-    console.error("Approval error:", error.response?.data);
   }
 };
 
@@ -383,7 +382,7 @@ onMounted(async () => {
       const response = await attendanceService.getPendingApprovals();
       pendingCount.value = response.total || 0;
     } catch (error) {
-      console.error("Failed to load pending count:", error);
+      // Silently fail - pending count is non-critical
     }
   }
 });
@@ -395,127 +394,9 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-// Modern Page Header
-.page-header {
-  margin-bottom: 28px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-
-  @media (max-width: 960px) {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-.page-title-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-}
-
-.page-icon-badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-  flex-shrink: 0;
-
-  .v-icon {
-    color: #ffffff !important;
-  }
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #001f3d;
-  margin: 0 0 4px 0;
-  letter-spacing: -0.5px;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: rgba(0, 31, 61, 0.6);
-  margin: 0;
-}
-
-// Action Buttons
-.action-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-
-  @media (max-width: 960px) {
-    width: 100%;
-  }
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  white-space: nowrap;
-
-  .v-icon {
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
-  }
-
-  &.action-btn-primary {
-    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-
-    .v-icon {
-      color: #ffffff !important;
-    }
-  }
-
-  &.action-btn-secondary {
-    background: rgba(237, 152, 95, 0.1);
-    color: #ed985f;
-    border: 1px solid rgba(237, 152, 95, 0.2);
-
-    .v-icon {
-      color: #ed985f !important;
-    }
-
-    &:hover {
-      background: rgba(237, 152, 95, 0.15);
-      border-color: rgba(237, 152, 95, 0.3);
-    }
-  }
-}
-
-// Modern Card & Tabs
+// Override shared modern-card padding for tab layout
 .modern-card {
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
+  padding: 0;
 }
 
 .tab-container {

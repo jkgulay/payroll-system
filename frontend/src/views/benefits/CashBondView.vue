@@ -719,8 +719,12 @@
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
+import { formatDate, formatNumber } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const authStore = useAuthStore();
+const { confirm: confirmDialog } = useConfirmDialog();
 const userRole = computed(() => authStore.user?.role);
 
 // Data
@@ -841,7 +845,7 @@ const fetchEmployees = async () => {
     });
     employees.value = response.data.data;
   } catch (error) {
-    console.error("Failed to fetch employees:", error);
+    devLog.error("Failed to fetch employees:", error);
   }
 };
 
@@ -1014,7 +1018,7 @@ const viewDetails = (bond) => {
 
 const confirmDelete = async (bond) => {
   if (
-    confirm(
+    await confirmDialog(
       `Are you sure you want to delete this cash bond for ${bond.employee.full_name}?`,
     )
   ) {
@@ -1056,22 +1060,6 @@ const getStatusColor = (status) => {
 
 const formatStatus = (status) => {
   return status.charAt(0).toUpperCase() + status.slice(1);
-};
-
-const formatNumber = (value) => {
-  return parseFloat(value || 0).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  return new Date(date).toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 };
 
 const getInitials = (name) => {

@@ -95,6 +95,7 @@ import { ref, onMounted, watch, onUnmounted } from "vue";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
+import { formatDate } from "@/utils/formatters";
 
 const emit = defineEmits(["approve", "reject", "update-count"]);
 const toast = useToast();
@@ -126,13 +127,7 @@ const loadPending = async () => {
   }
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+// formatDate imported from @/utils/formatters
 
 const getStatusColor = (status) => {
   const colors = {

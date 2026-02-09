@@ -389,11 +389,15 @@
                 </v-autocomplete>
               </v-col>
 
-              <!-- Password fields only shown in Edit mode -->
-              <v-col cols="12" md="6" v-if="isEditMode">
+              <!-- Password fields -->
+              <v-col cols="12" md="6">
                 <label class="form-label">
                   <v-icon size="small" color="#ed985f">mdi-lock</v-icon>
-                  Password (Leave blank to keep current)
+                  {{
+                    isEditMode
+                      ? "Password (Leave blank to keep current)"
+                      : "Password"
+                  }}
                 </label>
                 <v-text-field
                   v-model="userForm.password"
@@ -405,7 +409,7 @@
                 ></v-text-field>
               </v-col>
 
-              <v-col cols="12" md="6" v-if="isEditMode">
+              <v-col cols="12" md="6">
                 <label class="form-label">
                   <v-icon size="small" color="#ed985f">mdi-lock-check</v-icon>
                   Confirm Password
@@ -422,7 +426,9 @@
                           (v) =>
                             v === userForm.password || 'Passwords must match',
                         ]
-                      : []
+                      : isEditMode
+                        ? []
+                        : [(v) => !!v || 'Please confirm password']
                   "
                 ></v-text-field>
               </v-col>
@@ -701,6 +707,8 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import { formatDateTime as formatDate } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const router = useRouter();
 const toast = useToast();
@@ -826,16 +834,6 @@ function getEmployeeName(employee) {
   return `${employee.first_name} ${employee.middle_name || ""} ${employee.last_name}`.trim();
 }
 
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function getUserInitials(user) {
   if (user.employee) {
     // Get initials from employee name
@@ -881,7 +879,7 @@ async function fetchUsers() {
     const response = await api.get("/users");
     users.value = response.data;
   } catch (error) {
-    console.error("Error fetching users:", error);
+    devLog.error("Error fetching users:", error);
     toast.error("Failed to load users");
   } finally {
     loading.value = false;
@@ -893,7 +891,7 @@ async function fetchStats() {
     const response = await api.get("/users/stats");
     stats.value = response.data;
   } catch (error) {
-    console.error("Error fetching stats:", error);
+    devLog.error("Error fetching stats:", error);
   }
 }
 
@@ -902,7 +900,7 @@ async function fetchAvailableEmployees() {
     const response = await api.get("/users/available-employees");
     availableEmployees.value = response.data;
   } catch (error) {
-    console.error("Error fetching available employees:", error);
+    devLog.error("Error fetching available employees:", error);
   }
 }
 
@@ -990,7 +988,7 @@ async function saveUser() {
       fetchStats();
     }
   } catch (error) {
-    console.error("Error saving user:", error);
+    devLog.error("Error saving user:", error);
     toast.error(error.response?.data?.message || "Failed to save user");
   } finally {
     saving.value = false;
@@ -1006,7 +1004,7 @@ async function toggleUserStatus(user) {
     fetchUsers();
     fetchStats();
   } catch (error) {
-    console.error("Error toggling user status:", error);
+    devLog.error("Error toggling user status:", error);
     toast.error(
       error.response?.data?.message || "Failed to update user status",
     );
@@ -1028,7 +1026,7 @@ async function deleteUser() {
     fetchUsers();
     fetchStats();
   } catch (error) {
-    console.error("Error deleting user:", error);
+    devLog.error("Error deleting user:", error);
     toast.error(error.response?.data?.message || "Failed to delete user");
   } finally {
     deleting.value = false;
@@ -1065,7 +1063,6 @@ watch(
       const employee = availableEmployees.value.find(
         (e) => e.id === newEmployeeId,
       );
-      console.log("Selected employee:", employee);
       if (employee) {
         // Auto-fill full name
         userForm.value.full_name = employee.full_name;
@@ -1102,6 +1099,8 @@ onMounted(() => {
 .header-content {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 16px;
 }
 

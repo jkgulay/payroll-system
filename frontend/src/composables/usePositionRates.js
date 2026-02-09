@@ -1,5 +1,6 @@
 import { ref, computed } from "vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 // Shared reactive position rates from database
 const positionRates = ref([]);
@@ -21,7 +22,7 @@ export function usePositionRates() {
       positionRates.value = response.data || [];
       loaded.value = true;
     } catch (error) {
-      console.error("Error loading position rates:", error);
+      devLog.error("Error loading position rates:", error);
       positionRates.value = [];
     } finally {
       loading.value = false;
@@ -55,7 +56,7 @@ export function usePositionRates() {
       positionRates.value.push(response.data.data);
       return response.data.data;
     } catch (error) {
-      console.error("Error adding position:", error);
+      devLog.error("Error adding position:", error);
       throw error;
     }
   };
@@ -70,7 +71,7 @@ export function usePositionRates() {
       }
       return response.data.data;
     } catch (error) {
-      console.error("Error updating position:", error);
+      devLog.error("Error updating position:", error);
       throw error;
     }
   };
@@ -84,7 +85,7 @@ export function usePositionRates() {
         positionRates.value.splice(index, 1);
       }
     } catch (error) {
-      console.error("Error deleting position:", error);
+      devLog.error("Error deleting position:", error);
       throw error;
     }
   };
@@ -105,7 +106,7 @@ export function usePositionRates() {
       }
       return response.data;
     } catch (error) {
-      console.error("Error bulk updating employees:", error);
+      devLog.error("Error bulk updating employees:", error);
       throw error;
     }
   };

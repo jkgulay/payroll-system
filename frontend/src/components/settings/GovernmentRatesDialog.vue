@@ -158,6 +158,8 @@ import api from "@/services/api";
 import RateTablePanel from "./RateTablePanel.vue";
 import RateFormDialog from "./RateFormDialog.vue";
 import EmployeeContributionsTab from "./EmployeeContributionsTab.vue";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const props = defineProps({
   modelValue: {
@@ -168,6 +170,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue"]);
 const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const activeTab = ref("employees");
 const formDialog = ref(false);
@@ -218,7 +221,7 @@ const loadRates = async () => {
       tax: allRates.filter((r) => r.type === "tax"),
     };
   } catch (error) {
-    console.error("Failed to load rates:", error);
+    devLog.error("Failed to load rates:", error);
     toast.error("Failed to load government rates");
   } finally {
     loading.value = false;
@@ -250,7 +253,7 @@ const saveRate = async (rateData) => {
     formDialog.value = false;
     await loadRates();
   } catch (error) {
-    console.error("Failed to save rate:", error);
+    devLog.error("Failed to save rate:", error);
     const message = error.response?.data?.message || "Failed to save rate";
     const errors = error.response?.data?.errors;
     if (errors) {
@@ -264,9 +267,9 @@ const saveRate = async (rateData) => {
 
 const deleteRate = async (rate) => {
   if (
-    !confirm(
+    !(await confirmDialog(
       `Are you sure you want to delete this rate? This action cannot be undone.`,
-    )
+    ))
   ) {
     return;
   }
@@ -276,7 +279,7 @@ const deleteRate = async (rate) => {
     toast.success("Rate deleted successfully");
     loadRates();
   } catch (error) {
-    console.error("Failed to delete rate:", error);
+    devLog.error("Failed to delete rate:", error);
     toast.error("Failed to delete rate");
   }
 };
@@ -290,7 +293,7 @@ const toggleActive = async (rate) => {
     toast.success(`Rate ${rate.is_active ? "deactivated" : "activated"}`);
     await loadRates();
   } catch (error) {
-    console.error("Failed to toggle rate:", error);
+    devLog.error("Failed to toggle rate:", error);
     toast.error("Failed to update rate status");
   }
 };
@@ -304,9 +307,9 @@ const clearAllRates = async () => {
   }
 
   if (
-    !confirm(
+    !(await confirmDialog(
       `Are you sure you want to delete ALL ${totalRates} government rates? This action cannot be undone.`,
-    )
+    ))
   ) {
     return;
   }
@@ -319,7 +322,7 @@ const clearAllRates = async () => {
     toast.success(`Successfully deleted ${allIds.length} rate(s)`);
     await loadRates();
   } catch (error) {
-    console.error("Failed to clear rates:", error);
+    devLog.error("Failed to clear rates:", error);
     const message = error.response?.data?.message || "Failed to clear rates";
     toast.error(message);
   }
@@ -341,6 +344,7 @@ const clearAllRates = async () => {
 .header-content {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 16px;
   width: 100%;
 }

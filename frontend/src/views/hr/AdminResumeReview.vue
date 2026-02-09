@@ -226,7 +226,8 @@
                   <h3 class="text-h6 mb-2">Applicant Information</h3>
                   <v-row dense>
                     <v-col cols="12" sm="6">
-                      <strong>Name:</strong> {{ selectedResume.first_name }} {{ selectedResume.last_name }}
+                      <strong>Name:</strong> {{ selectedResume.first_name }}
+                      {{ selectedResume.last_name }}
                     </v-col>
                     <v-col cols="12" sm="6">
                       <strong>Email:</strong> {{ selectedResume.email }}
@@ -235,7 +236,8 @@
                       <strong>Phone:</strong> {{ selectedResume.phone }}
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <strong>Position Applied:</strong> {{ selectedResume.position_applied }}
+                      <strong>Position Applied:</strong>
+                      {{ selectedResume.position_applied }}
                     </v-col>
                     <v-col v-if="selectedResume.notes" cols="12">
                       <strong>Notes:</strong> {{ selectedResume.notes }}
@@ -614,7 +616,8 @@ import { ref, computed, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import { resumeService } from "@/services/resumeService";
 import api from "@/services/api";
-import { format } from "date-fns";
+import { formatDateTime as formatDate } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -678,7 +681,7 @@ async function fetchResumes() {
     }
   } catch (error) {
     toast.error("Failed to fetch resumes");
-    console.error(error);
+    devLog.error(error);
   } finally {
     loading.value = false;
   }
@@ -705,7 +708,7 @@ async function downloadResume(resume) {
     toast.success("Resume downloaded successfully");
   } catch (error) {
     toast.error("Failed to download resume");
-    console.error(error);
+    devLog.error(error);
   }
 }
 
@@ -742,7 +745,7 @@ async function approveResume() {
     }
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to approve resume");
-    console.error(error);
+    devLog.error(error);
   } finally {
     processing.value = false;
   }
@@ -767,7 +770,7 @@ async function rejectResume() {
     }
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to reject resume");
-    console.error(error);
+    devLog.error(error);
   } finally {
     processing.value = false;
   }
@@ -803,7 +806,7 @@ async function fetchApplicationDetails(applicationId) {
     applicationToReview.value = response.data;
   } catch (error) {
     toast.error("Failed to fetch application details");
-    console.error(error);
+    devLog.error(error);
   }
 }
 
@@ -829,7 +832,7 @@ async function approveApplication() {
     toast.error(
       error.response?.data?.message || "Failed to approve application",
     );
-    console.error(error);
+    devLog.error(error);
   } finally {
     processing.value = false;
   }
@@ -855,7 +858,7 @@ async function rejectApplication() {
     toast.error(
       error.response?.data?.message || "Failed to reject application",
     );
-    console.error(error);
+    devLog.error(error);
   } finally {
     processing.value = false;
   }
@@ -896,10 +899,6 @@ function formatFileSize(bytes) {
   const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
-}
-
-function formatDate(dateString) {
-  return format(new Date(dateString), "MMM dd, yyyy hh:mm a");
 }
 </script>
 
@@ -1065,4 +1064,3 @@ function formatDate(dateString) {
   padding: 24px;
 }
 </style>
-

@@ -119,7 +119,7 @@
                   <v-icon size="18">mdi-account-hard-hat</v-icon>
                 </div>
                 <div>
-                  <div class="info-label">Project Head</div>
+                  <div class="info-label">Department Head</div>
                   <div class="info-value">
                     {{
                       project.head_employee
@@ -946,6 +946,10 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
+
+const { confirm: confirmDialog } = useConfirmDialog();
 
 // State
 const loading = ref(false);
@@ -1053,8 +1057,8 @@ const fetchProjects = async () => {
     const response = await api.get("/projects");
     projects.value = response.data;
   } catch (error) {
-    showSnackbar("Failed to load projects", "error");
-    console.error("Error fetching projects:", error);
+    showSnackbar("Failed to load departments", "error");
+    devLog.error("Error fetching projects:", error);
   } finally {
     loading.value = false;
   }
@@ -1073,7 +1077,7 @@ const fetchEmployees = async () => {
       full_name: `${emp.first_name} ${emp.last_name}`,
     }));
   } catch (error) {
-    console.error("Error fetching employees:", error);
+    devLog.error("Error fetching employees:", error);
   } finally {
     loadingEmployees.value = false;
   }
@@ -1131,17 +1135,18 @@ const saveProject = async () => {
     const payload = normalizeSchedulePayload(formData.value);
     if (editMode.value) {
       await api.put(`/projects/${formData.value.id}`, payload);
-      showSnackbar("Project updated successfully", "success");
+      showSnackbar("Department updated successfully", "success");
     } else {
       await api.post("/projects", payload);
-      showSnackbar("Project created successfully", "success");
+      showSnackbar("Department created successfully", "success");
     }
     await fetchProjects();
     closeDialog();
   } catch (error) {
-    const message = error.response?.data?.message || "Failed to save project";
+    const message =
+      error.response?.data?.message || "Failed to save department";
     showSnackbar(message, "error");
-    console.error("Error saving project:", error);
+    devLog.error("Error saving project:", error);
   } finally {
     saving.value = false;
   }
@@ -1209,7 +1214,7 @@ const executeAddEmployees = async () => {
     await fetchProjects();
   } catch (error) {
     showSnackbar("Failed to add employees", "error");
-    console.error("Error adding employees:", error);
+    devLog.error("Error adding employees:", error);
   } finally {
     addingEmployees.value = false;
   }
@@ -1227,7 +1232,9 @@ const markComplete = async (project) => {
   } else {
     // No employees, just mark complete
     if (
-      !confirm(`Are you sure you want to mark "${project.name}" as complete?`)
+      !(await confirmDialog(
+        `Are you sure you want to mark "${project.name}" as complete?`,
+      ))
     )
       return;
     await completeProject(project);
@@ -1240,8 +1247,8 @@ const fetchProjectEmployees = async (projectId) => {
     const response = await api.get(`/projects/${projectId}/employees`);
     projectEmployees.value = response.data;
   } catch (error) {
-    showSnackbar("Failed to load project employees", "error");
-    console.error("Error fetching project employees:", error);
+    showSnackbar("Failed to load department employees", "error");
+    devLog.error("Error fetching project employees:", error);
   } finally {
     loadingDetails.value = false;
   }
@@ -1256,9 +1263,9 @@ const closeTransferDialog = () => {
 
 const skipTransfer = async () => {
   if (
-    !confirm(
+    !(await confirmDialog(
       `Skip transfer and mark "${selectedProject.value?.name}" as complete?\n\nEmployees will remain in this department.`,
-    )
+    ))
   )
     return;
 
@@ -1274,9 +1281,9 @@ const executeTransfer = async () => {
     }
 
     if (
-      !confirm(
+      !(await confirmDialog(
         `Transfer all ${projectEmployees.value.length} employee(s) to the selected department?`,
-      )
+      ))
     )
       return;
 
@@ -1301,7 +1308,7 @@ const executeTransfer = async () => {
       await fetchProjects();
     } catch (error) {
       showSnackbar("Failed to transfer employees", "error");
-      console.error("Error transferring employees:", error);
+      devLog.error("Error transferring employees:", error);
     } finally {
       transferring.value = false;
     }
@@ -1320,9 +1327,9 @@ const executeTransfer = async () => {
     }
 
     if (
-      !confirm(
+      !(await confirmDialog(
         `Transfer ${transfers.length} employee(s) to their selected departments?`,
-      )
+      ))
     )
       return;
 
@@ -1342,7 +1349,7 @@ const executeTransfer = async () => {
       await fetchProjects();
     } catch (error) {
       showSnackbar("Failed to transfer employees", "error");
-      console.error("Error transferring employees:", error);
+      devLog.error("Error transferring employees:", error);
     } finally {
       transferring.value = false;
     }
@@ -1354,33 +1361,37 @@ const completeProject = async (project) => {
     await api.post(`/projects/${project.id}/mark-complete`);
     await fetchProjects();
   } catch (error) {
-    showSnackbar("Failed to update project status", "error");
-    console.error("Error marking project complete:", error);
+    showSnackbar("Failed to update department status", "error");
+    devLog.error("Error marking project complete:", error);
   }
 };
 
 const reactivateProject = async (project) => {
   try {
     await api.post(`/projects/${project.id}/reactivate`);
-    showSnackbar("Project reactivated", "success");
+    showSnackbar("Department reactivated", "success");
     await fetchProjects();
   } catch (error) {
-    showSnackbar("Failed to reactivate project", "error");
-    console.error("Error reactivating project:", error);
+    showSnackbar("Failed to reactivate department", "error");
+    devLog.error("Error reactivating project:", error);
   }
 };
 
 const deleteProject = async (project) => {
-  if (!confirm(`Are you sure you want to delete "${project.name}"?`)) return;
+  if (
+    !(await confirmDialog(`Are you sure you want to delete "${project.name}"?`))
+  )
+    return;
 
   try {
     await api.delete(`/projects/${project.id}`);
-    showSnackbar("Project deleted successfully", "success");
+    showSnackbar("Department deleted successfully", "success");
     await fetchProjects();
   } catch (error) {
-    const message = error.response?.data?.message || "Failed to delete project";
+    const message =
+      error.response?.data?.message || "Failed to delete department";
     showSnackbar(message, "error");
-    console.error("Error deleting project:", error);
+    devLog.error("Error deleting project:", error);
   }
 };
 

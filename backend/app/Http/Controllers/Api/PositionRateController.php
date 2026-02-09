@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PositionRate;
 use App\Models\Employee;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -33,12 +34,7 @@ class PositionRateController extends Controller
             $query->where('position_name', 'ILIKE', '%' . $request->search . '%');
         }
 
-        $positionRates = $query->orderBy('position_name')->get();
-
-        // Add employee count for each position
-        $positionRates->each(function ($rate) {
-            $rate->employee_count = $rate->getEmployeeCount();
-        });
+        $positionRates = $query->withCount('employees')->orderBy('position_name')->get();
 
         return response()->json($positionRates);
     }
@@ -59,6 +55,16 @@ class PositionRateController extends Controller
         $validated['created_by'] = auth()->id();
 
         $positionRate = PositionRate::create($validated);
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'position_rates',
+            'action' => 'create_position_rate',
+            'description' => "Position rate '{$positionRate->position_name}' created",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'new_values' => $positionRate->toArray(),
+        ]);
 
         return response()->json([
             'message' => 'Position rate created successfully',
@@ -90,7 +96,19 @@ class PositionRateController extends Controller
 
         $validated['updated_by'] = auth()->id();
 
+        $oldValues = $positionRate->toArray();
         $positionRate->update($validated);
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'position_rates',
+            'action' => 'update_position_rate',
+            'description' => "Position rate '{$positionRate->position_name}' updated",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $oldValues,
+            'new_values' => $positionRate->fresh()->toArray(),
+        ]);
 
         return response()->json([
             'message' => 'Position rate updated successfully',
@@ -112,7 +130,18 @@ class PositionRateController extends Controller
             ], 422);
         }
 
+        $positionRateData = $positionRate->toArray();
         $positionRate->delete();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'position_rates',
+            'action' => 'delete_position_rate',
+            'description' => "Position rate '{$positionRateData['position_name']}' deleted",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $positionRateData,
+        ]);
 
         return response()->json([
             'message' => 'Position rate deleted successfully',

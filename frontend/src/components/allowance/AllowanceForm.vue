@@ -195,6 +195,8 @@
                 <v-select
                   v-model="form.department"
                   :items="departments"
+                  item-title="title"
+                  item-value="value"
                   label="Select Department"
                   variant="outlined"
                   density="comfortable"
@@ -366,7 +368,12 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useToast } from "vue-toastification";
 import allowanceService from "@/services/allowanceService";
+import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
+import { formatNumber } from "@/utils/formatters";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -375,6 +382,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue", "saved"]);
+
+const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const formRef = ref(null);
 const saving = ref(false);
@@ -473,6 +483,22 @@ watch(
 
 // Load employees on mount
 loadEmployees();
+loadDepartments();
+
+async function loadDepartments() {
+  try {
+    const response = await api.get("/projects", {
+      params: { is_active: true },
+    });
+    const projects = response.data.data || response.data;
+    departments.value = projects.map((p) => ({
+      title: p.name,
+      value: p.id,
+    }));
+  } catch (error) {
+    // Silent fail
+  }
+}
 
 async function loadEmployees() {
   loadingEmployees.value = true;
@@ -482,13 +508,8 @@ async function loadEmployees() {
       null,
       "all",
     );
-    departments.value = Array.from(
-      new Set(
-        availableEmployees.value.map((emp) => emp.department).filter(Boolean),
-      ),
-    ).sort();
   } catch (error) {
-    console.error("Error loading employees:", error);
+    // Silent fail
   } finally {
     loadingEmployees.value = false;
   }
@@ -520,7 +541,7 @@ async function save() {
   if (!valid) return;
 
   if (form.value.items.length === 0) {
-    alert("Please add at least one employee");
+    toast.warning("Please add at least one employee");
     return;
   }
 
@@ -536,16 +557,16 @@ async function save() {
   try {
     if (isEdit.value) {
       await allowanceService.update(props.mealAllowance.id, form.value);
-      alert("Allowance updated successfully");
+      toast.success("Allowance updated successfully");
     } else {
       await allowanceService.create(form.value);
-      alert("Allowance saved as draft");
+      toast.success("Allowance saved as draft");
     }
     emit("saved");
     close();
   } catch (error) {
-    console.error("Error saving allowance:", error);
-    alert(
+    devLog.error("Error saving allowance:", error);
+    toast.error(
       "Failed to save allowance: " +
         (error.response?.data?.message || error.message),
     );
@@ -559,7 +580,7 @@ async function saveAndSubmit() {
   if (!valid) return;
 
   if (form.value.items.length === 0) {
-    alert("Please add at least one employee");
+    toast.warning("Please add at least one employee");
     return;
   }
 
@@ -571,7 +592,12 @@ async function saveAndSubmit() {
     form.value.title = `${typeLabel} Allowance`;
   }
 
-  if (!confirm("Create and submit this allowance for admin approval?")) return;
+  if (
+    !(await confirmDialog(
+      "Create and submit this allowance for admin approval?",
+    ))
+  )
+    return;
 
   saving.value = true;
   try {
@@ -582,12 +608,12 @@ async function saveAndSubmit() {
     // Then submit it for approval
     await allowanceService.submit(mealAllowanceId);
 
-    alert("Allowance created and submitted for approval successfully!");
+    toast.success("Allowance created and submitted for approval successfully!");
     emit("saved");
     close();
   } catch (error) {
-    console.error("Error creating and submitting allowance:", error);
-    alert(
+    devLog.error("Error creating and submitting allowance:", error);
+    toast.error(
       "Failed to create and submit: " +
         (error.response?.data?.message || error.message),
     );
@@ -643,7 +669,7 @@ function inferAllowanceTypeFromTitle(title) {
 
 async function applySelection() {
   if (!bulkForm.value.no_of_days || !bulkForm.value.amount_per_day) {
-    alert("Please fill in Number of Days and Amount per Day");
+    toast.warning("Please fill in Number of Days and Amount per Day");
     return;
   }
 
@@ -651,7 +677,7 @@ async function applySelection() {
 
   if (selectionMode.value === "individual") {
     if (!form.value.employee_id) {
-      alert("Please select an employee");
+      toast.warning("Please select an employee");
       return;
     }
     employees = availableEmployees.value.filter(
@@ -661,7 +687,7 @@ async function applySelection() {
 
   if (selectionMode.value === "multiple") {
     if (!form.value.employee_ids || form.value.employee_ids.length === 0) {
-      alert("Please select employees");
+      toast.warning("Please select employees");
       return;
     }
     employees = availableEmployees.value.filter((emp) =>
@@ -671,19 +697,19 @@ async function applySelection() {
 
   if (selectionMode.value === "department") {
     if (!form.value.department) {
-      alert("Please select a department");
+      toast.warning("Please select a department");
       return;
     }
     employees = await allowanceService.getEmployeesByPosition(
       null,
-      null,
       form.value.department,
+      "all",
     );
   }
 
   if (selectionMode.value === "position") {
     if (!form.value.position_id) {
-      alert("Please select a position");
+      toast.warning("Please select a position");
       return;
     }
     employees = await allowanceService.getEmployeesByPosition(
@@ -704,13 +730,6 @@ async function applySelection() {
     total_amount: bulkForm.value.no_of_days * bulkForm.value.amount_per_day,
     sort_order: index,
   }));
-}
-
-function formatNumber(value) {
-  return new Intl.NumberFormat("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 </script>
 

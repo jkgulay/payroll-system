@@ -472,6 +472,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 const DEFAULT_TIME_IN = "07:30";
 const DEFAULT_TIME_OUT = "17:00";
@@ -519,8 +520,8 @@ const filteredProjects = computed(() => {
   const searchLower = search.value.toLowerCase();
   return projects.value.filter(
     (p) =>
-      p.name.toLowerCase().includes(searchLower) ||
-      p.code.toLowerCase().includes(searchLower) ||
+      (p.name && p.name.toLowerCase().includes(searchLower)) ||
+      (p.code && p.code.toLowerCase().includes(searchLower)) ||
       (p.description && p.description.toLowerCase().includes(searchLower)),
   );
 });
@@ -546,7 +547,7 @@ const fetchProjects = async () => {
     projects.value = response.data;
   } catch (error) {
     showSnackbar("Failed to load departments", "error");
-    console.error("Error fetching projects:", error);
+    devLog.error("Error fetching projects:", error);
   } finally {
     loading.value = false;
   }
@@ -621,7 +622,7 @@ const saveSchedule = async () => {
     const message =
       error.response?.data?.message || "Failed to update schedule";
     showSnackbar(message, "error");
-    console.error("Error saving schedule:", error);
+    devLog.error("Error saving schedule:", error);
   } finally {
     saving.value = false;
   }
@@ -644,7 +645,7 @@ const saveBulkSchedule = async () => {
     const message =
       error.response?.data?.message || "Failed to update schedules";
     showSnackbar(message, "error");
-    console.error("Error saving bulk schedules:", error);
+    devLog.error("Error saving bulk schedules:", error);
   } finally {
     bulkSaving.value = false;
   }
@@ -720,6 +721,8 @@ onMounted(() => {
 .header-content {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 16px;
 }
 

@@ -239,11 +239,18 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useToast } from "vue-toastification";
 import { useAuthStore } from "@/stores/auth";
 import allowanceService from "@/services/allowanceService";
 import AllowanceForm from "@/components/allowance/AllowanceForm.vue";
 import AllowanceDetails from "@/components/allowance/AllowanceDetails.vue";
 import AllowanceApproval from "@/components/allowance/AllowanceApproval.vue";
+import { formatDate, formatNumber } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
+
+const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const authStore = useAuthStore();
 const loading = ref(false);
@@ -309,7 +316,7 @@ async function fetchMealAllowances() {
     const response = await allowanceService.getAll(filters.value);
     mealAllowances.value = response.data || response;
   } catch (error) {
-    console.error("Error fetching allowances:", error);
+    devLog.error("Error fetching allowances:", error);
     mealAllowances.value = [];
   } finally {
     loading.value = false;
@@ -320,7 +327,7 @@ async function fetchPositions() {
   try {
     positions.value = await allowanceService.getPositions();
   } catch (error) {
-    console.error("Error fetching positions:", error);
+    devLog.error("Error fetching positions:", error);
   }
 }
 
@@ -345,29 +352,30 @@ function openApprovalDialog(item) {
 }
 
 async function submitForApproval(item) {
-  if (!confirm("Submit this allowance for approval?")) return;
+  if (!(await confirmDialog("Submit this allowance for approval?"))) return;
 
   try {
     await allowanceService.submit(item.id);
-    alert("Allowance submitted for approval");
+    toast.success("Allowance submitted for approval");
     await fetchMealAllowances();
   } catch (error) {
-    console.error("Error submitting allowance:", error);
-    alert("Failed to submit allowance");
+    devLog.error("Error submitting allowance:", error);
+    toast.error("Failed to submit allowance");
   }
 }
 
 async function generatePdf(item) {
-  if (!confirm(`Generate PDF for ${item.reference_number}?`)) return;
+  if (!(await confirmDialog(`Generate PDF for ${item.reference_number}?`)))
+    return;
 
   loading.value = true;
   try {
     const response = await allowanceService.generatePdf(item.id);
-    alert("PDF generated successfully");
+    toast.success("PDF generated successfully");
     await fetchMealAllowances();
   } catch (error) {
-    console.error("Error generating PDF:", error);
-    alert(error.response?.data?.message || "Failed to generate PDF");
+    devLog.error("Error generating PDF:", error);
+    toast.error(error.response?.data?.message || "Failed to generate PDF");
   } finally {
     loading.value = false;
   }
@@ -384,8 +392,8 @@ async function downloadPdf(item) {
     link.click();
     window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error("Error downloading PDF:", error);
-    alert("Failed to download PDF. Please generate it first.");
+    devLog.error("Error downloading PDF:", error);
+    toast.error("Failed to download PDF. Please generate it first.");
   } finally {
     loading.value = false;
   }
@@ -397,15 +405,15 @@ async function deleteMealAllowance(item) {
     ? `⚠️ WARNING: This allowance (${item.reference_number}) has been APPROVED and may have been used in payroll calculations. Are you absolutely sure you want to delete it?`
     : `Delete allowance ${item.reference_number}?`;
 
-  if (!confirm(message)) return;
+  if (!(await confirmDialog(message))) return;
 
   try {
     await allowanceService.delete(item.id);
-    alert("Allowance deleted successfully");
+    toast.success("Allowance deleted successfully");
     await fetchMealAllowances();
   } catch (error) {
-    console.error("Error deleting allowance:", error);
-    alert(error.response?.data?.message || "Failed to delete allowance");
+    devLog.error("Error deleting allowance:", error);
+    toast.error(error.response?.data?.message || "Failed to delete allowance");
   }
 }
 
@@ -417,21 +425,6 @@ function onSaved() {
 function onApproved() {
   showApprovalDialog.value = false;
   fetchMealAllowances();
-}
-
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatNumber(value) {
-  return new Intl.NumberFormat("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function calculateTotal(mealAllowance) {

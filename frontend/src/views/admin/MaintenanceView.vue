@@ -416,8 +416,11 @@
 import { ref, onMounted } from "vue";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { devLog } from "@/utils/devLog";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 const toast = useToast();
+const { confirm: confirmDialog } = useConfirmDialog();
 
 const healthData = ref(null);
 const result = ref(null);
@@ -436,7 +439,7 @@ async function checkHealth() {
     const response = await api.get("/maintenance/database-health");
     healthData.value = response.data;
   } catch (error) {
-    console.error("Error checking health:", error);
+    devLog.error("Error checking health:", error);
     toast.error("Failed to check database health");
   } finally {
     checking.value = false;
@@ -445,9 +448,9 @@ async function checkHealth() {
 
 async function fixPayrollSequence() {
   if (
-    !confirm(
+    !(await confirmDialog(
       "Fix the payroll sequence? This will reset it to the correct value.",
-    )
+    ))
   ) {
     return;
   }
@@ -463,7 +466,7 @@ async function fixPayrollSequence() {
     toast.success("Sequence fixed successfully!");
     await checkHealth();
   } catch (error) {
-    console.error("Error fixing sequence:", error);
+    devLog.error("Error fixing sequence:", error);
     result.value = {
       type: "error",
       message:
@@ -477,14 +480,18 @@ async function fixPayrollSequence() {
 
 async function cleanDatabase() {
   if (
-    !confirm(
+    !(await confirmDialog(
       "⚠️ WARNING: This will delete orphaned payroll items and reset sequences. Continue?",
-    )
+    ))
   ) {
     return;
   }
 
-  if (!confirm("This action cannot be undone. Are you absolutely sure?")) {
+  if (
+    !(await confirmDialog(
+      "This action cannot be undone. Are you absolutely sure?",
+    ))
+  ) {
     return;
   }
 
@@ -501,7 +508,7 @@ async function cleanDatabase() {
     toast.success("Database cleaned successfully!");
     await checkHealth();
   } catch (error) {
-    console.error("Error cleaning database:", error);
+    devLog.error("Error cleaning database:", error);
     result.value = {
       type: "error",
       message: error.response?.data?.message || "Failed to clean database",
@@ -527,6 +534,8 @@ async function cleanDatabase() {
 .header-content {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 16px;
 }
 

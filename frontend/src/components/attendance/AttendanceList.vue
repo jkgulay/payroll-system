@@ -144,7 +144,7 @@
 
       <template v-slot:item.approval="{ item }">
         <v-chip
-          v-if="item.is_approved"
+          v-if="item.approval_status === 'approved'"
           color="success"
           size="small"
           prepend-icon="mdi-check"
@@ -152,7 +152,7 @@
           Approved
         </v-chip>
         <v-chip
-          v-else-if="item.is_rejected"
+          v-else-if="item.approval_status === 'rejected'"
           color="error"
           size="small"
           prepend-icon="mdi-close"
@@ -220,6 +220,7 @@ import { useRoute } from "vue-router";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
+import { formatDate } from "@/utils/formatters";
 
 const toast = useToast();
 const route = useRoute();
@@ -280,13 +281,7 @@ const loadAttendance = async () => {
   }
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+// formatDate imported from @/utils/formatters
 
 const getStatusColor = (status) => {
   const colors = {
@@ -316,15 +311,18 @@ const formatHoursWorked = (hours) => {
 };
 
 const canEdit = (item) => {
-  return canEditRole.value && (!item.is_approved || user.role === "admin");
+  return (
+    canEditRole.value &&
+    (item.approval_status !== "approved" || user.role === "admin")
+  );
 };
 
 const canApprove = (item) => {
-  return canApproveRole.value && !item.is_approved && !item.is_rejected;
+  return canApproveRole.value && item.approval_status === "pending";
 };
 
 const canDelete = (item) => {
-  return canEditRole.value && !item.is_approved;
+  return canEditRole.value && item.approval_status !== "approved";
 };
 
 let unsubscribeAttendance = null;

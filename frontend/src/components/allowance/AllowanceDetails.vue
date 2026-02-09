@@ -154,6 +154,7 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
+import { formatDate, formatNumber } from "@/utils/formatters";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -202,21 +203,6 @@ const headers = [
 
 function close() {
   emit("update:modelValue", false);
-}
-
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatNumber(value) {
-  return new Intl.NumberFormat("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function getStatusColor(status) {

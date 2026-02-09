@@ -303,6 +303,7 @@ import { useCompanyInfoStore } from "@/stores/companyInfo";
 import { useToast } from "vue-toastification";
 import { useDisplay } from "vuetify";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 const router = useRouter();
 const route = useRoute();
@@ -867,7 +868,7 @@ async function confirmLogout() {
     toast.success("Logged out successfully");
     router.push("/login");
   } catch (error) {
-    console.error("Logout error:", error);
+    devLog.error("Logout error:", error);
     toast.error("Error logging out");
   } finally {
     loggingOut.value = false;
@@ -906,7 +907,7 @@ async function downloadCurrentPayslip() {
       toast.warning("No current payslip available");
     }
   } catch (error) {
-    console.error("Error downloading payslip:", error);
+    devLog.error("Error downloading payslip:", error);
     toast.error("Failed to download payslip");
   }
 }

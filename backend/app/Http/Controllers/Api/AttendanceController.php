@@ -139,7 +139,7 @@ class AttendanceController extends Controller
     {
         // Prevent editing approved records without proper permission
         if (
-            $attendance->is_approved &&
+            $attendance->approval_status === 'approved' &&
             !in_array($request->user()->role, ['admin', 'hr'])
         ) {
             return response()->json([
@@ -160,22 +160,23 @@ class AttendanceController extends Controller
         $oldValues = $attendance->toArray();
 
         try {
-            $updateData = array_filter([
-                'time_in' => $validated['time_in'] ?? null,
-                'time_out' => $validated['time_out'] ?? null,
-                'break_start' => $validated['break_start'] ?? null,
-                'break_end' => $validated['break_end'] ?? null,
-                'ot_time_in' => $validated['ot_time_in'] ?? null,
-                'ot_time_out' => $validated['ot_time_out'] ?? null,
+            // Build update data - include all validated fields (even null) to allow clearing
+            $updateData = [
                 'edit_reason' => $validated['notes'] ?? null,
-            ], function ($value) {
-                return !is_null($value);
-            });
+            ];
+
+            // Only include time fields that were actually sent in the request
+            foreach (['time_in', 'time_out', 'break_start', 'break_end', 'ot_time_in', 'ot_time_out'] as $field) {
+                if ($request->has($field)) {
+                    $updateData[$field] = $validated[$field] ?? null;
+                }
+            }
 
             $this->attendanceService->updateAttendance(
                 $attendance,
                 $updateData,
-                $request->user()->id
+                $request->user()->id,
+                in_array($request->user()->role, ['admin', 'hr'])
             );
 
             // Log the update
@@ -286,14 +287,14 @@ class AttendanceController extends Controller
 
     public function approve(Request $request, Attendance $attendance)
     {
-        if ($attendance->is_approved) {
+        if ($attendance->approval_status === 'approved') {
             return response()->json([
                 'message' => 'Attendance is already approved',
                 'attendance' => $attendance->load('employee', 'approvedBy'),
             ], 422);
         }
 
-        if ($attendance->is_rejected) {
+        if ($attendance->approval_status === 'rejected') {
             return response()->json([
                 'message' => 'Cannot approve rejected attendance. Please create a new record.',
             ], 422);
@@ -337,7 +338,7 @@ class AttendanceController extends Controller
             'reason' => 'required|string|max:500',
         ]);
 
-        if ($attendance->is_approved) {
+        if ($attendance->approval_status === 'approved') {
             return response()->json([
                 'message' => 'Cannot reject approved attendance',
             ], 422);
@@ -347,6 +348,7 @@ class AttendanceController extends Controller
 
         $attendance->update([
             'approval_status' => 'rejected',
+            'is_approved' => false,
             'is_rejected' => true,
             'rejected_by' => $request->user()->id,
             'rejected_at' => now(),
@@ -379,7 +381,7 @@ class AttendanceController extends Controller
             'employee' => $employee,
             'total_present' => Attendance::where('employee_id', $employeeId)->where('status', 'present')->count(),
             'total_absent' => Attendance::where('employee_id', $employeeId)->where('status', 'absent')->count(),
-            'total_late' => Attendance::where('employee_id', $employeeId)->where('status', 'late')->count(),
+            'total_late' => Attendance::where('employee_id', $employeeId)->where('status', 'present')->where('late_hours', '>', 0)->count(),
             'total_hours' => Attendance::where('employee_id', $employeeId)->sum('regular_hours'),
         ];
 
@@ -412,13 +414,13 @@ class AttendanceController extends Controller
             'total_records' => $attendances->count(),
             'total_present' => $attendances->where('status', 'present')->count(),
             'total_absent' => $attendances->where('status', 'absent')->count(),
-            'total_late' => $attendances->where('status', 'late')->count(),
-            'total_on_leave' => $attendances->where('status', 'on_leave')->count(),
+            'total_late' => $attendances->where('status', 'present')->filter(fn($a) => $a->late_hours > 0)->count(),
+            'total_on_leave' => $attendances->where('status', 'leave')->count(),
             'total_hours_worked' => $attendances->sum('regular_hours') + $attendances->sum('overtime_hours'),
             'total_regular_hours' => $attendances->sum('regular_hours'),
             'total_overtime_hours' => $attendances->sum('overtime_hours'),
             'total_night_differential_hours' => $attendances->sum('night_differential_hours'),
-            'pending_approval' => $attendances->where('is_approved', false)->where('is_rejected', false)->count(),
+            'pending_approval' => $attendances->where('approval_status', 'pending')->count(),
         ];
 
         if (!($validated['employee_id'] ?? false)) {
@@ -505,8 +507,8 @@ class AttendanceController extends Controller
             // Check if employee is on leave
             if ($excludeOnLeave) {
                 $onLeave = $employee->leaves()
-                    ->where('start_date', '<=', $date)
-                    ->where('end_date', '>=', $date)
+                    ->where('leave_date_from', '<=', $date)
+                    ->where('leave_date_to', '>=', $date)
                     ->where('status', 'approved')
                     ->exists();
 
@@ -520,6 +522,7 @@ class AttendanceController extends Controller
                 'employee_id' => $employee->id,
                 'attendance_date' => $date,
                 'status' => 'absent',
+                'approval_status' => 'approved',
                 'is_approved' => true,
                 'is_manual_entry' => true,
                 'manual_reason' => 'Marked absent automatically',
@@ -557,8 +560,7 @@ class AttendanceController extends Controller
      */
     public function pendingApprovals(Request $request)
     {
-        $query = Attendance::where('is_approved', false)
-            ->where('is_rejected', false)
+        $query = Attendance::where('approval_status', 'pending')
             ->with(['employee', 'createdBy']);
 
         if ($request->has('date_from')) {

@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 export const useCompanyInfoStore = defineStore("companyInfo", {
   state: () => ({
@@ -83,7 +84,7 @@ export const useCompanyInfoStore = defineStore("companyInfo", {
         }
         return this.companyInfo;
       } catch (error) {
-        console.error("Error fetching company info:", error);
+        devLog.error("Error fetching company info:", error);
         // Keep default values on error
         return this.companyInfo;
       } finally {
@@ -94,14 +95,14 @@ export const useCompanyInfoStore = defineStore("companyInfo", {
     async updateCompanyInfo(data) {
       this.loading = true;
       try {
-        const response = await api.put("/company-info", data);
+        const response = await api.post("/company-info", data);
         if (response.data.data) {
           this.companyInfo = { ...this.companyInfo, ...response.data.data };
           this.lastFetched = Date.now();
         }
         return response.data;
       } catch (error) {
-        console.error("Error updating company info:", error);
+        devLog.error("Error updating company info:", error);
         throw error;
       } finally {
         this.loading = false;

@@ -73,6 +73,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import auditLogService from "@/services/auditLogService";
+import { devLog } from "@/utils/devLog";
 
 // Props
 const props = defineProps({
@@ -104,7 +105,7 @@ async function fetchRecentActivities() {
     const response = await auditLogService.getAll(params);
     activities.value = response.data?.slice(0, props.limit) || [];
   } catch (error) {
-    console.error("Error fetching recent activities:", error);
+    devLog.error("Error fetching recent activities:", error);
   } finally {
     loading.value = false;
   }

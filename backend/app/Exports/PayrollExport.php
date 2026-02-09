@@ -25,7 +25,8 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
     public function __construct($payroll)
     {
         $this->payroll = $payroll;
-        $this->items = $payroll->items()->with(['employee.positionRate'])->get();
+        // Use the items collection (which may be filtered) instead of re-querying
+        $this->items = $payroll->items;
         $this->rowCount = $this->items->count();
     }
 
@@ -43,7 +44,10 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 'RATE',
                 'No. of Days',
                 'AMOUNT',
-                'OVERTIME', '', '', '',  // This will be merged
+                'OVERTIME',
+                '',
+                '',
+                '',  // This will be merged
                 'Adj. Prev. Salary',
                 'Allowance',
                 'GROSS AMOUNT',
@@ -58,9 +62,26 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 'SIGNATURE',
             ],
             [
-                '', '', '', '',
-                'HRS', 'REG OT', 'HRS', 'SUN/SPL. HOL.',  // OVERTIME subheaders
-                '', '', '', '', '', '', '', '', '', '', '', '',
+                '',
+                '',
+                '',
+                '',
+                'HRS',
+                'REG OT',
+                'HRS',
+                'SUN/SPL. HOL.',  // OVERTIME subheaders
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
             ],
         ];
     }
@@ -220,7 +241,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->getStyle("A{$totalRow}")->getFont()->setBold(true);
 
                 // Calculate totals - AMOUNT = Rate × No. of Days
-                $totalAmount = $this->items->sum(function($item) {
+                $totalAmount = $this->items->sum(function ($item) {
                     return ($item->effective_rate ?? $item->rate ?? 0) * ($item->days_worked ?? 0);
                 });
                 $sheet->setCellValue("D{$totalRow}", $totalAmount);
@@ -228,13 +249,13 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->setCellValue("F{$totalRow}", $this->items->sum('regular_ot_pay'));
                 $sheet->setCellValue("G{$totalRow}", $this->items->sum('special_ot_hours'));
                 $sheet->setCellValue("H{$totalRow}", $this->items->sum('special_ot_pay'));
-                
+
                 $sheet->setCellValue("I{$totalRow}", $this->items->sum('salary_adjustment'));
                 $sheet->setCellValue("J{$totalRow}", $this->items->sum('other_allowances'));
                 $sheet->setCellValue("K{$totalRow}", $this->items->sum('gross_pay'));
                 $sheet->setCellValue("L{$totalRow}", $this->items->sum('employee_savings'));
                 $sheet->setCellValue("M{$totalRow}", $this->items->sum('loans'));
-                
+
                 // Format total undertime
                 $totalUtHours = floor($this->items->sum('undertime_hours'));
                 $totalUtMinutes = round(($this->items->sum('undertime_hours') - $totalUtHours) * 60);
@@ -247,7 +268,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                     $totalUtDisplay = $totalUtMinutes . 'm';
                 }
                 $sheet->setCellValue("N{$totalRow}", $totalUtDisplay);
-                
+
                 $sheet->setCellValue("O{$totalRow}", $this->items->sum('employee_deductions'));
                 $sheet->setCellValue("P{$totalRow}", $this->items->sum('philhealth'));
                 $sheet->setCellValue("Q{$totalRow}", $this->items->sum('pagibig'));

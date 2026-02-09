@@ -200,6 +200,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
+import { formatDate } from "@/utils/formatters";
 
 const currentDate = ref(new Date());
 const selectedDate = ref(new Date());
@@ -458,14 +460,6 @@ function deleteEvent(eventId) {
   }
 }
 
-function formatDate(date) {
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function getColorValue(colorName) {
   const colorMap = {
     primary: "#6366f1",
@@ -490,7 +484,7 @@ async function fetchHolidays() {
       id: holiday.id,
     }));
   } catch (error) {
-    console.error("Error fetching holidays:", error);
+    devLog.error("Error fetching holidays:", error);
   }
 }
 
@@ -513,7 +507,7 @@ async function fetchUpcomingEvents() {
     );
     events.value = [...customEvents, ...upcomingEvents];
   } catch (error) {
-    console.error("Error fetching upcoming events:", error);
+    devLog.error("Error fetching upcoming events:", error);
   }
 }
 
@@ -534,7 +528,7 @@ onMounted(() => {
         date: new Date(event.date),
       }));
     } catch (e) {
-      console.error("Error loading events:", e);
+      devLog.error("Error loading events:", e);
     }
   }
 

@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 export const useAuthStore = defineStore("auth", () => {
   // State
@@ -21,7 +22,7 @@ export const useAuthStore = defineStore("auth", () => {
       api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
       initialized.value = true;
     } catch (e) {
-      console.error("Failed to parse stored user:", e);
+      devLog.error("Failed to parse stored user:", e);
       localStorage.removeItem("user");
     }
   }
@@ -63,7 +64,7 @@ export const useAuthStore = defineStore("auth", () => {
           user.value = { ...user.value, ...profileResponse.data.data };
         }
       } catch (profileError) {
-        console.warn("Could not fetch profile after login:", profileError);
+        devLog.warn("Could not fetch profile after login:", profileError);
       }
 
       // Store user data in localStorage
@@ -95,7 +96,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       await api.post("/logout");
     } catch (error) {
-      console.error("Logout error:", error);
+      devLog.error("Logout error:", error);
     } finally {
       // Clear state
       user.value = null;
@@ -163,7 +164,7 @@ export const useAuthStore = defineStore("auth", () => {
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(user.value));
     } catch (error) {
-      console.error("Fetch user error:", error);
+      devLog.error("Fetch user error:", error);
     } finally {
       loading.value = false;
     }

@@ -439,6 +439,10 @@ class LoanController extends Controller
             $newBalance = $loan->balance - $validated['amount'];
             $newAmountPaid = $loan->amount_paid + $validated['amount'];
 
+            // Capture old values BEFORE updating
+            $oldBalance = $loan->balance;
+            $oldAmountPaid = $loan->amount_paid;
+
             $updateData = [
                 'amount_paid' => $newAmountPaid,
                 'balance' => $newBalance,
@@ -458,7 +462,7 @@ class LoanController extends Controller
                 'description' => "Payment recorded for loan {$loan->loan_number}: ₱" . number_format($validated['amount'], 2),
                 'user_id' => auth()->id(),
                 'record_id' => $loan->id,
-                'old_values' => json_encode(['balance' => $loan->balance, 'amount_paid' => $loan->amount_paid]),
+                'old_values' => json_encode(['balance' => $oldBalance, 'amount_paid' => $oldAmountPaid]),
                 'new_values' => json_encode(['balance' => $newBalance, 'amount_paid' => $newAmountPaid]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),

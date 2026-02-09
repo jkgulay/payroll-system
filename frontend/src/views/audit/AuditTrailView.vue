@@ -422,6 +422,8 @@
 import { ref, computed, onMounted } from "vue";
 import auditLogService from "@/services/auditLogService";
 import { useToast } from "vue-toastification";
+import { formatDate, formatTime, formatDateTime } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -503,7 +505,7 @@ async function fetchAuditLogs() {
     // Update statistics
     updateStatistics();
   } catch (error) {
-    console.error("Error fetching audit logs:", error);
+    devLog.error("Error fetching audit logs:", error);
     toast.error("Failed to load audit logs");
   } finally {
     loading.value = false;
@@ -522,7 +524,7 @@ async function fetchUsers() {
     const data = await response.json();
     users.value = data.data || data;
   } catch (error) {
-    console.error("Error fetching users:", error);
+    devLog.error("Error fetching users:", error);
   } finally {
     loadingUsers.value = false;
   }
@@ -574,38 +576,11 @@ async function exportLogs() {
 
     toast.success("Audit logs exported successfully");
   } catch (error) {
-    console.error("Error exporting logs:", error);
+    devLog.error("Error exporting logs:", error);
     toast.error("Failed to export audit logs");
   } finally {
     exporting.value = false;
   }
-}
-
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatTime(date) {
-  return new Date(date).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function formatDateTime(date) {
-  return new Date(date).toLocaleString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
 }
 
 function formatModule(module) {

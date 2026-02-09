@@ -1,8 +1,8 @@
 <template>
   <div class="chat-container" :class="{ 'chat-expanded': isExpanded }">
     <!-- Chat Toggle Button -->
-    <button 
-      v-if="!isExpanded" 
+    <button
+      v-if="!isExpanded"
       class="chat-toggle-btn"
       @click="toggleChat"
       :aria-label="'Open AI Assistant'"
@@ -20,14 +20,21 @@
           <v-icon icon="mdi-robot-excited" size="32" color="white"></v-icon>
           <div>
             <h3>AI Assistant</h3>
-            <span class="status" :class="{ 'online': isOnline }">
-              {{ isOnline ? 'Online' : 'Offline' }}
+            <span class="status" :class="{ online: isOnline }">
+              {{ isOnline ? "Online" : "Offline" }}
             </span>
           </div>
         </div>
         <div class="chat-header-actions">
-          <button @click="showSuggestions = !showSuggestions" title="Suggested Questions">
-            <v-icon icon="mdi-lightbulb-on-outline" size="20" color="white"></v-icon>
+          <button
+            @click="showSuggestions = !showSuggestions"
+            title="Suggested Questions"
+          >
+            <v-icon
+              icon="mdi-lightbulb-on-outline"
+              size="20"
+              color="white"
+            ></v-icon>
           </button>
           <button @click="clearConversation" title="Clear Chat">
             <v-icon icon="mdi-delete-outline" size="20" color="white"></v-icon>
@@ -41,8 +48,8 @@
       <!-- Suggestions Panel -->
       <div v-if="showSuggestions" class="suggestions-panel">
         <div class="suggestions-tabs">
-          <button 
-            v-for="tab in suggestionTabs" 
+          <button
+            v-for="tab in suggestionTabs"
             :key="tab.id"
             :class="{ active: activeTab === tab.id }"
             @click="activeTab = tab.id"
@@ -51,8 +58,8 @@
           </button>
         </div>
         <div class="suggestions-list">
-          <button 
-            v-for="(question, index) in filteredSuggestions" 
+          <button
+            v-for="(question, index) in filteredSuggestions"
             :key="index"
             class="suggestion-item"
             @click="sendSuggestedQuestion(question)"
@@ -71,27 +78,70 @@
           <h4>Welcome to AI Assistant!</h4>
           <p>I can help you with:</p>
           <ul>
-            <li><v-icon icon="mdi-account-group" size="16" color="#ff9800"></v-icon> Employee information</li>
-            <li><v-icon icon="mdi-cash-multiple" size="16" color="#ff9800"></v-icon> Payroll calculations and reports</li>
-            <li><v-icon icon="mdi-calendar-check" size="16" color="#ff9800"></v-icon> Attendance and leave management</li>
-            <li><v-icon icon="mdi-file-document-check" size="16" color="#ff9800"></v-icon> Compliance and tax information</li>
-            <li><v-icon icon="mdi-help-circle" size="16" color="#ff9800"></v-icon> System help and guidance</li>
+            <li>
+              <v-icon
+                icon="mdi-account-group"
+                size="16"
+                color="#ff9800"
+              ></v-icon>
+              Employee information
+            </li>
+            <li>
+              <v-icon
+                icon="mdi-cash-multiple"
+                size="16"
+                color="#ff9800"
+              ></v-icon>
+              Payroll calculations and reports
+            </li>
+            <li>
+              <v-icon
+                icon="mdi-calendar-check"
+                size="16"
+                color="#ff9800"
+              ></v-icon>
+              Attendance and leave management
+            </li>
+            <li>
+              <v-icon
+                icon="mdi-file-document-check"
+                size="16"
+                color="#ff9800"
+              ></v-icon>
+              Compliance and tax information
+            </li>
+            <li>
+              <v-icon icon="mdi-help-circle" size="16" color="#ff9800"></v-icon>
+              System help and guidance
+            </li>
           </ul>
-          <p class="tip"><v-icon icon="mdi-lightbulb-on" size="16" color="#ff6f00"></v-icon> Try asking a question or click the lightbulb icon for suggestions!</p>
+          <p class="tip">
+            <v-icon icon="mdi-lightbulb-on" size="16" color="#ff6f00"></v-icon>
+            Try asking a question or click the lightbulb icon for suggestions!
+          </p>
         </div>
 
         <!-- Message List -->
-        <div 
-          v-for="(message, index) in messages" 
+        <div
+          v-for="(message, index) in messages"
           :key="index"
           class="message"
           :class="message.role"
         >
           <div class="message-avatar">
-            <v-icon :icon="message.role === 'user' ? 'mdi-account-circle' : 'mdi-robot'" size="24" color="white"></v-icon>
+            <v-icon
+              :icon="
+                message.role === 'user' ? 'mdi-account-circle' : 'mdi-robot'
+              "
+              size="24"
+              color="white"
+            ></v-icon>
           </div>
           <div class="message-content">
-            <div class="message-text" v-html="formatMessage(message.content)"></div>
+            <div
+              class="message-text"
+              v-html="formatMessage(message.content)"
+            ></div>
             <div class="message-time">{{ formatTime(message.timestamp) }}</div>
           </div>
         </div>
@@ -123,8 +173,8 @@
             :disabled="isTyping"
             ref="messageInput"
           ></textarea>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             :disabled="!inputMessage.trim() || isTyping"
             title="Send Message (Enter)"
           >
@@ -137,31 +187,37 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { useChatStore } from '@/stores/chatStore';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
+import { ref, computed, onMounted, nextTick, watch } from "vue";
+import { useChatStore } from "@/stores/chatStore";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
+import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
 export default {
-  name: 'ChatBot',
+  name: "ChatBot",
   setup() {
     const chatStore = useChatStore();
-    
+    const { confirm: confirmDialog } = useConfirmDialog();
+
     const isExpanded = ref(false);
-    const inputMessage = ref('');
+    const inputMessage = ref("");
     const messagesContainer = ref(null);
     const messageInput = ref(null);
     const showSuggestions = ref(false);
-    const activeTab = ref('employee');
+    const activeTab = ref("employee");
     const unreadCount = ref(0);
 
     const suggestionTabs = [
-      { id: 'employee', label: 'Employees', icon: 'mdi-account-group' },
-      { id: 'payroll', label: 'Payroll', icon: 'mdi-cash-multiple' },
-      { id: 'attendance', label: 'Attendance', icon: 'mdi-calendar-check' },
-      { id: 'leave', label: 'Leave', icon: 'mdi-calendar-account' },
-      { id: 'compliance', label: 'Compliance', icon: 'mdi-file-document-check' },
-      { id: 'help', label: 'Help', icon: 'mdi-help-circle' },
+      { id: "employee", label: "Employees", icon: "mdi-account-group" },
+      { id: "payroll", label: "Payroll", icon: "mdi-cash-multiple" },
+      { id: "attendance", label: "Attendance", icon: "mdi-calendar-check" },
+      { id: "leave", label: "Leave", icon: "mdi-calendar-account" },
+      {
+        id: "compliance",
+        label: "Compliance",
+        icon: "mdi-file-document-check",
+      },
+      { id: "help", label: "Help", icon: "mdi-help-circle" },
     ];
 
     const filteredSuggestions = computed(() => {
@@ -187,7 +243,7 @@ export default {
       if (!inputMessage.value.trim() || isTyping.value) return;
 
       const message = inputMessage.value.trim();
-      inputMessage.value = '';
+      inputMessage.value = "";
 
       await chatStore.sendMessage(message);
       scrollToBottom();
@@ -200,7 +256,9 @@ export default {
     };
 
     const clearConversation = async () => {
-      if (confirm('Are you sure you want to clear the conversation?')) {
+      if (
+        await confirmDialog("Are you sure you want to clear the conversation?")
+      ) {
         await chatStore.clearHistory();
       }
     };
@@ -214,16 +272,17 @@ export default {
 
     const formatTime = (timestamp) => {
       const date = new Date(timestamp);
-      return date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
       });
     };
 
     const scrollToBottom = () => {
       nextTick(() => {
         if (messagesContainer.value) {
-          messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+          messagesContainer.value.scrollTop =
+            messagesContainer.value.scrollHeight;
         }
       });
     };
@@ -242,7 +301,7 @@ export default {
     watch(messages, (newMessages, oldMessages) => {
       if (!isExpanded.value && newMessages.length > oldMessages.length) {
         const lastMessage = newMessages[newMessages.length - 1];
-        if (lastMessage.role === 'assistant') {
+        if (lastMessage.role === "assistant") {
           unreadCount.value++;
         }
       }
@@ -376,7 +435,7 @@ export default {
       gap: 4px;
 
       &.online::before {
-        content: '';
+        content: "";
         width: 8px;
         height: 8px;
         background: #2ecc71;
@@ -485,7 +544,7 @@ export default {
   overflow-y: auto;
   padding: 16px;
   background: #f8f9fa;
-  
+
   &::-webkit-scrollbar {
     width: 6px;
   }
@@ -599,7 +658,8 @@ export default {
           margin: 8px 0;
           font-size: 13px;
 
-          th, td {
+          th,
+          td {
             padding: 8px;
             border: 1px solid #e2e8f0;
             text-align: left;
@@ -632,7 +692,8 @@ export default {
           }
         }
 
-        :deep(ul), :deep(ol) {
+        :deep(ul),
+        :deep(ol) {
           margin: 8px 0;
           padding-left: 20px;
         }
@@ -685,7 +746,9 @@ export default {
 }
 
 @keyframes typing {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     transform: translateY(0);
     opacity: 0.7;
   }
@@ -755,7 +818,7 @@ export default {
   .chat-container {
     bottom: 8px;
     right: 8px;
-    
+
     &.chat-expanded {
       position: fixed;
       bottom: 0;
@@ -765,12 +828,12 @@ export default {
       z-index: 9999;
     }
   }
-  
+
   .chat-toggle-btn {
     width: 56px;
     height: 56px;
   }
-  
+
   .chat-window {
     width: 100vw;
     height: 100vh;
@@ -780,29 +843,29 @@ export default {
     right: 0;
     border-radius: 0;
   }
-  
+
   .chat-header {
     padding: 12px 16px;
-    
+
     h3 {
       font-size: 1.1rem;
     }
   }
-  
+
   .chat-messages {
     height: calc(100vh - 200px);
     padding: 12px;
-    
+
     .message {
       .message-content {
         max-width: 85%;
       }
     }
   }
-  
+
   .suggestions-panel {
     max-height: 50vh;
-    
+
     .suggestions-tabs {
       button {
         font-size: 0.75rem;
@@ -810,33 +873,34 @@ export default {
       }
     }
   }
-  
+
   .chat-input {
     padding: 12px;
-    
+
     textarea {
       font-size: 16px; // Prevent zoom on iOS
       padding: 10px 14px;
     }
-    
+
     button[type="submit"] {
       width: 40px;
       height: 40px;
     }
   }
-  
+
   .welcome-message {
     padding: 16px;
-    
+
     .v-icon {
       font-size: 48px !important;
     }
-    
+
     h4 {
       font-size: 1.1rem;
     }
-    
-    p, li {
+
+    p,
+    li {
       font-size: 0.85rem;
     }
   }
@@ -848,7 +912,7 @@ export default {
     width: 420px;
     height: 600px;
   }
-  
+
   .chat-container {
     bottom: 16px;
     right: 16px;
@@ -860,23 +924,23 @@ export default {
   .chat-toggle-btn {
     width: 48px;
     height: 48px;
-    
+
     .v-icon {
       font-size: 24px !important;
     }
   }
-  
+
   .chat-messages {
     .message {
       .message-avatar {
         width: 28px;
         height: 28px;
-        
+
         .v-icon {
           font-size: 18px !important;
         }
       }
-      
+
       .message-content {
         max-width: 90%;
         font-size: 0.85rem;
@@ -890,7 +954,7 @@ export default {
   .chat-window {
     height: 100vh;
   }
-  
+
   .chat-messages {
     height: calc(100vh - 160px);
   }

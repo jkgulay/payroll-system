@@ -86,6 +86,7 @@ class AttendanceService
                 'status' => 'present',
                 'is_manual_entry' => false,
                 'approval_status' => 'approved',
+                'is_approved' => true,
             ]);
             return ['action' => 'created', 'attendance' => $attendance];
         }
@@ -233,7 +234,7 @@ class AttendanceService
     /**
      * Update attendance record
      */
-    public function updateAttendance(Attendance $attendance, array $data, int $userId): Attendance
+    public function updateAttendance(Attendance $attendance, array $data, int $userId, bool $isAdmin = false): Attendance
     {
         $oldData = $attendance->toArray();
 
@@ -254,15 +255,29 @@ class AttendanceService
         $attendance->is_edited = true;
         $attendance->edited_by = $userId;
         $attendance->edited_at = now();
-        $attendance->approval_status = 'pending';
-        $attendance->is_approved = false;
-        $attendance->is_rejected = false;
-        $attendance->approved_by = null;
-        $attendance->approved_at = null;
-        $attendance->rejection_reason = null;
-        $attendance->rejected_by = null;
-        $attendance->rejected_at = null;
-        $attendance->approval_notes = null;
+
+        // Admin/HR edits are auto-approved; others go to pending
+        if ($isAdmin) {
+            $attendance->approval_status = 'approved';
+            $attendance->is_approved = true;
+            $attendance->is_rejected = false;
+            $attendance->approved_by = $userId;
+            $attendance->approved_at = now();
+            $attendance->rejection_reason = null;
+            $attendance->rejected_by = null;
+            $attendance->rejected_at = null;
+            $attendance->approval_notes = null;
+        } else {
+            $attendance->approval_status = 'pending';
+            $attendance->is_approved = false;
+            $attendance->is_rejected = false;
+            $attendance->approved_by = null;
+            $attendance->approved_at = null;
+            $attendance->rejection_reason = null;
+            $attendance->rejected_by = null;
+            $attendance->rejected_at = null;
+            $attendance->approval_notes = null;
+        }
         $attendance->save();
 
         $attendance->calculateHours();
@@ -344,8 +359,8 @@ class AttendanceService
             'is_approved' => false,
             'is_rejected' => true,
             'rejection_reason' => $reason,
-            'approved_by' => $userId,
-            'approved_at' => now(),
+            'rejected_by' => $userId,
+            'rejected_at' => now(),
         ]);
 
         return true;
@@ -409,6 +424,7 @@ class AttendanceService
                     'is_manual_entry' => true,
                     'manual_reason' => 'Auto-marked absent',
                     'approval_status' => 'approved',
+                    'is_approved' => true,
                 ]);
 
                 $markedAbsent++;

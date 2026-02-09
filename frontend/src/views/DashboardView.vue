@@ -762,6 +762,8 @@ import EmployeeDistributionChart from "@/components/charts/EmployeeDistributionC
 import AttendanceStatusChart from "@/components/charts/AttendanceStatusChart.vue";
 import TodayStaffInfoChart from "@/components/charts/TodayStaffInfoChart.vue";
 import RecentActivityWidget from "@/components/audit/RecentActivityWidget.vue";
+import { devLog } from "@/utils/devLog";
+import { formatNumber } from "@/utils/formatters";
 
 const toast = useToast();
 const router = useRouter();
@@ -899,7 +901,7 @@ async function fetchDashboardData() {
     const response = await api.get("/dashboard");
     stats.value = response.data.stats;
   } catch (error) {
-    console.error("Error fetching dashboard data:", error);
+    devLog.error("Error fetching dashboard data:", error);
   }
 }
 
@@ -938,7 +940,7 @@ async function refreshData() {
     await Promise.all([fetchDashboardData(), fetchPendingApplications()]);
     toast.success("Dashboard refreshed successfully!");
   } catch (error) {
-    console.error("Error refreshing dashboard:", error);
+    devLog.error("Error refreshing dashboard:", error);
     toast.error("Failed to refresh dashboard");
   } finally {
     refreshing.value = false;
@@ -950,7 +952,7 @@ async function fetchProjects() {
     const response = await api.get("/projects");
     projects.value = response.data.data || response.data;
   } catch (error) {
-    console.error("Error fetching projects:", error);
+    devLog.error("Error fetching projects:", error);
     toast.error("Failed to load projects");
   }
 }
@@ -971,7 +973,7 @@ async function saveEmployee(payload) {
 
     await fetchDashboardData();
   } catch (error) {
-    console.error("Error creating employee:", error);
+    devLog.error("Error creating employee:", error);
     if (error.response?.data?.errors) {
       const errors = error.response.data.errors;
       Object.keys(errors).forEach((field) => {
@@ -1008,13 +1010,6 @@ Role: ${newEmployeeData.value?.role}
   toast.success("Credentials copied to clipboard!");
 }
 
-function formatNumber(value) {
-  return new Intl.NumberFormat("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value || 0);
-}
-
 function formatDateShort(dateString) {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -1029,7 +1024,7 @@ async function fetchPendingApplications() {
     });
     pendingApplications.value = response.data;
   } catch (error) {
-    console.error("Error fetching applications:", error);
+    devLog.error("Error fetching applications:", error);
     toast.error("Failed to load pending applications");
   }
 }
@@ -1062,7 +1057,7 @@ async function approveApplication() {
     await fetchPendingApplications();
     await fetchDashboardData();
   } catch (error) {
-    console.error("Error approving application:", error);
+    devLog.error("Error approving application:", error);
     toast.error(
       error.response?.data?.message || "Failed to approve application",
     );
@@ -1086,7 +1081,7 @@ async function rejectApplication() {
     closeApplicationDialog();
     await fetchPendingApplications();
   } catch (error) {
-    console.error("Error rejecting application:", error);
+    devLog.error("Error rejecting application:", error);
     toast.error("Failed to reject application");
   } finally {
     processing.value = false;
@@ -1331,23 +1326,34 @@ Role: Employee
 }
 
 .section-header {
-  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  margin: -24px -24px 20px -24px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
 }
 
 .section-title-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .section-icon-badge {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
 
   &.success {
     background: linear-gradient(135deg, #f7b980 0%, #ed985f 100%);
@@ -1359,10 +1365,11 @@ Role: Employee
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #001f3d;
   margin: 0;
+  letter-spacing: -0.3px;
 }
 
 // Action Grid

@@ -497,7 +497,7 @@
                     <ul class="info-list">
                       <li><strong>Staff Type</strong> → Position (job role)</li>
                       <li>
-                        <strong>Department</strong> → Project (auto-created)
+                        <strong>Department</strong> → Department (auto-created)
                       </li>
                     </ul>
                   </div>
@@ -516,7 +516,10 @@
                     <ul class="info-list">
                       <li>Staff Code</li>
                       <li>Name</li>
-                      <li>Date columns (DD format like 01, 02, or MM-DD like 01-15)</li>
+                      <li>
+                        Date columns (DD format like 01, 02, or MM-DD like
+                        01-15)
+                      </li>
                     </ul>
                   </div>
                   <div class="info-section">
@@ -557,6 +560,7 @@
 import { ref, onMounted } from "vue";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
@@ -588,7 +592,7 @@ onMounted(async () => {
       value: project.id,
     }));
   } catch (error) {
-    console.error("Failed to load options:", error);
+    devLog.error("Failed to load options:", error);
   }
 });
 

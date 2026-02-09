@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Payroll;
 use App\Models\Attendance;
+use App\Models\AuditLog;
 use App\Services\PayrollService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -57,6 +58,16 @@ class ProjectController extends Controller
         $project = Project::create($validated);
         $project->load(['headEmployee', 'employees']);
 
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'projects',
+            'action' => 'create_project',
+            'description' => "Project '{$project->name}' created",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'new_values' => $project->toArray(),
+        ]);
+
         return response()->json($project, 201);
     }
 
@@ -89,11 +100,23 @@ class ProjectController extends Controller
 
         $validated = $this->applyDefaultSchedule($validated);
 
+        $oldValues = $project->toArray();
         $project->update($validated);
         if ($project->wasChanged(['time_in', 'time_out', 'grace_period_minutes'])) {
             $this->recalculateProjectAttendances($project);
         }
         $project->load(['headEmployee', 'employees']);
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'projects',
+            'action' => 'update_project',
+            'description' => "Project '{$project->name}' updated",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $oldValues,
+            'new_values' => $project->fresh()->toArray(),
+        ]);
 
         return response()->json($project);
     }
@@ -146,7 +169,19 @@ class ProjectController extends Controller
             ], 422);
         }
 
+        $projectData = $project->toArray();
         $project->delete();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'module' => 'projects',
+            'action' => 'delete_project',
+            'description' => "Project '{$projectData['name']}' deleted",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'old_values' => $projectData,
+        ]);
+
         return response()->json(['message' => 'Project deleted successfully']);
     }
 

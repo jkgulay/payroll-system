@@ -15,7 +15,8 @@ class PayrollWordExport
     public function __construct($payroll)
     {
         $this->payroll = $payroll;
-        $this->items = $payroll->items()->with(['employee.positionRate'])->get();
+        // Use the items collection (which may be filtered) instead of re-querying
+        $this->items = $payroll->items;
     }
 
     public function generate()

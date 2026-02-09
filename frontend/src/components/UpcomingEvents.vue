@@ -56,6 +56,7 @@ import { ref, onMounted } from "vue";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { differenceInDays, format, isToday, isTomorrow } from "date-fns";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 const events = ref([]);
@@ -67,7 +68,7 @@ const fetchEvents = async () => {
     const response = await api.get("/dashboard/upcoming-events");
     events.value = response.data;
   } catch (error) {
-    console.error("Error fetching events:", error);
+    devLog.error("Error fetching events:", error);
     toast.error("Failed to load upcoming events");
   } finally {
     loading.value = false;
