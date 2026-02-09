@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ThirteenthMonthPay;
 use App\Models\ThirteenthMonthPayItem;
 use App\Models\Employee;
+use App\Models\Project;
 use App\Models\EmployeeLoan;
 use App\Models\PayrollItem;
 use App\Models\CompanyInfo;
@@ -29,7 +30,7 @@ class ThirteenthMonthPayController extends Controller
                 'year' => 'required|integer|min:2020|max:' . (date('Y') + 1),
                 'period' => 'required|in:full_year,first_half,second_half',
                 'payment_date' => 'required|date',
-                'department' => 'nullable|string', // Add department filter
+                'department' => 'nullable|integer|exists:projects,id',
             ]);
 
             if ($validator->fails()) {
@@ -76,9 +77,9 @@ class ThirteenthMonthPayController extends Controller
                 // Get all active employees (not resigned or terminated)
                 $employeesQuery = Employee::whereNotIn('activity_status', ['resigned', 'terminated']);
 
-                // Apply department filter if provided
+                // Apply department (project) filter if provided
                 if ($department) {
-                    $employeesQuery->where('department', $department);
+                    $employeesQuery->where('project_id', $department);
                 }
 
                 $employees = $employeesQuery->get();
@@ -283,12 +284,12 @@ class ThirteenthMonthPayController extends Controller
             'approvedBy'
         ])->findOrFail($id);
 
-        // Group employees by department
+        // Group employees by department (project)
         $employeesByDepartment = $thirteenthMonth->items()
-            ->with('employee')
+            ->with('employee.project')
             ->get()
             ->groupBy(function ($item) {
-                return $item->employee->department ?? 'NO DEPARTMENT';
+                return $item->employee->project?->name ?? 'NO DEPARTMENT';
             })
             ->sortKeys();
 
@@ -348,7 +349,7 @@ class ThirteenthMonthPayController extends Controller
                 $query->where(function ($q) use ($startDate, $endDate) {
                     $q->whereBetween('period_start', [$startDate, $endDate])
                         ->orWhereBetween('period_end', [$startDate, $endDate]);
-                })->whereIn('status', ['paid', 'finalized', 'approved', 'completed']);
+                })->whereIn('status', ['paid', 'finalized']);
             })
                 ->where('employee_id', $employeeId)
                 ->get();
@@ -379,12 +380,12 @@ class ThirteenthMonthPayController extends Controller
             ];
         }
 
-        // Group employees by department
+        // Group employees by department (project)
         $employeesByDepartment = $thirteenthMonth->items()
-            ->with('employee')
+            ->with('employee.project')
             ->get()
             ->groupBy(function ($item) {
-                return $item->employee->department ?? 'NO DEPARTMENT';
+                return $item->employee->project?->name ?? 'NO DEPARTMENT';
             })
             ->sortKeys();
 
@@ -412,11 +413,15 @@ class ThirteenthMonthPayController extends Controller
      */
     public function getDepartments()
     {
-        $departments = Employee::whereNotNull('department')
-            ->where('department', '!=', '')
-            ->distinct()
-            ->pluck('department')
-            ->sort()
+        $departments = Project::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(function ($project) {
+                return [
+                    'value' => $project->id,
+                    'title' => $project->name,
+                ];
+            })
             ->values();
 
         return response()->json($departments);

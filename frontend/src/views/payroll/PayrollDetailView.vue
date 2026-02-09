@@ -523,6 +523,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 
 const route = useRoute();
 const router = useRouter();
@@ -631,7 +632,6 @@ async function fetchPayroll() {
     });
     availableDepartments.value = Array.from(departments).sort();
   } catch (error) {
-    console.error("Error fetching payroll:", error);
     toast.error("Failed to load payroll details");
     router.push("/payroll");
   } finally {
@@ -654,7 +654,6 @@ async function finalizePayroll() {
     toast.success("Payroll finalized successfully");
     await fetchPayroll();
   } catch (error) {
-    console.error("Error finalizing payroll:", error);
     toast.error("Failed to finalize payroll");
   } finally {
     finalizing.value = false;
@@ -769,7 +768,6 @@ async function downloadRegister() {
     exportFilter.value.departments = [];
     exportFilter.value.positions = [];
   } catch (error) {
-    console.error("Error downloading register:", error);
     toast.error("Failed to download payroll register");
   } finally {
     downloadingRegister.value = false;
@@ -796,7 +794,6 @@ async function downloadPayslip(item) {
 
     toast.success("Payslip downloaded");
   } catch (error) {
-    console.error("Error downloading payslip:", error);
     toast.error("Failed to download payslip");
   }
 }
@@ -819,22 +816,7 @@ function getStatusIcon(status) {
   return icons[status] || "mdi-file-document";
 }
 
-function formatDate(date) {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatCurrency(amount) {
-  if (!amount) return "0.00";
-  return parseFloat(amount).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+// formatDate, formatCurrency imported from @/utils/formatters
 
 function formatUndertime(hours) {
   if (!hours || hours <= 0) return "";
@@ -1272,86 +1254,7 @@ function formatUndertime(hours) {
   }
 }
 
-/* Modern Dialog Styling */
-.modern-dialog {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.dialog-header {
-  background: white;
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.dialog-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-
-  &.primary {
-    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-  }
-}
-
-.dialog-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #001f3d;
-  line-height: 1.2;
-}
-
-.dialog-subtitle {
-  font-size: 13px;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.dialog-content {
-  padding: 24px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 31, 61, 0.02) 0%,
-    rgba(237, 152, 95, 0.02) 100%
-  );
-  border-radius: 12px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  margin-bottom: 16px;
-}
-
-.section-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #001f3d;
-  margin: 0;
-  letter-spacing: -0.3px;
-}
+/* Dialog & section styles from _shared-layout.scss */
 
 .form-field-wrapper {
   margin-bottom: 20px;
@@ -1365,47 +1268,5 @@ function formatUndertime(hours) {
   font-weight: 600;
   color: #001f3d;
   margin-bottom: 8px;
-}
-
-.dialog-actions {
-  padding: 16px 24px;
-  background: rgba(0, 31, 61, 0.02);
-}
-
-.dialog-btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.dialog-btn-cancel {
-  background: transparent;
-  color: #64748b;
-
-  &:hover:not(:disabled) {
-    background: rgba(0, 31, 61, 0.04);
-  }
-}
-
-.dialog-btn-primary {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
-
-  &:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
-    transform: translateY(-1px);
-  }
 }
 </style>

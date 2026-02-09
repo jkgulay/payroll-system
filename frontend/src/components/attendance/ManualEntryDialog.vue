@@ -296,12 +296,15 @@ const save = async () => {
       notes: formData.notes || null,
     };
 
-    // Remove null values to avoid sending them
-    Object.keys(data).forEach((key) => {
-      if (data[key] === null || data[key] === "") {
-        delete data[key];
-      }
-    });
+    // For new records, remove null values to avoid sending them
+    // For edits, keep null values so cleared fields are sent to backend
+    if (!props.attendance) {
+      Object.keys(data).forEach((key) => {
+        if (data[key] === null || data[key] === "") {
+          delete data[key];
+        }
+      });
+    }
 
     if (props.attendance) {
       await attendanceStore.updateAttendance(props.attendance.id, data);
@@ -313,8 +316,6 @@ const save = async () => {
 
     emit("saved");
   } catch (error) {
-    console.error("Save error:", error.response?.data);
-
     // Handle duplicate record case
     if (
       error.response?.status === 422 &&
@@ -343,7 +344,6 @@ const save = async () => {
           toast.success("Attendance updated successfully");
           emit("saved");
         } catch (updateError) {
-          console.error("Update error:", updateError.response?.data);
           toast.error(
             updateError.response?.data?.message ||
               "Failed to update attendance",

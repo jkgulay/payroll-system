@@ -6,12 +6,11 @@ use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\Employee;
 use App\Models\Attendance;
-use App\Models\EmployeeAllowance;
 use App\Models\EmployeeLoan;
 use App\Models\LoanPayment;
 use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
-use App\Models\User;
+use App\Models\SalaryAdjustment;
 use App\Models\CompanyInfo;
 use App\Exports\PayrollExport;
 use App\Exports\PayrollWordExport;
@@ -19,7 +18,6 @@ use App\Services\PayrollService;
 use PhpOffice\PhpWord\IOFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -328,9 +326,10 @@ class PayrollController extends Controller
     {
         $payrollData = $payroll->toArray();
 
-        // Reverse loan and deduction payments before deleting
+        // Reverse loan, deduction, and salary adjustment payments before deleting
         $this->reverseLoanPaymentsForPayroll($payroll);
         $this->reverseDeductionPaymentsForPayroll($payroll);
+        $this->reverseSalaryAdjustmentsForPayroll($payroll);
 
         // Permanently delete payroll items and payroll (no soft delete)
         $payroll->items()->delete();
@@ -401,9 +400,10 @@ class PayrollController extends Controller
 
         DB::beginTransaction();
         try {
-            // First, reverse any loan/deduction payments that were recorded for this payroll
+            // First, reverse any loan/deduction/salary adjustment payments that were recorded for this payroll
             $this->reverseLoanPaymentsForPayroll($payroll);
             $this->reverseDeductionPaymentsForPayroll($payroll);
+            $this->reverseSalaryAdjustmentsForPayroll($payroll);
 
             $payrollService = app(\App\Services\PayrollService::class);
             $payrollService->reprocessPayroll($payroll);
@@ -685,6 +685,7 @@ class PayrollController extends Controller
             'attendances' => function ($q) use ($payroll) {
                 $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                     ->where('status', '!=', 'absent')
+                    ->where('approval_status', 'approved')
                     ->whereNotNull('time_in')
                     ->whereNotNull('time_out');
             },
@@ -1057,6 +1058,20 @@ class PayrollController extends Controller
                 }
             }
         }
+    }
+
+    /**
+     * Reverse salary adjustments for a payroll (used when reprocessing/deleting)
+     */
+    private function reverseSalaryAdjustmentsForPayroll(Payroll $payroll)
+    {
+        SalaryAdjustment::where('payroll_id', $payroll->id)
+            ->where('status', 'applied')
+            ->update([
+                'status' => 'pending',
+                'payroll_id' => null,
+                'applied_date' => null,
+            ]);
     }
 
     /**

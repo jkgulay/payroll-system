@@ -427,6 +427,8 @@
                 <v-select
                   v-model="formData.department"
                   :items="departments"
+                  item-title="title"
+                  item-value="value"
                   label="Select Department *"
                   placeholder="Choose a department"
                   variant="outlined"
@@ -1155,8 +1157,6 @@ const fetchEmployees = async () => {
     } else {
       employees.value = [];
     }
-
-    console.log("Loaded employees:", employees.value.length);
   } catch (error) {
     console.error("Failed to load employees:", error);
     toast.error("Failed to load employees");

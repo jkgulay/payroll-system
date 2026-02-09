@@ -69,7 +69,7 @@ class MealAllowanceController extends Controller
             'department' => 'nullable|string',
         ]);
 
-        $query = Employee::with('positionRate')
+        $query = Employee::with(['positionRate', 'project'])
             ->where('activity_status', 'active');
 
         if (isset($validated['position_id'])) {
@@ -80,10 +80,15 @@ class MealAllowanceController extends Controller
             $query->where('project_id', $validated['project_id']);
         }
 
-        // Default filter by department "Field (operators, helper)" if not specified
-        $department = $validated['department'] ?? 'Field (operators, helper)';
+        // Filter by department (project_id) only if explicitly provided and not 'all'
+        $department = $validated['department'] ?? null;
         if ($department && $department !== 'all') {
-            $query->where('department', $department);
+            // Support both project_id (numeric) and legacy string matching
+            if (is_numeric($department)) {
+                $query->where('project_id', $department);
+            } else {
+                $query->where('department', $department);
+            }
         }
 
         $employees = $query->get()->map(function ($employee) {
@@ -93,7 +98,8 @@ class MealAllowanceController extends Controller
                 'employee_number' => $employee->employee_number,
                 'position' => $employee->position,
                 'position_code' => $employee->positionRate?->code ?? '',
-                'department' => $employee->department,
+                'department' => $employee->project?->name ?? $employee->department ?? '',
+                'project_id' => $employee->project_id,
                 'basic_salary' => $employee->getDailyRateAttribute(),
             ];
         });

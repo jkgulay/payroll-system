@@ -86,7 +86,7 @@
               color="#ED985F"
               variant="tonal"
               icon="mdi-refresh"
-              @click="loadPayrolls"
+              @click="fetchPayrolls"
               :loading="loading"
               title="Refresh"
             ></v-btn>
@@ -637,6 +637,7 @@ import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 
 const router = useRouter();
 const toast = useToast();
@@ -644,8 +645,6 @@ const toast = useToast();
 const loading = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
-const loadingPositions = ref(false);
-const loadingProjects = ref(false);
 const search = ref("");
 const dialog = ref(false);
 const deleteDialog = ref(false);
@@ -657,10 +656,6 @@ const form = ref(null);
 
 const payrolls = ref([]);
 const selectedPayroll = ref(null);
-const positions = ref([]);
-const projects = ref([]);
-const departmentOptions = ref([]);
-const staffTypeOptions = ref([]);
 
 const formData = ref({
   period_name: "",
@@ -692,9 +687,6 @@ const stats = computed(() => {
 
 onMounted(() => {
   fetchPayrolls();
-  fetchPositions();
-  fetchProjects();
-  fetchDepartmentsAndStaffTypes();
 });
 
 async function fetchPayrolls() {
@@ -703,65 +695,9 @@ async function fetchPayrolls() {
     const response = await api.get("/payrolls");
     payrolls.value = response.data.data || response.data;
   } catch (error) {
-    console.error("Error fetching payrolls:", error);
     toast.error("Failed to load payrolls");
   } finally {
     loading.value = false;
-  }
-}
-
-async function fetchPositions() {
-  loadingPositions.value = true;
-  try {
-    const response = await api.get("/position-rates");
-    positions.value = (response.data.data || response.data).filter(
-      (p) => p.is_active,
-    );
-  } catch (error) {
-    console.error("Error fetching positions:", error);
-  } finally {
-    loadingPositions.value = false;
-  }
-}
-
-async function fetchProjects() {
-  loadingProjects.value = true;
-  try {
-    const response = await api.get("/projects");
-    projects.value = (response.data.data || response.data).filter(
-      (p) => p.is_active,
-    );
-  } catch (error) {
-    console.error("Error fetching projects:", error);
-  } finally {
-    loadingProjects.value = false;
-  }
-}
-
-async function fetchDepartmentsAndStaffTypes() {
-  try {
-    // Fetch all employees to get unique departments
-    const response = await api.get("/employees", {
-      params: { per_page: 10000 }, // Get all employees
-    });
-    const employees = response.data.data || response.data;
-
-    // Extract unique departments (filter out null/empty values)
-    const depts = [
-      ...new Set(
-        employees.map((e) => e.department).filter((d) => d && d.trim() !== ""),
-      ),
-    ].sort();
-    departmentOptions.value = depts;
-
-    // Get staff types from position_rates table (active positions)
-    const positionResponse = await api.get("/position-rates");
-    const activePositions = (
-      positionResponse.data.data || positionResponse.data
-    ).filter((p) => p.is_active);
-    staffTypeOptions.value = activePositions.map((p) => p.position_name).sort();
-  } catch (error) {
-    console.error("Error fetching departments and staff types:", error);
   }
 }
 
@@ -797,20 +733,8 @@ function closeDialog() {
 }
 
 async function savePayroll(forceCreate = false) {
-  console.log("💾 savePayroll called", {
-    forceCreate,
-    editMode: editMode.value,
-    period_start: formData.value.period_start,
-    period_end: formData.value.period_end,
-  });
-
   const { valid } = await form.value.validate();
-  if (!valid) {
-    console.log("❌ Form validation failed");
-    return;
-  }
-
-  console.log("✅ Form is valid, preparing payload");
+  if (!valid) return;
 
   // Prepare payload - simplified for all employees only
   const payload = {
@@ -833,54 +757,26 @@ async function savePayroll(forceCreate = false) {
 
   // Step 1: Validate attendance completeness (unless forcing OR editing existing payroll)
   if (!forceCreate && !editMode.value) {
-    console.log("🔍 Will validate attendance...");
     saving.value = true;
     try {
-      console.log("🔍 Validating payroll attendance...", {
-        period_start: formData.value.period_start,
-        period_end: formData.value.period_end,
-        has_attendance: formData.value.has_attendance || false,
-        forceCreate: forceCreate,
-      });
-
-      const validationResponse = await api.post("/payrolls/validate", {
+      await api.post("/payrolls/validate", {
         period_start: formData.value.period_start,
         period_end: formData.value.period_end,
         has_attendance: formData.value.has_attendance || false,
       });
-
-      console.log("✅ Validation passed:", validationResponse.data);
-      // Validation passed, continue to create
     } catch (error) {
-      console.error("⚠️ Validation error caught:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        errorObject: error,
-      });
       saving.value = false;
       if (error.response?.status === 422) {
-        // Show incomplete attendance warning
         incompleteRecords.value = error.response.data.incomplete_records || [];
-        console.log(
-          "🚨 Found incomplete records:",
-          incompleteRecords.value.length,
-          "records",
-        );
-        console.log("🚨 Opening validation dialog...");
         validationWarningDialog.value = true;
-        console.log("🚨 Dialog state:", validationWarningDialog.value);
-        return; // Stop here and show warning
+        return;
       } else {
-        console.error("❌ Non-422 error, showing toast");
         toast.error(
           error.response?.data?.message || "Failed to validate payroll data",
         );
         return;
       }
     }
-    // Don't set saving.value = false here, continue to step 2
-  } else {
-    console.log("⏭️ Skipping validation (forceCreate = true)");
   }
 
   // Step 2: Create payroll
@@ -900,23 +796,14 @@ async function savePayroll(forceCreate = false) {
     await fetchPayrolls();
     closeDialog();
   } catch (error) {
-    console.error("Error saving payroll:", error);
-
-    // Extract detailed error message from response
     let errorMessage = "Failed to save payroll";
 
     if (error.response?.data) {
       const data = error.response.data;
-      // Check for detailed error field first, then fall back to message
       if (data.error) {
         errorMessage = data.error;
       } else if (data.message && data.message !== "Validation failed") {
         errorMessage = data.message;
-      }
-
-      // Add employee count info if available
-      if (data.employee_count) {
-        console.log("Employee count breakdown:", data.employee_count);
       }
     }
 
@@ -945,7 +832,6 @@ async function deletePayroll() {
     await fetchPayrolls();
     deleteDialog.value = false;
   } catch (error) {
-    console.error("Error deleting payroll:", error);
     toast.error("Failed to delete payroll");
   } finally {
     deleting.value = false;
@@ -978,401 +864,13 @@ function getStatusColor(status) {
   return colors[status] || "grey";
 }
 
-function formatDate(date) {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatCurrency(amount) {
-  if (!amount) return "0.00";
-  return parseFloat(amount).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+// formatDate, formatCurrency imported from @/utils/formatters
 </script>
 
 <style scoped lang="scss">
 .payroll-page {
   max-width: 1600px;
   margin: 0 auto;
-}
-
-.page-header {
-  margin-bottom: 24px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 24px;
-
-  @media (max-width: 960px) {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-.page-title-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-}
-
-.page-icon-badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-  flex-shrink: 0;
-
-  .v-icon {
-    color: #ffffff !important;
-  }
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #001f3d;
-  margin: 0 0 4px 0;
-  letter-spacing: -0.5px;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: rgba(0, 31, 61, 0.6);
-  margin: 0;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-
-  @media (max-width: 960px) {
-    width: 100%;
-  }
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  white-space: nowrap;
-
-  .v-icon {
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.25);
-  }
-
-  &.action-btn-primary {
-    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-
-    .v-icon {
-      color: #ffffff !important;
-    }
-  }
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 14px 16px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
-    transform: scaleY(0);
-    transition: transform 0.3s ease;
-  }
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
-  border-color: rgba(237, 152, 95, 0.3);
-
-  &::before {
-    transform: scaleY(1);
-  }
-}
-
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.stat-icon.total {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-
-  .v-icon {
-    color: white;
-  }
-}
-
-.stat-icon.draft {
-  background: rgba(237, 152, 95, 0.1);
-
-  .v-icon {
-    color: #ed985f;
-  }
-}
-
-.stat-icon.finalized {
-  background: rgba(0, 31, 61, 0.1);
-
-  .v-icon {
-    color: #001f3d;
-  }
-}
-
-.stat-icon.paid {
-  background: rgba(16, 185, 129, 0.1);
-
-  .v-icon {
-    color: #10b981;
-  }
-}
-
-.stat-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.stat-label {
-  font-size: 11px;
-  color: rgba(0, 31, 61, 0.6);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #001f3d;
-  line-height: 1;
-}
-
-.stat-value.warning {
-  color: #f59e0b;
-}
-
-.stat-value.info {
-  color: #3b82f6;
-}
-
-.stat-value.success {
-  color: #10b981;
-}
-
-.modern-card {
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-  padding: 24px;
-}
-
-.filters-section {
-  background: rgba(0, 31, 61, 0.01);
-}
-
-.table-section {
-  background: #ffffff;
-}
-
-.modern-dialog {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.dialog-header {
-  background: white;
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.dialog-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-
-  &.primary {
-    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-  }
-
-  &.warning {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 152, 0, 0.15) 0%,
-      rgba(255, 193, 7, 0.1) 100%
-    );
-
-    .v-icon {
-      color: #ff9800 !important;
-    }
-  }
-}
-
-.dialog-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #001f3d;
-  line-height: 1.2;
-}
-
-.dialog-subtitle {
-  font-size: 13px;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.dialog-content {
-  padding: 24px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 31, 61, 0.02) 0%,
-    rgba(237, 152, 95, 0.02) 100%
-  );
-  border-radius: 12px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  margin-bottom: 16px;
-}
-
-.section-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #001f3d;
-  margin: 0;
-  letter-spacing: -0.3px;
-}
-
-.dialog-actions {
-  padding: 16px 24px;
-  background: rgba(0, 31, 61, 0.02);
-}
-
-.dialog-btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.dialog-btn-cancel {
-  background: transparent;
-  color: #64748b;
-
-  &:hover:not(:disabled) {
-    background: rgba(0, 31, 61, 0.04);
-  }
-}
-
-.dialog-btn-primary {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
-
-  &:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
-    transform: translateY(-1px);
-  }
 }
 
 // Delete Dialog - Modern Design
@@ -1641,20 +1139,6 @@ function formatCurrency(amount) {
     box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4) !important;
     transform: translateY(-1px);
   }
-}
-
-.form-field-wrapper {
-  margin-bottom: 16px;
-}
-
-.form-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #001f3d;
-  margin-bottom: 8px;
 }
 
 // Validation Warning Dialog

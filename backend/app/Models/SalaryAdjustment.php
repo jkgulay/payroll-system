@@ -19,6 +19,7 @@ class SalaryAdjustment extends Model
         'effective_date',
         'status',
         'payroll_id',
+        'applied_date',
         'created_by',
     ];
 

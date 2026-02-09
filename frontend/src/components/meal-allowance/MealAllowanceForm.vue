@@ -354,6 +354,8 @@
                 <v-select
                   v-model="form.department"
                   :items="departments"
+                  item-title="title"
+                  item-value="value"
                   label="Select Department"
                   variant="outlined"
                   density="comfortable"
@@ -562,6 +564,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import mealAllowanceService from "@/services/mealAllowanceService";
+import api from "@/services/api";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -679,23 +682,30 @@ watch(
 
 // Load employees on mount
 loadEmployees();
+loadDepartments();
+
+async function loadDepartments() {
+  try {
+    const response = await api.get("/projects", {
+      params: { is_active: true },
+    });
+    const projects = response.data.data || response.data;
+    departments.value = projects.map((p) => ({
+      title: p.name,
+      value: p.id,
+    }));
+  } catch (error) {
+    // Silent fail
+  }
+}
 
 async function loadEmployees() {
   loadingEmployees.value = true;
   try {
     availableEmployees.value =
-      await mealAllowanceService.getEmployeesByPosition(
-        null,
-        null,
-        selectedDepartment.value,
-      );
-    departments.value = Array.from(
-      new Set(
-        availableEmployees.value.map((emp) => emp.department).filter(Boolean),
-      ),
-    ).sort();
+      await mealAllowanceService.getEmployeesByPosition(null, null, "all");
   } catch (error) {
-    console.error("Error loading employees:", error);
+    // Silent fail
   } finally {
     loadingEmployees.value = false;
   }
@@ -1014,8 +1024,8 @@ async function applySelection() {
     }
     employees = await mealAllowanceService.getEmployeesByPosition(
       null,
-      null,
       form.value.department,
+      "all",
     );
   }
 

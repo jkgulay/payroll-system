@@ -5,11 +5,7 @@ namespace App\Services;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\Employee;
-use App\Models\Attendance;
-use App\Models\EmployeeAllowance;
 use App\Models\MealAllowanceItem;
-use App\Models\EmployeeLoan;
-use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\Holiday;
 use App\Models\GovernmentRate;
@@ -247,7 +243,7 @@ class PayrollService
                 ->keyBy(function ($holiday) {
                     return Carbon::parse($holiday->date)->format('Y-m-d');
                 })
-                ->toArray();
+                ->all();
         });
     }
 
@@ -489,18 +485,22 @@ class PayrollService
         $loanDeduction = 0;
         foreach ($activeLoans as $loan) {
             // Determine payment amount based on payroll period and loan payment frequency
+            $amortization = 0;
             if ($loan->payment_frequency === 'semi_monthly') {
                 // Semi-monthly loans: use semi_monthly_amortization for semi-monthly payrolls
                 // For monthly payrolls, use monthly_amortization (2 payments combined)
-                $loanDeduction += $isSemiMonthly
+                $amortization = $isSemiMonthly
                     ? ($loan->semi_monthly_amortization ?? 0)
                     : ($loan->monthly_amortization ?? 0);
             } else {
                 // Monthly loans: only deduct on monthly payrolls
                 if (!$isSemiMonthly) {
-                    $loanDeduction += $loan->monthly_amortization ?? 0;
+                    $amortization = $loan->monthly_amortization ?? 0;
                 }
             }
+
+            // Cap the deduction to the remaining loan balance
+            $loanDeduction += min($amortization, $loan->balance);
         }
 
         // Employee savings

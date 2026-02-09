@@ -215,6 +215,7 @@ import attendanceService from "@/services/attendanceService";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { onAttendanceUpdate } from "@/stores/attendance";
+import { formatDate } from "@/utils/formatters";
 
 const toast = useToast();
 
@@ -255,7 +256,7 @@ const loadEmployees = async () => {
   try {
     const response = await api.get("/employees", {
       params: {
-        per_page: 10000, 
+        per_page: 10000,
       },
     });
     employees.value = response.data.data || response.data || [];
@@ -266,13 +267,7 @@ const loadEmployees = async () => {
   }
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+// formatDate imported from @/utils/formatters
 
 const setToday = () => {
   const today = new Date().toISOString().split("T")[0];

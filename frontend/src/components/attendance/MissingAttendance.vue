@@ -336,7 +336,6 @@ const loadMissingAttendance = async () => {
       employees_with_issues: response.employees_with_issues,
     };
   } catch (error) {
-    console.error("Failed to load missing attendance:", error);
     toast.error("Failed to load missing attendance data");
     missingRecords.value = [];
     summary.value = null;

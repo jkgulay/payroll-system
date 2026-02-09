@@ -127,14 +127,20 @@
                   <v-icon size="small">mdi-file-document-outline</v-icon>
                 </template>
                 <v-list-item-title>Simple Format</v-list-item-title>
-                <v-list-item-subtitle>Name, Total, Signature</v-list-item-subtitle>
+                <v-list-item-subtitle
+                  >Name, Total, Signature</v-list-item-subtitle
+                >
               </v-list-item>
               <v-list-item @click="downloadPdfDetailed(item)">
                 <template v-slot:prepend>
-                  <v-icon size="small">mdi-file-document-multiple-outline</v-icon>
+                  <v-icon size="small"
+                    >mdi-file-document-multiple-outline</v-icon
+                  >
                 </template>
                 <v-list-item-title>Detailed Format</v-list-item-title>
-                <v-list-item-subtitle>Rate, Days, Savings, C/A, etc.</v-list-item-subtitle>
+                <v-list-item-subtitle
+                  >Rate, Days, Savings, C/A, etc.</v-list-item-subtitle
+                >
               </v-list-item>
             </v-list>
           </v-menu>
@@ -201,7 +207,7 @@
         <v-divider></v-divider>
 
         <v-card-text class="dialog-content" style="max-height: 70vh">
-          <v-form ref="calculateForm" v-model="formValid">
+          <v-form ref="calculateFormRef" v-model="formValid">
             <v-row>
               <!-- Section 1: Period Details -->
               <v-col cols="12">
@@ -277,6 +283,8 @@
                 <v-select
                   v-model="calculateForm.department"
                   :items="departments"
+                  item-title="title"
+                  item-value="value"
                   label="Department"
                   placeholder="All Departments"
                   prepend-inner-icon="mdi-office-building"
@@ -586,9 +594,9 @@ const fetchThirteenthMonth = async () => {
 const fetchDepartments = async () => {
   try {
     const response = await api.get("/thirteenth-month/departments");
-    departments.value = ["All Departments", ...response.data];
+    departments.value = response.data;
   } catch (error) {
-    console.error("Error fetching departments:", error);
+    // Silent fail — departments are optional
   }
 };
 
@@ -612,10 +620,7 @@ const calculate = async () => {
       payment_date: calculateForm.value.payment_date,
     };
 
-    if (
-      calculateForm.value.department &&
-      calculateForm.value.department !== "All Departments"
-    ) {
+    if (calculateForm.value.department) {
       payload.department = calculateForm.value.department;
     }
 
@@ -675,14 +680,20 @@ const downloadPdf = async (item) => {
 
 const downloadPdfDetailed = async (item) => {
   try {
-    const response = await api.get(`/thirteenth-month/${item.id}/export-pdf-detailed`, {
-      responseType: "blob",
-    });
+    const response = await api.get(
+      `/thirteenth-month/${item.id}/export-pdf-detailed`,
+      {
+        responseType: "blob",
+      },
+    );
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `13th-month-pay-detailed-${item.batch_number}.pdf`);
+    link.setAttribute(
+      "download",
+      `13th-month-pay-detailed-${item.batch_number}.pdf`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
