@@ -71,14 +71,6 @@
           <span>Missing Attendance</span>
         </button>
         <button
-          class="modern-tab"
-          :class="{ active: tab === 'calendar' }"
-          @click="tab = 'calendar'"
-        >
-          <v-icon size="20">mdi-calendar</v-icon>
-          <span>Calendar View</span>
-        </button>
-        <button
           v-if="canApprove"
           class="modern-tab"
           :class="{ active: tab === 'approvals' }"
@@ -120,16 +112,6 @@
               @delete="deleteAttendance"
               @approve="approveAttendance"
               @reject="openRejectDialog"
-            />
-          </div>
-        </v-window-item>
-
-        <!-- Calendar View -->
-        <v-window-item value="calendar">
-          <div class="tab-content">
-            <AttendanceCalendar
-              @date-click="handleDateClick"
-              @record-click="openEditDialog"
             />
           </div>
         </v-window-item>
@@ -232,7 +214,6 @@ import { useToast } from "vue-toastification";
 import { useAuthStore } from "@/stores/auth";
 import attendanceService from "@/services/attendanceService";
 import AttendanceList from "@/components/attendance/AttendanceList.vue";
-import AttendanceCalendar from "@/components/attendance/AttendanceCalendar.vue";
 import PendingApprovals from "@/components/attendance/PendingApprovals.vue";
 import AttendanceSummary from "@/components/attendance/AttendanceSummary.vue";
 import MissingAttendance from "@/components/attendance/MissingAttendance.vue";
@@ -307,12 +288,6 @@ const openDTRDialog = () => {
 const openRejectDialog = (attendance) => {
   selectedAttendance.value = attendance;
   rejectDialog.value = true;
-};
-
-const handleDateClick = (date) => {
-  prefilledDate.value = date;
-  selectedAttendance.value = null;
-  manualEntryDialog.value = true;
 };
 
 // CRUD operations
