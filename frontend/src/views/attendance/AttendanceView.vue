@@ -61,13 +61,14 @@
           <v-icon size="20">mdi-view-list</v-icon>
           <span>Attendance List</span>
         </button>
+
         <button
           class="modern-tab"
-          :class="{ active: tab === 'calendar' }"
-          @click="tab = 'calendar'"
+          :class="{ active: tab === 'missing' }"
+          @click="tab = 'missing'"
         >
-          <v-icon size="20">mdi-calendar</v-icon>
-          <span>Calendar View</span>
+          <v-icon size="20">mdi-alert-circle-outline</v-icon>
+          <span>Missing Attendance</span>
         </button>
         <button
           v-if="canApprove"
@@ -89,6 +90,7 @@
           <v-icon size="20">mdi-chart-bar</v-icon>
           <span>Summary</span>
         </button>
+
         <button
           v-if="canManualEntry"
           class="modern-tab"
@@ -114,16 +116,6 @@
           </div>
         </v-window-item>
 
-        <!-- Calendar View -->
-        <v-window-item value="calendar">
-          <div class="tab-content">
-            <AttendanceCalendar
-              @date-click="handleDateClick"
-              @record-click="openEditDialog"
-            />
-          </div>
-        </v-window-item>
-
         <!-- Pending Approvals -->
         <v-window-item value="approvals" v-if="canApprove">
           <div class="tab-content">
@@ -139,6 +131,13 @@
         <v-window-item value="summary">
           <div class="tab-content">
             <AttendanceSummary />
+          </div>
+        </v-window-item>
+
+        <!-- Missing Attendance -->
+        <v-window-item value="missing">
+          <div class="tab-content">
+            <MissingAttendance @edit-attendance="openEditDialog" />
           </div>
         </v-window-item>
 
@@ -215,9 +214,9 @@ import { useToast } from "vue-toastification";
 import { useAuthStore } from "@/stores/auth";
 import attendanceService from "@/services/attendanceService";
 import AttendanceList from "@/components/attendance/AttendanceList.vue";
-import AttendanceCalendar from "@/components/attendance/AttendanceCalendar.vue";
 import PendingApprovals from "@/components/attendance/PendingApprovals.vue";
 import AttendanceSummary from "@/components/attendance/AttendanceSummary.vue";
+import MissingAttendance from "@/components/attendance/MissingAttendance.vue";
 import DeviceManagement from "@/components/attendance/DeviceManagement.vue";
 import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
 import ImportBiometricDialog from "@/components/attendance/ImportBiometricDialog.vue";
@@ -260,9 +259,17 @@ const openManualEntryDialog = () => {
   manualEntryDialog.value = true;
 };
 
-const openEditDialog = (attendance) => {
-  selectedAttendance.value = attendance;
-  prefilledDate.value = null;
+const openEditDialog = (data) => {
+  // Handle both old format (just attendance object) and new format (object with attendance and date)
+  if (data && data.attendance) {
+    // From Missing Attendance tab - has both attendance and selected date
+    selectedAttendance.value = data.attendance;
+    prefilledDate.value = data.date;
+  } else {
+    // From other tabs - just attendance object
+    selectedAttendance.value = data;
+    prefilledDate.value = data?.attendance_date || null;
+  }
   manualEntryDialog.value = true;
 };
 
@@ -281,12 +288,6 @@ const openDTRDialog = () => {
 const openRejectDialog = (attendance) => {
   selectedAttendance.value = attendance;
   rejectDialog.value = true;
-};
-
-const handleDateClick = (date) => {
-  prefilledDate.value = date;
-  selectedAttendance.value = null;
-  manualEntryDialog.value = true;
 };
 
 // CRUD operations
@@ -515,7 +516,6 @@ onMounted(async () => {
   border: 1px solid rgba(0, 31, 61, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
- 
 }
 
 .tab-container {
@@ -731,4 +731,3 @@ onMounted(async () => {
   background: transparent !important;
 }
 </style>
-

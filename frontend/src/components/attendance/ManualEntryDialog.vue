@@ -370,7 +370,9 @@ watch(
         // Edit mode - populate form
         Object.assign(formData, {
           employee_id: props.attendance.employee_id,
-          attendance_date: props.attendance.attendance_date,
+          // Use prefilledDate if provided (from Missing Attendance tab), otherwise use attendance record date
+          attendance_date:
+            props.prefilledDate || props.attendance.attendance_date,
           time_in: props.attendance.time_in?.substring(0, 5) || "",
           time_out: props.attendance.time_out?.substring(0, 5) || "",
           break_start: props.attendance.break_start?.substring(0, 5) || "",

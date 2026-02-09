@@ -208,6 +208,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/attendance/clear-device-logs', [App\Http\Controllers\Api\AttendanceController::class, 'clearDeviceLogs']);
     Route::get('/attendance/device-info', [App\Http\Controllers\Api\AttendanceController::class, 'deviceInfo']);
     Route::get('/attendance/pending-approvals', [App\Http\Controllers\Api\AttendanceController::class, 'pendingApprovals']);
+    Route::get('/attendance/missing', [App\Http\Controllers\Api\AttendanceController::class, 'getMissingAttendance']);
     Route::get('/attendance/summary', [App\Http\Controllers\Api\AttendanceController::class, 'summary']);
     Route::get('/attendance/summary/export', [App\Http\Controllers\Api\AttendanceController::class, 'exportSummary']);
     Route::get('/attendance/employee/{employee}/summary', [App\Http\Controllers\Api\AttendanceController::class, 'employeeSummary']);
@@ -251,6 +252,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('loans', App\Http\Controllers\Api\LoanController::class);
 
     // Payroll - specific routes MUST come before apiResource (Protected by role middleware)
+    Route::post('/payrolls/validate', [App\Http\Controllers\PayrollController::class, 'validatePayrollCreation'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister'])->middleware('role:admin,payrollist');

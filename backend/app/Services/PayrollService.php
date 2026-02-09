@@ -81,6 +81,12 @@ class PayrollService
             foreach ($employees as $employee) {
                 $item = $this->calculatePayrollItem($payroll, $employee, $holidays);
 
+                // Skip employees with ₱0 or negative gross pay
+                // These employees have no complete attendance records, so they shouldn't be included in payroll
+                if ($item['gross_pay'] <= 0) {
+                    continue;
+                }
+
                 // OPTIMIZATION: Collect items instead of individual inserts
                 $payrollItems[] = $item;
 
@@ -126,6 +132,7 @@ class PayrollService
                 'attendances' => function ($q) use ($payroll) {
                     $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                         ->where('status', '!=', 'absent')
+                        ->where('approval_status', 'approved')
                         ->whereNotNull('time_in')
                         ->whereNotNull('time_out')
                         ->select(
@@ -442,29 +449,32 @@ class PayrollService
 
         // Calculate government deductions (only if enabled for the employee)
         // Use custom contributions if set, otherwise calculate based on salary
+        // IMPORTANT: Skip government contributions if gross pay is ₱0 or negative
         $sss = 0;
         $philhealth = 0;
         $pagibig = 0;
 
-        if ($employee->has_sss) {
-            // Use custom SSS if set (already semi-monthly amount), otherwise calculate
-            $sss = $employee->custom_sss !== null
-                ? (float) $employee->custom_sss
-                : $this->calculateSSS($grossPay);
-        }
+        if ($grossPay > 0) {
+            if ($employee->has_sss) {
+                // Use custom SSS if set (already semi-monthly amount), otherwise calculate
+                $sss = $employee->custom_sss !== null
+                    ? (float) $employee->custom_sss
+                    : $this->calculateSSS($grossPay);
+            }
 
-        if ($employee->has_philhealth) {
-            // Use custom PhilHealth if set (already semi-monthly amount), otherwise calculate
-            $philhealth = $employee->custom_philhealth !== null
-                ? (float) $employee->custom_philhealth
-                : $this->calculatePhilHealth($grossPay);
-        }
+            if ($employee->has_philhealth) {
+                // Use custom PhilHealth if set (already semi-monthly amount), otherwise calculate
+                $philhealth = $employee->custom_philhealth !== null
+                    ? (float) $employee->custom_philhealth
+                    : $this->calculatePhilHealth($grossPay);
+            }
 
-        if ($employee->has_pagibig) {
-            // Use custom Pag-IBIG if set (already semi-monthly amount), otherwise calculate
-            $pagibig = $employee->custom_pagibig !== null
-                ? (float) $employee->custom_pagibig
-                : $this->calculatePagibig($grossPay);
+            if ($employee->has_pagibig) {
+                // Use custom Pag-IBIG if set (already semi-monthly amount), otherwise calculate
+                $pagibig = $employee->custom_pagibig !== null
+                    ? (float) $employee->custom_pagibig
+                    : $this->calculatePagibig($grossPay);
+            }
         }
 
         // Determine if this is semi-monthly payroll (typically 15 days or less)

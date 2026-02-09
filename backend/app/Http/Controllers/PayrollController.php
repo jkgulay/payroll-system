@@ -43,6 +43,143 @@ class PayrollController extends Controller
         return response()->json($payrolls);
     }
 
+    /**
+     * Validate payroll creation - check for incomplete attendance records
+     */
+    public function validatePayrollCreation(Request $request)
+    {
+        $validated = $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+            'has_attendance' => 'nullable|boolean',
+        ]);
+
+        $periodStart = $validated['period_start'];
+        $periodEnd = $validated['period_end'];
+        $hasAttendanceFilter = $validated['has_attendance'] ?? false;
+
+        // Step 1: Find employees that WILL be included in payroll
+        $employeeQuery = Employee::query();
+
+        if ($hasAttendanceFilter) {
+            // Only check employees who have at least one attendance record
+            $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
+                $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                    ->where('status', '!=', 'absent');
+            });
+        } else {
+            // Check all active/on_leave employees OR anyone with attendance
+            $employeeQuery->where(function ($q) use ($periodStart, $periodEnd) {
+                $q->whereIn('activity_status', ['active', 'on_leave'])
+                    ->orWhereHas('attendances', function ($subQ) use ($periodStart, $periodEnd) {
+                        $subQ->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                            ->where('status', '!=', 'absent');
+                    });
+            });
+        }
+
+        // Only include employees who have attendance in the period (warn if only incomplete records exist)
+        $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
+            $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                ->where('status', '!=', 'absent')
+                ->where('approval_status', 'approved');
+        });
+
+        $employeeIds = $employeeQuery->pluck('id');
+
+        // Step 2: Find incomplete attendance records for these employees
+        $incompleteRecords = Attendance::whereBetween('attendance_date', [$periodStart, $periodEnd])
+            ->whereIn('employee_id', $employeeIds)
+            ->where('status', '!=', 'absent')
+            ->where('approval_status', 'approved')
+            ->where(function ($q) {
+                // Missing time_in for payable statuses
+                $q->where(function ($sq) {
+                    $sq->whereIn('status', ['present', 'late', 'half_day'])
+                        ->whereNull('time_in');
+                })
+                    // Missing time_out
+                    ->orWhere(function ($sq) {
+                        $sq->whereNotNull('time_in')
+                            ->whereNull('time_out');
+                    })
+                    // OR missing break_end when break_start exists
+                    ->orWhere(function ($sq) {
+                        $sq->whereNotNull('break_start')
+                            ->whereNull('break_end');
+                    })
+                    // OR missing ot_time_out when ot_time_in exists
+                    ->orWhere(function ($sq) {
+                        $sq->whereNotNull('ot_time_in')
+                            ->whereNull('ot_time_out');
+                    })
+                    // OR missing ot_time_out_2 when ot_time_in_2 exists
+                    ->orWhere(function ($sq) {
+                        $sq->whereNotNull('ot_time_in_2')
+                            ->whereNull('ot_time_out_2');
+                    });
+            })
+            ->with(['employee:id,employee_number,first_name,last_name'])
+            ->get([
+                'id',
+                'employee_id',
+                'attendance_date',
+                'status',
+                'time_in',
+                'time_out',
+                'break_start',
+                'break_end',
+                'ot_time_in',
+                'ot_time_out',
+                'ot_time_in_2',
+                'ot_time_out_2'
+            ]);
+
+        // Format the incomplete records
+        $issues = $incompleteRecords->map(function ($record) {
+            $issuesList = [];
+
+            if (!$record->time_in && in_array($record->status, ['present', 'late', 'half_day'], true)) {
+                $issuesList[] = 'Missing time in';
+            }
+            if ($record->time_in && !$record->time_out) {
+                $issuesList[] = 'Missing time out';
+            }
+            if ($record->break_start && !$record->break_end) {
+                $issuesList[] = 'Missing break end';
+            }
+            if ($record->ot_time_in && !$record->ot_time_out) {
+                $issuesList[] = 'Missing OT time out';
+            }
+            if ($record->ot_time_in_2 && !$record->ot_time_out_2) {
+                $issuesList[] = 'Missing OT2 time out';
+            }
+
+            return [
+                'employee_number' => $record->employee->employee_number,
+                'employee_name' => $record->employee->first_name . ' ' . $record->employee->last_name,
+                'attendance_date' => Carbon::parse($record->attendance_date)->format('M d, Y'),
+                'issues' => $issuesList,
+                'attendance_id' => $record->id,
+            ];
+        });
+
+        // Check if there are any incomplete records
+        if ($issues->count() > 0) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Some employees have incomplete attendance records',
+                'incomplete_records' => $issues,
+                'total_issues' => $issues->count(),
+            ], 422);
+        }
+
+        return response()->json([
+            'valid' => true,
+            'message' => 'All attendance records are complete',
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -53,7 +190,24 @@ class PayrollController extends Controller
             'notes' => 'nullable|string',
             // Only employees with attendance
             'has_attendance' => 'nullable|boolean',
+            // Allow force create to bypass validation
+            'force_create' => 'nullable|boolean',
         ]);
+
+        // Run validation check unless force_create is true
+        if (!($validated['force_create'] ?? false)) {
+            $validationRequest = new Request([
+                'period_start' => $validated['period_start'],
+                'period_end' => $validated['period_end'],
+                'has_attendance' => $validated['has_attendance'] ?? false,
+            ]);
+
+            $validationResponse = $this->validatePayrollCreation($validationRequest);
+
+            if ($validationResponse->status() === 422) {
+                return $validationResponse;
+            }
+        }
 
         DB::beginTransaction();
         try {
