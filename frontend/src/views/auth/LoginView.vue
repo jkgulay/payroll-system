@@ -46,12 +46,14 @@
                   <div class="icon-circle">
                     <v-icon
                       icon="mdi-hard-hat"
-                      size="40"
+                      size="32"
                       color="white"
                     ></v-icon>
                   </div>
-                  <h1 class="header-title">Sign In</h1>
-                  <p class="header-subtitle">Access your payroll dashboard</p>
+                  <div class="header-text">
+                    <h1 class="header-title">Sign In</h1>
+                    <p class="header-subtitle">Access your payroll dashboard</p>
+                  </div>
                 </div>
               </div>
 
@@ -463,4 +465,3 @@ function handleTwoFactorCancel() {
 </script>
 
 <style scoped lang="scss" src="@/styles/login-view.scss"></style>
-
