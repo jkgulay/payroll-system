@@ -165,7 +165,10 @@ const router = createRouter({
             import(
               /* webpackChunkName: "attendance" */ "@/views/attendance/BiometricImportView.vue"
             ),
-          meta: { title: "Biometric Import", roles: ["admin", "hr"] },
+          meta: {
+            title: "Biometric Import",
+            roles: ["admin", "hr", "payrollist"],
+          },
         },
         {
           path: "resumes",
@@ -225,7 +228,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "benefits" */ "@/views/benefits/LoansView.vue"
             ),
-          meta: { title: "Loans", roles: ["admin", "payrollist"] },
+          meta: { title: "Loans", roles: ["admin", "hr", "payrollist"] },
         },
         {
           path: "deductions",
@@ -234,7 +237,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "benefits" */ "@/views/benefits/DeductionsView.vue"
             ),
-          meta: { title: "Deductions", roles: ["admin", "payrollist"] },
+          meta: { title: "Deductions", roles: ["admin", "hr", "payrollist"] },
         },
         {
           path: "cash-bonds",
@@ -245,7 +248,7 @@ const router = createRouter({
             ),
           meta: {
             title: "Cash Bond Management",
-            roles: ["admin", "payrollist"],
+            roles: ["admin", "hr", "payrollist"],
           },
         },
         {
@@ -257,7 +260,7 @@ const router = createRouter({
             ),
           meta: {
             title: "Salary Adjustments",
-            roles: ["admin", "payrollist"],
+            roles: ["admin", "hr", "payrollist"],
           },
         },
         {

@@ -26,8 +26,9 @@ class AttendanceController extends Controller
         $this->attendanceService = $attendanceService;
         $this->biometricService = $biometricService;
 
-        // Manual entry and editing: admin and hr only
-        $this->middleware('role:admin,hr')->only(['store', 'update', 'destroy', 'markAbsent']);
+        // Manual entry and editing: admin and hr only (store/destroy), payrollist can update
+        $this->middleware('role:admin,hr')->only(['store', 'destroy', 'markAbsent']);
+        $this->middleware('role:admin,hr,payrollist')->only(['update']);
 
         // Approval actions: admin, hr, and manager
         $this->middleware('role:admin,hr,manager')->only(['approve', 'reject']);
@@ -140,7 +141,7 @@ class AttendanceController extends Controller
         // Prevent editing approved records without proper permission
         if (
             $attendance->approval_status === 'approved' &&
-            !in_array($request->user()->role, ['admin', 'hr'])
+            !in_array($request->user()->role, ['admin', 'hr', 'payrollist'])
         ) {
             return response()->json([
                 'message' => 'Cannot edit approved attendance records',

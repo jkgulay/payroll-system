@@ -503,13 +503,20 @@ async function loadDepartments() {
 async function loadEmployees() {
   loadingEmployees.value = true;
   try {
-    availableEmployees.value = await allowanceService.getEmployeesByPosition(
-      null,
-      null,
-      "all",
-    );
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 1000, // Get all employees
+        status: "active",
+      },
+    });
+    // Map employees to add name field for v-select
+    availableEmployees.value = (response.data.data || []).map((emp) => ({
+      ...emp,
+      name: `${emp.first_name || ""} ${emp.last_name || ""}`.trim(),
+    }));
   } catch (error) {
-    // Silent fail
+    console.error("Failed to load employees:", error);
+    toast.error("Failed to load employees");
   } finally {
     loadingEmployees.value = false;
   }

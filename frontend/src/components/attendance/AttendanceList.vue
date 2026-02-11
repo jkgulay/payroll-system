@@ -230,7 +230,9 @@ const loading = ref(false);
 const attendance = ref([]);
 
 const user = JSON.parse(localStorage.getItem("user") || "{}");
-const canEditRole = computed(() => ["admin", "hr"].includes(user.role));
+const canEditRole = computed(() =>
+  ["admin", "hr", "payrollist"].includes(user.role),
+);
 const canApproveRole = computed(() =>
   ["admin", "hr", "manager"].includes(user.role),
 );

@@ -300,9 +300,9 @@ class MealAllowanceController extends Controller
      */
     public function submit(Request $request, MealAllowance $mealAllowance)
     {
-        // Check if user has permission (HR/Accountant)
+        // Check if user has permission (Admin/HR/Payrollist)
         $user = auth()->user();
-        if (!in_array($user->role, ['admin', 'hr'])) {
+        if (!in_array($user->role, ['admin', 'hr', 'payrollist'])) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

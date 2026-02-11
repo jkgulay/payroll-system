@@ -264,7 +264,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
     // Deductions - specific routes MUST come before apiResource
-    Route::post('/deductions/bulk', [App\Http\Controllers\Api\DeductionController::class, 'bulkStore'])->middleware('role:admin,hr');
+    Route::post('/deductions/bulk', [App\Http\Controllers\Api\DeductionController::class, 'bulkStore'])->middleware('role:admin,hr,payrollist');
     Route::get('/deductions/departments/list', [App\Http\Controllers\Api\DeductionController::class, 'getDepartments']);
     Route::get('/deductions/positions/list', [App\Http\Controllers\Api\DeductionController::class, 'getPositions']);
     Route::post('/deductions/employees/filter', [App\Http\Controllers\Api\DeductionController::class, 'getEmployeesByFilter']);

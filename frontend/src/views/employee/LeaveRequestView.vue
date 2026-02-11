@@ -453,11 +453,13 @@
 import { ref, computed, onMounted } from "vue";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { useToast } from "vue-toastification";
+import { useAuthStore } from "@/stores/auth";
 import leaveService from "@/services/leaveService";
 import { formatDate, formatDateTime } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
+const authStore = useAuthStore();
 
 // State
 const loading = ref(false);
@@ -629,11 +631,18 @@ const saveLeave = async () => {
 
   try {
     saving.value = true;
+
+    // Prepare data with employee_id
+    const submitData = {
+      ...formData.value,
+      employee_id: authStore.user?.employee_id || null,
+    };
+
     if (editMode.value && selectedLeave.value) {
-      await leaveService.updateLeave(selectedLeave.value.id, formData.value);
+      await leaveService.updateLeave(selectedLeave.value.id, submitData);
       toast.success("Leave request updated successfully");
     } else {
-      await leaveService.createLeave(formData.value);
+      await leaveService.createLeave(submitData);
       toast.success("Leave request submitted successfully");
     }
     closeLeaveDialog();

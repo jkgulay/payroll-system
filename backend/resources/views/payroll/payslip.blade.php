@@ -190,11 +190,11 @@
                 <td class="value">PHP {{ number_format($item->cola, 2) }}</td>
             </tr>
             @endif
-            @if(!empty($item->allowances_breakdown) && count($item->allowances_breakdown) > 0)
+            @if(!empty($item->allowances_breakdown) && is_array($item->allowances_breakdown) && count($item->allowances_breakdown) > 0)
             @foreach($item->allowances_breakdown as $allowance)
             <tr>
-                <td class="label">{{ strtoupper($allowance['name']) }}</td>
-                <td class="value">PHP {{ number_format($allowance['amount'], 2) }}</td>
+                <td class="label">{{ strtoupper($allowance['name'] ?? 'ALLOWANCE') }}</td>
+                <td class="value">PHP {{ number_format($allowance['amount'] ?? 0, 2) }}</td>
             </tr>
             @endforeach
             @elseif($item->other_allowances > 0)
@@ -250,11 +250,11 @@
                 <td class="value">PHP {{ number_format($item->undertime_deduction, 2) }}</td>
             </tr>
             @endif
-            @if(!empty($item->deductions_breakdown))
+            @if(!empty($item->deductions_breakdown) && is_array($item->deductions_breakdown) && count($item->deductions_breakdown) > 0)
             @foreach($item->deductions_breakdown as $deduction)
             <tr>
-                <td class="label">{{ $deduction['name'] ?? ucwords(str_replace('_', ' ', $deduction['type'])) }}</td>
-                <td class="value">PHP {{ number_format($deduction['amount'], 2) }}</td>
+                <td class="label">{{ strtoupper($deduction['name'] ?? $deduction['type'] ?? 'DEDUCTION') }}</td>
+                <td class="value">PHP {{ number_format($deduction['amount'] ?? 0, 2) }}</td>
             </tr>
             @endforeach
             @endif

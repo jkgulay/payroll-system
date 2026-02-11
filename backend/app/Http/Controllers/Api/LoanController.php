@@ -17,11 +17,11 @@ class LoanController extends Controller
 {
     public function __construct()
     {
-        // Employee can request loans (create)
-        // HR can create loans for employees
+        // Payrollist, HR can create loans for employees, Employee can request loans
         // Admin approves/rejects loans
         $this->middleware('role:admin')->only(['approve', 'reject']);
-        $this->middleware('role:admin,hr')->only(['update', 'destroy']);
+        $this->middleware('role:admin,hr,payrollist,employee')->only(['store']);
+        $this->middleware('role:admin,hr,payrollist')->only(['update', 'destroy']);
     }
 
     public function index(Request $request)

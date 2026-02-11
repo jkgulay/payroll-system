@@ -11,7 +11,7 @@ class AllowanceController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:admin,hr')->only(['store', 'update', 'destroy']);
+        $this->middleware('role:admin,hr,payrollist')->only(['store', 'update', 'destroy']);
     }
 
     public function index(Request $request)
