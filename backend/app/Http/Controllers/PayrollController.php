@@ -345,29 +345,40 @@ class PayrollController extends Controller
 
         $payrollData = $payroll->toArray();
 
-        // Reverse loan, deduction, and salary adjustment payments before deleting
-        $this->reverseLoanPaymentsForPayroll($payroll);
-        $this->reverseDeductionPaymentsForPayroll($payroll);
-        $this->reverseSalaryAdjustmentsForPayroll($payroll);
+        try {
+            // Reverse loan, deduction, and salary adjustment payments before deleting
+            $this->reverseLoanPaymentsForPayroll($payroll);
+            $this->reverseDeductionPaymentsForPayroll($payroll);
+            $this->reverseSalaryAdjustmentsForPayroll($payroll);
 
-        // Permanently delete payroll items and payroll (no soft delete)
-        $payroll->items()->delete();
-        $payroll->forceDelete();
+            // Permanently delete payroll items and payroll (no soft delete)
+            $payroll->items()->delete();
+            $payroll->forceDelete();
 
-        // Log payroll deletion
-        AuditLog::create([
-            'user_id' => auth()->id(),
-            'module' => 'payroll',
-            'action' => 'delete_payroll',
-            'description' => "Payroll '{$payrollData['period_name']}' (ID: {$payrollData['id']}) permanently deleted - loan/deduction payments reversed",
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'old_values' => $payrollData,
-        ]);
+            // Log payroll deletion
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'delete_payroll',
+                'description' => "Payroll '{$payrollData['period_name']}' (ID: {$payrollData['id']}) permanently deleted - loan/deduction payments reversed",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'old_values' => $payrollData,
+            ]);
 
-        return response()->json([
-            'message' => 'Payroll deleted successfully'
-        ]);
+            return response()->json([
+                'message' => 'Payroll deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Payroll deletion error: ' . $e->getMessage(), [
+                'payroll_id' => $payroll->id,
+                'exception' => $e
+            ]);
+
+            return response()->json([
+                'message' => 'Error deleting payroll: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function finalize($id)
@@ -1084,12 +1095,11 @@ class PayrollController extends Controller
      */
     private function reverseSalaryAdjustmentsForPayroll(Payroll $payroll)
     {
-        SalaryAdjustment::where('payroll_id', $payroll->id)
+        SalaryAdjustment::where('applied_payroll_id', $payroll->id)
             ->where('status', 'applied')
             ->update([
                 'status' => 'pending',
-                'payroll_id' => null,
-                'applied_date' => null,
+                'applied_payroll_id' => null,
             ]);
     }
 

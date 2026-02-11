@@ -36,14 +36,21 @@ class Holiday extends Model
     protected static function booted()
     {
         static::saved(function () {
-            Cache::tags(['holidays'])->flush();
-            // Also clear any specific date-range caches
-            Cache::forget('holidays:*');
+            // Clear specific holiday caches (cache tags not available with file driver)
+            Cache::forget('holidays');
+            Cache::forget('active_holidays');
+            // Clear year-specific caches
+            for ($year = now()->year - 1; $year <= now()->year + 2; $year++) {
+                Cache::forget("holidays_year_{$year}");
+            }
         });
 
         static::deleted(function () {
-            Cache::tags(['holidays'])->flush();
-            Cache::forget('holidays:*');
+            Cache::forget('holidays');
+            Cache::forget('active_holidays');
+            for ($year = now()->year - 1; $year <= now()->year + 2; $year++) {
+                Cache::forget("holidays_year_{$year}");
+            }
         });
     }
 

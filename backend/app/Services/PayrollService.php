@@ -110,8 +110,7 @@ class PayrollService
                 SalaryAdjustment::whereIn('id', $allAdjustmentIds)
                     ->update([
                         'status' => 'applied',
-                        'payroll_id' => $payroll->id,
-                        'applied_date' => now(),
+                        'applied_payroll_id' => $payroll->id,
                     ]);
             }
 
@@ -165,6 +164,8 @@ class PayrollService
                         );
                 },
                 // Active allowances for period
+                // CRITERIA: is_active=true, effective_date <= period_end, 
+                // (end_date IS NULL OR end_date >= period_start)
                 'allowances' => function ($q) use ($payroll) {
                     $q->where('is_active', true)
                         ->where('effective_date', '<=', $payroll->period_end)
@@ -187,7 +188,7 @@ class PayrollService
                             $query->whereNull('effective_date')
                                 ->orWhere('effective_date', '<=', $payroll->period_end);
                         })
-                        ->select('id', 'employee_id', 'adjustment_type', 'amount');
+                        ->select('id', 'employee_id', 'type', 'amount');
                 },
                 // Active loans with balance
                 'loans' => function ($q) use ($payroll) {
@@ -206,6 +207,8 @@ class PayrollService
                         );
                 },
                 // Active deductions
+                // CRITERIA: status='active', balance > 0, start_date <= period_end,
+                // (end_date IS NULL OR end_date >= period_start)
                 'deductions' => function ($q) use ($payroll) {
                     $q->where('status', 'active')
                         ->where('balance', '>', 0)
@@ -369,46 +372,46 @@ class PayrollService
         // ===== PERIOD-LEVEL UNDERTIME-OVERTIME OFFSET =====
         // Apply offset across the entire payroll period (not per day)
         // Total OT cancels total UT: if OT > UT, UT becomes 0 and OT is reduced
-        $totalOtHours = $regularOtHours + $sundayOtHours + $regularHolidayOtHours + 
-                        $regularHolidaySundayOtHours + $specialHolidayOtHours;
+        $totalOtHours = $regularOtHours + $sundayOtHours + $regularHolidayOtHours +
+            $regularHolidaySundayOtHours + $specialHolidayOtHours;
 
         if ($totalUndertimeHours > 0 && $totalOtHours > 0) {
             $offsetAmount = min($totalUndertimeHours, $totalOtHours);
-            
+
             // Reduce undertime first
             $totalUndertimeHours = round($totalUndertimeHours - $offsetAmount, 4);
-            
+
             // Reduce OT starting from regular OT (lowest multiplier), then special types
             $remainingOffset = $offsetAmount;
-            
+
             // 1. Offset from regular OT first
             if ($remainingOffset > 0 && $regularOtHours > 0) {
                 $reduceBy = min($remainingOffset, $regularOtHours);
                 $regularOtHours = round($regularOtHours - $reduceBy, 4);
                 $remainingOffset -= $reduceBy;
             }
-            
+
             // 2. Offset from Sunday OT
             if ($remainingOffset > 0 && $sundayOtHours > 0) {
                 $reduceBy = min($remainingOffset, $sundayOtHours);
                 $sundayOtHours = round($sundayOtHours - $reduceBy, 4);
                 $remainingOffset -= $reduceBy;
             }
-            
+
             // 3. Offset from special holiday OT
             if ($remainingOffset > 0 && $specialHolidayOtHours > 0) {
                 $reduceBy = min($remainingOffset, $specialHolidayOtHours);
                 $specialHolidayOtHours = round($specialHolidayOtHours - $reduceBy, 4);
                 $remainingOffset -= $reduceBy;
             }
-            
+
             // 4. Offset from regular holiday OT
             if ($remainingOffset > 0 && $regularHolidayOtHours > 0) {
                 $reduceBy = min($remainingOffset, $regularHolidayOtHours);
                 $regularHolidayOtHours = round($regularHolidayOtHours - $reduceBy, 4);
                 $remainingOffset -= $reduceBy;
             }
-            
+
             // 5. Offset from regular holiday Sunday OT
             if ($remainingOffset > 0 && $regularHolidaySundayOtHours > 0) {
                 $reduceBy = min($remainingOffset, $regularHolidaySundayOtHours);
@@ -503,7 +506,7 @@ class PayrollService
         $adjustmentIds = [];
         foreach ($pendingAdjustments as $adjustment) {
             // Deductions are negative, additions are positive
-            if ($adjustment->adjustment_type === 'deduction') {
+            if ($adjustment->type === 'deduction') {
                 $salaryAdjustment -= abs($adjustment->amount);
             } else {
                 $salaryAdjustment += abs($adjustment->amount);

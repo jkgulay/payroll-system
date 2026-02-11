@@ -15,8 +15,8 @@ class DeductionController extends Controller
 {
     public function __construct()
     {
-        // Admin and HR can manage deductions
-        $this->middleware('role:admin,hr')->only(['store', 'update', 'destroy']);
+        // Admin, HR, and Payrollist can manage deductions
+        $this->middleware('role:admin,hr,payrollist')->only(['store', 'update', 'destroy']);
     }
 
     public function index(Request $request)

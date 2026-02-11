@@ -13,21 +13,19 @@ class SalaryAdjustment extends Model
     protected $fillable = [
         'employee_id',
         'amount',
-        'adjustment_type',
+        'type',
         'reason',
-        'description',
+        'reference_period',
         'effective_date',
         'status',
-        'payroll_id',
-        'applied_date',
+        'applied_payroll_id',
+        'notes',
         'created_by',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'effective_date' => 'date',
-        'applied_date' => 'date',
-        'approved_at' => 'datetime',
     ];
 
     /**
@@ -43,7 +41,7 @@ class SalaryAdjustment extends Model
      */
     public function appliedPayroll(): BelongsTo
     {
-        return $this->belongsTo(Payroll::class, 'payroll_id');
+        return $this->belongsTo(Payroll::class, 'applied_payroll_id');
     }
 
     /**
@@ -83,22 +81,14 @@ class SalaryAdjustment extends Model
      */
     public function getEffectiveAmountAttribute(): float
     {
-        return $this->adjustment_type === 'deduction' ? -abs($this->amount) : abs($this->amount);
+        return $this->type === 'deduction' ? -abs($this->amount) : abs($this->amount);
     }
 
     /**
-     * Accessor for type attribute (alias for adjustment_type)
+     * Accessor for description attribute (alias for reference_period for backwards compatibility)
      */
-    public function getTypeAttribute(): string
+    public function getDescriptionAttribute(): ?string
     {
-        return $this->adjustment_type;
-    }
-
-    /**
-     * Accessor for reference_period attribute (alias for description)
-     */
-    public function getReferencePeriodAttribute(): ?string
-    {
-        return $this->description;
+        return $this->reference_period;
     }
 }

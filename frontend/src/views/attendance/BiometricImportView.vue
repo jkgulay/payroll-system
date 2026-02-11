@@ -663,6 +663,7 @@ const importStaffInformation = async () => {
 
     const response = await api.post("/biometric/import-staff", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      timeout: 300000, // 5 minutes for large staff imports
     });
 
     staffImportResult.value = {
@@ -735,6 +736,7 @@ const importPunchRecords = async () => {
       formData,
       {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 300000, // 5 minutes for large punch record imports
       },
     );
 

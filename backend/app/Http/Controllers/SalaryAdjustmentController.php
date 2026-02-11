@@ -87,9 +87,9 @@ class SalaryAdjustmentController extends Controller
         $adjustment = SalaryAdjustment::create([
             'employee_id' => $validated['employee_id'],
             'amount' => $validated['amount'],
-            'adjustment_type' => $validated['type'],
+            'type' => $validated['type'],
             'reason' => $validated['reason'] ?? null,
-            'description' => $validated['reference_period'] ?? null,
+            'reference_period' => $validated['reference_period'] ?? null,
             'effective_date' => $validated['effective_date'] ?? null,
             'status' => 'pending',
             'created_by' => Auth::id(),
@@ -99,7 +99,7 @@ class SalaryAdjustmentController extends Controller
             'adjustment_id' => $adjustment->id,
             'employee_id' => $adjustment->employee_id,
             'amount' => $adjustment->amount,
-            'type' => $adjustment->adjustment_type,
+            'type' => $adjustment->type,
             'created_by' => Auth::id(),
         ]);
 
@@ -155,13 +155,13 @@ class SalaryAdjustmentController extends Controller
             $updateData['amount'] = $validated['amount'];
         }
         if (isset($validated['type'])) {
-            $updateData['adjustment_type'] = $validated['type'];
+            $updateData['type'] = $validated['type'];
         }
         if (array_key_exists('reason', $validated)) {
             $updateData['reason'] = $validated['reason'];
         }
         if (array_key_exists('reference_period', $validated)) {
-            $updateData['description'] = $validated['reference_period'];
+            $updateData['reference_period'] = $validated['reference_period'];
         }
         if (array_key_exists('effective_date', $validated)) {
             $updateData['effective_date'] = $validated['effective_date'];
@@ -261,15 +261,6 @@ class SalaryAdjustmentController extends Controller
 
         $created = [];
         foreach ($validated['adjustments'] as $adjustmentData) {
-            // Map frontend field names to model field names
-            if (isset($adjustmentData['type'])) {
-                $adjustmentData['adjustment_type'] = $adjustmentData['type'];
-                unset($adjustmentData['type']);
-            }
-            if (isset($adjustmentData['reference_period'])) {
-                $adjustmentData['description'] = $adjustmentData['reference_period'];
-                unset($adjustmentData['reference_period']);
-            }
             $adjustmentData['created_by'] = Auth::id();
             $adjustmentData['status'] = 'pending';
             $created[] = SalaryAdjustment::create($adjustmentData);
