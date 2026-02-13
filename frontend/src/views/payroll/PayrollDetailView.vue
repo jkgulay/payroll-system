@@ -339,9 +339,9 @@
             <v-icon size="24">mdi-download</v-icon>
           </div>
           <div>
-            <div class="dialog-title">Export Payroll Register</div>
+            <div class="dialog-title">Export Payroll</div>
             <div class="dialog-subtitle">
-              Choose export format for payroll register
+              Choose export type and format
             </div>
           </div>
         </v-card-title>
@@ -410,6 +410,23 @@
                     </div>
                     <div class="text-caption text-grey">
                       Editable formatted document
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </v-radio>
+            <v-radio value="payslips" class="mb-3">
+              <template v-slot:label>
+                <div class="d-flex align-center">
+                  <v-icon size="24" class="mr-3" color="#FF6F00"
+                    >mdi-file-document-multiple</v-icon
+                  >
+                  <div>
+                    <div class="text-subtitle-1 font-weight-medium">
+                      Payslips (Compact)
+                    </div>
+                    <div class="text-caption text-grey">
+                      4 payslips per page, portrait format
                     </div>
                   </div>
                 </div>
@@ -510,7 +527,7 @@
             @click="downloadRegister"
           >
             <v-icon size="20" class="mr-2">mdi-download</v-icon>
-            Download {{ exportFilter.format.toUpperCase() }}
+            Download {{ exportFilter.format === 'payslips' ? 'PAYSLIPS' : exportFilter.format.toUpperCase() }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -665,11 +682,18 @@ async function finalizePayroll() {
 async function downloadRegister() {
   if (downloadingRegister.value) return;
   downloadingRegister.value = true;
+  
+  // Determine if exporting payslips or register (needs to be outside try for error handling)
+  const isPayslips = exportFilter.value.format === 'payslips';
+  
   try {
     // Build params object
-    const params = {
-      format: exportFilter.value.format,
-    };
+    const params = {};
+    
+    // Only add format for register export (payslips is always PDF)
+    if (!isPayslips) {
+      params.format = exportFilter.value.format;
+    }
 
     // Determine filter type based on selections
     const hasDepartments =
@@ -692,8 +716,13 @@ async function downloadRegister() {
       params.filter_type = "all";
     }
 
+    // Use different endpoint for payslips
+    const endpoint = isPayslips 
+      ? `/payrolls/${payroll.value.id}/download-payslips`
+      : `/payrolls/${payroll.value.id}/download-register`;
+
     const response = await api.get(
-      `/payrolls/${payroll.value.id}/download-register`,
+      endpoint,
       {
         params: params,
         responseType: "blob",
@@ -709,9 +738,13 @@ async function downloadRegister() {
       pdf: ".pdf",
       excel: ".xlsx",
       word: ".docx",
+      payslips: ".pdf",
     };
 
-    let filename = `payroll_register_${payroll.value.payroll_number}`;
+    // Use different base filename for payslips
+    let filename = isPayslips 
+      ? `payslips_${payroll.value.payroll_number}`
+      : `payroll_register_${payroll.value.payroll_number}`;
 
     // Add department info to filename if filtered
     if (
@@ -736,9 +769,12 @@ async function downloadRegister() {
       pdf: "PDF",
       excel: "Excel",
       word: "Word",
+      payslips: "Compact Payslips PDF",
     };
 
-    let successMessage = `Payroll register downloaded as ${formatNames[exportFilter.value.format]}`;
+    let successMessage = isPayslips 
+      ? "Payslips downloaded successfully"
+      : `Payroll register downloaded as ${formatNames[exportFilter.value.format]}`;
     const filterParts = [];
 
     if (
@@ -771,7 +807,7 @@ async function downloadRegister() {
     exportFilter.value.positions = [];
   } catch (error) {
     // When responseType is 'blob', error response data is a Blob - parse it
-    let errorMessage = "Failed to download payroll register";
+    let errorMessage = isPayslips ? "Failed to download payslips" : "Failed to download payroll register";
     if (error.response?.data instanceof Blob) {
       try {
         const text = await error.response.data.text();

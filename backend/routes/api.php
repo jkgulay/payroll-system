@@ -258,6 +258,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister'])->middleware('role:admin,payrollist');
+    Route::get('/payrolls/{payroll}/download-payslips', [App\Http\Controllers\PayrollController::class, 'downloadPayslips'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/export-excel', [App\Http\Controllers\PayrollController::class, 'exportToExcel'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip'])->middleware('role:admin,payrollist,employee');
     Route::apiResource('payrolls', App\Http\Controllers\PayrollController::class)->middleware('role:admin,payrollist');

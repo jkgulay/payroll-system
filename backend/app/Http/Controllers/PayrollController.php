@@ -524,6 +524,95 @@ class PayrollController extends Controller
         return $pdf->download("payslip_{$item->employee->employee_number}_{$payroll->period_name}.pdf");
     }
 
+    /**
+     * Download all payslips for a payroll in compact format (4 per page)
+     */
+    public function downloadPayslips(Request $request, Payroll $payroll)
+    {
+        // Increase memory limit for PDF generation
+        ini_set('memory_limit', '1024M');
+        ini_set('max_execution_time', '300');
+
+        // Validate filter parameters
+        $validated = $request->validate([
+            'filter_type' => 'nullable|in:all,department,position,both',
+            'departments' => 'nullable|array',
+            'departments.*' => 'string',
+            'positions' => 'nullable|array',
+            'positions.*' => 'string',
+        ]);
+
+        // Load payroll items with employee relationship
+        $itemsQuery = $payroll->items()->with(['employee.positionRate', 'employee.project']);
+
+        // Apply filters if provided
+        if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
+            if ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
+                // Filter by both department (project) AND position
+                $itemsQuery->whereHas('employee', function ($q) use ($validated) {
+                    $q->where(function ($q2) use ($validated) {
+                        $q2->whereHas('project', function ($q3) use ($validated) {
+                            $q3->whereIn('name', $validated['departments']);
+                        })->orWhereIn('department', $validated['departments']);
+                    })->whereHas('positionRate', function ($q2) use ($validated) {
+                        $q2->whereIn('position_name', $validated['positions']);
+                    });
+                });
+            } elseif ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
+                $itemsQuery->whereHas('employee', function ($q) use ($validated) {
+                    $q->where(function ($q2) use ($validated) {
+                        $q2->whereHas('project', function ($q3) use ($validated) {
+                            $q3->whereIn('name', $validated['departments']);
+                        })->orWhereIn('department', $validated['departments']);
+                    });
+                });
+            } elseif ($validated['filter_type'] === 'position' && !empty($validated['positions'])) {
+                $itemsQuery->whereHas('employee.positionRate', function ($q) use ($validated) {
+                    $q->whereIn('position_name', $validated['positions']);
+                });
+            }
+        }
+
+        // Get filtered items
+        $payroll->setRelation('items', $itemsQuery->get());
+
+        // Build filename
+        $filenameBase = "payslips_{$payroll->payroll_number}";
+        if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
+            $filenameBase .= '_filtered';
+        }
+
+        // Get company info from database
+        $companyInfo = CompanyInfo::first();
+
+        // Ensure installed-fonts.json exists in font cache directory
+        $fontCache = storage_path('fonts');
+        $installedFonts = $fontCache . '/installed-fonts.json';
+        if (!file_exists($installedFonts)) {
+            $distFonts = base_path('vendor/dompdf/dompdf/lib/fonts/installed-fonts.dist.json');
+            if (file_exists($distFonts)) {
+                copy($distFonts, $installedFonts);
+            }
+        }
+
+        try {
+            $pdf = Pdf::loadView('payroll.payslips-compact', [
+                'payroll' => $payroll,
+                'companyInfo' => $companyInfo,
+            ])->setPaper('A4', 'portrait');
+
+            return $pdf->download($filenameBase . '.pdf');
+        } catch (\Exception $e) {
+            Log::error('Payslips PDF Export Error: ' . $e->getMessage(), [
+                'payroll_id' => $payroll->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'message' => 'Failed to generate payslips PDF: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function downloadRegister(Request $request, Payroll $payroll)
     {
         // Increase memory limit for PDF generation
