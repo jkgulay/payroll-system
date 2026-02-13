@@ -429,7 +429,7 @@ class MealAllowanceController extends Controller
                 ->setOption('debugKeepTemp', false)
                 ->setOption('chroot', base_path())
                 ->setOption('tempDir', sys_get_temp_dir())
-                ->setOption('fontDir', storage_path('fonts'))
+                ->setOption('fontDir', base_path('vendor/dompdf/dompdf/lib/fonts'))
                 ->setOption('fontCache', storage_path('fonts'));
 
             // Save PDF to storage

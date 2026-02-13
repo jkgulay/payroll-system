@@ -44,7 +44,7 @@ return [
          * Times-Roman, Times-Bold, Times-Italic, Times-BoldItalic,
          * Symbol, ZapfDingbats.
          */
-        "font_dir" => storage_path('fonts'),
+        "font_dir" => base_path('vendor/dompdf/dompdf/lib/fonts'),
 
         /**
          * The location of the DOMPDF font cache directory
