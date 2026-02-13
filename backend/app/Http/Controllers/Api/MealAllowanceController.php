@@ -428,7 +428,7 @@ class MealAllowanceController extends Controller
                 ->setOption('isRemoteEnabled', false)
                 ->setOption('debugKeepTemp', false)
                 ->setOption('chroot', base_path())
-                ->setOption('tempDir', sys_get_temp_dir())
+                ->setOption('tempDir', storage_path('framework/cache'))
                 ->setOption('fontDir', base_path('vendor/dompdf/dompdf/lib/fonts'))
                 ->setOption('fontCache', storage_path('fonts'));
 
