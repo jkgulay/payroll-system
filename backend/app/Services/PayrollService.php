@@ -37,24 +37,17 @@ class PayrollService
 
     /**
      * Reprocess/recalculate payroll (deletes old items and recalculates)
+     * Note: Transaction should be managed by the caller (PayrollController)
      */
     public function reprocessPayroll(Payroll $payroll, ?array $employeeIds = null)
     {
-        DB::beginTransaction();
-        try {
-            // Delete existing payroll items
-            PayrollItem::where('payroll_id', $payroll->id)->delete();
+        // Delete existing payroll items
+        PayrollItem::where('payroll_id', $payroll->id)->delete();
 
-            // Process payroll again
-            $this->processPayroll($payroll, $employeeIds);
+        // Process payroll again
+        $this->processPayroll($payroll, $employeeIds);
 
-            DB::commit();
-            return $payroll->fresh();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error reprocessing payroll: ' . $e->getMessage());
-            throw $e;
-        }
+        return $payroll->fresh();
     }
 
     /**
