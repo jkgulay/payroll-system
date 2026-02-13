@@ -142,28 +142,42 @@
         </template>
 
         <template v-slot:item.actions="{ item }">
-          <v-btn
-            v-if="item.status === 'pending'"
-            icon="mdi-pencil"
-            size="small"
-            variant="text"
-            @click="openEditDialog(item)"
-          ></v-btn>
-          <v-btn
-            v-if="item.status === 'pending'"
-            icon="mdi-delete"
-            size="small"
-            variant="text"
-            color="error"
-            @click="confirmDelete(item)"
-          ></v-btn>
-          <v-btn
-            icon="mdi-eye"
-            size="small"
-            variant="text"
-            color="info"
-            @click="viewAdjustment(item)"
-          ></v-btn>
+          <v-menu>
+            <template v-slot:activator="{ props }">
+              <v-btn
+                icon="mdi-dots-vertical"
+                size="small"
+                variant="text"
+                v-bind="props"
+              ></v-btn>
+            </template>
+            <v-list>
+              <v-list-item
+                v-if="item.status === 'pending'"
+                @click="openEditDialog(item)"
+              >
+                <template v-slot:prepend>
+                  <v-icon size="small">mdi-pencil</v-icon>
+                </template>
+                <v-list-item-title>Edit</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="viewAdjustment(item)">
+                <template v-slot:prepend>
+                  <v-icon size="small" color="info">mdi-eye</v-icon>
+                </template>
+                <v-list-item-title>View Details</v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                v-if="item.status === 'pending'"
+                @click="confirmDelete(item)"
+              >
+                <template v-slot:prepend>
+                  <v-icon size="small" color="error">mdi-delete</v-icon>
+                </template>
+                <v-list-item-title class="text-error">Delete</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </template>
 
         <template v-slot:no-data>

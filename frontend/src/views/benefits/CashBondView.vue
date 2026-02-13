@@ -280,7 +280,7 @@
         <v-divider></v-divider>
 
         <v-card-text class="dialog-content" style="max-height: 70vh">
-          <v-form ref="form" v-model="formValid">
+          <v-form ref="bondFormRef" v-model="formValid">
             <v-row>
               <v-col cols="12" class="pb-0">
                 <div class="section-header">
@@ -384,7 +384,6 @@
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-numeric"
-                  :rules="[rules.positiveNumber]"
                   readonly
                   hint="Auto-calculated from amount fields"
                   persistent-hint
@@ -735,6 +734,7 @@ const dialog = ref(false);
 const refundDialog = ref(false);
 const detailsDialog = ref(false);
 const editMode = ref(false);
+const bondFormRef = ref(null);
 const formValid = ref(false);
 const refundFormValid = ref(false);
 const saving = ref(false);
@@ -769,6 +769,7 @@ const statusOptions = [
 
 // Form
 const form = ref({
+  id: null,
   employee_id: null,
   total_amount: null,
   amount_per_cutoff: null,
@@ -887,11 +888,15 @@ const openAddDialog = () => {
   editMode.value = false;
   resetForm();
   dialog.value = true;
+  // Reset form validation after dialog opens
+  setTimeout(() => {
+    bondFormRef.value?.resetValidation();
+  }, 100);
 };
 
 const openEditDialog = (bond) => {
   editMode.value = true;
-  form.value = {
+  Object.assign(form.value, {
     id: bond.id,
     employee_id: bond.employee_id,
     total_amount: bond.total_amount,
@@ -901,12 +906,16 @@ const openEditDialog = (bond) => {
     reference_number: bond.reference_number || "",
     description: bond.description || "",
     notes: bond.notes || "",
-  };
+  });
   dialog.value = true;
+  // Reset form validation after dialog opens
+  setTimeout(() => {
+    bondFormRef.value?.resetValidation();
+  }, 100);
 };
 
 const openRefundDialog = (bond) => {
-  refundForm.value = {
+  Object.assign(refundForm.value, {
     deduction_id: bond.id,
     employee_name: bond.employee.full_name,
     total_amount: bond.total_amount,
@@ -915,18 +924,19 @@ const openRefundDialog = (bond) => {
     refund_amount: bond.balance,
     refund_date: new Date().toISOString().substr(0, 10),
     refund_reason: "",
-  };
+  });
   refundDialog.value = true;
 };
 
 const closeDialog = () => {
   dialog.value = false;
+  bondFormRef.value?.reset();
   resetForm();
 };
 
 const closeRefundDialog = () => {
   refundDialog.value = false;
-  refundForm.value = {
+  Object.assign(refundForm.value, {
     deduction_id: null,
     employee_name: "",
     total_amount: 0,
@@ -935,11 +945,12 @@ const closeRefundDialog = () => {
     refund_amount: 0,
     refund_date: new Date().toISOString().substr(0, 10),
     refund_reason: "",
-  };
+  });
 };
 
 const resetForm = () => {
-  form.value = {
+  Object.assign(form.value, {
+    id: null,
     employee_id: null,
     total_amount: null,
     amount_per_cutoff: null,
@@ -948,10 +959,17 @@ const resetForm = () => {
     reference_number: "",
     description: "",
     notes: "",
-  };
+  });
 };
 
 const saveCashBond = async () => {
+  // Validate form before submission
+  const { valid } = await bondFormRef.value?.validate();
+  if (!valid) {
+    showSnackbar("Please fill in all required fields correctly", "error");
+    return;
+  }
+
   saving.value = true;
   try {
     // Convert reactive form to plain object to avoid circular structure error
