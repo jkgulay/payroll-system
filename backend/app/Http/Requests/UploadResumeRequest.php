@@ -36,7 +36,7 @@ class UploadResumeRequest extends FormRequest
                         'image/jpeg',
                         'image/png',
                     ];
-                    
+
                     if ($value && !in_array($value->getMimeType(), $allowedMimes)) {
                         $fail('The file type is not allowed. Only PDF, DOC, DOCX, JPG, and PNG files are accepted.');
                     }
@@ -49,7 +49,7 @@ class UploadResumeRequest extends FormRequest
                     // Verify file extension matches MIME type
                     $extension = strtolower($value->getClientOriginalExtension());
                     $mimeType = $value->getMimeType();
-                    
+
                     $validCombinations = [
                         'pdf' => 'application/pdf',
                         'doc' => 'application/msword',
@@ -75,9 +75,11 @@ class UploadResumeRequest extends FormRequest
                     if (count($parts) >= 2) {
                         $lastTwo = array_slice($parts, -2);
                         // Check if both segments look like file extensions (3-4 chars, alphanumeric)
-                        if (count($lastTwo) === 2 && 
-                            preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[0]) && 
-                            preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[1])) {
+                        if (
+                            count($lastTwo) === 2 &&
+                            preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[0]) &&
+                            preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[1])
+                        ) {
                             $fail('Multiple file extensions are not allowed.');
                         }
                     }

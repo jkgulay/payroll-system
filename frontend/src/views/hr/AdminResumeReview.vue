@@ -97,7 +97,9 @@
             <div v-if="item.first_name">
               <strong>
                 {{ item.first_name }}
-                <template v-if="item.middle_name">{{ item.middle_name }}</template>
+                <template v-if="item.middle_name">{{
+                  item.middle_name
+                }}</template>
                 {{ item.last_name }}
               </strong>
               <div v-if="item.position_applied" class="text-caption text-grey">
@@ -212,7 +214,9 @@
           </div>
           <div>
             <div class="dialog-title">Resume Details</div>
-            <div class="dialog-subtitle">Review and approve applicant resume</div>
+            <div class="dialog-subtitle">
+              Review and approve applicant resume
+            </div>
           </div>
         </v-card-title>
 
@@ -226,7 +230,10 @@
             class="mb-4"
           >
             <div class="alert-title">Employee Application Resume</div>
-            <div>This resume is part of an employee application. You can approve or reject it directly from here.</div>
+            <div>
+              This resume is part of an employee application. You can approve or
+              reject it directly from here.
+            </div>
           </v-alert>
 
           <div class="detail-row">
@@ -247,19 +254,28 @@
             <div class="detail-label">Full Name</div>
             <div class="detail-value">
               {{ selectedResume.first_name }}
-              <template v-if="selectedResume.middle_name">{{ selectedResume.middle_name }}</template>
+              <template v-if="selectedResume.middle_name">{{
+                selectedResume.middle_name
+              }}</template>
               {{ selectedResume.last_name }}
             </div>
           </div>
 
           <div v-if="selectedResume.date_of_birth" class="detail-row">
             <div class="detail-label">Date of Birth</div>
-            <div class="detail-value">{{ formatDate(selectedResume.date_of_birth) }}</div>
+            <div class="detail-value">
+              {{ formatDate(selectedResume.date_of_birth) }}
+            </div>
           </div>
 
           <div v-if="selectedResume.gender" class="detail-row">
             <div class="detail-label">Gender</div>
-            <div class="detail-value">{{ selectedResume.gender.charAt(0).toUpperCase() + selectedResume.gender.slice(1) }}</div>
+            <div class="detail-value">
+              {{
+                selectedResume.gender.charAt(0).toUpperCase() +
+                selectedResume.gender.slice(1)
+              }}
+            </div>
           </div>
 
           <div v-if="selectedResume.email" class="detail-row">
@@ -279,22 +295,30 @@
 
           <div v-if="selectedResume.position_applied" class="detail-row">
             <div class="detail-label">Position Applied</div>
-            <div class="detail-value">{{ selectedResume.position_applied }}</div>
+            <div class="detail-value">
+              {{ selectedResume.position_applied }}
+            </div>
           </div>
 
           <div v-if="selectedResume.department_preference" class="detail-row">
             <div class="detail-label">Department</div>
-            <div class="detail-value">{{ selectedResume.department_preference }}</div>
+            <div class="detail-value">
+              {{ selectedResume.department_preference }}
+            </div>
           </div>
 
           <div v-if="selectedResume.expected_salary" class="detail-row">
             <div class="detail-label">Expected Salary</div>
-            <div class="detail-value">₱{{ selectedResume.expected_salary }}</div>
+            <div class="detail-value">
+              ₱{{ selectedResume.expected_salary }}
+            </div>
           </div>
 
           <div v-if="selectedResume.availability_date" class="detail-row">
             <div class="detail-label">Start Date</div>
-            <div class="detail-value">{{ formatDate(selectedResume.availability_date) }}</div>
+            <div class="detail-value">
+              {{ formatDate(selectedResume.availability_date) }}
+            </div>
           </div>
 
           <!-- Submission Details -->
@@ -302,40 +326,56 @@
             <div class="detail-label">Uploaded By</div>
             <div class="detail-value">
               <div class="employee-info">
-                <div class="employee-name">{{ selectedResume.user?.username }}</div>
-                <div class="employee-number">{{ selectedResume.user?.email }}</div>
+                <div class="employee-name">
+                  {{ selectedResume.user?.username }}
+                </div>
+                <div class="employee-number">
+                  {{ selectedResume.user?.email }}
+                </div>
               </div>
             </div>
           </div>
 
           <div class="detail-row">
             <div class="detail-label">File Name</div>
-            <div class="detail-value">{{ selectedResume.original_filename }}</div>
+            <div class="detail-value">
+              {{ selectedResume.original_filename }}
+            </div>
           </div>
 
           <div class="detail-row">
             <div class="detail-label">File Type</div>
-            <div class="detail-value">{{ selectedResume.file_type.toUpperCase() }}</div>
+            <div class="detail-value">
+              {{ selectedResume.file_type.toUpperCase() }}
+            </div>
           </div>
 
           <div class="detail-row">
             <div class="detail-label">File Size</div>
-            <div class="detail-value">{{ formatFileSize(selectedResume.file_size) }}</div>
+            <div class="detail-value">
+              {{ formatFileSize(selectedResume.file_size) }}
+            </div>
           </div>
 
           <div class="detail-row">
             <div class="detail-label">Uploaded</div>
-            <div class="detail-value">{{ formatDateTime(selectedResume.created_at) }}</div>
+            <div class="detail-value">
+              {{ formatDateTime(selectedResume.created_at) }}
+            </div>
           </div>
 
           <div v-if="selectedResume.reviewed_at" class="detail-row">
             <div class="detail-label">Reviewed</div>
-            <div class="detail-value">{{ formatDateTime(selectedResume.reviewed_at) }}</div>
+            <div class="detail-value">
+              {{ formatDateTime(selectedResume.reviewed_at) }}
+            </div>
           </div>
 
           <div v-if="selectedResume.reviewer" class="detail-row">
             <div class="detail-label">Reviewed By</div>
-            <div class="detail-value">{{ selectedResume.reviewer.username }}</div>
+            <div class="detail-value">
+              {{ selectedResume.reviewer.username }}
+            </div>
           </div>
 
           <div v-if="selectedResume.notes" class="detail-row full-width">

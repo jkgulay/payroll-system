@@ -223,9 +223,7 @@
               <div class="section-icon-badge">
                 <v-icon size="16">mdi-file-account</v-icon>
               </div>
-              <h3 class="section-title-compact">
-                Recent Applications
-              </h3>
+              <h3 class="section-title-compact">Recent Applications</h3>
             </div>
 
             <div class="content-card">
@@ -251,10 +249,14 @@
                   <span class="table-text">{{ item.position }}</span>
                 </template>
                 <template v-slot:item.project="{ item }">
-                  <span class="table-text">{{ item.project?.name || "N/A" }}</span>
+                  <span class="table-text">{{
+                    item.project?.name || "N/A"
+                  }}</span>
                 </template>
                 <template v-slot:item.created_at="{ item }">
-                  <span class="table-date">{{ formatDate(item.created_at) }}</span>
+                  <span class="table-date">{{
+                    formatDate(item.created_at)
+                  }}</span>
                 </template>
                 <template v-slot:item.actions="{ item }">
                   <v-btn
@@ -292,7 +294,7 @@
                       <span class="text-white text-caption">{{
                         getInitials(
                           item.employee.first_name,
-                          item.employee.last_name
+                          item.employee.last_name,
                         )
                       }}</span>
                     </v-avatar>
@@ -488,7 +490,9 @@
                     >
                     <span class="metric-info-label">Turnover (30d)</span>
                   </div>
-                  <div class="metric-text">{{ hrStats.recentResignations }} employees</div>
+                  <div class="metric-text">
+                    {{ hrStats.recentResignations }} employees
+                  </div>
                 </div>
               </div>
             </div>
@@ -563,7 +567,12 @@
     </div>
 
     <!-- Upload Resume Dialog -->
-    <v-dialog v-model="showUploadResumeDialog" max-width="900px" persistent scrollable>
+    <v-dialog
+      v-model="showUploadResumeDialog"
+      max-width="900px"
+      persistent
+      scrollable
+    >
       <v-card class="modern-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
@@ -571,7 +580,9 @@
           </div>
           <div>
             <div class="dialog-title">Upload Applicant Resume</div>
-            <div class="dialog-subtitle">Complete applicant information for review</div>
+            <div class="dialog-subtitle">
+              Complete applicant information for review
+            </div>
           </div>
         </v-card-title>
         <v-divider></v-divider>
@@ -785,11 +796,7 @@
                   @update:model-value="handleFileChange"
                 >
                   <template v-slot:selection="{ fileNames }">
-                    <v-chip
-                      size="small"
-                      color="primary"
-                      class="me-2"
-                    >
+                    <v-chip size="small" color="primary" class="me-2">
                       {{ fileNames[0] }}
                     </v-chip>
                   </template>
@@ -805,7 +812,10 @@
                   </v-card-title>
                   <v-card-text class="pa-0">
                     <!-- Image Preview -->
-                    <div v-if="filePreviewType === 'image'" class="image-preview-container">
+                    <div
+                      v-if="filePreviewType === 'image'"
+                      class="image-preview-container"
+                    >
                       <v-img
                         :src="filePreview"
                         max-height="400"
@@ -814,7 +824,10 @@
                       ></v-img>
                     </div>
                     <!-- PDF Preview -->
-                    <div v-else-if="filePreviewType === 'pdf'" class="pdf-preview-container">
+                    <div
+                      v-else-if="filePreviewType === 'pdf'"
+                      class="pdf-preview-container"
+                    >
                       <iframe
                         :src="filePreview"
                         class="pdf-preview"
@@ -863,7 +876,7 @@
               width="2"
               class="me-2"
             ></v-progress-circular>
-            {{ uploading ? 'Uploading...' : 'Submit Application' }}
+            {{ uploading ? "Uploading..." : "Submit Application" }}
           </button>
         </v-card-actions>
       </v-card>
@@ -1099,7 +1112,7 @@ async function fetchHRStats() {
   try {
     // Get total employees count from meta or fetch all
     const employeesResponse = await api.get("/employees", {
-      params: { per_page: 9999 } // Get all employees
+      params: { per_page: 9999 }, // Get all employees
     });
     hrStats.value.totalEmployees =
       employeesResponse.data.meta?.total ||
@@ -1121,18 +1134,18 @@ async function fetchHRStats() {
       params: { type: "leave", status: "pending" },
     });
     hrStats.value.pendingLeaves =
-      leavesResponse.data.data?.filter((app) => app.type === "leave")
-        .length || 0;
+      leavesResponse.data.data?.filter((app) => app.type === "leave").length ||
+      0;
 
     // Get recent resignations (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const startDate = thirtyDaysAgo.toISOString().split("T")[0];
-    
+
     const resignationsResponse = await api.get("/resignations", {
-      params: { 
+      params: {
         start_date: startDate,
-        per_page: 100 // Get all within date range
+        per_page: 100, // Get all within date range
       },
     });
     hrStats.value.recentResignations =
@@ -1175,11 +1188,11 @@ async function fetchRecentResignations() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const startDate = thirtyDaysAgo.toISOString().split("T")[0];
-    
+
     const response = await api.get("/resignations", {
-      params: { 
+      params: {
         start_date: startDate,
-        per_page: 10 
+        per_page: 10,
       },
     });
     recentResignations.value = response.data.data || response.data || [];
@@ -1363,9 +1376,15 @@ async function submitResume() {
     formData.append("phone", resumeData.value.phone);
     formData.append("address", resumeData.value.address || "");
     formData.append("position_applied", resumeData.value.position_applied);
-    formData.append("department_preference", resumeData.value.department_preference || "");
+    formData.append(
+      "department_preference",
+      resumeData.value.department_preference || "",
+    );
     formData.append("expected_salary", resumeData.value.expected_salary || "");
-    formData.append("availability_date", resumeData.value.availability_date || "");
+    formData.append(
+      "availability_date",
+      resumeData.value.availability_date || "",
+    );
     formData.append("notes", resumeData.value.notes || "");
 
     // Handle file input - v-file-input returns array
@@ -1376,13 +1395,17 @@ async function submitResume() {
     formData.append("resume", file);
 
     await resumeService.uploadResume(formData);
-    toast.success("Application submitted successfully! Waiting for admin review.");
+    toast.success(
+      "Application submitted successfully! Waiting for admin review.",
+    );
     closeResumeDialog();
     await fetchMyResumes();
     await fetchHRStats();
   } catch (error) {
     devLog.error("Error uploading resume:", error);
-    toast.error(error.response?.data?.message || "Failed to submit application");
+    toast.error(
+      error.response?.data?.message || "Failed to submit application",
+    );
   } finally {
     uploading.value = false;
   }
@@ -1390,30 +1413,30 @@ async function submitResume() {
 
 function handleFileChange(files) {
   // Clean up previous PDF blob URL to prevent memory leaks
-  if (filePreview.value && filePreviewType.value === 'pdf') {
+  if (filePreview.value && filePreviewType.value === "pdf") {
     URL.revokeObjectURL(filePreview.value);
   }
-  
+
   filePreview.value = null;
   filePreviewType.value = null;
 
   if (!files || files.length === 0) return;
 
   const file = Array.isArray(files) ? files[0] : files;
-  
-  if (file.type.startsWith('image/')) {
+
+  if (file.type.startsWith("image/")) {
     // Image preview
     const reader = new FileReader();
     reader.onload = (e) => {
       filePreview.value = e.target.result;
-      filePreviewType.value = 'image';
+      filePreviewType.value = "image";
     };
     reader.readAsDataURL(file);
-  } else if (file.type === 'application/pdf') {
+  } else if (file.type === "application/pdf") {
     // PDF preview
     const fileURL = URL.createObjectURL(file);
     filePreview.value = fileURL;
-    filePreviewType.value = 'pdf';
+    filePreviewType.value = "pdf";
   }
 }
 
@@ -1460,12 +1483,12 @@ async function fetchDepartments() {
 
 function closeResumeDialog() {
   showUploadResumeDialog.value = false;
-  
+
   // Clean up PDF blob URL to prevent memory leaks
-  if (filePreview.value && filePreviewType.value === 'pdf') {
+  if (filePreview.value && filePreviewType.value === "pdf") {
     URL.revokeObjectURL(filePreview.value);
   }
-  
+
   filePreview.value = null;
   filePreviewType.value = null;
   resumeData.value = {
@@ -2105,7 +2128,7 @@ function getResumeStatusColor(status) {
 
     .quick-action-icon {
       background: rgba(255, 255, 255, 0.2);
-      
+
       .v-icon {
         color: white !important;
       }
@@ -2126,7 +2149,7 @@ function getResumeStatusColor(status) {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  
+
   .v-icon {
     color: #ed985f !important;
   }
@@ -2570,5 +2593,3 @@ function getResumeStatusColor(status) {
   height: 100%;
 }
 </style>
-
-

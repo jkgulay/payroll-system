@@ -1523,12 +1523,12 @@ const headers = [
 
 onMounted(async () => {
   // Check if we should auto-open the Add Employee dialog FIRST
-  if (route.query.add === 'true') {
+  if (route.query.add === "true") {
     showAddEmployeeDialog.value = true;
     // Clean up the URL without reloading
     router.replace({ query: {} });
   }
-  
+
   await fetchEmployees();
   await fetchDepartments();
   await fetchProjects();
@@ -1536,13 +1536,16 @@ onMounted(async () => {
 });
 
 // Watch for route query changes to auto-open Add Employee dialog
-watch(() => route.query.add, (newValue) => {
-  if (newValue === 'true') {
-    showAddEmployeeDialog.value = true;
-    // Clean up the URL without reloading
-    router.replace({ query: {} });
-  }
-});
+watch(
+  () => route.query.add,
+  (newValue) => {
+    if (newValue === "true") {
+      showAddEmployeeDialog.value = true;
+      // Clean up the URL without reloading
+      router.replace({ query: {} });
+    }
+  },
+);
 
 // Debounce search to avoid too many API calls
 let searchTimeout = null;

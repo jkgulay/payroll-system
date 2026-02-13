@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class HrResume extends Model
 {
     use HasFactory, SoftDeletes;
-    
+
     protected $table = 'hr_resumes';
 
     protected $fillable = [
