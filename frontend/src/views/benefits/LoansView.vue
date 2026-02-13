@@ -1177,7 +1177,13 @@ const fetchLoans = async () => {
 // Fetch employees
 const fetchEmployees = async () => {
   try {
-    const response = await api.get("/employees?per_page=1000");
+    // Fetch active and on_leave employees for the loan dropdown
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 10000,
+        activity_status: "active,on_leave",
+      },
+    });
     employees.value = response.data.data || response.data;
   } catch (error) {
     devLog.error("Failed to load employees:", error);

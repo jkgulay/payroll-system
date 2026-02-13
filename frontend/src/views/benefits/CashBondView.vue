@@ -842,7 +842,10 @@ const fetchCashBonds = async () => {
 const fetchEmployees = async () => {
   try {
     const response = await api.get("/employees", {
-      params: { per_page: 1000 },
+      params: {
+        per_page: 10000,
+        activity_status: "active,on_leave",
+      },
     });
     employees.value = response.data.data;
   } catch (error) {

@@ -295,7 +295,7 @@ class PayrollController extends Controller
         $validated = $request->validate([
             'period_name' => 'sometimes|string|max:255',
             'period_start' => 'sometimes|date',
-            'period_end' => 'sometimes|date|after_or_equal:period_start',
+            'period_end' => 'sometimes|date|after_or_equal:' . ($request->has('period_start') ? 'period_start' : $payroll->period_start->format('Y-m-d')),
             'payment_date' => 'sometimes|date',
             'notes' => 'nullable|string',
         ]);

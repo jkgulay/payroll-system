@@ -37,24 +37,17 @@ class PayrollService
 
     /**
      * Reprocess/recalculate payroll (deletes old items and recalculates)
+     * Note: Transaction should be managed by the caller (PayrollController)
      */
     public function reprocessPayroll(Payroll $payroll, ?array $employeeIds = null)
     {
-        DB::beginTransaction();
-        try {
-            // Delete existing payroll items
-            PayrollItem::where('payroll_id', $payroll->id)->delete();
+        // Delete existing payroll items
+        PayrollItem::where('payroll_id', $payroll->id)->delete();
 
-            // Process payroll again
-            $this->processPayroll($payroll, $employeeIds);
+        // Process payroll again
+        $this->processPayroll($payroll, $employeeIds);
 
-            DB::commit();
-            return $payroll->fresh();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error reprocessing payroll: ' . $e->getMessage());
-            throw $e;
-        }
+        return $payroll->fresh();
     }
 
     /**
@@ -264,13 +257,47 @@ class PayrollService
         $cacheKey = "holidays:{$startDate}:{$endDate}";
 
         return Cache::remember($cacheKey, 3600, function () use ($startDate, $endDate) {
-            return Holiday::whereBetween('date', [$startDate, $endDate])
-                ->where('is_active', true)
-                ->get()
-                ->keyBy(function ($holiday) {
-                    return Carbon::parse($holiday->date)->format('Y-m-d');
+            $start = Carbon::parse($startDate);
+            $end = Carbon::parse($endDate);
+
+            // Get holidays: exact date matches + recurring holidays matching month/day range
+            $holidays = Holiday::where('is_active', true)
+                ->where(function ($q) use ($startDate, $endDate, $start, $end) {
+                    // Exact date match within period
+                    $q->whereBetween('date', [$startDate, $endDate])
+                        // OR recurring holidays whose month/day falls within the period
+                        ->orWhere(function ($q2) use ($start, $end) {
+                            $q2->where('is_recurring', true)
+                                ->where(function ($q3) use ($start, $end) {
+                                    // Match recurring holidays by month and day within period range
+                                    for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+                                        $q3->orWhere(function ($q4) use ($date) {
+                                            $q4->whereMonth('date', $date->month)
+                                                ->whereDay('date', $date->day);
+                                        });
+                                    }
+                                });
+                        });
                 })
-                ->all();
+                ->get();
+
+            // Key by actual period date (for recurring holidays, use period year)
+            $result = [];
+            foreach ($holidays as $holiday) {
+                if ($holiday->is_recurring) {
+                    // For recurring holidays, create the date key using the period's year
+                    $holidayDate = Carbon::parse($holiday->date);
+                    for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+                        if ($date->month === $holidayDate->month && $date->day === $holidayDate->day) {
+                            $result[$date->format('Y-m-d')] = $holiday;
+                        }
+                    }
+                } else {
+                    $result[Carbon::parse($holiday->date)->format('Y-m-d')] = $holiday;
+                }
+            }
+
+            return $result;
         });
     }
 

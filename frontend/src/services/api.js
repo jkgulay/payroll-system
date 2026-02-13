@@ -16,8 +16,8 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add token from localStorage
-    const token = localStorage.getItem("token");
+    // Add token from localStorage or sessionStorage
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -46,8 +46,10 @@ api.interceptors.response.use(
 
       switch (status) {
         case 401:
-          // Unauthorized - clear auth and redirect to login
+          // Unauthorized - clear auth from both storages and redirect to login
           localStorage.removeItem("token");
+          sessionStorage.removeItem("token");
+          delete api.defaults.headers.common["Authorization"];
           window.location.href = "/login";
           toast.error("Session expired. Please login again.");
           break;

@@ -61,9 +61,17 @@ class EmployeeController extends Controller
             $query->where('contract_type', $request->contract_type);
         }
 
-        // Filter by activity status
+        // Filter by activity status (supports single value, array, or comma-separated)
         if ($request->has('activity_status')) {
-            $query->where('activity_status', $request->activity_status);
+            $activityStatus = $request->activity_status;
+            if (is_array($activityStatus)) {
+                $query->whereIn('activity_status', $activityStatus);
+            } elseif (str_contains($activityStatus, ',')) {
+                $statuses = array_map('trim', explode(',', $activityStatus));
+                $query->whereIn('activity_status', $statuses);
+            } else {
+                $query->where('activity_status', $activityStatus);
+            }
         }
 
         // Filter by work schedule (new) or employment_type (legacy)

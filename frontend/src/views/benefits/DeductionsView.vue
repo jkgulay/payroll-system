@@ -1146,8 +1146,8 @@ const fetchEmployees = async () => {
   try {
     const response = await api.get("/employees", {
       params: {
-        per_page: 10000, // Large number to get all employees
-        paginate: false,
+        per_page: 10000,
+        activity_status: "active,on_leave",
       },
     });
 

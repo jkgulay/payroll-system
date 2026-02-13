@@ -60,6 +60,7 @@ export const resumeService = {
   },
 
   getFileUrl(filePath) {
-    return `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${filePath}`;
+    const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '');
+    return `${apiUrl}/storage/${filePath}`;
   },
 };
