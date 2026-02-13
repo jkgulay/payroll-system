@@ -153,7 +153,18 @@ class FileSecurityService
     private function hasDoubleExtension(string $filename): bool
     {
         $parts = explode('.', $filename);
-        return count($parts) > 2;
+        
+        // Need at least 3 parts to have a double extension (name.ext1.ext2)
+        if (count($parts) < 3) {
+            return false;
+        }
+        
+        // Check if the last two segments look like file extensions
+        $lastTwo = array_slice($parts, -2);
+        
+        // Both should be 2-4 characters and alphanumeric to be considered extensions
+        return preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[0]) && 
+               preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[1]);
     }
 
     /**
@@ -271,14 +282,14 @@ class FileSecurityService
         $extension = strtolower($file->getClientOriginalExtension());
         $mimeType = $file->getMimeType();
         
-        // Skip entropy check for image files (they naturally have high entropy due to compression)
-        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-        $imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
+        // Skip entropy check for compressed files (they naturally have high entropy due to compression)
+        $compressedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'pdf'];
+        $compressedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'application/pdf'];
         
-        $isImage = in_array($extension, $imageExtensions) || in_array($mimeType, $imageMimeTypes);
+        $isCompressed = in_array($extension, $compressedExtensions) || in_array($mimeType, $compressedMimeTypes);
         
-        // Check file entropy only for non-image files (high entropy might indicate encryption/packing)
-        if (!$isImage) {
+        // Check file entropy only for non-compressed files (high entropy might indicate encryption/packing)
+        if (!$isCompressed) {
             $entropy = $this->calculateFileEntropy($path);
             if ($entropy > 7.5) {
                 $suspicious = true;

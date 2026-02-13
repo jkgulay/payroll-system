@@ -16,10 +16,17 @@ class HrResume extends Model
     protected $fillable = [
         'user_id',
         'first_name',
+        'middle_name',
         'last_name',
+        'date_of_birth',
+        'gender',
         'email',
         'phone',
+        'address',
         'position_applied',
+        'department_preference',
+        'expected_salary',
+        'availability_date',
         'notes',
         'original_filename',
         'stored_filename',
@@ -38,12 +45,19 @@ class HrResume extends Model
     public function getFullNameAttribute(): string
     {
         if ($this->first_name && $this->last_name) {
-            return trim("{$this->first_name} {$this->last_name}");
+            $name = $this->first_name;
+            if ($this->middle_name) {
+                $name .= ' ' . $this->middle_name;
+            }
+            $name .= ' ' . $this->last_name;
+            return trim($name);
         }
         return '';
     }
 
     protected $casts = [
+        'date_of_birth' => 'date',
+        'availability_date' => 'date',
         'reviewed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
