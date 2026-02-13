@@ -115,8 +115,8 @@ class FileSecurityService
             'png' => 'image/png',
         ];
 
-        return isset($validCombinations[$extension]) && 
-               $validCombinations[$extension] === $mimeType;
+        return isset($validCombinations[$extension]) &&
+            $validCombinations[$extension] === $mimeType;
     }
 
     /**
@@ -153,7 +153,18 @@ class FileSecurityService
     private function hasDoubleExtension(string $filename): bool
     {
         $parts = explode('.', $filename);
-        return count($parts) > 2;
+
+        // Need at least 3 parts to have a double extension (name.ext1.ext2)
+        if (count($parts) < 3) {
+            return false;
+        }
+
+        // Check if the last two segments look like file extensions
+        $lastTwo = array_slice($parts, -2);
+
+        // Both should be 2-4 characters and alphanumeric to be considered extensions
+        return preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[0]) &&
+            preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[1]);
     }
 
     /**
@@ -174,7 +185,7 @@ class FileSecurityService
 
             // Check for known safe signatures based on extension
             $extension = strtolower($file->getClientOriginalExtension());
-            
+
             switch ($extension) {
                 case 'pdf':
                     return str_starts_with($hex, '25504446'); // %PDF
@@ -241,17 +252,17 @@ class FileSecurityService
     {
         // Remove any path information
         $filename = basename($filename);
-        
+
         // Remove special characters
         $filename = preg_replace('/[^a-zA-Z0-9\._-]/', '_', $filename);
-        
+
         // Remove multiple dots (except the last one)
         $parts = explode('.', $filename);
         if (count($parts) > 2) {
             $extension = array_pop($parts);
             $filename = implode('_', $parts) . '.' . $extension;
         }
-        
+
         return $filename;
     }
 
@@ -262,7 +273,7 @@ class FileSecurityService
     {
         // TODO: Integrate with ClamAV or similar antivirus solution
         // For now, perform basic checks
-        
+
         $path = $file->getRealPath();
         $suspicious = false;
         $reason = '';
@@ -270,15 +281,15 @@ class FileSecurityService
         // Get file extension and MIME type
         $extension = strtolower($file->getClientOriginalExtension());
         $mimeType = $file->getMimeType();
-        
-        // Skip entropy check for image files (they naturally have high entropy due to compression)
-        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-        $imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
-        
-        $isImage = in_array($extension, $imageExtensions) || in_array($mimeType, $imageMimeTypes);
-        
-        // Check file entropy only for non-image files (high entropy might indicate encryption/packing)
-        if (!$isImage) {
+
+        // Skip entropy check for compressed files (they naturally have high entropy due to compression)
+        $compressedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'pdf'];
+        $compressedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'application/pdf'];
+
+        $isCompressed = in_array($extension, $compressedExtensions) || in_array($mimeType, $compressedMimeTypes);
+
+        // Check file entropy only for non-compressed files (high entropy might indicate encryption/packing)
+        if (!$isCompressed) {
             $entropy = $this->calculateFileEntropy($path);
             if ($entropy > 7.5) {
                 $suspicious = true;

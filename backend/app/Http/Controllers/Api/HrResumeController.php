@@ -28,7 +28,7 @@ class HrResumeController extends Controller
             $existingResume = HrResume::where('email', $request->email)
                 ->where('status', 'pending')
                 ->first();
-            
+
             if ($existingResume) {
                 return response()->json([
                     'success' => false,
@@ -81,10 +81,17 @@ class HrResumeController extends Controller
             $resume = HrResume::create([
                 'user_id' => auth()->id(),
                 'first_name' => $request->first_name,
+                'middle_name' => $request->middle_name,
                 'last_name' => $request->last_name,
+                'date_of_birth' => $request->date_of_birth,
+                'gender' => $request->gender,
                 'email' => $request->email,
                 'phone' => $request->phone,
+                'address' => $request->address,
                 'position_applied' => $request->position_applied,
+                'department_preference' => $request->department_preference,
+                'expected_salary' => $request->expected_salary,
+                'availability_date' => $request->availability_date,
                 'notes' => $request->notes,
                 'original_filename' => $originalFilename,
                 'stored_filename' => $storedFilename,

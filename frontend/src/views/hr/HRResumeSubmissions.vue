@@ -87,7 +87,11 @@
       >
         <template v-slot:item.full_name="{ item }">
           <div class="name-cell">
-            <div class="name">{{ item.first_name }} {{ item.last_name }}</div>
+            <div class="name">
+              {{ item.first_name }}
+              <template v-if="item.middle_name">{{ item.middle_name }}</template>
+              {{ item.last_name }}
+            </div>
             <div v-if="item.position_applied" class="position">
               {{ item.position_applied }}
             </div>
@@ -158,102 +162,185 @@
 
     <!-- View Dialog -->
     <v-dialog v-model="viewDialog" max-width="700px">
-      <v-card v-if="selectedResume">
-        <v-card-title class="d-flex align-center">
-          <v-icon class="mr-2">mdi-file-document</v-icon>
-          Resume Details
-          <v-spacer></v-spacer>
-          <v-chip :color="getStatusColor(selectedResume.status)" size="small">
-            {{ selectedResume.status }}
-          </v-chip>
+      <v-card v-if="selectedResume" class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper info">
+            <v-icon size="24">mdi-file-account</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Resume Details</div>
+            <div class="dialog-subtitle">Review applicant information</div>
+          </div>
         </v-card-title>
 
-        <v-divider></v-divider>
-
-        <v-card-text class="pa-6">
-          <!-- Status -->
-          <v-alert
-            :type="getAlertType(selectedResume.status)"
-            variant="tonal"
-            class="mb-4"
-          >
-            <strong>Status:</strong> {{ selectedResume.status.toUpperCase() }}
-            <div v-if="selectedResume.status === 'pending'" class="mt-1">
-              Awaiting admin review
+        <v-card-text class="dialog-content">
+          <div class="detail-row">
+            <div class="detail-label">Status</div>
+            <div class="detail-value">
+              <v-chip
+                :color="getStatusColor(selectedResume.status)"
+                variant="flat"
+                size="small"
+              >
+                {{ selectedResume.status.toUpperCase() }}
+              </v-chip>
             </div>
-            <div v-if="selectedResume.status === 'rejected' && selectedResume.admin_notes" class="mt-1">
-              <strong>Reason:</strong> {{ selectedResume.admin_notes }}
-            </div>
-          </v-alert>
-
-          <!-- Applicant Info -->
-          <div class="info-section">
-            <h3 class="section-title">Applicant Information</h3>
-            <v-row dense>
-              <v-col cols="6">
-                <div class="info-label">Name</div>
-                <div class="info-value">
-                  {{ selectedResume.first_name }} {{ selectedResume.last_name }}
-                </div>
-              </v-col>
-              <v-col cols="6">
-                <div class="info-label">Position</div>
-                <div class="info-value">
-                  {{ selectedResume.position_applied || 'Not specified' }}
-                </div>
-              </v-col>
-              <v-col cols="6">
-                <div class="info-label">Email</div>
-                <div class="info-value">
-                  {{ selectedResume.email || selectedResume.user?.email || 'N/A' }}
-                </div>
-              </v-col>
-              <v-col cols="6">
-                <div class="info-label">Contact</div>
-                <div class="info-value">
-                  {{ selectedResume.contact_number || 'Not provided' }}
-                </div>
-              </v-col>
-            </v-row>
           </div>
 
-          <!-- Submission Info -->
-          <div class="info-section">
-            <h3 class="section-title">Submission Details</h3>
-            <v-row dense>
-              <v-col cols="6">
-                <div class="info-label">Submitted By</div>
-                <div class="info-value">{{ selectedResume.user?.username }}</div>
-              </v-col>
-              <v-col cols="6">
-                <div class="info-label">Date</div>
-                <div class="info-value">{{ formatDate(selectedResume.created_at) }}</div>
-              </v-col>
-              <v-col cols="6">
-                <div class="info-label">File</div>
-                <div class="info-value">{{ selectedResume.original_filename }}</div>
-              </v-col>
-              <v-col cols="6">
-                <div class="info-label">Size</div>
-                <div class="info-value">{{ formatFileSize(selectedResume.file_size) }}</div>
-              </v-col>
-            </v-row>
+          <!-- Personal Information -->
+          <div class="detail-row">
+            <div class="detail-label">Full Name</div>
+            <div class="detail-value">
+              {{ selectedResume.first_name }}
+              <template v-if="selectedResume.middle_name">{{ selectedResume.middle_name }}</template>
+              {{ selectedResume.last_name }}
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Date of Birth</div>
+            <div class="detail-value">{{ selectedResume.date_of_birth ? formatDate(selectedResume.date_of_birth) : 'Not provided' }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Gender</div>
+            <div class="detail-value">{{ selectedResume.gender ? (selectedResume.gender.charAt(0).toUpperCase() + selectedResume.gender.slice(1)) : 'Not specified' }}</div>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="detail-row">
+            <div class="detail-label">Email</div>
+            <div class="detail-value">{{ selectedResume.email || selectedResume.user?.email || 'N/A' }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Phone</div>
+            <div class="detail-value">{{ selectedResume.phone || selectedResume.contact_number || 'Not provided' }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Address</div>
+            <div class="detail-value">{{ selectedResume.address || 'Not provided' }}</div>
+          </div>
+
+          <!-- Professional Information -->
+          <div class="detail-row">
+            <div class="detail-label">Position Applied</div>
+            <div class="detail-value">{{ selectedResume.position_applied || 'Not specified' }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Department</div>
+            <div class="detail-value">{{ selectedResume.department_preference || 'Not specified' }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Expected Salary</div>
+            <div class="detail-value">{{ selectedResume.expected_salary ? '₱' + selectedResume.expected_salary : 'Not specified' }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Start Date</div>
+            <div class="detail-value">{{ selectedResume.availability_date ? formatDate(selectedResume.availability_date) : 'Not specified' }}</div>
+          </div>
+
+          <!-- Submission Details -->
+          <div class="detail-row">
+            <div class="detail-label">Submitted By</div>
+            <div class="detail-value">{{ selectedResume.user?.username }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Submitted On</div>
+            <div class="detail-value">{{ formatDate(selectedResume.created_at) }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">File Name</div>
+            <div class="detail-value">{{ selectedResume.original_filename }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">File Size</div>
+            <div class="detail-value">{{ formatFileSize(selectedResume.file_size) }}</div>
+          </div>
+
+          <div v-if="selectedResume.notes" class="detail-row full-width">
+            <div class="detail-label">Additional Notes</div>
+            <div class="detail-value">{{ selectedResume.notes }}</div>
+          </div>
+
+          <v-alert
+            v-if="selectedResume.status === 'rejected' && selectedResume.admin_notes"
+            type="error"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <div class="alert-title">Rejection Reason</div>
+            <div>{{ selectedResume.admin_notes }}</div>
+          </v-alert>
+
+          <v-alert
+            v-if="selectedResume.status === 'pending'"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <div>Awaiting admin review</div>
+          </v-alert>
+
+          <!-- Preview for images -->
+          <div
+            v-if="
+              ['jpg', 'jpeg', 'png'].includes(
+                selectedResume.file_type.toLowerCase(),
+              )
+            "
+            class="mt-4"
+          >
+            <v-divider class="mb-4"></v-divider>
+            <div class="detail-label mb-2">Preview</div>
+            <v-img
+              :src="selectedResume.file_url"
+              max-height="600"
+              contain
+              class="mt-2"
+            ></v-img>
+          </div>
+
+          <!-- PDF Preview -->
+          <div
+            v-if="selectedResume.file_type.toLowerCase() === 'pdf'"
+            class="mt-4"
+          >
+            <v-divider class="mb-4"></v-divider>
+            <div class="detail-label mb-2">PDF Preview</div>
+            <iframe
+              :src="selectedResume.file_url"
+              width="100%"
+              height="600px"
+              class="mt-2"
+            ></iframe>
           </div>
         </v-card-text>
 
-        <v-divider></v-divider>
-
-        <v-card-actions>
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn
-            color="primary"
-            variant="flat"
-            prepend-icon="mdi-download"
+          <button
+            class="dialog-btn dialog-btn-success"
             @click="downloadResume(selectedResume)"
           >
+            <v-icon size="18">mdi-download</v-icon>
             Download
-          </v-btn>
-          <v-btn variant="text" @click="viewDialog = false">Close</v-btn>
+          </button>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="viewDialog = false"
+          >
+            Close
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -548,30 +635,169 @@ function formatFileSize(bytes) {
 }
 
 /* Dialog */
-.info-section {
-  margin-bottom: 24px;
+.modern-dialog {
+  border-radius: 16px !important;
+  overflow: hidden;
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px !important;
+    background: linear-gradient(135deg, #001f3d 0%, #0a2f4d 100%);
+    color: #ffffff;
+  }
+
+  .dialog-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.15);
+    flex-shrink: 0;
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+
+    &.info {
+      background: rgba(237, 152, 95, 0.2);
+    }
+
+    &:hover {
+      background: rgba(0, 31, 61, 0.1);
+      transform: scale(1.05);
+    }
+  }
+
+  .dialog-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 4px;
+  }
+
+  .dialog-subtitle {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .dialog-content {
+    padding: 24px !important;
+  }
+
+  .dialog-actions {
+    padding: 16px 24px !important;
+    background: rgba(0, 31, 61, 0.02);
+    border-top: 1px solid rgba(0, 31, 61, 0.08);
+    gap: 10px;
+  }
 }
 
-.section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 16px;
+/* Detail Row (View Dialog) */
+.detail-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.06);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.full-width {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(0, 31, 61, 0.6);
+  }
+
+  .detail-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: #001f3d;
+  }
 }
 
-.info-label {
-  font-size: 0.75rem;
-  color: #6b7280;
+.alert-title {
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
-  font-weight: 600;
+  margin-bottom: 6px;
 }
 
-.info-value {
-  font-size: 0.9375rem;
-  color: #1f2937;
-  font-weight: 500;
+/* Dialog Buttons */
+.dialog-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+
+  .v-icon {
+    flex-shrink: 0;
+    color: inherit !important;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.dialog-btn-cancel {
+    background: rgba(0, 31, 61, 0.06);
+    color: rgba(0, 31, 61, 0.8);
+
+    &:hover:not(:disabled) {
+      background: rgba(0, 31, 61, 0.1);
+    }
+  }
+
+  &.dialog-btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+  }
+
+  &.dialog-btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+
+    .v-icon {
+      color: #ffffff !important;
+    }
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+  }
 }
 
 /* Responsive */

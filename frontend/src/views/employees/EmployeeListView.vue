@@ -1415,6 +1415,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useEmployeeStore } from "@/stores/employee";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
@@ -1431,6 +1432,8 @@ import { formatDate, formatCurrency } from "@/utils/formatters";
 
 const toast = useToast();
 const employeeStore = useEmployeeStore();
+const route = useRoute();
+const router = useRouter();
 const { confirm: confirmDialog } = useConfirmDialog();
 const {
   positionOptions,
@@ -1519,11 +1522,30 @@ const headers = [
 ];
 
 onMounted(async () => {
+  // Check if we should auto-open the Add Employee dialog FIRST
+  if (route.query.add === "true") {
+    showAddEmployeeDialog.value = true;
+    // Clean up the URL without reloading
+    router.replace({ query: {} });
+  }
+
   await fetchEmployees();
   await fetchDepartments();
   await fetchProjects();
   await loadPositionRates();
 });
+
+// Watch for route query changes to auto-open Add Employee dialog
+watch(
+  () => route.query.add,
+  (newValue) => {
+    if (newValue === "true") {
+      showAddEmployeeDialog.value = true;
+      // Clean up the URL without reloading
+      router.replace({ query: {} });
+    }
+  },
+);
 
 // Debounce search to avoid too many API calls
 let searchTimeout = null;

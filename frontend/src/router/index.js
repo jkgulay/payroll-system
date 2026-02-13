@@ -87,7 +87,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "employees" */ "@/views/employees/EmployeeListView.vue"
             ),
-          meta: { title: "Employees", roles: ["admin", "payrollist"] },
+          meta: { title: "Employees", roles: ["admin", "hr", "payrollist"] },
         },
         {
           path: "resignations",

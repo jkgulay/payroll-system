@@ -95,7 +95,13 @@
         >
           <template v-slot:item.full_name="{ item }">
             <div v-if="item.first_name">
-              <strong>{{ item.first_name }} {{ item.last_name }}</strong>
+              <strong>
+                {{ item.first_name }}
+                <template v-if="item.middle_name">{{
+                  item.middle_name
+                }}</template>
+                {{ item.last_name }}
+              </strong>
               <div v-if="item.position_applied" class="text-caption text-grey">
                 {{ item.position_applied }}
               </div>
@@ -133,7 +139,7 @@
           </template>
 
           <template v-slot:item.created_at="{ item }">
-            {{ formatDate(item.created_at) }}
+            {{ formatDateTime(item.created_at) }}
           </template>
 
           <template v-slot:item.actions="{ item }">
@@ -201,107 +207,192 @@
 
     <!-- View Dialog -->
     <v-dialog v-model="viewDialog" max-width="900">
-      <v-card v-if="selectedResume">
-        <v-card-title>
-          <span class="text-h5">Resume Details</span>
+      <v-card v-if="selectedResume" class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper info">
+            <v-icon size="24">mdi-file-account</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Resume Details</div>
+            <div class="dialog-subtitle">
+              Review and approve applicant resume
+            </div>
+          </div>
         </v-card-title>
-        <v-card-text>
+
+        <v-card-text class="dialog-content">
           <!-- Application Resume Alert -->
           <v-alert
             v-if="selectedResume.is_application"
             type="info"
             variant="tonal"
+            density="compact"
             class="mb-4"
           >
-            <strong>Employee Application Resume</strong><br />
-            This resume is part of an employee application. You can approve or
-            reject it directly from here.
+            <div class="alert-title">Employee Application Resume</div>
+            <div>
+              This resume is part of an employee application. You can approve or
+              reject it directly from here.
+            </div>
           </v-alert>
 
-          <!-- Applicant Info -->
-          <v-row v-if="selectedResume.first_name" class="mb-4">
-            <v-col cols="12">
-              <v-card color="grey-lighten-4" variant="flat">
-                <v-card-text>
-                  <h3 class="text-h6 mb-2">Applicant Information</h3>
-                  <v-row dense>
-                    <v-col cols="12" sm="6">
-                      <strong>Name:</strong> {{ selectedResume.first_name }}
-                      {{ selectedResume.last_name }}
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <strong>Email:</strong> {{ selectedResume.email }}
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <strong>Phone:</strong> {{ selectedResume.phone }}
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <strong>Position Applied:</strong>
-                      {{ selectedResume.position_applied }}
-                    </v-col>
-                    <v-col v-if="selectedResume.notes" cols="12">
-                      <strong>Notes:</strong> {{ selectedResume.notes }}
-                    </v-col>
-                  </v-row>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <v-row>
-            <v-col cols="12" sm="6">
-              <strong>Uploaded By:</strong>
-              <div>
-                {{ selectedResume.user?.username }} ({{
-                  selectedResume.user?.email
-                }})
-              </div>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <strong>Status:</strong>
+          <div class="detail-row">
+            <div class="detail-label">Status</div>
+            <div class="detail-value">
               <v-chip
                 :color="getStatusColor(selectedResume.status)"
+                variant="flat"
                 size="small"
-                dark
-                class="ml-2"
               >
                 {{ selectedResume.status.toUpperCase() }}
               </v-chip>
-            </v-col>
-            <v-col cols="12" sm="6">
-              <strong>Filename:</strong> {{ selectedResume.original_filename }}
-            </v-col>
-            <v-col cols="12" sm="6">
-              <strong>File Type:</strong>
+            </div>
+          </div>
+
+          <!-- Applicant Information -->
+          <div v-if="selectedResume.first_name" class="detail-row">
+            <div class="detail-label">Full Name</div>
+            <div class="detail-value">
+              {{ selectedResume.first_name }}
+              <template v-if="selectedResume.middle_name">{{
+                selectedResume.middle_name
+              }}</template>
+              {{ selectedResume.last_name }}
+            </div>
+          </div>
+
+          <div v-if="selectedResume.date_of_birth" class="detail-row">
+            <div class="detail-label">Date of Birth</div>
+            <div class="detail-value">
+              {{ formatDate(selectedResume.date_of_birth) }}
+            </div>
+          </div>
+
+          <div v-if="selectedResume.gender" class="detail-row">
+            <div class="detail-label">Gender</div>
+            <div class="detail-value">
+              {{
+                selectedResume.gender.charAt(0).toUpperCase() +
+                selectedResume.gender.slice(1)
+              }}
+            </div>
+          </div>
+
+          <div v-if="selectedResume.email" class="detail-row">
+            <div class="detail-label">Email</div>
+            <div class="detail-value">{{ selectedResume.email }}</div>
+          </div>
+
+          <div v-if="selectedResume.phone" class="detail-row">
+            <div class="detail-label">Phone</div>
+            <div class="detail-value">{{ selectedResume.phone }}</div>
+          </div>
+
+          <div v-if="selectedResume.address" class="detail-row">
+            <div class="detail-label">Address</div>
+            <div class="detail-value">{{ selectedResume.address }}</div>
+          </div>
+
+          <div v-if="selectedResume.position_applied" class="detail-row">
+            <div class="detail-label">Position Applied</div>
+            <div class="detail-value">
+              {{ selectedResume.position_applied }}
+            </div>
+          </div>
+
+          <div v-if="selectedResume.department_preference" class="detail-row">
+            <div class="detail-label">Department</div>
+            <div class="detail-value">
+              {{ selectedResume.department_preference }}
+            </div>
+          </div>
+
+          <div v-if="selectedResume.expected_salary" class="detail-row">
+            <div class="detail-label">Expected Salary</div>
+            <div class="detail-value">
+              ₱{{ selectedResume.expected_salary }}
+            </div>
+          </div>
+
+          <div v-if="selectedResume.availability_date" class="detail-row">
+            <div class="detail-label">Start Date</div>
+            <div class="detail-value">
+              {{ formatDate(selectedResume.availability_date) }}
+            </div>
+          </div>
+
+          <!-- Submission Details -->
+          <div class="detail-row">
+            <div class="detail-label">Uploaded By</div>
+            <div class="detail-value">
+              <div class="employee-info">
+                <div class="employee-name">
+                  {{ selectedResume.user?.username }}
+                </div>
+                <div class="employee-number">
+                  {{ selectedResume.user?.email }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">File Name</div>
+            <div class="detail-value">
+              {{ selectedResume.original_filename }}
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">File Type</div>
+            <div class="detail-value">
               {{ selectedResume.file_type.toUpperCase() }}
-            </v-col>
-            <v-col cols="12" sm="6">
-              <strong>File Size:</strong>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">File Size</div>
+            <div class="detail-value">
               {{ formatFileSize(selectedResume.file_size) }}
-            </v-col>
-            <v-col cols="12" sm="6">
-              <strong>Uploaded:</strong>
-              {{ formatDate(selectedResume.created_at) }}
-            </v-col>
-            <v-col v-if="selectedResume.reviewed_at" cols="12" sm="6">
-              <strong>Reviewed:</strong>
-              {{ formatDate(selectedResume.reviewed_at) }}
-            </v-col>
-            <v-col v-if="selectedResume.reviewer" cols="12" sm="6">
-              <strong>Reviewed By:</strong>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Uploaded</div>
+            <div class="detail-value">
+              {{ formatDateTime(selectedResume.created_at) }}
+            </div>
+          </div>
+
+          <div v-if="selectedResume.reviewed_at" class="detail-row">
+            <div class="detail-label">Reviewed</div>
+            <div class="detail-value">
+              {{ formatDateTime(selectedResume.reviewed_at) }}
+            </div>
+          </div>
+
+          <div v-if="selectedResume.reviewer" class="detail-row">
+            <div class="detail-label">Reviewed By</div>
+            <div class="detail-value">
               {{ selectedResume.reviewer.username }}
-            </v-col>
-            <v-col v-if="selectedResume.admin_notes" cols="12">
-              <v-alert
-                :type="
-                  selectedResume.status === 'approved' ? 'success' : 'error'
-                "
-              >
-                <strong>Admin Notes:</strong><br />
-                {{ selectedResume.admin_notes }}
-              </v-alert>
-            </v-col>
-          </v-row>
+            </div>
+          </div>
+
+          <div v-if="selectedResume.notes" class="detail-row full-width">
+            <div class="detail-label">Applicant Notes</div>
+            <div class="detail-value">{{ selectedResume.notes }}</div>
+          </div>
+
+          <v-alert
+            v-if="selectedResume.admin_notes"
+            :type="selectedResume.status === 'approved' ? 'success' : 'error'"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <div class="alert-title">Admin Notes</div>
+            <div>{{ selectedResume.admin_notes }}</div>
+          </v-alert>
 
           <!-- Preview for images -->
           <div
@@ -313,7 +404,7 @@
             class="mt-4"
           >
             <v-divider class="mb-4"></v-divider>
-            <strong>Preview:</strong>
+            <div class="detail-label mb-2">Preview</div>
             <v-img
               :src="selectedResume.file_url"
               max-height="600"
@@ -328,7 +419,7 @@
             class="mt-4"
           >
             <v-divider class="mb-4"></v-divider>
-            <strong>PDF Preview:</strong>
+            <div class="detail-label mb-2">PDF Preview</div>
             <iframe
               :src="selectedResume.file_url"
               width="100%"
@@ -337,61 +428,67 @@
             ></iframe>
           </div>
         </v-card-text>
-        <v-card-actions>
+
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn
+          <button
             v-if="
               selectedResume.status === 'pending' &&
               !selectedResume.is_application
             "
-            color="success"
+            class="dialog-btn dialog-btn-success"
             @click="openApproveDialog(selectedResume)"
           >
-            <v-icon left>mdi-check</v-icon>
+            <v-icon size="18">mdi-check</v-icon>
             Approve
-          </v-btn>
-          <v-btn
+          </button>
+          <button
             v-if="
               selectedResume.status === 'pending' &&
               !selectedResume.is_application
             "
-            color="error"
+            class="dialog-btn dialog-btn-danger"
             @click="openRejectDialog(selectedResume)"
           >
-            <v-icon left>mdi-close</v-icon>
+            <v-icon size="18">mdi-close</v-icon>
             Reject
-          </v-btn>
-          <v-btn
+          </button>
+          <button
             v-if="
               selectedResume.status === 'pending' &&
               selectedResume.is_application
             "
-            color="success"
+            class="dialog-btn dialog-btn-success"
             @click="openApproveApplicationDialog(selectedResume)"
           >
-            <v-icon left>mdi-check-circle</v-icon>
+            <v-icon size="18">mdi-check-circle</v-icon>
             Approve Application
-          </v-btn>
-          <v-btn
+          </button>
+          <button
             v-if="
               selectedResume.status === 'pending' &&
               selectedResume.is_application
             "
-            color="error"
+            class="dialog-btn dialog-btn-danger"
             @click="openRejectApplicationDialog(selectedResume)"
           >
-            <v-icon left>mdi-close-circle</v-icon>
+            <v-icon size="18">mdi-close-circle</v-icon>
             Reject Application
-          </v-btn>
-          <v-btn
+          </button>
+          <button
             v-if="!selectedResume.is_application"
-            color="primary"
+            class="dialog-btn dialog-btn-success"
             @click="downloadResume(selectedResume)"
           >
-            <v-icon left>mdi-download</v-icon>
+            <v-icon size="18">mdi-download</v-icon>
             Download
-          </v-btn>
-          <v-btn text @click="viewDialog = false">Close</v-btn>
+          </button>
+          <button
+            class="dialog-btn dialog-btn-cancel"
+            @click="viewDialog = false"
+          >
+            Close
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -616,7 +713,7 @@ import { ref, computed, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import { resumeService } from "@/services/resumeService";
 import api from "@/services/api";
-import { formatDateTime as formatDate } from "@/utils/formatters";
+import { formatDate, formatDateTime } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
@@ -1062,5 +1159,162 @@ function formatFileSize(bytes) {
   overflow: hidden;
   border: 1px solid rgba(0, 31, 61, 0.08);
   padding: 24px;
+}
+
+/* Modern Dialog Styles */
+.modern-dialog .dialog-header {
+  background: linear-gradient(135deg, #001f3d 0%, #0a2f4d 100%);
+  color: white;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: none;
+}
+
+.modern-dialog .dialog-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.modern-dialog .dialog-icon-wrapper.info {
+  background: rgba(237, 152, 95, 0.2);
+  color: #f7b980;
+}
+
+.modern-dialog .dialog-icon-wrapper:hover {
+  transform: scale(1.05);
+}
+
+.modern-dialog .dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+}
+
+.modern-dialog .dialog-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+}
+
+.modern-dialog .dialog-content {
+  padding: 28px !important;
+  background: #fafbfc;
+}
+
+.modern-dialog .detail-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.06);
+  align-items: start;
+}
+
+.modern-dialog .detail-row:last-child {
+  border-bottom: none;
+}
+
+.modern-dialog .detail-row.full-width {
+  grid-template-columns: 140px 1fr;
+}
+
+.modern-dialog .detail-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 31, 61, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.modern-dialog .detail-value {
+  font-size: 14px;
+  color: #001f3d;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.modern-dialog .employee-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modern-dialog .employee-name {
+  font-weight: 600;
+  color: #001f3d;
+}
+
+.modern-dialog .employee-number {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.6);
+}
+
+.modern-dialog .dialog-actions {
+  padding: 20px 28px;
+  background: white;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+  gap: 12px;
+}
+
+.modern-dialog .dialog-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  text-transform: none;
+  letter-spacing: 0.3px;
+}
+
+.modern-dialog .dialog-btn-cancel {
+  background: #f5f5f5;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.modern-dialog .dialog-btn-cancel:hover {
+  background: #eeeeee;
+  transform: translateY(-1px);
+}
+
+.modern-dialog .dialog-btn-success {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+}
+
+.modern-dialog .dialog-btn-success:hover {
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+  transform: translateY(-1px);
+}
+
+.modern-dialog .dialog-btn-danger {
+  background: linear-gradient(135deg, #ef5350 0%, #f44336 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(239, 83, 80, 0.3);
+}
+
+.modern-dialog .dialog-btn-danger:hover {
+  box-shadow: 0 4px 12px rgba(239, 83, 80, 0.4);
+  transform: translateY(-1px);
+}
+
+.modern-dialog .alert-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 </style>

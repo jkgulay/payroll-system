@@ -1,16 +1,16 @@
 <template>
-  <div class="modern-dashboard">
+  <div class="modern-dashboard hr-dashboard">
     <!-- Dashboard Content -->
     <div>
       <!-- Merged Header with Employee Info -->
-      <div class="dashboard-header-merged">
+      <div class="dashboard-header-merged hr-gradient">
         <div class="header-content">
           <v-avatar color="#ED985F" size="80" class="header-avatar">
             <v-img v-if="userAvatar" :src="userAvatar" cover></v-img>
-            <v-icon v-else size="40" color="white">mdi-account</v-icon>
+            <v-icon v-else size="40" color="white">mdi-account-tie</v-icon>
           </v-avatar>
           <div class="header-info">
-            <div class="welcome-badge">
+            <div class="welcome-badge hr-badge">
               <v-icon size="16" class="welcome-icon">mdi-account-tie</v-icon>
               <span>Human Resources Portal</span>
             </div>
@@ -35,70 +35,88 @@
         </div>
       </div>
 
-      <!-- Modern Statistics Cards -->
+      <!-- HR Statistics Cards -->
       <v-row class="stats-row">
         <v-col cols="12" sm="6" lg="3">
-          <div class="stat-card-new stat-card-employees">
+          <div
+            class="stat-card-new stat-card-hr-employees"
+            @click="$router.push('/employees')"
+          >
             <div class="stat-icon-wrapper">
               <div class="stat-icon-circle">
-                <v-icon size="22">mdi-calendar-check</v-icon>
+                <v-icon size="22">mdi-account-group</v-icon>
               </div>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Present This Month</div>
-              <div class="stat-value">{{ presentDays }}</div>
-              <div class="stat-meta">of {{ totalDays }} days</div>
+              <div class="stat-label">Total Employees</div>
+              <div class="stat-value">{{ hrStats.totalEmployees }}</div>
+              <div class="stat-meta">Active workforce</div>
             </div>
-          </div>
-        </v-col>
-
-        <v-col cols="12" sm="6" lg="3">
-          <div class="stat-card-new stat-card-attendance">
-            <div class="stat-icon-wrapper">
-              <div class="stat-icon-circle">
-                <v-icon size="22">mdi-clock-alert</v-icon>
-              </div>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">Late / Undertime</div>
-              <div class="stat-value">{{ lateDays }}</div>
-              <div class="stat-meta">times this month</div>
-            </div>
-          </div>
-        </v-col>
-
-        <v-col cols="12" sm="6" lg="3">
-          <div class="stat-card-new stat-card-payroll">
-            <div class="stat-icon-wrapper">
-              <div class="stat-icon-circle">
-                <v-icon size="22">mdi-clock-time-four</v-icon>
-              </div>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">Total Hours</div>
-              <div class="stat-value">{{ totalHours }}</div>
-              <div class="stat-meta">hours worked</div>
+            <div class="stat-arrow">
+              <v-icon size="20">mdi-chevron-right</v-icon>
             </div>
           </div>
         </v-col>
 
         <v-col cols="12" sm="6" lg="3">
           <div
-            class="stat-card-new stat-card-pending"
-            @click="downloadCurrentPayslip"
+            class="stat-card-new stat-card-hr-applications"
+            @click="$router.push('/resume-review')"
           >
             <div class="stat-icon-wrapper">
-              <div class="stat-icon-circle stat-icon-pulse">
-                <v-icon size="22">mdi-cash-multiple</v-icon>
+              <div class="stat-icon-circle stat-icon-pulse-hr">
+                <v-icon size="22">mdi-file-account</v-icon>
               </div>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Latest Payslip</div>
-              <div class="stat-value">₱{{ formatNumber(latestPayslip) }}</div>
-              <div class="stat-meta">Click to download</div>
+              <div class="stat-label">Pending Applications</div>
+              <div class="stat-value">{{ hrStats.pendingApplications }}</div>
+              <div class="stat-meta">Need review</div>
             </div>
             <div class="stat-arrow">
-              <v-icon size="20">mdi-download</v-icon>
+              <v-icon size="20">mdi-chevron-right</v-icon>
+            </div>
+          </div>
+        </v-col>
+
+        <v-col cols="12" sm="6" lg="3">
+          <div
+            class="stat-card-new stat-card-hr-leaves"
+            @click="$router.push('/leave-approval')"
+          >
+            <div class="stat-icon-wrapper">
+              <div class="stat-icon-circle">
+                <v-icon size="22">mdi-calendar-alert</v-icon>
+              </div>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Pending Leaves</div>
+              <div class="stat-value">{{ hrStats.pendingLeaves }}</div>
+              <div class="stat-meta">Awaiting approval</div>
+            </div>
+            <div class="stat-arrow">
+              <v-icon size="20">mdi-chevron-right</v-icon>
+            </div>
+          </div>
+        </v-col>
+
+        <v-col cols="12" sm="6" lg="3">
+          <div
+            class="stat-card-new stat-card-hr-resignations"
+            @click="$router.push('/resignations')"
+          >
+            <div class="stat-icon-wrapper">
+              <div class="stat-icon-circle">
+                <v-icon size="22">mdi-briefcase-remove</v-icon>
+              </div>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Recent Resignations</div>
+              <div class="stat-value">{{ hrStats.recentResignations }}</div>
+              <div class="stat-meta">Last 30 days</div>
+            </div>
+            <div class="stat-arrow">
+              <v-icon size="20">mdi-chevron-right</v-icon>
             </div>
           </div>
         </v-col>
@@ -108,103 +126,209 @@
       <v-row>
         <!-- Left Column - 2/3 Width -->
         <v-col cols="12" lg="8">
-          <!-- Attendance Records Section -->
-          <div class="attendance-section mb-6">
+          <!-- Pending Actions with Modern Design -->
+          <div class="action-section mb-6">
+            <div class="section-header-compact">
+              <div class="section-title-wrapper">
+                <div class="section-icon-badge">
+                  <v-icon size="18">mdi-bell-ring</v-icon>
+                </div>
+                <h2 class="section-title">Action Items</h2>
+                <v-chip size="small" class="ml-2" v-if="totalPendingItems > 0">
+                  {{ totalPendingItems }}
+                </v-chip>
+              </div>
+            </div>
+
+            <!-- Action Cards in Grid -->
+            <div class="action-grid" v-if="totalPendingItems > 0">
+              <!-- Pending Applications -->
+              <div
+                v-if="hrStats.pendingApplications > 0"
+                class="action-item"
+                @click="$router.push('/resume-review')"
+              >
+                <div class="action-item-icon action-icon-warning">
+                  <v-icon size="24">mdi-file-account</v-icon>
+                </div>
+                <div class="action-item-content">
+                  <div class="action-item-title">Job Applications</div>
+                  <div class="action-item-desc">
+                    {{ hrStats.pendingApplications }} awaiting review
+                  </div>
+                </div>
+                <div class="action-item-badge">
+                  {{ hrStats.pendingApplications }}
+                </div>
+              </div>
+
+              <!-- Pending Leaves -->
+              <div
+                v-if="hrStats.pendingLeaves > 0"
+                class="action-item"
+                @click="$router.push('/leave-approval')"
+              >
+                <div class="action-item-icon action-icon-info">
+                  <v-icon size="24">mdi-calendar-alert</v-icon>
+                </div>
+                <div class="action-item-content">
+                  <div class="action-item-title">Leave Requests</div>
+                  <div class="action-item-desc">
+                    {{ hrStats.pendingLeaves }} need approval
+                  </div>
+                </div>
+                <div class="action-item-badge">
+                  {{ hrStats.pendingLeaves }}
+                </div>
+              </div>
+
+              <!-- Recent Resignations -->
+              <div
+                v-if="hrStats.recentResignations > 0"
+                class="action-item"
+                @click="$router.push('/resignations')"
+              >
+                <div class="action-item-icon action-icon-danger">
+                  <v-icon size="24">mdi-briefcase-remove</v-icon>
+                </div>
+                <div class="action-item-content">
+                  <div class="action-item-title">Resignations</div>
+                  <div class="action-item-desc">
+                    {{ hrStats.recentResignations }} pending review
+                  </div>
+                </div>
+                <div class="action-item-badge">
+                  {{ hrStats.recentResignations }}
+                </div>
+              </div>
+            </div>
+
+            <!-- No Pending Actions -->
+            <div v-else class="no-actions-state">
+              <div class="no-actions-icon">
+                <v-icon size="64" color="success"
+                  >mdi-check-circle-outline</v-icon
+                >
+              </div>
+              <div class="no-actions-title">All Caught Up!</div>
+              <div class="no-actions-desc">
+                No pending actions require your attention
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Applications Details -->
+          <div class="applications-section mb-6">
             <div class="section-header-compact">
               <div class="section-icon-badge">
-                <v-icon size="16">mdi-calendar-check</v-icon>
+                <v-icon size="16">mdi-file-account</v-icon>
               </div>
-              <h3 class="section-title-compact">
-                Attendance Records (Last 3 Months)
-              </h3>
+              <h3 class="section-title-compact">Recent Applications</h3>
             </div>
 
             <div class="content-card">
               <v-data-table
-                :headers="attendanceHeaders"
-                :items="attendanceRecords"
-                :items-per-page="15"
+                :headers="applicationHeaders"
+                :items="pendingApplications"
+                :items-per-page="10"
                 class="modern-table"
               >
-                <template v-slot:item.attendance_date="{ item }">
+                <template v-slot:item.name="{ item }">
+                  <div class="name-cell">
+                    <v-avatar size="32" color="#ED985F">
+                      <span class="text-white text-caption">{{
+                        getInitials(item.first_name, item.last_name)
+                      }}</span>
+                    </v-avatar>
+                    <span class="ml-2">
+                      {{ item.first_name }} {{ item.last_name }}
+                    </span>
+                  </div>
+                </template>
+                <template v-slot:item.position="{ item }">
+                  <span class="table-text">{{ item.position }}</span>
+                </template>
+                <template v-slot:item.project="{ item }">
+                  <span class="table-text">{{
+                    item.project?.name || "N/A"
+                  }}</span>
+                </template>
+                <template v-slot:item.created_at="{ item }">
                   <span class="table-date">{{
-                    formatDate(item.attendance_date)
+                    formatDate(item.created_at)
                   }}</span>
                 </template>
-                <template v-slot:item.status="{ item }">
-                  <v-chip
-                    :color="getStatusColor(item.status)"
+                <template v-slot:item.actions="{ item }">
+                  <v-btn
                     size="small"
-                    variant="flat"
+                    variant="text"
+                    color="#ED985F"
+                    @click="viewApplication(item)"
                   >
-                    {{ item.status }}
-                  </v-chip>
-                </template>
-                <template v-slot:item.time_in="{ item }">
-                  <span class="table-time">{{ item.time_in || "N/A" }}</span>
-                </template>
-                <template v-slot:item.time_out="{ item }">
-                  <span class="table-time">{{ item.time_out || "N/A" }}</span>
-                </template>
-                <template v-slot:item.regular_hours="{ item }">
-                  <span class="table-hours">{{
-                    formatHoursDisplay(calculateHours(item))
-                  }}</span>
+                    Review
+                  </v-btn>
                 </template>
               </v-data-table>
             </div>
           </div>
 
-          <!-- Payslip History Section -->
-          <div class="payslip-history-section">
+          <!-- Pending Leave Requests Section -->
+          <div class="leave-requests-section mb-6">
             <div class="section-header-compact">
-              <div class="section-icon-badge">
-                <v-icon size="16">mdi-history</v-icon>
+              <div class="section-icon-badge warning">
+                <v-icon size="16">mdi-calendar-alert</v-icon>
               </div>
-              <h3 class="section-title-compact">Payslip History</h3>
+              <h3 class="section-title-compact">Recent Leave Requests</h3>
             </div>
 
             <div class="content-card">
-              <div v-if="payslipHistory.length" class="payslip-history-list">
-                <div
-                  v-for="payslip in payslipHistory"
-                  :key="payslip.id"
-                  class="payslip-history-item"
-                >
-                  <div class="payslip-history-info">
-                    <div class="payslip-history-period">
-                      <v-icon size="16" class="mr-1">mdi-calendar</v-icon>
-                      {{ formatDate(payslip.payroll.period_start) }} -
-                      {{ formatDate(payslip.payroll.period_end) }}
-                    </div>
-                    <div class="payslip-history-amount">
-                      ₱{{ formatNumber(payslip.net_pay) }}
-                    </div>
+              <v-data-table
+                :headers="leaveHeaders"
+                :items="pendingLeaveRequests"
+                :items-per-page="10"
+                class="modern-table"
+              >
+                <template v-slot:item.employee="{ item }">
+                  <div class="name-cell">
+                    <v-avatar size="32" color="#F57C00">
+                      <span class="text-white text-caption">{{
+                        getInitials(
+                          item.employee.first_name,
+                          item.employee.last_name,
+                        )
+                      }}</span>
+                    </v-avatar>
+                    <span class="ml-2">
+                      {{ item.employee.first_name }}
+                      {{ item.employee.last_name }}
+                    </span>
                   </div>
-                  <div class="payslip-history-actions">
-                    <button
-                      class="payslip-action-btn-small"
-                      @click="downloadPayslip(payslip.id, 'pdf')"
-                    >
-                      <v-icon size="16">mdi-file-pdf-box</v-icon>
-                      <span>PDF</span>
-                    </button>
-                    <button
-                      class="payslip-action-btn-small"
-                      @click="downloadPayslip(payslip.id, 'excel')"
-                    >
-                      <v-icon size="16">mdi-file-excel</v-icon>
-                      <span>Excel</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div v-else class="empty-state-small">
-                <v-icon size="48" color="rgba(0, 31, 61, 0.2)"
-                  >mdi-history</v-icon
-                >
-                <div class="empty-state-text">No payslip history</div>
-              </div>
+                </template>
+                <template v-slot:item.leave_type="{ item }">
+                  <v-chip size="small" variant="flat" color="#FFF3E0">
+                    {{ item.leave_type }}
+                  </v-chip>
+                </template>
+                <template v-slot:item.dates="{ item }">
+                  <span class="table-text">
+                    {{ formatDate(item.start_date) }} -
+                    {{ formatDate(item.end_date) }}
+                  </span>
+                </template>
+                <template v-slot:item.total_days="{ item }">
+                  <span class="table-hours">{{ item.total_days }} days</span>
+                </template>
+                <template v-slot:item.actions="{ item }">
+                  <v-btn
+                    size="small"
+                    variant="text"
+                    color="#F57C00"
+                    @click="viewLeaveRequest(item)"
+                  >
+                    Review
+                  </v-btn>
+                </template>
+              </v-data-table>
             </div>
           </div>
         </v-col>
@@ -286,8 +410,8 @@
             </div>
           </div>
 
-          <!-- Quick Links - HR specific -->
-          <div class="quick-actions-section">
+          <!-- Quick Actions - HR specific -->
+          <div class="quick-actions-section mb-6">
             <div class="section-header-compact">
               <div class="section-icon-badge">
                 <v-icon size="16">mdi-lightning-bolt</v-icon>
@@ -296,32 +420,81 @@
             </div>
             <div class="quick-action-buttons">
               <button
-                class="quick-action-btn highlight"
+                class="quick-action-btn"
+                @click="$router.push('/employees?add=true')"
+              >
+                <div class="quick-action-icon">
+                  <v-icon>mdi-account-plus</v-icon>
+                </div>
+                <span>Add Employee</span>
+              </button>
+              <button
+                class="quick-action-btn"
                 @click="showUploadResumeDialog = true"
               >
-                <div class="quick-action-icon highlight">
-                  <v-icon>mdi-file-upload</v-icon>
+                <div class="quick-action-icon">
+                  <v-icon>mdi-file-account</v-icon>
                 </div>
                 <span>Upload Resume</span>
               </button>
               <button
                 class="quick-action-btn"
-                @click="$router.push('/leave-approval')"
+                @click="$router.push('/biometric-import')"
               >
                 <div class="quick-action-icon">
-                  <v-icon>mdi-calendar-check</v-icon>
+                  <v-icon>mdi-file-upload</v-icon>
                 </div>
-                <span>Leave Requests</span>
+                <span>Import Biometrics</span>
               </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/resignations')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-briefcase-remove-outline</v-icon>
+            </div>
+          </div>
+
+          <!-- HR Statistics -->
+          <div class="system-health-section">
+            <div class="section-header-compact">
+              <div class="section-icon-badge success">
+                <v-icon size="16">mdi-chart-box</v-icon>
+              </div>
+              <h3 class="section-title-compact">HR Overview</h3>
+            </div>
+            <div class="health-metrics">
+              <div class="health-metric">
+                <div class="metric-info">
+                  <div class="metric-info-left">
+                    <v-icon size="20" class="metric-icon" color="#ed985f"
+                      >mdi-account-group</v-icon
+                    >
+                    <span class="metric-info-label">Active Employees</span>
+                  </div>
+                  <div class="metric-badge">{{ hrStats.totalEmployees }}</div>
                 </div>
-                <span>Resignations</span>
-              </button>
+              </div>
+
+              <div class="health-metric">
+                <div class="metric-info">
+                  <div class="metric-info-left">
+                    <v-icon size="20" class="metric-icon" color="#F57C00"
+                      >mdi-clock-check</v-icon
+                    >
+                    <span class="metric-info-label">Attendance Rate</span>
+                  </div>
+                  <div class="metric-badge">{{ attendanceRate }}%</div>
+                </div>
+              </div>
+
+              <div class="health-metric">
+                <div class="metric-info">
+                  <div class="metric-info-left">
+                    <v-icon size="20" class="metric-icon" color="#5c6bc0"
+                      >mdi-briefcase-remove</v-icon
+                    >
+                    <span class="metric-info-label">Turnover (30d)</span>
+                  </div>
+                  <div class="metric-text">
+                    {{ hrStats.recentResignations }} employees
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </v-col>
@@ -394,90 +567,286 @@
     </div>
 
     <!-- Upload Resume Dialog -->
-    <v-dialog v-model="showUploadResumeDialog" max-width="600px" persistent>
-      <v-card>
-        <v-card-title class="text-h5 py-4 bg-primary">
-          <v-icon start>mdi-file-upload</v-icon>
-          Upload Applicant Resume
+    <v-dialog
+      v-model="showUploadResumeDialog"
+      max-width="900px"
+      persistent
+      scrollable
+    >
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper primary">
+            <v-icon size="24">mdi-account-plus-outline</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Upload Applicant Resume</div>
+            <div class="dialog-subtitle">
+              Complete applicant information for review
+            </div>
+          </div>
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="pt-6">
+        <v-card-text class="dialog-content" style="max-height: 70vh">
           <v-form ref="resumeForm">
+            <!-- Info Alert -->
+            <v-alert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+              icon="mdi-information"
+            >
+              Application will be sent for admin review after submission.
+            </v-alert>
+
             <v-row>
-              <v-col cols="12" md="6">
+              <!-- Section 1: Personal Information -->
+              <v-col cols="12">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-account-circle</v-icon>
+                  </div>
+                  <h3 class="section-title">Personal Information</h3>
+                </div>
+              </v-col>
+
+              <v-col cols="12" md="4">
                 <v-text-field
                   v-model="resumeData.first_name"
                   label="First Name"
+                  prepend-inner-icon="mdi-account"
+                  :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="resumeData.middle_name"
+                  label="Middle Name"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Optional"
+                  persistent-hint
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="resumeData.last_name"
+                  label="Last Name"
                   :rules="[rules.required]"
+                  variant="outlined"
+                  density="comfortable"
                 ></v-text-field>
               </v-col>
 
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="resumeData.last_name"
-                  label="Last Name"
+                  v-model="resumeData.date_of_birth"
+                  label="Date of Birth"
+                  type="date"
+                  prepend-inner-icon="mdi-calendar"
+                  :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
-                  :rules="[rules.required]"
                 ></v-text-field>
               </v-col>
 
-              <v-col cols="12">
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="resumeData.gender"
+                  :items="GENDERS"
+                  label="Gender"
+                  prepend-inner-icon="mdi-gender-male-female"
+                  :rules="[rules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="6">
                 <v-text-field
                   v-model="resumeData.email"
-                  label="Email"
+                  label="Email Address"
                   type="email"
+                  prepend-inner-icon="mdi-email"
+                  :rules="[rules.required, rules.email]"
                   variant="outlined"
                   density="comfortable"
-                  :rules="[rules.required, rules.email]"
                 ></v-text-field>
               </v-col>
 
-              <v-col cols="12">
+              <v-col cols="12" md="6">
                 <v-text-field
                   v-model="resumeData.phone"
-                  label="Phone Number"
+                  label="Mobile Number"
+                  prepend-inner-icon="mdi-cellphone"
+                  :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
-                  :rules="[rules.required]"
+                  hint="Format: 09171234567"
+                  persistent-hint
                 ></v-text-field>
               </v-col>
 
               <v-col cols="12">
-                <v-text-field
-                  v-model="resumeData.position_applied"
-                  label="Position Applied For"
+                <v-textarea
+                  v-model="resumeData.address"
+                  label="Complete Address"
+                  prepend-inner-icon="mdi-map-marker"
+                  rows="1"
+                  :rules="[rules.required]"
                   variant="outlined"
                   density="comfortable"
+                ></v-textarea>
+              </v-col>
+
+              <!-- Section 2: Professional Information -->
+              <v-col cols="12" class="mt-4">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-briefcase</v-icon>
+                  </div>
+                  <h3 class="section-title">Professional Information</h3>
+                </div>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="resumeData.position_applied"
+                  :items="positionOptions"
+                  label="Position Applied For"
+                  prepend-inner-icon="mdi-badge-account"
                   :rules="[rules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Select from available positions"
+                  persistent-hint
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="resumeData.department_preference"
+                  :items="departments"
+                  item-title="name"
+                  item-value="name"
+                  label="Department Preference"
+                  prepend-inner-icon="mdi-office-building"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Optional"
+                  persistent-hint
+                  clearable
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="resumeData.expected_salary"
+                  label="Expected Salary"
+                  prepend-inner-icon="mdi-cash"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Optional - Daily or monthly rate"
+                  persistent-hint
+                  prefix="₱"
                 ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="resumeData.availability_date"
+                  label="Available Start Date"
+                  type="date"
+                  prepend-inner-icon="mdi-calendar-clock"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="When can you start?"
+                  persistent-hint
+                ></v-text-field>
+              </v-col>
+
+              <!-- Section 3: Resume Upload -->
+              <v-col cols="12" class="mt-4">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-file-document</v-icon>
+                  </div>
+                  <h3 class="section-title">Resume & Documents</h3>
+                </div>
               </v-col>
 
               <v-col cols="12">
                 <v-file-input
                   v-model="resumeData.resume_file"
-                  label="Resume File"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  label="Upload Resume"
+                  accept=".pdf,.jpg,.jpeg,.png"
                   variant="outlined"
                   density="comfortable"
                   prepend-icon="mdi-paperclip"
-                  hint="PDF, DOC, DOCX, JPG, or PNG (Max 10MB)"
+                  hint="PDF, JPG, or PNG (Max 10MB)"
                   persistent-hint
                   show-size
+                  :multiple="false"
                   :rules="[rules.required]"
-                ></v-file-input>
+                  @update:model-value="handleFileChange"
+                >
+                  <template v-slot:selection="{ fileNames }">
+                    <v-chip size="small" color="primary" class="me-2">
+                      {{ fileNames[0] }}
+                    </v-chip>
+                  </template>
+                </v-file-input>
+              </v-col>
+
+              <!-- File Preview Section -->
+              <v-col cols="12" v-if="filePreview">
+                <v-card variant="outlined" class="file-preview-card">
+                  <v-card-title class="text-subtitle-2 bg-grey-lighten-4">
+                    <v-icon start size="20">mdi-eye</v-icon>
+                    File Preview
+                  </v-card-title>
+                  <v-card-text class="pa-0">
+                    <!-- Image Preview -->
+                    <div
+                      v-if="filePreviewType === 'image'"
+                      class="image-preview-container"
+                    >
+                      <v-img
+                        :src="filePreview"
+                        max-height="400"
+                        contain
+                        class="preview-image"
+                      ></v-img>
+                    </div>
+                    <!-- PDF Preview -->
+                    <div
+                      v-else-if="filePreviewType === 'pdf'"
+                      class="pdf-preview-container"
+                    >
+                      <iframe
+                        :src="filePreview"
+                        class="pdf-preview"
+                        frameborder="0"
+                      ></iframe>
+                    </div>
+                  </v-card-text>
+                </v-card>
               </v-col>
 
               <v-col cols="12">
                 <v-textarea
                   v-model="resumeData.notes"
-                  label="Additional Notes (Optional)"
+                  label="Additional Notes"
                   rows="3"
                   variant="outlined"
                   density="comfortable"
+                  hint="Optional - Any additional information you'd like to share"
+                  persistent-hint
                 ></v-textarea>
               </v-col>
             </v-row>
@@ -486,23 +855,29 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="pa-4">
+        <v-card-actions class="dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
+          <button
+            class="dialog-btn dialog-btn-cancel"
             @click="closeResumeDialog"
             :disabled="uploading"
           >
             Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            variant="elevated"
+          </button>
+          <button
+            class="dialog-btn dialog-btn-primary"
             @click="submitResume"
-            :loading="uploading"
+            :disabled="uploading"
           >
-            Upload Resume
-          </v-btn>
+            <v-progress-circular
+              v-if="uploading"
+              indeterminate
+              size="16"
+              width="2"
+              class="me-2"
+            ></v-progress-circular>
+            {{ uploading ? "Uploading..." : "Submit Application" }}
+          </button>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -511,6 +886,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
@@ -518,10 +894,13 @@ import { resumeService } from "@/services/resumeService";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { usePositionRates } from "@/composables/usePositionRates";
 
+const router = useRouter();
 const authStore = useAuthStore();
 const toast = useToast();
 const { confirm: confirmDialog } = useConfirmDialog();
+const { positionOptions, loadPositionRates } = usePositionRates();
 
 const refreshing = ref(false);
 const downloading = ref(false);
@@ -540,17 +919,45 @@ const payslipHistory = ref([]);
 const myResumes = ref([]);
 const showUploadResumeDialog = ref(false);
 
+// HR-specific data
+const hrStats = ref({
+  totalEmployees: 0,
+  pendingApplications: 0,
+  pendingLeaves: 0,
+  recentResignations: 0,
+});
+
+const pendingApplications = ref([]);
+const pendingLeaveRequests = ref([]);
+const recentResignations = ref([]);
+
 const resumeData = ref({
   first_name: "",
+  middle_name: "",
   last_name: "",
+  date_of_birth: null,
+  gender: "",
   email: "",
   phone: "",
+  address: "",
   position_applied: "",
+  department_preference: "",
+  expected_salary: "",
+  availability_date: "",
   resume_file: null,
   notes: "",
 });
 
+const filePreview = ref(null);
+const filePreviewType = ref(null);
+const departments = ref([]);
+
 const resumeForm = ref(null);
+
+const GENDERS = [
+  { title: "Male", value: "male" },
+  { title: "Female", value: "female" },
+];
 
 const rules = {
   required: (value) => !!value || "This field is required",
@@ -608,6 +1015,21 @@ const latestPayslip = computed(() => {
   return typeof netPay === "number" ? netPay : parseFloat(netPay) || 0;
 });
 
+const totalPendingItems = computed(() => {
+  return (
+    hrStats.value.pendingApplications +
+    hrStats.value.pendingLeaves +
+    hrStats.value.recentResignations
+  );
+});
+
+const attendanceRate = computed(() => {
+  if (!attendanceSummary.value) return 0;
+  const present = attendanceSummary.value.present || 0;
+  const total = totalDays.value || 1;
+  return Math.round((present / total) * 100);
+});
+
 const userAvatar = computed(() => {
   if (!authStore.user?.avatar) return null;
   const avatar = authStore.user.avatar;
@@ -628,6 +1050,22 @@ const attendanceHeaders = [
   { title: "Hours", key: "regular_hours" },
 ];
 
+const applicationHeaders = [
+  { title: "Name", key: "name", sortable: true },
+  { title: "Position", key: "position", sortable: true },
+  { title: "Department", key: "project", sortable: true },
+  { title: "Submitted", key: "created_at", sortable: true },
+  { title: "Actions", key: "actions", sortable: false },
+];
+
+const leaveHeaders = [
+  { title: "Employee", key: "employee", sortable: true },
+  { title: "Leave Type", key: "leave_type", sortable: true },
+  { title: "Dates", key: "dates", sortable: false },
+  { title: "Duration", key: "total_days", sortable: true },
+  { title: "Actions", key: "actions", sortable: false },
+];
+
 const resumeHeaders = [
   { title: "Applicant Name", key: "full_name", sortable: true },
   { title: "Email", key: "email", sortable: true },
@@ -640,6 +1078,8 @@ const resumeHeaders = [
 onMounted(async () => {
   await fetchDashboardData();
   await fetchMyResumes();
+  await fetchDepartments();
+  await loadPositionRates();
 });
 
 async function fetchDashboardData() {
@@ -656,9 +1096,108 @@ async function fetchDashboardData() {
     attendanceRecords.value = response.data.attendance || [];
     currentPayslip.value = response.data.current_payslip;
     payslipHistory.value = response.data.payslip_history || [];
+
+    // Fetch HR-specific data
+    await fetchHRStats();
+    await fetchPendingApplications();
+    await fetchPendingLeaves();
+    await fetchRecentResignations();
   } catch (error) {
     devLog.error("Error loading dashboard:", error);
     toast.error("Failed to load dashboard data");
+  }
+}
+
+async function fetchHRStats() {
+  try {
+    // Get total employees count from meta or fetch all
+    const employeesResponse = await api.get("/employees", {
+      params: { per_page: 9999 }, // Get all employees
+    });
+    hrStats.value.totalEmployees =
+      employeesResponse.data.meta?.total ||
+      employeesResponse.data.data?.length ||
+      employeesResponse.data.length ||
+      0;
+
+    // Get pending applications count
+    const applicationsResponse = await api.get("/employee-applications", {
+      params: { status: "pending" },
+    });
+    hrStats.value.pendingApplications =
+      applicationsResponse.data.data?.length ||
+      applicationsResponse.data.length ||
+      0;
+
+    // Get pending leaves count
+    const leavesResponse = await api.get("/employee-applications", {
+      params: { type: "leave", status: "pending" },
+    });
+    hrStats.value.pendingLeaves =
+      leavesResponse.data.data?.filter((app) => app.type === "leave").length ||
+      0;
+
+    // Get recent resignations (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const startDate = thirtyDaysAgo.toISOString().split("T")[0];
+
+    const resignationsResponse = await api.get("/resignations", {
+      params: {
+        start_date: startDate,
+        per_page: 100, // Get all within date range
+      },
+    });
+    hrStats.value.recentResignations =
+      resignationsResponse.data.data?.length ||
+      resignationsResponse.data.length ||
+      0;
+  } catch (error) {
+    devLog.error("Error loading HR stats:", error);
+    // Don't show error toast, just log it
+  }
+}
+
+async function fetchPendingApplications() {
+  try {
+    const response = await api.get("/employee-applications", {
+      params: { status: "pending", limit: 10 },
+    });
+    pendingApplications.value = response.data.data || response.data || [];
+  } catch (error) {
+    devLog.error("Error loading pending applications:", error);
+  }
+}
+
+async function fetchPendingLeaves() {
+  try {
+    const response = await api.get("/employee-applications", {
+      params: { type: "leave", status: "pending", limit: 10 },
+    });
+    const allApplications = response.data.data || response.data || [];
+    pendingLeaveRequests.value = allApplications.filter(
+      (app) => app.type === "leave",
+    );
+  } catch (error) {
+    devLog.error("Error loading pending leaves:", error);
+  }
+}
+
+async function fetchRecentResignations() {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const startDate = thirtyDaysAgo.toISOString().split("T")[0];
+
+    const response = await api.get("/resignations", {
+      params: {
+        start_date: startDate,
+        per_page: 10,
+      },
+    });
+    recentResignations.value = response.data.data || response.data || [];
+  } catch (error) {
+    devLog.error("Error loading recent resignations:", error);
   }
 }
 
@@ -732,6 +1271,34 @@ function getStatusColor(status) {
   return colors[status] || "grey";
 }
 
+function getInitials(firstName, lastName) {
+  const first = firstName ? firstName.charAt(0).toUpperCase() : "";
+  const last = lastName ? lastName.charAt(0).toUpperCase() : "";
+  return first + last || "?";
+}
+
+function getResignationStatusColor(status) {
+  const colors = {
+    pending: "warning",
+    approved: "success",
+    rejected: "error",
+    completed: "info",
+  };
+  return colors[status] || "grey";
+}
+
+function viewApplication(application) {
+  router.push(`/resume-review/${application.id}`);
+}
+
+function viewLeaveRequest(leave) {
+  router.push(`/leave-approval/${leave.id}`);
+}
+
+function viewResignation(resignation) {
+  router.push(`/resignations/${resignation.id}`);
+}
+
 function calculateHours(record) {
   if (
     record.regular_hours &&
@@ -801,10 +1368,23 @@ async function submitResume() {
   try {
     const formData = new FormData();
     formData.append("first_name", resumeData.value.first_name);
+    formData.append("middle_name", resumeData.value.middle_name || "");
     formData.append("last_name", resumeData.value.last_name);
+    formData.append("date_of_birth", resumeData.value.date_of_birth || "");
+    formData.append("gender", resumeData.value.gender || "");
     formData.append("email", resumeData.value.email);
     formData.append("phone", resumeData.value.phone);
+    formData.append("address", resumeData.value.address || "");
     formData.append("position_applied", resumeData.value.position_applied);
+    formData.append(
+      "department_preference",
+      resumeData.value.department_preference || "",
+    );
+    formData.append("expected_salary", resumeData.value.expected_salary || "");
+    formData.append(
+      "availability_date",
+      resumeData.value.availability_date || "",
+    );
     formData.append("notes", resumeData.value.notes || "");
 
     // Handle file input - v-file-input returns array
@@ -815,14 +1395,48 @@ async function submitResume() {
     formData.append("resume", file);
 
     await resumeService.uploadResume(formData);
-    toast.success("Resume uploaded successfully! Waiting for admin approval.");
+    toast.success(
+      "Application submitted successfully! Waiting for admin review.",
+    );
     closeResumeDialog();
     await fetchMyResumes();
+    await fetchHRStats();
   } catch (error) {
     devLog.error("Error uploading resume:", error);
-    toast.error(error.response?.data?.message || "Failed to upload resume");
+    toast.error(
+      error.response?.data?.message || "Failed to submit application",
+    );
   } finally {
     uploading.value = false;
+  }
+}
+
+function handleFileChange(files) {
+  // Clean up previous PDF blob URL to prevent memory leaks
+  if (filePreview.value && filePreviewType.value === "pdf") {
+    URL.revokeObjectURL(filePreview.value);
+  }
+
+  filePreview.value = null;
+  filePreviewType.value = null;
+
+  if (!files || files.length === 0) return;
+
+  const file = Array.isArray(files) ? files[0] : files;
+
+  if (file.type.startsWith("image/")) {
+    // Image preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      filePreview.value = e.target.result;
+      filePreviewType.value = "image";
+    };
+    reader.readAsDataURL(file);
+  } else if (file.type === "application/pdf") {
+    // PDF preview
+    const fileURL = URL.createObjectURL(file);
+    filePreview.value = fileURL;
+    filePreviewType.value = "pdf";
   }
 }
 
@@ -858,14 +1472,38 @@ async function deleteResume(resumeId) {
   }
 }
 
+async function fetchDepartments() {
+  try {
+    const response = await api.get("/projects");
+    departments.value = response.data || [];
+  } catch (error) {
+    devLog.error("Error loading departments:", error);
+  }
+}
+
 function closeResumeDialog() {
   showUploadResumeDialog.value = false;
+
+  // Clean up PDF blob URL to prevent memory leaks
+  if (filePreview.value && filePreviewType.value === "pdf") {
+    URL.revokeObjectURL(filePreview.value);
+  }
+
+  filePreview.value = null;
+  filePreviewType.value = null;
   resumeData.value = {
     first_name: "",
+    middle_name: "",
     last_name: "",
+    date_of_birth: null,
+    gender: "",
     email: "",
     phone: "",
+    address: "",
     position_applied: "",
+    department_preference: "",
+    expected_salary: "",
+    availability_date: "",
     resume_file: null,
     notes: "",
   };
@@ -919,6 +1557,10 @@ function getResumeStatusColor(status) {
     gap: 20px;
     align-items: flex-start;
   }
+
+  &.hr-gradient {
+    background: linear-gradient(135deg, #001f3d 0%, #0a2f4d 100%);
+  }
 }
 
 .header-content {
@@ -958,6 +1600,12 @@ function getResumeStatusColor(status) {
 
   .welcome-icon {
     color: #ed985f;
+  }
+
+  &.hr-badge {
+    .welcome-icon {
+      color: #ed985f;
+    }
   }
 }
 
@@ -1004,126 +1652,120 @@ function getResumeStatusColor(status) {
 }
 
 .stat-card-new {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 31, 61, 0.08);
-  transition: all 0.3s ease;
-  cursor: default;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  height: 100%;
 
   &::before {
     content: "";
     position: absolute;
+    left: 0;
     top: 0;
-    right: 0;
-    width: 100px;
-    height: 100px;
-    background: radial-gradient(
-      circle,
-      rgba(237, 152, 95, 0.1) 0%,
-      transparent 70%
-    );
-    border-radius: 50%;
-    transform: translate(30%, -30%);
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
   }
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 31, 61, 0.12);
-  }
+    box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
+    border-color: rgba(237, 152, 95, 0.3);
 
-  &.stat-card-pending {
-    cursor: pointer;
+    &::before {
+      transform: scaleY(1);
+    }
+
+    .stat-arrow {
+      transform: translateX(4px);
+      opacity: 1;
+    }
   }
 }
 
 .stat-icon-wrapper {
-  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .stat-icon-circle {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    rgba(237, 152, 95, 0.12) 0%,
+    rgba(247, 185, 128, 0.08) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  position: relative;
-  z-index: 1;
+  transition: all 0.3s ease;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
 }
 
-.stat-card-employees .stat-icon-circle {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+// All stat cards use the same light background style
+// No need for individual overrides
+
+.stat-icon-pulse-hr {
+  animation: pulse-glow 2s infinite;
 }
 
-.stat-card-attendance .stat-icon-circle {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.stat-card-payroll .stat-icon-circle {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.stat-card-pending .stat-icon-circle {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-}
-
-.stat-icon-pulse {
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
+@keyframes pulse-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(67, 233, 123, 0.4);
+    box-shadow: 0 0 0 0 rgba(237, 152, 95, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(67, 233, 123, 0);
+    box-shadow: 0 0 0 8px rgba(237, 152, 95, 0);
   }
 }
 
 .stat-content {
-  position: relative;
-  z-index: 1;
+  flex: 1;
+  min-width: 0;
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 11px;
+  font-weight: 600;
   color: rgba(0, 31, 61, 0.6);
-  font-weight: 500;
-  margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 6px;
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
   color: #001f3d;
   line-height: 1;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .stat-meta {
   font-size: 12px;
   color: rgba(0, 31, 61, 0.5);
-  font-weight: 500;
 }
 
 .stat-arrow {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  color: rgba(0, 31, 61, 0.2);
+  opacity: 0;
+  transform: translateX(0);
   transition: all 0.3s ease;
-}
-
-.stat-card-new:hover .stat-arrow {
-  color: rgba(0, 31, 61, 0.4);
-  transform: translateX(4px);
+  color: #ed985f;
 }
 
 // Section Headers
@@ -1132,21 +1774,72 @@ function getResumeStatusColor(status) {
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
+  padding: 0 8px;
 }
 
 .section-icon-badge {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    rgba(237, 152, 95, 0.12) 0%,
+    rgba(247, 185, 128, 0.08) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  flex-shrink: 0;
 
   &.success {
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(16, 185, 129, 0.12) 0%,
+      rgba(16, 185, 129, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #10b981 !important;
+    }
+  }
+
+  &.warning {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 152, 0, 0.12) 0%,
+      rgba(255, 111, 0, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #ff9800 !important;
+    }
+  }
+
+  &.info {
+    background: linear-gradient(
+      135deg,
+      rgba(33, 150, 243, 0.12) 0%,
+      rgba(21, 101, 192, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #2196f3 !important;
+    }
+  }
+
+  &.danger {
+    background: linear-gradient(
+      135deg,
+      rgba(244, 67, 54, 0.12) 0%,
+      rgba(198, 40, 40, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #f44336 !important;
+    }
+  }
+
+  .v-icon {
+    color: #ed985f !important;
   }
 }
 
@@ -1160,10 +1853,11 @@ function getResumeStatusColor(status) {
 
 // Content Cards
 .content-card {
-  background: white;
+  background: #ffffff;
   border-radius: 16px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 31, 61, 0.08);
 }
 
 // Tables
@@ -1174,13 +1868,13 @@ function getResumeStatusColor(status) {
   }
 
   :deep(.v-data-table-header) {
-    background: #f8f9fa;
+    background: rgba(0, 31, 61, 0.02);
 
     th {
       font-weight: 600 !important;
-      color: #001f3d !important;
+      font-size: 13px !important;
+      color: rgba(0, 31, 61, 0.7) !important;
       text-transform: uppercase;
-      font-size: 11px !important;
       letter-spacing: 0.5px;
     }
   }
@@ -1201,13 +1895,24 @@ function getResumeStatusColor(status) {
 
 .table-time {
   font-family: "Courier New", monospace;
-  color: rgba(0, 31, 61, 0.7);
-  font-size: 13px;
+  font-size: 14px;
+  color: rgba(0, 31, 61, 0.8);
 }
 
 .table-hours {
   font-weight: 600;
-  color: #667eea;
+  color: #ed985f;
+}
+
+.table-text {
+  font-weight: 500;
+  color: rgba(0, 31, 61, 0.8);
+}
+
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 // Payslip Details
@@ -1297,12 +2002,12 @@ function getResumeStatusColor(status) {
   transition: all 0.3s ease;
 
   &.primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
     color: white;
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
     }
   }
 
@@ -1400,9 +2105,9 @@ function getResumeStatusColor(status) {
   gap: 16px;
   padding: 16px;
   background: white;
-  border: none;
+  border: 1px solid rgba(0, 31, 61, 0.08);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 31, 61, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: left;
@@ -1412,16 +2117,21 @@ function getResumeStatusColor(status) {
 
   &:hover {
     transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(0, 31, 61, 0.12);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.15);
+    border-color: rgba(237, 152, 95, 0.2);
   }
 
   &.highlight {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
     color: white;
+    border-color: transparent;
 
     .quick-action-icon {
       background: rgba(255, 255, 255, 0.2);
-      color: white;
+
+      .v-icon {
+        color: white !important;
+      }
     }
   }
 }
@@ -1430,12 +2140,19 @@ function getResumeStatusColor(status) {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: #f8f9fa;
+  background: linear-gradient(
+    135deg,
+    rgba(237, 152, 95, 0.12) 0%,
+    rgba(247, 185, 128, 0.08) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #667eea;
   flex-shrink: 0;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
 }
 
 // Empty State
@@ -1452,5 +2169,427 @@ function getResumeStatusColor(status) {
   font-size: 14px;
   color: rgba(0, 31, 61, 0.5);
   font-weight: 500;
+}
+
+// Action Section (matching admin dashboard)
+.action-section {
+  .section-header {
+    margin-bottom: 20px;
+  }
+
+  .section-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #001f3d;
+    margin: 0;
+  }
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 31, 61, 0.08);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(237, 152, 95, 0.15);
+    border-color: rgba(237, 152, 95, 0.2);
+  }
+}
+
+.action-item-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.action-icon-warning {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 152, 0, 0.12) 0%,
+      rgba(255, 111, 0, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #ff9800 !important;
+    }
+  }
+
+  &.action-icon-info {
+    background: linear-gradient(
+      135deg,
+      rgba(33, 150, 243, 0.12) 0%,
+      rgba(21, 101, 192, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #2196f3 !important;
+    }
+  }
+
+  &.action-icon-success {
+    background: linear-gradient(
+      135deg,
+      rgba(76, 175, 80, 0.12) 0%,
+      rgba(46, 125, 50, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #4caf50 !important;
+    }
+  }
+
+  &.action-icon-primary {
+    background: linear-gradient(
+      135deg,
+      rgba(237, 152, 95, 0.12) 0%,
+      rgba(247, 185, 128, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #ed985f !important;
+    }
+  }
+
+  &.action-icon-danger {
+    background: linear-gradient(
+      135deg,
+      rgba(244, 67, 54, 0.12) 0%,
+      rgba(198, 40, 40, 0.08) 100%
+    );
+
+    .v-icon {
+      color: #f44336 !important;
+    }
+  }
+}
+
+.action-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.action-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #001f3d;
+  margin-bottom: 4px;
+}
+
+.action-item-desc {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.6);
+}
+
+.action-item-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #001f3d;
+  flex-shrink: 0;
+}
+
+.no-actions-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  gap: 16px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 31, 61, 0.08);
+}
+
+.no-actions-icon {
+  opacity: 0.5;
+}
+
+.no-actions-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+}
+
+.no-actions-desc {
+  font-size: 14px;
+  color: rgba(0, 31, 61, 0.6);
+}
+
+// System Health Section (matching admin dashboard)
+.system-health-section {
+  margin-bottom: 24px;
+}
+
+.health-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.health-metric {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 31, 61, 0.08);
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.6);
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+}
+
+.metric-progress {
+  height: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.metric-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ed985f 0%, #f7b980 100%);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.metric-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric-info-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.metric-icon {
+  color: #ed985f;
+}
+
+.metric-info-label {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.7);
+  font-weight: 500;
+}
+
+.metric-badge {
+  padding: 6px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #001f3d;
+}
+
+.metric-text {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.7);
+  font-weight: 500;
+}
+
+// Modern Dialog Styles (matching AddEmployeeDialog)
+.modern-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.dialog-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+
+  &.primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  }
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+
+.dialog-subtitle {
+  font-size: 13px;
+  color: rgba(0, 31, 61, 0.6);
+  margin-top: 4px;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
+}
+
+.dialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.dialog-btn-cancel {
+  background: transparent;
+  color: #64748b;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 31, 61, 0.04);
+  }
+}
+
+.dialog-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  margin-left: 12px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+  }
+}
+
+// File Preview Styles
+.file-preview-card {
+  margin-top: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.image-preview-container {
+  padding: 20px;
+  background: #f8f9fa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.preview-image {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-preview-container {
+  height: 500px;
+  background: #f8f9fa;
+}
+
+.pdf-preview {
+  width: 100%;
+  height: 100%;
 }
 </style>

@@ -36,7 +36,7 @@ class UploadResumeRequest extends FormRequest
                         'image/jpeg',
                         'image/png',
                     ];
-                    
+
                     if ($value && !in_array($value->getMimeType(), $allowedMimes)) {
                         $fail('The file type is not allowed. Only PDF, DOC, DOCX, JPG, and PNG files are accepted.');
                     }
@@ -49,7 +49,7 @@ class UploadResumeRequest extends FormRequest
                     // Verify file extension matches MIME type
                     $extension = strtolower($value->getClientOriginalExtension());
                     $mimeType = $value->getMimeType();
-                    
+
                     $validCombinations = [
                         'pdf' => 'application/pdf',
                         'doc' => 'application/msword',
@@ -70,17 +70,33 @@ class UploadResumeRequest extends FormRequest
                     }
 
                     // Prevent double extensions (e.g., file.pdf.exe)
+                    // Only check the last two segments after splitting by dot
                     $parts = explode('.', $filename);
-                    if (count($parts) > 2) {
-                        $fail('Multiple file extensions are not allowed.');
+                    if (count($parts) >= 2) {
+                        $lastTwo = array_slice($parts, -2);
+                        // Check if both segments look like file extensions (3-4 chars, alphanumeric)
+                        if (
+                            count($lastTwo) === 2 &&
+                            preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[0]) &&
+                            preg_match('/^[a-z0-9]{2,4}$/i', $lastTwo[1])
+                        ) {
+                            $fail('Multiple file extensions are not allowed.');
+                        }
                     }
                 },
             ],
             'first_name' => 'required|string|max:100',
+            'middle_name' => 'nullable|string|max:100',
             'last_name' => 'required|string|max:100',
+            'date_of_birth' => 'nullable|date',
+            'gender' => 'nullable|in:male,female',
             'email' => 'required|email|max:255',
             'phone' => 'required|string|max:20',
+            'address' => 'nullable|string|max:500',
             'position_applied' => 'required|string|max:255',
+            'department_preference' => 'nullable|string|max:255',
+            'expected_salary' => 'nullable|string|max:50',
+            'availability_date' => 'nullable|date',
             'notes' => 'nullable|string|max:1000',
         ];
     }

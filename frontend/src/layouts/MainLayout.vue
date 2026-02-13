@@ -400,8 +400,8 @@ const menuItems = computed(() => {
     {
       title: "Dashboard",
       icon: "mdi-view-dashboard-variant",
-      value: "Human Resources-dashboard",
-      to: "/Human Resources-dashboard",
+      value: "hr-dashboard",
+      to: "/hr-dashboard",
       roles: ["hr"],
     },
     {
@@ -416,7 +416,7 @@ const menuItems = computed(() => {
       icon: "mdi-hard-hat",
       value: "employees",
       to: "/employees",
-      roles: ["admin"],
+      roles: ["admin", "hr"],
     },
     {
       title: "Departments",
@@ -682,7 +682,7 @@ const menuSections = computed(() => {
       icon: "mdi-hard-hat",
       value: "employees",
       to: "/employees",
-      roles: ["admin", "payrollist"],
+      roles: ["admin", "hr", "payrollist"],
     },
     {
       title: "Payrolls",
@@ -814,7 +814,7 @@ const menuSections = computed(() => {
       icon: "mdi-file-upload-outline",
       value: "biometric-import",
       to: "/biometric-import",
-      roles: ["admin", "payrollist"],
+      roles: ["admin", "hr", "payrollist"],
     },
     {
       title: "My Leaves",
