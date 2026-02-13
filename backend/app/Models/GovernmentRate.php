@@ -97,7 +97,9 @@ class GovernmentRate extends Model
     // Helper methods
     public static function getContributionForSalary($type, $monthlySalary, $date = null)
     {
-        $rate = static::active()
+        // Use effectiveOn() only (which handles date filtering) instead of active() + effectiveOn()
+        // to avoid conflicts when computing contributions for past payroll periods
+        $rate = static::where('is_active', true)
             ->byType($type)
             ->forSalary($monthlySalary)
             ->effectiveOn($date)
@@ -112,8 +114,13 @@ class GovernmentRate extends Model
             ];
         }
 
-        $employeeContribution = $rate->employee_fixed ?? ($monthlySalary * ($rate->employee_rate / 100));
-        $employerContribution = $rate->employer_fixed ?? ($monthlySalary * ($rate->employer_rate / 100));
+        // Use employee_fixed if it's set and > 0, otherwise calculate from rate
+        $employeeContribution = ($rate->employee_fixed !== null && (float)$rate->employee_fixed > 0)
+            ? (float)$rate->employee_fixed
+            : ($monthlySalary * ($rate->employee_rate / 100));
+        $employerContribution = ($rate->employer_fixed !== null && (float)$rate->employer_fixed > 0)
+            ? (float)$rate->employer_fixed
+            : ($monthlySalary * ($rate->employer_rate / 100));
 
         // Use total_contribution if specified (for fixed brackets)
         if ($rate->total_contribution) {

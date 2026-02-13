@@ -122,13 +122,16 @@ class EmployeeLoan extends Model
     {
         $year = date('Y');
         $month = date('m');
-        $lastLoan = self::whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->orderBy('id', 'desc')
+        $prefix = "LOAN-{$year}{$month}-";
+
+        // Include soft-deleted records to avoid duplicate numbers
+        $lastLoan = self::withTrashed()
+            ->where('loan_number', 'like', "{$prefix}%")
+            ->orderBy('loan_number', 'desc')
             ->first();
 
         $sequence = $lastLoan ? (intval(substr($lastLoan->loan_number, -4)) + 1) : 1;
 
-        return 'LOAN-' . $year . $month . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return $prefix . str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 }

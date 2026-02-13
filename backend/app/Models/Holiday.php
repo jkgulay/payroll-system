@@ -111,23 +111,43 @@ class Holiday extends Model
 
     /**
      * Check if a given date is a holiday
+     * Supports recurring holidays (matches by month and day regardless of year)
      */
     public static function isHoliday($date)
     {
         $date = Carbon::parse($date);
         return static::active()
-            ->whereDate('date', $date)
+            ->where(function ($q) use ($date) {
+                // Exact date match
+                $q->whereDate('date', $date)
+                    // OR recurring holiday matching month and day
+                    ->orWhere(function ($q2) use ($date) {
+                        $q2->where('is_recurring', true)
+                            ->whereMonth('date', $date->month)
+                            ->whereDay('date', $date->day);
+                    });
+            })
             ->exists();
     }
 
     /**
      * Get holiday for a given date
+     * Supports recurring holidays (matches by month and day regardless of year)
      */
     public static function getHolidayForDate($date)
     {
         $date = Carbon::parse($date);
         return static::active()
-            ->whereDate('date', $date)
+            ->where(function ($q) use ($date) {
+                // Exact date match
+                $q->whereDate('date', $date)
+                    // OR recurring holiday matching month and day
+                    ->orWhere(function ($q2) use ($date) {
+                        $q2->where('is_recurring', true)
+                            ->whereMonth('date', $date->month)
+                            ->whereDay('date', $date->day);
+                    });
+            })
             ->first();
     }
 
