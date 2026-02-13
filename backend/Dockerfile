@@ -31,6 +31,7 @@ RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
 # Create storage directories and set permissions
 RUN mkdir -p storage/fonts storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
+    && cp vendor/dompdf/dompdf/lib/fonts/installed-fonts.dist.json storage/fonts/installed-fonts.json \
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 

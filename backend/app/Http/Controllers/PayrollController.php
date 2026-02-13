@@ -504,6 +504,16 @@ class PayrollController extends Controller
         // Get company info from database
         $companyInfo = CompanyInfo::first();
 
+        // Ensure installed-fonts.json exists in font cache directory
+        $fontCache = storage_path('fonts');
+        $installedFonts = $fontCache . '/installed-fonts.json';
+        if (!file_exists($installedFonts)) {
+            $distFonts = base_path('vendor/dompdf/dompdf/lib/fonts/installed-fonts.dist.json');
+            if (file_exists($distFonts)) {
+                copy($distFonts, $installedFonts);
+            }
+        }
+
         $pdf = Pdf::loadView('payroll.payslip', [
             'payroll' => $payroll,
             'item' => $item,
@@ -603,40 +613,61 @@ class PayrollController extends Controller
 
     private function exportRegisterToPdf(Payroll $payroll, array $validated, string $filenameBase)
     {
-        // Group items by department or staff type if multiple filters selected
-        $groupedItems = null;
-        $filterInfo = null;
-        $filterType = $validated['filter_type'] ?? 'all';
+        try {
+            // Group items by department or staff type if multiple filters selected
+            $groupedItems = null;
+            $filterInfo = null;
+            $filterType = $validated['filter_type'] ?? 'all';
 
-        if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
-            if ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
-                // Group by department if multiple departments selected
-                if (count($validated['departments']) > 1) {
-                    $groupedItems = $payroll->items->groupBy(function ($item) {
-                        return $item->employee->department ?? 'N/A';
-                    });
-                } else {
-                    $filterInfo = 'Department: ' . implode(', ', $validated['departments']);
+            if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
+                if ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
+                    // Group by department if multiple departments selected
+                    if (count($validated['departments']) > 1) {
+                        $groupedItems = $payroll->items->groupBy(function ($item) {
+                            return $item->employee->department ?? 'N/A';
+                        });
+                    } else {
+                        $filterInfo = 'Department: ' . implode(', ', $validated['departments']);
+                    }
+                } elseif ($validated['filter_type'] === 'position' && !empty($validated['positions'])) {
+                    // Group by position if multiple positions selected
+                    if (count($validated['positions']) > 1) {
+                        $groupedItems = $payroll->items->groupBy(function ($item) {
+                            return $item->employee->positionRate->position_name ?? 'N/A';
+                        });
+                    } else {
+                        $filterInfo = 'Position: ' . implode(', ', $validated['positions']);
+                    }
+                } elseif ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
+                    $filterInfo = 'Department: ' . implode(', ', $validated['departments']) . ' | Position: ' . implode(', ', $validated['positions']);
                 }
-            } elseif ($validated['filter_type'] === 'position' && !empty($validated['positions'])) {
-                // Group by position if multiple positions selected
-                if (count($validated['positions']) > 1) {
-                    $groupedItems = $payroll->items->groupBy(function ($item) {
-                        return $item->employee->positionRate->position_name ?? 'N/A';
-                    });
-                } else {
-                    $filterInfo = 'Position: ' . implode(', ', $validated['positions']);
-                }
-            } elseif ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
-                $filterInfo = 'Department: ' . implode(', ', $validated['departments']) . ' | Position: ' . implode(', ', $validated['positions']);
             }
+
+            // Get company info from database
+            $companyInfo = CompanyInfo::first();
+
+            // Ensure installed-fonts.json exists in font cache directory
+            $fontCache = storage_path('fonts');
+            $installedFonts = $fontCache . '/installed-fonts.json';
+            if (!file_exists($installedFonts)) {
+                $distFonts = base_path('vendor/dompdf/dompdf/lib/fonts/installed-fonts.dist.json');
+                if (file_exists($distFonts)) {
+                    copy($distFonts, $installedFonts);
+                }
+            }
+
+            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
+                ->setPaper('A4', 'landscape');
+            return $pdf->download($filenameBase . '.pdf');
+        } catch (\Exception $e) {
+            Log::error('PDF Export Error: ' . $e->getMessage(), [
+                'payroll_id' => $payroll->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'message' => 'Failed to generate PDF: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Get company info from database
-        $companyInfo = CompanyInfo::first();
-
-        $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'));
-        return $pdf->download($filenameBase . '.pdf');
     }
 
     private function exportRegisterToExcel(Payroll $payroll, string $filenameBase)
@@ -646,18 +677,28 @@ class PayrollController extends Controller
 
     private function exportRegisterToWord(Payroll $payroll, string $filenameBase)
     {
-        $export = new PayrollWordExport($payroll);
-        $phpWord = $export->generate();
+        try {
+            $export = new PayrollWordExport($payroll);
+            $phpWord = $export->generate();
 
-        $filename = $filenameBase . '.docx';
-        $tempFile = tempnam(sys_get_temp_dir(), 'payroll_');
+            $filename = $filenameBase . '.docx';
+            $tempFile = tempnam(sys_get_temp_dir(), 'payroll_');
 
-        $writer = IOFactory::createWriter($phpWord, 'Word2007');
-        $writer->save($tempFile);
+            $writer = IOFactory::createWriter($phpWord, 'Word2007');
+            $writer->save($tempFile);
 
-        return response()->download($tempFile, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ])->deleteFileAfterSend(true);
+            return response()->download($tempFile, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ])->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            Log::error('Word Export Error: ' . $e->getMessage(), [
+                'payroll_id' => $payroll->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'message' => 'Failed to generate Word document: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function exportToExcel(Payroll $payroll)

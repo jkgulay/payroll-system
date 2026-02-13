@@ -770,7 +770,16 @@ async function downloadRegister() {
     exportFilter.value.departments = [];
     exportFilter.value.positions = [];
   } catch (error) {
-    toast.error("Failed to download payroll register");
+    // When responseType is 'blob', error response data is a Blob - parse it
+    let errorMessage = "Failed to download payroll register";
+    if (error.response?.data instanceof Blob) {
+      try {
+        const text = await error.response.data.text();
+        const json = JSON.parse(text);
+        if (json.message) errorMessage = json.message;
+      } catch (_) {}
+    }
+    toast.error(errorMessage);
   } finally {
     downloadingRegister.value = false;
   }
