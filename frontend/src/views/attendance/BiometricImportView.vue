@@ -173,6 +173,28 @@
             </v-btn>
           </div>
 
+          <!-- Progress Bar -->
+          <div v-if="importingStaff" class="progress-container">
+            <div class="progress-header">
+              <span class="progress-label">
+                {{
+                  staffProcessing
+                    ? "Processing records..."
+                    : "Uploading file..."
+                }}
+              </span>
+              <span class="progress-percentage">
+                {{ Math.round(staffUploadProgress) }}%
+              </span>
+            </div>
+            <v-progress-linear
+              :model-value="staffUploadProgress"
+              color="#ed985f"
+              height="8"
+              rounded
+            ></v-progress-linear>
+          </div>
+
           <!-- Compact Results -->
           <div
             v-if="staffImportResult"
@@ -391,6 +413,28 @@
             </v-btn>
           </div>
 
+          <!-- Progress Bar -->
+          <div v-if="importingPunch" class="progress-container">
+            <div class="progress-header">
+              <span class="progress-label">
+                {{
+                  punchProcessing
+                    ? "Processing records..."
+                    : "Uploading file..."
+                }}
+              </span>
+              <span class="progress-percentage">
+                {{ Math.round(punchUploadProgress) }}%
+              </span>
+            </div>
+            <v-progress-linear
+              :model-value="punchUploadProgress"
+              color="#ed985f"
+              height="8"
+              rounded
+            ></v-progress-linear>
+          </div>
+
           <!-- Compact Results -->
           <div
             v-if="punchImportResult"
@@ -569,6 +613,9 @@ const staffFile = ref(null);
 const isDraggingStaff = ref(false);
 const importingStaff = ref(false);
 const staffImportResult = ref(null);
+const staffUploadProgress = ref(0);
+const staffProcessing = ref(false);
+let staffProgressTimer = null;
 
 // Default values for missing data
 const defaultPosition = ref(null);
@@ -601,6 +648,9 @@ const punchFile = ref(null);
 const isDraggingPunch = ref(false);
 const importingPunch = ref(false);
 const punchImportResult = ref(null);
+const punchUploadProgress = ref(0);
+const punchProcessing = ref(false);
+let punchProgressTimer = null;
 const punchYear = ref(new Date().getFullYear());
 const punchMonth = ref(null);
 
@@ -643,11 +693,30 @@ const handleStaffDrop = (event) => {
   }
 };
 
+// Simulate processing progress
+const simulateProgress = (progressRef, maxProgress = 95) => {
+  return setInterval(() => {
+    if (progressRef.value < maxProgress) {
+      // Slower increment as it approaches max
+      const increment = maxProgress - progressRef.value > 20 ? 2 : 0.5;
+      progressRef.value = Math.min(progressRef.value + increment, maxProgress);
+    }
+  }, 500);
+};
+
 const importStaffInformation = async () => {
   if (!staffFile.value) return;
 
   importingStaff.value = true;
   staffImportResult.value = null;
+  staffUploadProgress.value = 0;
+  staffProcessing.value = false;
+
+  // Clear any existing timer
+  if (staffProgressTimer) {
+    clearInterval(staffProgressTimer);
+    staffProgressTimer = null;
+  }
 
   try {
     const formData = new FormData();
@@ -664,7 +733,27 @@ const importStaffInformation = async () => {
     const response = await api.post("/biometric/import-staff", formData, {
       headers: { "Content-Type": "multipart/form-data" },
       timeout: 300000, // 5 minutes for large staff imports
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total,
+        );
+        staffUploadProgress.value = percentCompleted;
+
+        // Switch to processing mode when upload completes
+        if (percentCompleted === 100) {
+          staffProcessing.value = true;
+          // Start simulated progress for processing
+          staffProgressTimer = simulateProgress(staffUploadProgress);
+        }
+      },
     });
+
+    // Clear timer and set to 100% on completion
+    if (staffProgressTimer) {
+      clearInterval(staffProgressTimer);
+      staffProgressTimer = null;
+    }
+    staffUploadProgress.value = 100;
 
     staffImportResult.value = {
       success: true,
@@ -693,7 +782,13 @@ const importStaffInformation = async () => {
       ],
     };
   } finally {
+    if (staffProgressTimer) {
+      clearInterval(staffProgressTimer);
+      staffProgressTimer = null;
+    }
     importingStaff.value = false;
+    staffUploadProgress.value = 0;
+    staffProcessing.value = false;
   }
 };
 
@@ -722,6 +817,14 @@ const importPunchRecords = async () => {
 
   importingPunch.value = true;
   punchImportResult.value = null;
+  punchUploadProgress.value = 0;
+  punchProcessing.value = false;
+
+  // Clear any existing timer
+  if (punchProgressTimer) {
+    clearInterval(punchProgressTimer);
+    punchProgressTimer = null;
+  }
 
   try {
     const formData = new FormData();
@@ -737,8 +840,28 @@ const importPunchRecords = async () => {
       {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 300000, // 5 minutes for large punch record imports
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total,
+          );
+          punchUploadProgress.value = percentCompleted;
+
+          // Switch to processing mode when upload completes
+          if (percentCompleted === 100) {
+            punchProcessing.value = true;
+            // Start simulated progress for processing
+            punchProgressTimer = simulateProgress(punchUploadProgress);
+          }
+        },
       },
     );
+
+    // Clear timer and set to 100% on completion
+    if (punchProgressTimer) {
+      clearInterval(punchProgressTimer);
+      punchProgressTimer = null;
+    }
+    punchUploadProgress.value = 100;
 
     punchImportResult.value = {
       success: true,
@@ -767,7 +890,13 @@ const importPunchRecords = async () => {
       ],
     };
   } finally {
+    if (punchProgressTimer) {
+      clearInterval(punchProgressTimer);
+      punchProgressTimer = null;
+    }
     importingPunch.value = false;
+    punchUploadProgress.value = 0;
+    punchProcessing.value = false;
   }
 };
 
@@ -1136,6 +1265,32 @@ const showTemplateInfo = () => {
   font-size: 12px;
   color: #64748b;
   flex-shrink: 0;
+}
+
+/* Progress Container */
+.progress-container {
+  padding: 16px 24px;
+  background: rgba(237, 152, 95, 0.05);
+  border-top: 1px solid rgba(237, 152, 95, 0.15);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #001f3d;
+}
+
+.progress-percentage {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ed985f;
 }
 
 // Import Results - Compact

@@ -767,7 +767,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-@import "@/styles/_shared-layout.scss";
+@use "@/styles/_shared-layout.scss";
 
 .salary-adjustments-page {
   max-width: 1400px;
