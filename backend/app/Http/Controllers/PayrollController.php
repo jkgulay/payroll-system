@@ -746,7 +746,7 @@ class PayrollController extends Controller
             }
 
             $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
-                ->setPaper('A4', 'landscape');
+                ->setPaper([0, 0, 612, 936], 'landscape'); // Long bond paper 8.5x13in landscape
             return $pdf->download($filenameBase . '.pdf');
         } catch (\Exception $e) {
             Log::error('PDF Export Error: ' . $e->getMessage(), [

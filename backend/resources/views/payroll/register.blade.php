@@ -6,159 +6,199 @@
     <title>Payroll Register</title>
     <style>
         @page {
-            size: A4 landscape;
-            margin: 10mm 10mm 60mm 10mm;
+            size: 13in 8.5in;
+            margin: 8mm 8mm 52mm 8mm;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'DejaVu Sans', Arial, sans-serif;
             margin: 0;
-            padding: 10px;
-            font-size: 9px;
+            padding: 6px 8px;
+            font-size: 8px;
+            color: #222;
         }
 
+        /* ===== HEADER ===== */
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #333;
         }
 
         .company-name {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #111;
         }
 
         .company-address {
-            font-size: 10px;
-            margin-top: 3px;
+            font-size: 9px;
+            margin-top: 2px;
+            color: #444;
         }
 
         .title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
-            letter-spacing: 8px;
-            margin-top: 15px;
+            letter-spacing: 10px;
+            margin-top: 10px;
+            text-transform: uppercase;
+            color: #111;
         }
 
         .period {
-            font-size: 11px;
-            margin-top: 5px;
+            font-size: 10px;
+            margin-top: 3px;
+            color: #333;
         }
 
+        /* ===== PROJECT / DEPARTMENT INFO ===== */
         .project-info {
-            margin: 15px 0;
-            font-size: 10px;
+            margin: 8px 0 4px 0;
+            font-size: 9px;
         }
 
         .project-info div {
-            margin: 3px 0;
+            margin: 2px 0;
         }
 
-        table {
+        /* ===== MAIN DATA TABLE ===== */
+        table.payroll-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-            border: 1px solid #000;
+            margin-top: 6px;
         }
 
-        th,
-        td {
-            border: 1px solid #000;
-            padding: 4px 3px;
-            font-size: 8px;
-        }
-
-        th {
-            background-color: white;
-            color: black;
+        /* Every cell gets all 4 borders — dompdf-safe, no missing edges */
+        table.payroll-table th,
+        table.payroll-table td {
+            border: 1px solid #444;
+            padding: 3px 2px;
+            font-size: 7.5px;
             text-align: center;
+            vertical-align: middle;
+        }
+
+        /* Header row styling — dark background for formal look */
+        table.payroll-table thead th {
+            background-color: #2c3e50;
+            color: #fff;
             font-weight: bold;
+            font-size: 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 4px 2px;
+            border-color: #1a252f;
         }
 
-        td {
-            text-align: center;
+        /* Sub-header row (HRS, REG OT, SSS, etc) — slightly lighter */
+        table.payroll-table thead tr:last-child th {
+            background-color: #34495e;
+            font-size: 6.5px;
         }
 
+        /* Data cells */
+        table.payroll-table tbody td {
+            background-color: #fff;
+            color: #222;
+            border-color: #999;
+        }
+
+        /* Zebra striping for readability */
+        table.payroll-table tbody tr:nth-child(even) td {
+            background-color: #f5f7fa;
+        }
+
+        /* Text alignment helpers */
         .text-left {
-            text-align: left;
-            padding-left: 5px;
+            text-align: left !important;
+            padding-left: 4px !important;
         }
 
         .text-right {
-            text-align: right;
-            padding-right: 5px;
+            text-align: right !important;
+            padding-right: 4px !important;
         }
 
+        /* Nothing follows row */
         .nothing-follows {
-            text-align: center;
+            text-align: center !important;
             font-style: italic;
-            font-size: 9px;
-            padding: 5px;
-        }
-
-        .total-row {
-            font-weight: bold;
-            font-size: 9px;
-        }
-
-        .acknowledgment {
-            margin-top: 10px;
             font-size: 8px;
-            font-style: italic;
-            text-align: center;
+            padding: 4px !important;
+            background-color: #fff !important;
+            color: #666;
         }
 
-        /* Fixed footer signature section on every page */
+        /* Total row — bold with top accent border */
+        .total-row td {
+            font-weight: bold;
+            font-size: 7.5px;
+            background-color: #ebedef !important;
+            border-top: 2px solid #2c3e50 !important;
+            color: #111;
+        }
+
+        /* ===== FIXED FOOTER — SIGNATURES ===== */
         .page-footer {
             position: fixed;
-            bottom: -50mm;
+            bottom: -44mm;
             left: 0mm;
             right: 0mm;
-            height: 50mm;
-            text-align: center;
+            height: 44mm;
             background-color: white;
+            padding: 0 2mm;
         }
 
         .footer-acknowledgment {
-            font-size: 8px;
+            font-size: 7px;
             font-style: italic;
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            color: #444;
         }
 
-        .footer-signature-section {
-            width: 100%;
-            margin-top: 5px;
-        }
-
-        .footer-signature-table {
+        table.footer-signature-table {
             width: 100%;
             border: none;
             border-collapse: collapse;
         }
 
-        .footer-signature-table td {
+        table.footer-signature-table td {
             border: none;
             text-align: center;
-            padding: 2px 5px;
+            padding: 1px 4px;
             vertical-align: top;
         }
 
         .footer-signature-title {
-            font-size: 7px;
-            margin-bottom: 12px;
+            font-size: 6.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #555;
+            margin-bottom: 14px;
         }
 
         .footer-signature-name {
             font-size: 7px;
             font-weight: bold;
+            color: #111;
+            border-top: 1px solid #333;
+            display: inline-block;
+            padding-top: 2px;
+            min-width: 80%;
         }
 
         .footer-signature-position {
             font-size: 6px;
+            color: #555;
+            font-style: italic;
         }
 
-        /* Hide inline signature section since we have it in footer */
+        /* Hide the inline signature section (footer handles it) */
         .signature-section {
             display: none;
         }
@@ -228,7 +268,7 @@
         <div><strong>DESIGNATION:</strong> {{ $items->first()?->employee?->project?->description ?? 'N/A' }}</div>
     </div>
 
-    <table>
+    <table class="payroll-table">
         <thead>
             <tr>
                 <th rowspan="2">NAME</th>
@@ -245,7 +285,7 @@
                 <th rowspan="2">Deductions</th>
                 <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
-                <th rowspan="2" style="border-right: 1px solid #000;">SIGNATURE</th>
+                <th rowspan="2">SIGNATURE</th>
             </tr>
             <tr>
                 <th>HRS</th>
@@ -260,7 +300,6 @@
         <tbody>
             @foreach($items as $index => $item)
             @php
-            // Use the undertime deduction already calculated by PayrollService
             $undertimeDeduction = $item->undertime_deduction ?? 0;
             $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             @endphp
@@ -284,21 +323,18 @@
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
-                <td style="border-right: 1px solid #000;"></td>
+                <td></td>
             </tr>
             @endforeach
             <tr>
-                <td colspan="21" class="nothing-follows"><em>nothing follows</em></td>
+                <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
             </tr>
             @php
-            // Calculate total undertime deduction
             $totalUndertimeDeduction = $items->sum(function($item) {
-            return $item->undertime_deduction ?? 0;
+                return $item->undertime_deduction ?? 0;
             });
-            @endphp
-            @php
             $totalAmount = $items->sum(function($item) {
-            return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+                return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             });
             @endphp
             <tr class="total-row">
@@ -321,7 +357,7 @@
                 <td class="text-right">{{ number_format($items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('pagibig'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('net_pay'), 2) }}</td>
-                <td style="border-right: 1px solid #000;"></td>
+                <td></td>
             </tr>
         </tbody>
     </table>
@@ -340,7 +376,7 @@
     </div>
     @endif
 
-    <table>
+    <table class="payroll-table">
         <thead>
             <tr>
                 <th rowspan="2">NAME</th>
@@ -357,7 +393,7 @@
                 <th rowspan="2">Deductions</th>
                 <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
-                <th rowspan="2" style="border-right: 1px solid #000;">SIGNATURE</th>
+                <th rowspan="2">SIGNATURE</th>
             </tr>
             <tr>
                 <th>HRS</th>
@@ -372,7 +408,6 @@
         <tbody>
             @foreach($payroll->items as $index => $item)
             @php
-            // Use the undertime deduction already calculated by PayrollService
             $undertimeDeduction = $item->undertime_deduction ?? 0;
             $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             @endphp
@@ -396,21 +431,18 @@
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
-                <td style="border-right: 1px solid #000;"></td>
+                <td></td>
             </tr>
             @endforeach
             <tr>
-                <td colspan="21" class="nothing-follows"><em>nothing follows</em></td>
+                <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
             </tr>
             @php
-            // Calculate total undertime deduction
             $totalUndertimeDeduction = $payroll->items->sum(function($item) {
-            return $item->undertime_deduction ?? 0;
+                return $item->undertime_deduction ?? 0;
             });
-            @endphp
-            @php
             $totalAmount = $payroll->items->sum(function($item) {
-            return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+                return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             });
             @endphp
             <tr class="total-row">
@@ -433,7 +465,7 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('net_pay'), 2) }}</td>
-                <td style="border-right: 1px solid #000;"></td>
+                <td></td>
             </tr>
         </tbody>
     </table>
