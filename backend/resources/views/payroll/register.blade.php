@@ -6,7 +6,7 @@
     <title>Payroll Register</title>
     <style>
         @page {
-            size: A4 landscape;
+            size: 13in 8.5in;
             margin: 10mm 10mm 60mm 10mm;
         }
 
@@ -56,16 +56,24 @@
 
         table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             margin-top: 10px;
-            border: 1px solid #000;
+            border-left: 1px solid #000;
         }
 
         th,
         td {
-            border: 1px solid #000;
+            border-right: 1px solid #000;
+            border-bottom: 1px solid #000;
             padding: 4px 3px;
             font-size: 8px;
+        }
+
+        /* Only the first header row gets border-top — this redraws every page
+           when dompdf repeats thead, with no double-border on the sub-header row */
+        thead tr:first-child th {
+            border-top: 1px solid #000;
         }
 
         th {
@@ -162,6 +170,12 @@
         .signature-section {
             display: none;
         }
+
+        /* Force right border on last SIGNATURE column - dompdf border-collapse drops it otherwise */
+        .sig-col {
+            border-right: 1px solid #000;
+            border-bottom: 1px solid #000;
+        }
     </style>
 </head>
 
@@ -245,7 +259,7 @@
                 <th rowspan="2">Deductions</th>
                 <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
-                <th rowspan="2" style="border-right: 1px solid #000;">SIGNATURE</th>
+                <th rowspan="2" class="sig-col">SIGNATURE</th>
             </tr>
             <tr>
                 <th>HRS</th>
@@ -284,7 +298,7 @@
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
-                <td style="border-right: 1px solid #000;"></td>
+                <td class="sig-col"></td>
             </tr>
             @endforeach
             <tr>
@@ -321,7 +335,7 @@
                 <td class="text-right">{{ number_format($items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('pagibig'), 2) }}</td>
                 <td class="text-right">{{ number_format($items->sum('net_pay'), 2) }}</td>
-                <td style="border-right: 1px solid #000;"></td>
+                <td class="sig-col"></td>
             </tr>
         </tbody>
     </table>
@@ -357,7 +371,7 @@
                 <th rowspan="2">Deductions</th>
                 <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
-                <th rowspan="2" style="border-right: 1px solid #000;">SIGNATURE</th>
+                <th rowspan="2" class="sig-col">SIGNATURE</th>
             </tr>
             <tr>
                 <th>HRS</th>
@@ -396,7 +410,7 @@
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
-                <td style="border-right: 1px solid #000;"></td>
+                <td class="sig-col"></td>
             </tr>
             @endforeach
             <tr>
@@ -433,7 +447,7 @@
                 <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
                 <td class="text-right">{{ number_format($payroll->items->sum('net_pay'), 2) }}</td>
-                <td style="border-right: 1px solid #000;"></td>
+                <td class="sig-col"></td>
             </tr>
         </tbody>
     </table>
