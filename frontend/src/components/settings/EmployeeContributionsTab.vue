@@ -89,18 +89,7 @@
           :items="projects"
           item-title="name"
           item-value="id"
-          label="Filter by Department"
-          variant="outlined"
-          density="compact"
-          hide-details
-          clearable
-        ></v-select>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-select
-          v-model="selectedDepartment"
-          :items="departments"
-          label="Filter by Department"
+          label="Filter by Project"
           variant="outlined"
           density="compact"
           hide-details
@@ -411,9 +400,7 @@ const employees = ref([]);
 const summary = ref({});
 const search = ref("");
 const selectedProject = ref(null);
-const selectedDepartment = ref(null);
 const projects = ref([]);
-const departments = ref([]);
 
 // Inline editing state
 const editingId = ref(null);
@@ -464,10 +451,6 @@ const filteredEmployees = computed(() => {
     result = result.filter((e) => e.project_id === selectedProject.value);
   }
 
-  if (selectedDepartment.value) {
-    result = result.filter((e) => e.department === selectedDepartment.value);
-  }
-
   return result;
 });
 
@@ -483,12 +466,6 @@ const loadData = async () => {
     employees.value = employeesRes.data.data || [];
     summary.value = summaryRes.data || {};
     projects.value = projectsRes.data.data || projectsRes.data || [];
-
-    // Extract unique departments
-    const depts = new Set(
-      employees.value.map((e) => e.department).filter(Boolean),
-    );
-    departments.value = Array.from(depts).sort();
   } catch (error) {
     devLog.error("Failed to load employee contributions:", error);
     toast.error("Failed to load employee contributions");

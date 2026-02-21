@@ -18,7 +18,6 @@ class MealAllowance extends Model
         'period_start',
         'period_end',
         'location',
-        'project_name',
         'project_id',
         'position_id',
         'status',

@@ -64,7 +64,7 @@ class EmployeeDocumentController extends Controller
             AuditLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'create',
-                'model' => 'EmployeeDocument',
+                'model_type' => 'EmployeeDocument',
                 'model_id' => $document->id,
                 'description' => "Uploaded document: {$validated['document_name']} for employee ID {$employeeId}",
                 'ip_address' => $request->ip(),
@@ -121,7 +121,7 @@ class EmployeeDocumentController extends Controller
             AuditLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'delete',
-                'model' => 'EmployeeDocument',
+                'model_type' => 'EmployeeDocument',
                 'model_id' => $document->id,
                 'description' => "Deleted document: {$document->document_name} for employee ID {$document->employee_id}",
                 'ip_address' => $request->ip(),
@@ -182,7 +182,7 @@ class EmployeeDocumentController extends Controller
             AuditLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'update',
-                'model' => 'EmployeeGovernmentInfo',
+                'model_type' => 'EmployeeGovernmentInfo',
                 'model_id' => $govInfo->id,
                 'description' => "Updated government information for employee ID {$employeeId}",
                 'ip_address' => $request->ip(),

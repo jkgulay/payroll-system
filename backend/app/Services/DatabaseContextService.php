@@ -426,26 +426,28 @@ class DatabaseContextService
      */
     protected function getDocumentContext(string $query): array
     {
-        // Count employees missing required documents
-        $missingDocs = Employee::where(function ($q) {
-            $q->whereNull('tin_number')
-                ->orWhereNull('sss_number')
-                ->orWhereNull('philhealth_number')
-                ->orWhereNull('pagibig_number');
-        })->select('id', 'first_name', 'last_name', 'tin_number', 'sss_number', 'philhealth_number', 'pagibig_number')
-            ->get()
-            ->map(function ($emp) {
-                $missing = [];
-                if (!$emp->tin_number) $missing[] = 'TIN';
-                if (!$emp->sss_number) $missing[] = 'SSS';
-                if (!$emp->philhealth_number) $missing[] = 'PhilHealth';
-                if (!$emp->pagibig_number) $missing[] = 'Pag-IBIG';
+        // Count employees missing required government IDs (sourced from employee_government_info)
+        $allEmployees = Employee::with('governmentInfo')
+            ->whereNull('deleted_at')
+            ->select('id', 'first_name', 'last_name')
+            ->get();
 
-                return [
-                    'name' => $emp->first_name . ' ' . $emp->last_name,
-                    'missing_documents' => $missing,
-                ];
-            });
+        $missingDocs = $allEmployees->filter(function ($emp) {
+            $gov = $emp->governmentInfo;
+            return !$gov || !$gov->tin_number || !$gov->sss_number || !$gov->philhealth_number || !$gov->pagibig_number;
+        })->map(function ($emp) {
+            $gov = $emp->governmentInfo;
+            $missing = [];
+            if (!$gov || !$gov->tin_number)         $missing[] = 'TIN';
+            if (!$gov || !$gov->sss_number)          $missing[] = 'SSS';
+            if (!$gov || !$gov->philhealth_number)   $missing[] = 'PhilHealth';
+            if (!$gov || !$gov->pagibig_number)      $missing[] = 'Pag-IBIG';
+
+            return [
+                'name' => $emp->first_name . ' ' . $emp->last_name,
+                'missing_documents' => $missing,
+            ];
+        });
 
         return [
             'employees_with_missing_documents' => $missingDocs->count(),

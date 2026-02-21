@@ -23,7 +23,6 @@ class PayrollItem extends Model
         'regular_ot_pay',
         'special_ot_hours',
         'special_ot_pay',
-        'cola',
         'other_allowances',
         'salary_adjustment',
         'allowances_breakdown',
