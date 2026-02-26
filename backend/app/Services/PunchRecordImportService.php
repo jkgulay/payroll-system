@@ -11,233 +11,137 @@ use Illuminate\Support\Facades\Log;
 class PunchRecordImportService
 {
     /**
-     * Import punch records from biometric device export
-     * Format: Staff Code, Name, 12-01, 12-02, ... (dates as columns with time entries)
-     * Also supports: Staff Code, Name, 01, 02, ... (day-only columns with month from parameter)
-     * Each date column may contain multiple time entries separated by newlines
+     * Import punch records from biometric device export.
+     *
+     * Expected XLS format (one row per punch event):
+     *   Staff Code | Name | Punch Date          | Punch Type   | Punch Address | Device Name | Punch Photo | Remark
+     *   ZS060594   | ...  | 2026-02-02 17:18    | Device Punch |               | C.P Garcia  |             |
+     *
+     * Rows for the same employee+date are grouped automatically and processed
+     * using the standard punch-assignment logic (time_in → break → time_out → OT).
      */
-    public function importPunchRecords(array $punchData, ?int $year = null, ?int $month = null): array
+    public function importPunchRecords(array $punchData): array
     {
         $imported = 0;
-        $updated = 0;
-        $skipped = 0;
-        $errors = [];
-        $debugInfo = [];
+        $updated  = 0;
+        $skipped  = 0;
+        $errors   = [];
 
-        // Default to current year if not provided
-        if (!$year) {
-            $year = now()->year;
+        if (empty($punchData)) {
+            return ['imported' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'error_details' => []];
         }
 
-        // Try to detect month from column headers if not provided
-        $detectedMonth = $this->detectMonthFromColumns(array_keys($punchData[0] ?? []));
+        // ── Group all rows by (staffCode → date → [HH:mm, ...]) ──────────────
+        $grouped = [];
+        $deviceNames = []; // Capture first non-empty device name per employee+date
+        foreach ($punchData as $row) {
+            $staffCode    = trim($row['Staff Code'] ?? '');
+            $rawPunchDate = trim($row['Punch Date'] ?? '');
 
-        // Debug: Log what we're working with
-        Log::info('Import starting', [
-            'total_rows' => count($punchData),
-            'year' => $year,
-            'month' => $month,
-            'detected_month' => $detectedMonth,
-            'sample_columns' => array_keys($punchData[0] ?? [])
+            if ($staffCode === '' || $rawPunchDate === '') {
+                $skipped++;
+                continue;
+            }
+
+            // Normalize Excel date artifacts:
+            // PhpSpreadsheet may produce "2026-02-03 00:00:00 06:49:00" when a
+            // cell stores date + time separately. Extract the YYYY-MM-DD part and
+            // the LAST HH:MM[:SS] part so Carbon gets a clean datetime string.
+            if (substr_count($rawPunchDate, ':') >= 2) {
+                $datePart = '';
+                $timePart = '';
+                if (preg_match('/\d{4}-\d{2}-\d{2}/', $rawPunchDate, $dm)) {
+                    $datePart = $dm[0];
+                }
+                if (preg_match_all('/\d{2}:\d{2}(?::\d{2})?/', $rawPunchDate, $tm)) {
+                    // Use the LAST time match — midnight 00:00:00 always comes first
+                    $timePart = end($tm[0]);
+                }
+                if ($datePart && $timePart) {
+                    $rawPunchDate = $datePart . ' ' . $timePart;
+                }
+            }
+
+            try {
+                $punchDt = Carbon::parse($rawPunchDate);
+            } catch (\Exception $e) {
+                $skipped++;
+                continue;
+            }
+
+            $dateKey = $punchDt->format('Y-m-d');
+            $timeKey = $punchDt->format('H:i');
+
+            $grouped[$staffCode][$dateKey][] = $timeKey;
+
+            // Store first non-empty device name seen for this employee+date
+            if (!isset($deviceNames[$staffCode][$dateKey])) {
+                $deviceName = trim($row['Device Name'] ?? '');
+                if ($deviceName !== '') {
+                    $deviceNames[$staffCode][$dateKey] = $deviceName;
+                }
+            }
+        }
+
+        Log::info('Punch import starting', [
+            'total_rows'    => count($punchData),
+            'unique_employees' => count($grouped),
         ]);
 
-        // Process each row independently to avoid PostgreSQL transaction abort cascading
-        foreach ($punchData as $index => $row) {
-            try {
-                // Skip if no staff code
-                if (empty($row['Staff Code'])) {
-                    $skipped++;
-                    continue;
-                }
+        // ── Process each employee's punches per date ──────────────────────────
+        foreach ($grouped as $staffCode => $dates) {
+            $employee = Employee::where('employee_number', $staffCode)->first();
 
-                $staffCode = trim($row['Staff Code']);
+            if (!$employee) {
+                $errors[] = [
+                    'staff_code' => $staffCode,
+                    'error' => 'Employee not found. Please import staff information first.',
+                ];
+                continue;
+            }
 
-                // Find employee by staff code
-                $employee = Employee::where('employee_number', $staffCode)->first();
+            foreach ($dates as $dateStr => $times) {
+                // Sort times chronologically before passing to processPunchRecord
+                sort($times);
+                $attendanceDate = Carbon::parse($dateStr);
+                // processPunchRecord expects newline-separated HH:MM strings
+                $timeEntries = implode("\n", $times);
+                $deviceName = $deviceNames[$staffCode][$dateStr] ?? null;
 
-                if (!$employee) {
-                    Log::warning("Employee not found: {$staffCode}");
-                    $errors[] = [
-                        'row' => $index + 1,
-                        'staff_code' => $staffCode,
-                        'error' => 'Employee not found. Please import staff information first.',
-                    ];
-                    continue;
-                }
-
-                Log::info("Processing employee: {$employee->first_name} {$employee->last_name} ({$staffCode})");
-
-                // Process each date column for this employee in a single transaction
                 DB::beginTransaction();
-
                 try {
-                    $rowImported = 0;
-                    $rowUpdated = 0;
-
-                    foreach ($row as $key => $value) {
-                        // Skip non-date columns (case-insensitive check)
-                        $keyLower = strtolower(trim($key ?? ''));
-                        if (in_array($keyLower, ['staff code', 'name', 'staff_code', 'employee_number', 'employee number', ''])) {
-                            continue;
-                        }
-
-                        // Skip null or empty column headers
-                        if ($key === null || trim($key) === '') {
-                            continue;
-                        }
-
-                        $dateInfo = $this->parseDateFromColumnHeader($key, $year, $month, $detectedMonth);
-
-                        if ($dateInfo) {
-                            try {
-                                $attendanceDate = Carbon::create($dateInfo['year'], $dateInfo['month'], $dateInfo['day']);
-
-                                // Skip if no time entries
-                                if (empty($value) || (is_string($value) && trim($value) === '') || $value === null) {
-                                    continue;
-                                }
-
-                                // Convert value to string if it's not already
-                                $timeValue = is_string($value) ? $value : (string)$value;
-
-                                Log::info("Processing date column", [
-                                    'employee' => $staffCode,
-                                    'column' => $key,
-                                    'date' => $attendanceDate->format('Y-m-d'),
-                                    'times' => substr($timeValue, 0, 100)
-                                ]);
-
-                                $result = $this->processPunchRecord($employee, $attendanceDate, $timeValue);
-
-                                if ($result['action'] === 'created') {
-                                    $rowImported++;
-                                } elseif ($result['action'] === 'updated') {
-                                    $rowUpdated++;
-                                }
-                            } catch (\Exception $e) {
-                                Log::warning("Invalid date: {$key} for year {$year}, error: " . $e->getMessage());
-                            }
-                        } else {
-                            // Date column not recognized
-                            if (!in_array(strtolower(trim($key)), ['staff code', 'name', ''])) {
-                                Log::debug("Column not recognized as date: {$key}");
-                            }
-                        }
-                    }
-
+                    $result = $this->processPunchRecord($employee, $attendanceDate, $timeEntries, $deviceName);
                     DB::commit();
-                    $imported += $rowImported;
-                    $updated += $rowUpdated;
+
+                    if ($result['action'] === 'created')      $imported++;
+                    elseif ($result['action'] === 'updated')  $updated++;
+                    else                                       $skipped++;
                 } catch (\Exception $e) {
                     DB::rollBack();
                     $errors[] = [
-                        'row' => $index + 1,
                         'staff_code' => $staffCode,
-                        'error' => $e->getMessage(),
+                        'date'       => $dateStr,
+                        'error'      => $e->getMessage(),
                     ];
-                    Log::error('Punch record import error for row ' . ($index + 1) . ': ' . $e->getMessage());
+                    Log::error("Punch import error [{$staffCode} {$dateStr}]: " . $e->getMessage());
                 }
-            } catch (\Exception $e) {
-                $errors[] = [
-                    'row' => $index + 1,
-                    'staff_code' => $row['Staff Code'] ?? 'N/A',
-                    'error' => $e->getMessage(),
-                ];
-                Log::error('Punch record import error: ' . $e->getMessage(), ['row' => $row]);
             }
         }
 
-        Log::info('Import completed', [
+        Log::info('Punch import completed', [
             'imported' => $imported,
-            'updated' => $updated,
-            'skipped' => $skipped,
-            'failed' => count($errors)
+            'updated'  => $updated,
+            'skipped'  => $skipped,
+            'failed'   => count($errors),
         ]);
 
         return [
-            'imported' => $imported,
-            'updated' => $updated,
-            'skipped' => $skipped,
-            'failed' => count($errors),
+            'imported'     => $imported,
+            'updated'      => $updated,
+            'skipped'      => $skipped,
+            'failed'       => count($errors),
             'error_details' => $errors,
         ];
-    }
-
-    /**
-     * Parse date from column header - supports multiple formats:
-     * - "MM-DD" format (e.g., "01-15" means January 15)
-     * - "DD" format (e.g., "15" or "01" means day 15 or day 1, month from parameter)
-     * - Numeric day only (e.g., 1, 2, 15)
-     */
-    protected function parseDateFromColumnHeader(string $key, int $year, ?int $providedMonth, ?int $detectedMonth): ?array
-    {
-        $key = trim($key);
-
-        // Format 1: "MM-DD" (e.g., "01-15", "12-01")
-        if (preg_match('/^(\d{1,2})-(\d{1,2})$/', $key, $matches)) {
-            $monthNum = (int)$matches[1];
-            $dayNum = (int)$matches[2];
-
-            // Validate day range
-            if ($dayNum < 1 || $dayNum > 31) {
-                return null;
-            }
-
-            // Override month if provided
-            if ($providedMonth) {
-                $monthNum = $providedMonth;
-            }
-
-            // Validate month range
-            if ($monthNum < 1 || $monthNum > 12) {
-                return null;
-            }
-
-            return [
-                'year' => $year,
-                'month' => $monthNum,
-                'day' => $dayNum,
-            ];
-        }
-
-        // Format 2: Day-only number (e.g., "01", "15", "1", "31")
-        // This handles Yunnat biometric exports that use day numbers as column headers
-        if (preg_match('/^(\d{1,2})$/', $key, $matches)) {
-            $dayNum = (int)$matches[1];
-
-            // Validate day range (1-31)
-            if ($dayNum < 1 || $dayNum > 31) {
-                return null;
-            }
-
-            // Month must be provided or detected for day-only format
-            $monthNum = $providedMonth ?? $detectedMonth ?? now()->month;
-
-            return [
-                'year' => $year,
-                'month' => $monthNum,
-                'day' => $dayNum,
-            ];
-        }
-
-        return null;
-    }
-
-    /**
-     * Detect month from column headers if they are in MM-DD format
-     */
-    protected function detectMonthFromColumns(array $headers): ?int
-    {
-        foreach ($headers as $header) {
-            if ($header === null) {
-                continue;
-            }
-            $header = trim((string)$header);
-            if (preg_match('/^(\d{1,2})-(\d{1,2})$/', $header, $matches)) {
-                return (int)$matches[1];
-            }
-        }
-        return null;
     }
 
     /**
@@ -245,7 +149,7 @@ class PunchRecordImportService
      * Time entries can be multiple lines like "06:10\n11:39\n11:51\n17:02"
      * Now processes each punch individually to properly track OT sessions
      */
-    protected function processPunchRecord(Employee $employee, Carbon $attendanceDate, string $timeEntries): array
+    protected function processPunchRecord(Employee $employee, Carbon $attendanceDate, string $timeEntries, ?string $deviceName = null): array
     {
         // Parse time entries (multiple times may be on separate lines or separated by \n)
         $times = [];
@@ -290,12 +194,16 @@ class PunchRecordImportService
                 'attendance_date' => $attendanceDate->format('Y-m-d'),
                 'status' => 'present',
                 'is_manual_entry' => false,
+                'device_name' => $deviceName,
                 'approval_status' => 'approved',
                 'is_approved' => true,
                 'created_by' => auth()->id() ?? 1,
             ]);
         } else {
             // Clear ALL time and calculated fields for clean re-import
+            if ($deviceName !== null) {
+                $attendance->device_name = $deviceName;
+            }
             $attendance->time_in = null;
             $attendance->time_out = null;
             $attendance->break_start = null;
@@ -442,9 +350,12 @@ class PunchRecordImportService
         }
 
         // Check if late (more than grace period)
-        $timeIn = Carbon::parse($attendance->attendance_date . ' ' . $attendance->time_in);
-        $schedule = $this->getScheduleForEmployee($attendance->employee, Carbon::parse($attendance->attendance_date));
-        $scheduledTimeIn = Carbon::parse($attendance->attendance_date . ' ' . $schedule['standard_time_in']);
+        $dateStr = $attendance->attendance_date instanceof Carbon
+            ? $attendance->attendance_date->format('Y-m-d')
+            : $attendance->attendance_date;
+        $timeIn = Carbon::parse($dateStr . ' ' . $attendance->time_in);
+        $schedule = $this->getScheduleForEmployee($attendance->employee, Carbon::parse($dateStr));
+        $scheduledTimeIn = Carbon::parse($dateStr . ' ' . $schedule['standard_time_in']);
         $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
 
         if ($attendance->status === 'present' && $timeIn->gt($scheduledTimeIn->copy()->addMinutes($gracePeriodMinutes))) {
@@ -479,36 +390,5 @@ class PunchRecordImportService
                 ? (int) $project->grace_period_minutes
                 : $defaultGrace,
         ];
-    }
-
-    /**
-     * Parse date from column header - supports multiple formats:
-     * - "MM-DD" format (e.g., "01-15" means January 15)
-     * - "DD" format (e.g., "15" or "01" means day only)
-     */
-    public function parseDateColumn(string $columnHeader): ?array
-    {
-        $columnHeader = trim($columnHeader);
-
-        // Format 1: "MM-DD" (e.g., "01-15", "12-01")
-        if (preg_match('/^(\d{1,2})-(\d{1,2})$/', $columnHeader, $matches)) {
-            return [
-                'month' => (int)$matches[1],
-                'day' => (int)$matches[2],
-            ];
-        }
-
-        // Format 2: Day-only number (e.g., "01", "15", "1", "31")
-        if (preg_match('/^(\d{1,2})$/', $columnHeader, $matches)) {
-            $dayNum = (int)$matches[1];
-            if ($dayNum >= 1 && $dayNum <= 31) {
-                return [
-                    'month' => null, // Month needs to be provided separately
-                    'day' => $dayNum,
-                ];
-            }
-        }
-
-        return null;
     }
 }

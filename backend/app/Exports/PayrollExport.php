@@ -21,13 +21,17 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
     protected $payroll;
     protected $items;
     protected $rowCount;
+    protected ?string $customTitle;
+    protected int $currentIndex = 0;
 
-    public function __construct($payroll)
+    public function __construct($payroll, ?string $customTitle = null)
     {
         $this->payroll = $payroll;
         // Use the items collection (which may be filtered) instead of re-querying
         $this->items = $payroll->items;
         $this->rowCount = $this->items->count();
+        $this->customTitle = $customTitle;
+        $this->currentIndex = 0;
     }
 
     public function collection()
@@ -88,8 +92,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
 
     public function map($item): array
     {
-        static $index = 0;
-        $index++;
+        $index = ++$this->currentIndex;
 
         // Format undertime display
         $utHours = floor($item->undertime_hours ?? 0);
@@ -139,7 +142,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
 
     public function title(): string
     {
-        return 'Payroll - ' . $this->payroll->period_name;
+        return $this->customTitle ?? ('Payroll - ' . $this->payroll->period_name);
     }
 
     public function registerEvents(): array

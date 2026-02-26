@@ -13,6 +13,7 @@ use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\CompanyInfo;
 use App\Exports\PayrollExport;
+use App\Exports\PayrollByDeviceExport;
 use App\Exports\PayrollWordExport;
 use App\Services\PayrollService;
 use PhpOffice\PhpWord\IOFactory;
@@ -626,7 +627,7 @@ class PayrollController extends Controller
             'departments.*' => 'string',
             'positions' => 'nullable|array',
             'positions.*' => 'string',
-            'format' => 'nullable|in:pdf,excel,word',
+            'format' => 'nullable|in:pdf,excel,word,by_device,by_device_pdf',
         ]);
 
         // Default to PDF if format not specified
@@ -694,6 +695,10 @@ class PayrollController extends Controller
             return $this->exportRegisterToExcel($payroll, $filenameBase);
         } elseif ($format === 'word') {
             return $this->exportRegisterToWord($payroll, $filenameBase);
+        } elseif ($format === 'by_device') {
+            return $this->exportRegisterByDevice($payroll, $filenameBase);
+        } elseif ($format === 'by_device_pdf') {
+            return $this->exportRegisterByDevicePdf($payroll, $filenameBase);
         } else {
             // Default PDF export
             return $this->exportRegisterToPdf($payroll, $validated, $filenameBase);
@@ -757,6 +762,150 @@ class PayrollController extends Controller
                 'message' => 'Failed to generate PDF: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function exportRegisterByDevice(Payroll $payroll, string $filenameBase)
+    {
+        $deviceGroups = $this->buildDeviceGroups($payroll);
+
+        $sheets = [];
+        foreach ($deviceGroups as $deviceName => $items) {
+            $clonedPayroll = clone $payroll;
+            $clonedPayroll->setRelation('items', $items->values());
+            // Excel sheet names are limited to 31 characters
+            $sheets[] = new PayrollExport($clonedPayroll, mb_substr($deviceName, 0, 31));
+        }
+
+        return Excel::download(
+            new PayrollByDeviceExport($sheets),
+            $filenameBase . '_by_device.xlsx'
+        );
+    }
+
+    private function exportRegisterByDevicePdf(Payroll $payroll, string $filenameBase)
+    {
+        try {
+            // $groupedItems is keyed by device name — the register blade reuses the
+            // per-group rendering logic (same as department grouping) to print a
+            // section header per device.
+            $groupedItems = $this->buildDeviceGroups($payroll);
+
+            $companyInfo = CompanyInfo::first();
+            $filterInfo  = null;
+            $filterType  = 'department';
+
+            $fontCache      = storage_path('fonts');
+            $installedFonts = $fontCache . '/installed-fonts.json';
+            if (!file_exists($installedFonts)) {
+                $distFonts = base_path('vendor/dompdf/dompdf/lib/fonts/installed-fonts.dist.json');
+                if (file_exists($distFonts)) {
+                    copy($distFonts, $installedFonts);
+                }
+            }
+
+            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
+                ->setPaper([0, 0, 612, 936], 'landscape');
+
+            return $pdf->download($filenameBase . '_by_device.pdf');
+        } catch (\Exception $e) {
+            Log::error('By-Device PDF Export Error: ' . $e->getMessage(), [
+                'payroll_id' => $payroll->id,
+                'trace'      => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'message' => 'Failed to generate by-device PDF: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Build per-device groups with proportionally split payroll figures.
+     *
+     * Each employee appears under EVERY device they timed in at during the
+     * payroll period. Their monetary / hour / day values are scaled by the
+     * fraction of attendance days recorded on that device:
+     *
+     *   ratio = device_days / total_attendance_days_for_employee
+     *
+     * Examples
+     *   4 days on Site A, 5 days on Site B → appears on both sheets.
+     *   Site A gets  4/9 of gross_pay, days_worked, net_pay, etc.
+     *   Site B gets  5/9 of those same totals.
+     *
+     * The daily rate is left unchanged (it is per-day, not a period total).
+     * Employees with no attendance device record fall into "Unassigned".
+     *
+     * @return \Illuminate\Support\Collection  keyed by device name, Unassigned last
+     */
+    private function buildDeviceGroups(Payroll $payroll): \Illuminate\Support\Collection
+    {
+        $employeeIds = $payroll->items->pluck('employee_id')->unique();
+
+        // Fetch one row per attendance day — we only need employee_id + device_name
+        $attendances = Attendance::whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+            ->whereIn('employee_id', $employeeIds)
+            ->select(['employee_id', 'device_name'])
+            ->get();
+
+        // Build: employee_id => [ device_name => day_count ]
+        $employeeDeviceDays = [];
+        foreach ($attendances as $att) {
+            $device = (isset($att->device_name) && $att->device_name !== '')
+                ? $att->device_name
+                : 'Unassigned';
+            $employeeDeviceDays[$att->employee_id][$device] =
+                ($employeeDeviceDays[$att->employee_id][$device] ?? 0) + 1;
+        }
+
+        // These fields are period totals → scale proportionally by device ratio.
+        // `effective_rate` / `rate` are daily rates and stay unchanged.
+        $scalableFields = [
+            'days_worked',
+            'gross_pay',
+            'net_pay',
+            'regular_ot_hours',
+            'regular_ot_pay',
+            'special_ot_hours',
+            'special_ot_pay',
+            'salary_adjustment',
+            'other_allowances',
+            'employee_savings',
+            'loans',
+            'employee_deductions',
+            'philhealth',
+            'pagibig',
+            'sss',
+            'undertime_hours',
+        ];
+
+        $deviceGroups = [];
+
+        foreach ($payroll->items as $item) {
+            $empId     = $item->employee_id;
+            $deviceMap = $employeeDeviceDays[$empId] ?? ['Unassigned' => 1];
+            $totalDays = array_sum($deviceMap);
+
+            foreach ($deviceMap as $device => $days) {
+                $ratio = $totalDays > 0 ? ($days / $totalDays) : 1;
+
+                // Clone the Eloquent model and scale each aggregate field
+                $split = clone $item;
+                foreach ($scalableFields as $field) {
+                    $split->setAttribute($field, round(($item->getAttribute($field) ?? 0) * $ratio, 4));
+                }
+
+                $deviceGroups[$device][] = $split;
+            }
+        }
+
+        // Sort alphabetically; keep "Unassigned" last
+        uksort($deviceGroups, function ($a, $b) {
+            if ($a === 'Unassigned') return 1;
+            if ($b === 'Unassigned') return -1;
+            return strnatcasecmp($a, $b);
+        });
+
+        return collect($deviceGroups)->map(fn($items) => collect($items));
     }
 
     private function exportRegisterToExcel(Payroll $payroll, string $filenameBase)

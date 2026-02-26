@@ -340,9 +340,7 @@
           </div>
           <div>
             <div class="dialog-title">Export Payroll</div>
-            <div class="dialog-subtitle">
-              Choose export type and format
-            </div>
+            <div class="dialog-subtitle">Choose export type and format</div>
           </div>
         </v-card-title>
 
@@ -410,23 +408,6 @@
                     </div>
                     <div class="text-caption text-grey">
                       Editable formatted document
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </v-radio>
-            <v-radio value="payslips" class="mb-3">
-              <template v-slot:label>
-                <div class="d-flex align-center">
-                  <v-icon size="24" class="mr-3" color="#FF6F00"
-                    >mdi-file-document-multiple</v-icon
-                  >
-                  <div>
-                    <div class="text-subtitle-1 font-weight-medium">
-                      Payslips (Compact)
-                    </div>
-                    <div class="text-caption text-grey">
-                      4 payslips per page, portrait format
                     </div>
                   </div>
                 </div>
@@ -507,6 +488,105 @@
             Filtering will only include employees from selected departments and
             positions
           </div>
+
+          <v-divider class="my-4"></v-divider>
+
+          <!-- Section: Special Exports -->
+          <v-col cols="12" class="px-0 pb-2">
+            <div class="section-header">
+              <div class="section-icon">
+                <v-icon size="18">mdi-lightning-bolt</v-icon>
+              </div>
+              <h3 class="section-title">Special Exports</h3>
+            </div>
+          </v-col>
+
+          <!-- Payslips card -->
+          <div
+            class="special-export-card mb-3"
+            :class="{
+              'special-export-card--active': exportFilter.format === 'payslips',
+            }"
+            @click="exportFilter.format = 'payslips'"
+          >
+            <v-icon size="22" color="#FF6F00" class="mr-3"
+              >mdi-file-document-multiple</v-icon
+            >
+            <div class="flex-grow-1">
+              <div class="text-subtitle-2 font-weight-medium">
+                Payslips (Compact)
+              </div>
+              <div class="text-caption text-grey">
+                4 payslips per page · portrait · PDF
+              </div>
+            </div>
+            <v-icon
+              size="18"
+              :color="
+                exportFilter.format === 'payslips' ? '#ed985f' : '#bdbdbd'
+              "
+            >
+              {{
+                exportFilter.format === "payslips"
+                  ? "mdi-check-circle"
+                  : "mdi-circle-outline"
+              }}
+            </v-icon>
+          </div>
+
+          <!-- By Device card -->
+          <div
+            class="special-export-card"
+            :class="{
+              'special-export-card--active': [
+                'by_device',
+                'by_device_pdf',
+              ].includes(exportFilter.format),
+            }"
+          >
+            <v-icon size="22" color="#00897B" class="mr-3 mt-1"
+              >mdi-devices</v-icon
+            >
+            <div class="flex-grow-1">
+              <div class="text-subtitle-2 font-weight-medium">
+                By Biometric Device
+              </div>
+              <div class="text-caption text-grey mb-2">
+                Separate section per device · grouped from attendance records
+              </div>
+              <div class="d-flex">
+                <v-chip
+                  size="small"
+                  :color="
+                    exportFilter.format === 'by_device' ? '#217346' : undefined
+                  "
+                  :variant="
+                    exportFilter.format === 'by_device' ? 'flat' : 'outlined'
+                  "
+                  prepend-icon="mdi-file-excel-box"
+                  class="mr-2"
+                  @click.stop="exportFilter.format = 'by_device'"
+                  >Excel</v-chip
+                >
+                <v-chip
+                  size="small"
+                  :color="
+                    exportFilter.format === 'by_device_pdf'
+                      ? '#D32F2F'
+                      : undefined
+                  "
+                  :variant="
+                    exportFilter.format === 'by_device_pdf'
+                      ? 'flat'
+                      : 'outlined'
+                  "
+                  prepend-icon="mdi-file-pdf-box"
+                  @click.stop="exportFilter.format = 'by_device_pdf'"
+                  >PDF</v-chip
+                >
+              </div>
+            </div>
+          </div>
         </v-card-text>
 
         <v-divider></v-divider>
@@ -527,7 +607,17 @@
             @click="downloadRegister"
           >
             <v-icon size="20" class="mr-2">mdi-download</v-icon>
-            Download {{ exportFilter.format === 'payslips' ? 'PAYSLIPS' : exportFilter.format.toUpperCase() }}
+            Download
+            {{
+              {
+                pdf: "PDF",
+                excel: "EXCEL",
+                word: "WORD",
+                payslips: "PAYSLIPS",
+                by_device: "BY DEVICE (XLS)",
+                by_device_pdf: "BY DEVICE (PDF)",
+              }[exportFilter.format] || exportFilter.format.toUpperCase()
+            }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -682,14 +772,14 @@ async function finalizePayroll() {
 async function downloadRegister() {
   if (downloadingRegister.value) return;
   downloadingRegister.value = true;
-  
+
   // Determine if exporting payslips or register (needs to be outside try for error handling)
-  const isPayslips = exportFilter.value.format === 'payslips';
-  
+  const isPayslips = exportFilter.value.format === "payslips";
+
   try {
     // Build params object
     const params = {};
-    
+
     // Only add format for register export (payslips is always PDF)
     if (!isPayslips) {
       params.format = exportFilter.value.format;
@@ -717,17 +807,14 @@ async function downloadRegister() {
     }
 
     // Use different endpoint for payslips
-    const endpoint = isPayslips 
+    const endpoint = isPayslips
       ? `/payrolls/${payroll.value.id}/download-payslips`
       : `/payrolls/${payroll.value.id}/download-register`;
 
-    const response = await api.get(
-      endpoint,
-      {
-        params: params,
-        responseType: "blob",
-      },
-    );
+    const response = await api.get(endpoint, {
+      params: params,
+      responseType: "blob",
+    });
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
@@ -739,10 +826,12 @@ async function downloadRegister() {
       excel: ".xlsx",
       word: ".docx",
       payslips: ".pdf",
+      by_device: ".xlsx",
+      by_device_pdf: ".pdf",
     };
 
     // Use different base filename for payslips
-    let filename = isPayslips 
+    let filename = isPayslips
       ? `payslips_${payroll.value.payroll_number}`
       : `payroll_register_${payroll.value.payroll_number}`;
 
@@ -770,9 +859,11 @@ async function downloadRegister() {
       excel: "Excel",
       word: "Word",
       payslips: "Compact Payslips PDF",
+      by_device: "By Device (Excel)",
+      by_device_pdf: "By Device (PDF)",
     };
 
-    let successMessage = isPayslips 
+    let successMessage = isPayslips
       ? "Payslips downloaded successfully"
       : `Payroll register downloaded as ${formatNames[exportFilter.value.format]}`;
     const filterParts = [];
@@ -807,7 +898,9 @@ async function downloadRegister() {
     exportFilter.value.positions = [];
   } catch (error) {
     // When responseType is 'blob', error response data is a Blob - parse it
-    let errorMessage = isPayslips ? "Failed to download payslips" : "Failed to download payroll register";
+    let errorMessage = isPayslips
+      ? "Failed to download payslips"
+      : "Failed to download payroll register";
     if (error.response?.data instanceof Blob) {
       try {
         const text = await error.response.data.text();
@@ -1342,6 +1435,29 @@ function formatUndertime(hours) {
   color: #001f3d;
   margin: 0;
   letter-spacing: -0.3px;
+}
+
+.special-export-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0, 31, 61, 0.1);
+  background: rgba(0, 31, 61, 0.02);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.special-export-card:hover {
+  border-color: rgba(0, 31, 61, 0.22);
+  background: rgba(0, 31, 61, 0.05);
+}
+
+.special-export-card--active {
+  border-color: #ed985f;
+  background: rgba(237, 152, 95, 0.06);
 }
 
 .form-field-wrapper {

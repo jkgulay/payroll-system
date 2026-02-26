@@ -54,7 +54,6 @@ class PayrollItem extends Model
         'regular_ot_pay' => 'decimal:2',
         'special_ot_hours' => 'decimal:2',
         'special_ot_pay' => 'decimal:2',
-        'cola' => 'decimal:2',
         'other_allowances' => 'decimal:2',
         'salary_adjustment' => 'decimal:2',
         'allowances_breakdown' => 'array',

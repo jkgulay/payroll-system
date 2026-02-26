@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\AuditLog;
 use App\Services\AttendanceService;
 use App\Services\BiometricService;
+use App\Services\PunchRecordImportService;
 use App\Exports\AttendanceSummaryExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,11 +21,13 @@ class AttendanceController extends Controller
 {
     protected $attendanceService;
     protected $biometricService;
+    protected $punchRecordImportService;
 
-    public function __construct(AttendanceService $attendanceService, BiometricService $biometricService)
+    public function __construct(AttendanceService $attendanceService, BiometricService $biometricService, PunchRecordImportService $punchRecordImportService)
     {
         $this->attendanceService = $attendanceService;
         $this->biometricService = $biometricService;
+        $this->punchRecordImportService = $punchRecordImportService;
 
         // Manual entry and editing: admin and hr only (store/destroy), payrollist can update
         $this->middleware('role:admin,hr')->only(['store', 'destroy', 'markAbsent']);
@@ -221,67 +224,86 @@ class AttendanceController extends Controller
 
     public function importBiometric(Request $request)
     {
-        $validated = $request->validate([
-            'file' => 'required|file|mimes:csv,txt',
-            'file_type' => 'required|in:csv,text',
-            'date_from' => 'nullable|date',
-            'date_to' => 'nullable|date|after_or_equal:date_from',
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls',
         ]);
 
         try {
-            $file = $request->file('file');
+            $file     = $request->file('file');
             $filePath = $file->storeAs('biometric_imports', 'import_' . time() . '.' . $file->getClientOriginalExtension());
             $fullPath = Storage::path($filePath);
 
-            // Parse the file based on type
-            $records = $validated['file_type'] === 'csv'
-                ? $this->biometricService->parseCSVExport($fullPath)
-                : $this->biometricService->parseTextExport($fullPath);
+            // Parse with PhpSpreadsheet – read cells directly to handle Excel
+            // date/time serial numbers properly (avoids "2026-02-03 00:00:00 06:49:00"
+            // artefacts that toArray() with format masks can produce).
+            $spreadsheet   = \PhpOffice\PhpSpreadsheet\IOFactory::load($fullPath);
+            $worksheet     = $spreadsheet->getActiveSheet();
+            $highestRow    = $worksheet->getHighestDataRow();
+            $highestCol    = $worksheet->getHighestDataColumn();
+            $highestColIdx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestCol);
 
-            // Filter by date range if provided
-            if ($validated['date_from'] ?? false) {
-                $records = array_filter($records, function ($record) use ($validated) {
-                    $date = Carbon::parse($record['date']);
-                    return $date->gte(Carbon::parse($validated['date_from'])) &&
-                        $date->lte(Carbon::parse($validated['date_to'] ?? 'today'));
-                });
+            if ($highestRow < 2) {
+                Storage::delete($filePath);
+                return response()->json(['message' => 'No valid data found in file'], 422);
             }
 
-            // Import the records
-            $result = $this->attendanceService->importBiometric($records);
+            $headers = [];
+            for ($col = 1; $col <= $highestColIdx; $col++) {
+                $coord = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $headers[$col] = trim((string) $worksheet->getCell($coord . '1')->getValue());
+            }
 
-            // Log the import
+            $punchData = [];
+            for ($row = 2; $row <= $highestRow; $row++) {
+                $rowData = [];
+                for ($col = 1; $col <= $highestColIdx; $col++) {
+                    $header = $headers[$col] ?? '';
+                    if ($header === '') continue;
+                    $coord = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                    $cell  = $worksheet->getCell($coord . $row);
+                    $value = $cell->getValue();
+                    if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell) && is_numeric($value)) {
+                        $dt    = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
+                        $value = $dt->format('Y-m-d H:i:s');
+                    }
+                    $rowData[$header] = ($value !== null && $value !== '') ? trim((string) $value) : null;
+                }
+                $punchData[] = $rowData;
+            }
+
+            $result = $this->punchRecordImportService->importPunchRecords($punchData);
+
             AuditLog::create([
-                'user_id' => $request->user()->id,
-                'module' => 'attendance',
-                'action' => 'biometric_import',
+                'user_id'     => $request->user()->id,
+                'module'      => 'attendance',
+                'action'      => 'biometric_import',
                 'description' => 'Biometric attendance imported from file',
-                'old_values' => null,
-                'new_values' => [
-                    'file' => $file->getClientOriginalName(),
-                    'records_imported' => $result['imported'],
-                    'records_updated' => $result['updated'] ?? 0,
-                    'records_failed' => $result['errors'],
+                'old_values'  => null,
+                'new_values'  => [
+                    'file'     => $file->getClientOriginalName(),
+                    'imported' => $result['imported'],
+                    'updated'  => $result['updated'],
+                    'failed'   => $result['failed'],
                 ],
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
 
-            // Clean up temp file
             Storage::delete($filePath);
 
             return response()->json([
-                'message' => 'Biometric data imported successfully',
+                'message'  => 'Biometric data imported successfully',
                 'imported' => $result['imported'],
-                'updated' => $result['updated'] ?? 0,
-                'failed' => $result['errors'],
-                'errors' => $result['error_details'] ?? [],
+                'updated'  => $result['updated'],
+                'skipped'  => $result['skipped'],
+                'failed'   => $result['failed'],
+                'errors'   => $result['error_details'] ?? [],
             ]);
         } catch (\Exception $e) {
             Log::error('Biometric import failed: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to import biometric data',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
