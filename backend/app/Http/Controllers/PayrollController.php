@@ -622,11 +622,13 @@ class PayrollController extends Controller
 
         // Validate filter parameters
         $validated = $request->validate([
-            'filter_type' => 'nullable|in:all,department,position,both',
+            'filter_type' => 'nullable|in:all,department,position,both,employee',
             'departments' => 'nullable|array',
             'departments.*' => 'string',
             'positions' => 'nullable|array',
             'positions.*' => 'string',
+            'employee_ids' => 'nullable|array',
+            'employee_ids.*' => 'integer|exists:employees,id',
             'format' => 'nullable|in:pdf,excel,word,by_device,by_device_pdf',
         ]);
 
@@ -638,7 +640,10 @@ class PayrollController extends Controller
 
         // Apply filters if provided
         if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
-            if ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
+            if ($validated['filter_type'] === 'employee' && !empty($validated['employee_ids'])) {
+                // Filter by specific employee IDs
+                $itemsQuery->whereIn('employee_id', $validated['employee_ids']);
+            } elseif ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
                 // Filter by both department (project) AND position
                 $itemsQuery->whereHas('employee', function ($q) use ($validated) {
                     $q->where(function ($q2) use ($validated) {
@@ -674,7 +679,19 @@ class PayrollController extends Controller
         $filterInfo = null;
 
         if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
-            if ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
+            if ($validated['filter_type'] === 'employee' && !empty($validated['employee_ids'])) {
+                if (count($validated['employee_ids']) == 1) {
+                    // Get employee name for single employee
+                    $employee = Employee::find($validated['employee_ids'][0]);
+                    if ($employee) {
+                        $filterInfo = 'Employee: ' . $employee->first_name . ' ' . $employee->last_name;
+                        $filenameBase .= '_' . str_replace(' ', '_', $employee->last_name);
+                    }
+                } else {
+                    $filterInfo = 'Multiple Employees (' . count($validated['employee_ids']) . ')';
+                    $filenameBase .= '_filtered';
+                }
+            } elseif ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
                 if (count($validated['departments']) == 1) {
                     $filterInfo = 'Department: ' . implode(', ', $validated['departments']);
                 }
@@ -685,7 +702,7 @@ class PayrollController extends Controller
             } elseif ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
                 $filterInfo = 'Filtered by Department & Position';
             }
-            if ($filterInfo) {
+            if ($filterInfo && !str_contains($filenameBase, '_filtered') && $validated['filter_type'] !== 'employee') {
                 $filenameBase .= '_filtered';
             }
         }
@@ -714,7 +731,17 @@ class PayrollController extends Controller
             $filterType = $validated['filter_type'] ?? 'all';
 
             if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
-                if ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
+                if ($validated['filter_type'] === 'employee' && !empty($validated['employee_ids'])) {
+                    if (count($validated['employee_ids']) == 1) {
+                        // Get employee name for single employee
+                        $employee = Employee::find($validated['employee_ids'][0]);
+                        if ($employee) {
+                            $filterInfo = 'Employee: ' . $employee->first_name . ' ' . $employee->last_name;
+                        }
+                    } else {
+                        $filterInfo = 'Multiple Employees (' . count($validated['employee_ids']) . ')';
+                    }
+                } elseif ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
                     // Group by department if multiple departments selected
                     if (count($validated['departments']) > 1) {
                         $groupedItems = $payroll->items->groupBy(function ($item) {

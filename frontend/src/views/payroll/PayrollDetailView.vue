@@ -468,7 +468,7 @@
             clearable
             hint="Leave empty to include all positions"
             persistent-hint
-            class="mb-2"
+            class="mb-4"
           >
             <template v-slot:selection="{ item, index }">
               <v-chip v-if="index < 2" size="small" color="#ED985F">
@@ -483,9 +483,46 @@
             </template>
           </v-select>
 
+          <v-autocomplete
+            v-model="exportFilter.employees"
+            :items="availableEmployees"
+            item-title="name"
+            item-value="id"
+            label="Filter by Employee"
+            prepend-inner-icon="mdi-account"
+            variant="outlined"
+            density="comfortable"
+            multiple
+            chips
+            closable-chips
+            clearable
+            hint="Leave empty to include all employees"
+            persistent-hint
+            class="mb-2"
+          >
+            <template v-slot:selection="{ item, index }">
+              <v-chip v-if="index < 2" size="small" color="#00897B">
+                {{ item.raw.name }}
+              </v-chip>
+              <span
+                v-if="index === 2"
+                class="text-grey text-caption align-self-center"
+              >
+                (+{{ exportFilter.employees.length - 2 }} others)
+              </span>
+            </template>
+            <template v-slot:item="{ props, item }">
+              <v-list-item v-bind="props" :title="item.raw.name">
+                <template v-slot:subtitle>
+                  {{ item.raw.employee_number }} · {{ item.raw.position }}
+                </template>
+              </v-list-item>
+            </template>
+          </v-autocomplete>
+
           <div class="text-caption text-grey">
             <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
-            Filtering will only include employees from selected departments and
+            Filtering will only include selected employees from departments and
             positions
           </div>
 
@@ -649,6 +686,7 @@ const exportFilter = ref({
   format: "pdf", // pdf, excel, word
   departments: [], // Array of department names
   positions: [], // Array of position names
+  employees: [], // Array of employee IDs
 });
 const availableDepartments = ref([]);
 
@@ -664,6 +702,30 @@ const availablePositions = computed(() => {
   });
 
   return Array.from(positions).sort();
+});
+
+// Compute available employees from payroll items
+const availableEmployees = computed(() => {
+  if (!payroll.value?.items) return [];
+
+  const employees = payroll.value.items
+    .map((item) => {
+      if (!item.employee) return null;
+      
+      const emp = item.employee;
+      const fullName = `${emp.first_name || ""} ${emp.middle_name || ""} ${emp.last_name || ""}`.replace(/\s+/g, " ").trim();
+      
+      return {
+        id: emp.id,
+        name: fullName,
+        employee_number: emp.employee_number || "",
+        position: emp.position?.position_name || "N/A",
+      };
+    })
+    .filter((emp) => emp !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return employees;
 });
 
 // Filter items by position
@@ -791,8 +853,14 @@ async function downloadRegister() {
       exportFilter.value.departments.length > 0;
     const hasPositions =
       exportFilter.value.positions && exportFilter.value.positions.length > 0;
+    const hasEmployees =
+      exportFilter.value.employees && exportFilter.value.employees.length > 0;
 
-    if (hasDepartments && hasPositions) {
+    if (hasEmployees) {
+      // If employees are selected, prioritize employee filter
+      params.filter_type = "employee";
+      params.employee_ids = exportFilter.value.employees;
+    } else if (hasDepartments && hasPositions) {
       params.filter_type = "both";
       params.departments = exportFilter.value.departments;
       params.positions = exportFilter.value.positions;
@@ -869,21 +937,31 @@ async function downloadRegister() {
     const filterParts = [];
 
     if (
-      exportFilter.value.departments &&
-      exportFilter.value.departments.length > 0
+      exportFilter.value.employees &&
+      exportFilter.value.employees.length > 0
     ) {
       filterParts.push(
-        `${exportFilter.value.departments.length} department${exportFilter.value.departments.length > 1 ? "s" : ""}`,
+        `${exportFilter.value.employees.length} employee${exportFilter.value.employees.length > 1 ? "s" : ""}`,
       );
-    }
+    } else {
+      // Only show department/position filters if no employee filter is active
+      if (
+        exportFilter.value.departments &&
+        exportFilter.value.departments.length > 0
+      ) {
+        filterParts.push(
+          `${exportFilter.value.departments.length} department${exportFilter.value.departments.length > 1 ? "s" : ""}`,
+        );
+      }
 
-    if (
-      exportFilter.value.positions &&
-      exportFilter.value.positions.length > 0
-    ) {
-      filterParts.push(
-        `${exportFilter.value.positions.length} position${exportFilter.value.positions.length > 1 ? "s" : ""}`,
-      );
+      if (
+        exportFilter.value.positions &&
+        exportFilter.value.positions.length > 0
+      ) {
+        filterParts.push(
+          `${exportFilter.value.positions.length} position${exportFilter.value.positions.length > 1 ? "s" : ""}`,
+        );
+      }
     }
 
     if (filterParts.length > 0) {
@@ -896,6 +974,7 @@ async function downloadRegister() {
     // Reset filters for next time
     exportFilter.value.departments = [];
     exportFilter.value.positions = [];
+    exportFilter.value.employees = [];
   } catch (error) {
     // When responseType is 'blob', error response data is a Blob - parse it
     let errorMessage = isPayslips
