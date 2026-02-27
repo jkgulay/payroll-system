@@ -110,8 +110,6 @@ class BiometricImportController extends Controller
 
         $validated = $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv',
-            'year' => 'nullable|integer|min:2020|max:2100',
-            'month' => 'nullable|integer|min:1|max:12',
         ]);
 
         try {
@@ -128,11 +126,7 @@ class BiometricImportController extends Controller
                 ], 422);
             }
 
-            // Import punch records
-            $year = $validated['year'] ?? now()->year;
-            $month = $validated['month'] ?? null;
-
-            $result = $this->punchRecordImportService->importPunchRecords($punchData, $year, $month);
+            $result = $this->punchRecordImportService->importPunchRecords($punchData);
 
             // Log the import
             AuditLog::create([
@@ -143,8 +137,6 @@ class BiometricImportController extends Controller
                 'old_values' => null,
                 'new_values' => [
                     'file' => $file->getClientOriginalName(),
-                    'year' => $year,
-                    'month' => $month,
                     'imported' => $result['imported'],
                     'updated' => $result['updated'],
                     'skipped' => $result['skipped'],
@@ -180,29 +172,46 @@ class BiometricImportController extends Controller
     protected function parseExcelFile(string $filePath): array
     {
         try {
-            // Use PhpSpreadsheet to read the file
             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
-            $worksheet = $spreadsheet->getActiveSheet();
-            $rows = $worksheet->toArray();
+            $worksheet   = $spreadsheet->getActiveSheet();
 
-            if (empty($rows)) {
+            // Read cells directly so we can detect and convert Excel date/time serial
+            // numbers ourselves, instead of relying on toArray()'s format-mask output
+            // which can produce "2026-02-03 00:00:00 06:49:00" for datetime cells.
+            $highestRow    = $worksheet->getHighestDataRow();
+            $highestCol    = $worksheet->getHighestDataColumn();
+            $highestColIdx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestCol);
+
+            if ($highestRow < 2) {
                 return [];
             }
 
-            // First row is header
-            $headers = array_shift($rows);
+            // Row 1 = headers
+            $headers = [];
+            for ($col = 1; $col <= $highestColIdx; $col++) {
+                $coord = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $headers[$col] = trim((string) $worksheet->getCell($coord . '1')->getValue());
+            }
 
-            // Clean headers
-            $headers = array_map(function ($header) {
-                return trim($header);
-            }, $headers);
-
-            // Convert rows to associative arrays
             $data = [];
-            foreach ($rows as $row) {
+            for ($row = 2; $row <= $highestRow; $row++) {
                 $rowData = [];
-                foreach ($headers as $index => $header) {
-                    $rowData[$header] = $row[$index] ?? null;
+                for ($col = 1; $col <= $highestColIdx; $col++) {
+                    $header = $headers[$col] ?? '';
+                    if ($header === '') {
+                        continue;
+                    }
+                    $coord = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                    $cell  = $worksheet->getCell($coord . $row);
+                    $value = $cell->getValue();
+
+                    // Convert Excel date/time serial numbers to a clean datetime string
+                    if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell) && is_numeric($value)) {
+                        $dt    = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
+                        $value = $dt->format('Y-m-d H:i:s');
+                    }
+
+                    $rowData[$header] = ($value !== null && $value !== '') ? trim((string) $value) : null;
                 }
                 $data[] = $rowData;
             }
@@ -227,15 +236,12 @@ class BiometricImportController extends Controller
                 'format' => 'Excel (.xls, .xlsx) or CSV',
             ],
             'punch_records_template' => [
-                'description' => 'Import attendance punch records with date-based columns',
-                'required_columns' => ['Staff Code', 'Name'],
-                'date_columns' => 'Columns with format DD (e.g., 01, 02, 15) or MM-DD (e.g., 01-15) containing time entries',
-                'time_format' => 'HH:MM (e.g., 08:30, 17:00), multiple entries separated by newlines',
-                'format' => 'Excel (.xls, .xlsx) or CSV',
-                'parameters' => [
-                    'year' => 'Year of the records (default: current year)',
-                    'month' => 'Month of the records (required when using DD format columns)',
-                ],
+                'description' => 'Import attendance punch records from biometric device export',
+                'required_columns' => ['Staff Code', 'Name', 'Punch Date'],
+                'optional_columns' => ['Punch Type', 'Punch Address', 'Device Name', 'Punch Photo', 'Remark'],
+                'date_format' => 'YYYY-MM-DD HH:MM (e.g., 2026-02-02 17:18)',
+                'notes' => 'Each row is one punch event. Multiple punches for the same employee and date are grouped automatically.',
+                'format' => 'Excel (.xls, .xlsx)',
             ],
         ]);
     }

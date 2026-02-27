@@ -27,6 +27,8 @@ class Payroll extends Model
         'created_by',
         'finalized_by',
         'finalized_at',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
@@ -34,6 +36,7 @@ class Payroll extends Model
         'period_end' => 'date',
         'payment_date' => 'date',
         'finalized_at' => 'datetime',
+        'approved_at' => 'datetime',
         'total_gross' => 'decimal:2',
         'total_deductions' => 'decimal:2',
         'total_net' => 'decimal:2',
@@ -70,7 +73,7 @@ class Payroll extends Model
         $year = date('Y');
         $month = date('m');
         $prefix = "PR{$year}{$month}";
-        
+
         $lastPayroll = self::withTrashed()
             ->where('payroll_number', 'like', "{$prefix}%")
             ->orderBy('payroll_number', 'desc')

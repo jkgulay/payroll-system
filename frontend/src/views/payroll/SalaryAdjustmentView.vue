@@ -102,28 +102,22 @@
         <template v-slot:item.amount="{ item }">
           <span class="font-weight-medium">
             <span
-              :class="
-                item.adjustment_type === 'deduction'
-                  ? 'text-error'
-                  : 'text-success'
-              "
+              :class="item.type === 'deduction' ? 'text-error' : 'text-success'"
             >
-              {{ item.adjustment_type === "deduction" ? "-" : "+" }}₱{{
+              {{ item.type === "deduction" ? "-" : "+" }}₱{{
                 formatCurrency(item.amount)
               }}
             </span>
           </span>
         </template>
 
-        <template v-slot:item.adjustment_type="{ item }">
+        <template v-slot:item.type="{ item }">
           <v-chip
-            :color="item.adjustment_type === 'deduction' ? 'warning' : 'info'"
+            :color="item.type === 'deduction' ? 'warning' : 'info'"
             size="small"
             variant="tonal"
           >
-            {{
-              item.adjustment_type === "deduction" ? "Deduction" : "Addition"
-            }}
+            {{ item.type === "deduction" ? "Deduction" : "Addition" }}
           </v-chip>
         </template>
 
@@ -442,15 +436,13 @@
               <span class="detail-value">
                 <v-chip
                   :color="
-                    selectedAdjustment.adjustment_type === 'deduction'
-                      ? 'warning'
-                      : 'info'
+                    selectedAdjustment.type === 'deduction' ? 'warning' : 'info'
                   "
                   size="small"
                   variant="tonal"
                 >
                   {{
-                    selectedAdjustment.adjustment_type === "deduction"
+                    selectedAdjustment.type === "deduction"
                       ? "Deduction"
                       : "Addition"
                   }}
@@ -462,16 +454,14 @@
               <span
                 class="detail-value font-weight-bold"
                 :class="
-                  selectedAdjustment.adjustment_type === 'deduction'
+                  selectedAdjustment.type === 'deduction'
                     ? 'text-error'
                     : 'text-success'
                 "
               >
-                {{
-                  selectedAdjustment.adjustment_type === "deduction"
-                    ? "-"
-                    : "+"
-                }}₱{{ formatCurrency(selectedAdjustment.amount) }}
+                {{ selectedAdjustment.type === "deduction" ? "-" : "+" }}₱{{
+                  formatCurrency(selectedAdjustment.amount)
+                }}
               </span>
             </div>
             <div class="detail-item">
@@ -490,10 +480,10 @@
               <span class="detail-label">Reason</span>
               <span class="detail-value">{{ selectedAdjustment.reason }}</span>
             </div>
-            <div class="detail-item" v-if="selectedAdjustment.description">
+            <div class="detail-item" v-if="selectedAdjustment.reference_period">
               <span class="detail-label">Reference Period</span>
               <span class="detail-value">{{
-                selectedAdjustment.description
+                selectedAdjustment.reference_period
               }}</span>
             </div>
             <div class="detail-item" v-if="selectedAdjustment.applied_payroll">
@@ -569,9 +559,9 @@ const form = reactive({
 const headers = [
   { title: "Employee", key: "employee", sortable: true },
   { title: "Amount", key: "amount", sortable: true },
-  { title: "Type", key: "adjustment_type", sortable: true },
+  { title: "Type", key: "type", sortable: true },
   { title: "Reason", key: "reason", sortable: false },
-  { title: "Reference Period", key: "description", sortable: false },
+  { title: "Reference Period", key: "reference_period", sortable: false },
   { title: "Status", key: "status", sortable: true },
   { title: "Created", key: "created_at", sortable: true },
   { title: "Actions", key: "actions", sortable: false, width: "130px" },
@@ -608,7 +598,7 @@ const filteredAdjustments = computed(() => {
     result = result.filter((a) => a.status === statusFilter.value);
   }
   if (typeFilter.value !== "all") {
-    result = result.filter((a) => a.adjustment_type === typeFilter.value);
+    result = result.filter((a) => a.type === typeFilter.value);
   }
   return result;
 });
@@ -688,9 +678,9 @@ const openEditDialog = (item) => {
   form.id = item.id;
   form.employee_id = item.employee_id;
   form.amount = item.amount;
-  form.type = item.adjustment_type;
+  form.type = item.type;
   form.reason = item.reason || "";
-  form.reference_period = item.description || "";
+  form.reference_period = item.reference_period || "";
   dialog.value = true;
 };
 

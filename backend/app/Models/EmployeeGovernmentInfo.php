@@ -21,7 +21,7 @@ class EmployeeGovernmentInfo extends Model
         'tin_registration_date',
         'tax_status',
         'is_minimum_wage_earner',
-        'is_govt_contribution_exempt',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -30,7 +30,6 @@ class EmployeeGovernmentInfo extends Model
         'pagibig_registration_date' => 'date',
         'tin_registration_date' => 'date',
         'is_minimum_wage_earner' => 'boolean',
-        'is_govt_contribution_exempt' => 'boolean',
     ];
 
     public function employee()

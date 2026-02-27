@@ -294,7 +294,7 @@
                     <div class="requirement-content">
                       <div class="requirement-label">Required Fields</div>
                       <div class="requirement-value">
-                        Staff Code, Name, Date columns (DD or MM-DD)
+                        Staff Code, Name, Punch Date (YYYY-MM-DD HH:MM)
                       </div>
                     </div>
                   </div>
@@ -303,9 +303,10 @@
                       <v-icon size="14">mdi-clock-outline</v-icon>
                     </div>
                     <div class="requirement-content">
-                      <div class="requirement-label">Time Format</div>
+                      <div class="requirement-label">Row Format</div>
                       <div class="requirement-value">
-                        HH:MM (e.g., 08:30), multiple times per day
+                        One punch event per row — grouped by employee + date
+                        automatically
                       </div>
                     </div>
                   </div>
@@ -322,47 +323,6 @@
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
-
-          <!-- Year/Month Selection - Compact -->
-          <div class="date-selection-section">
-            <div class="section-label">
-              <v-icon size="16">mdi-calendar</v-icon>
-              <span>Date Parameters</span>
-            </div>
-            <v-row dense>
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model.number="punchYear"
-                  label="Year *"
-                  type="number"
-                  :min="2020"
-                  :max="2100"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                >
-                  <template v-slot:prepend-inner>
-                    <v-icon size="18">mdi-calendar</v-icon>
-                  </template>
-                </v-text-field>
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="punchMonth"
-                  :items="months"
-                  label="Month (optional)"
-                  variant="outlined"
-                  density="compact"
-                  clearable
-                  hide-details
-                >
-                  <template v-slot:prepend-inner>
-                    <v-icon size="18">mdi-calendar-month</v-icon>
-                  </template>
-                </v-select>
-              </v-col>
-            </v-row>
-          </div>
 
           <!-- Compact Drop Zone -->
           <div
@@ -406,7 +366,7 @@
               size="small"
               @click="importPunchRecords"
               :loading="importingPunch"
-              :disabled="!punchFile || !punchYear"
+              :disabled="!punchFile"
             >
               <v-icon start size="18">mdi-import</v-icon>
               Import
@@ -560,26 +520,25 @@
                     <ul class="info-list">
                       <li>Staff Code</li>
                       <li>Name</li>
-                      <li>
-                        Date columns (DD format like 01, 02, or MM-DD like
-                        01-15)
-                      </li>
+                      <li>Punch Date (YYYY-MM-DD HH:MM)</li>
                     </ul>
                   </div>
                   <div class="info-section">
-                    <div class="info-section-title">Time Format</div>
+                    <div class="info-section-title">Optional Columns</div>
                     <ul class="info-list">
-                      <li>HH:MM format (e.g., 08:30, 17:00)</li>
-                      <li>Multiple times separated by newlines in cell</li>
+                      <li>Punch Type</li>
+                      <li>Punch Address</li>
+                      <li>Device Name</li>
+                      <li>Punch Photo, Remark</li>
                     </ul>
                   </div>
                   <div class="info-section">
-                    <div class="info-section-title">Parameters</div>
+                    <div class="info-section-title">Notes</div>
                     <ul class="info-list">
-                      <li><strong>Year:</strong> Required - Year of records</li>
+                      <li>One row = one punch event</li>
                       <li>
-                        <strong>Month:</strong> Optional - Override month from
-                        columns
+                        Multiple punches per employee per day are grouped
+                        automatically
                       </li>
                     </ul>
                   </div>
@@ -651,29 +610,10 @@ const punchImportResult = ref(null);
 const punchUploadProgress = ref(0);
 const punchProcessing = ref(false);
 let punchProgressTimer = null;
-const punchYear = ref(new Date().getFullYear());
-const punchMonth = ref(null);
 
 // Template Dialog
 const templateDialog = ref(false);
 
-// Months
-const months = [
-  { title: "January", value: 1 },
-  { title: "February", value: 2 },
-  { title: "March", value: 3 },
-  { title: "April", value: 4 },
-  { title: "May", value: 5 },
-  { title: "June", value: 6 },
-  { title: "July", value: 7 },
-  { title: "August", value: 8 },
-  { title: "September", value: 9 },
-  { title: "October", value: 10 },
-  { title: "November", value: 11 },
-  { title: "December", value: 12 },
-];
-
-// Staff Information Handlers
 const handleStaffFileSelect = (event) => {
   const file = event.target.files[0];
   if (file) {
@@ -813,7 +753,7 @@ const handlePunchDrop = (event) => {
 };
 
 const importPunchRecords = async () => {
-  if (!punchFile.value || !punchYear.value) return;
+  if (!punchFile.value) return;
 
   importingPunch.value = true;
   punchImportResult.value = null;
@@ -829,10 +769,6 @@ const importPunchRecords = async () => {
   try {
     const formData = new FormData();
     formData.append("file", punchFile.value);
-    formData.append("year", punchYear.value);
-    if (punchMonth.value) {
-      formData.append("month", punchMonth.value);
-    }
 
     const response = await api.post(
       "/biometric/import-punch-records",

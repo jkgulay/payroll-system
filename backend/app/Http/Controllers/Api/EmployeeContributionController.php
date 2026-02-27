@@ -17,7 +17,7 @@ class EmployeeContributionController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Employee::with(['project', 'positionRate'])
+        $query = Employee::with(['project', 'positionRate', 'governmentInfo'])
             ->whereIn('activity_status', ['active', 'on_leave']);
 
         // Search filter
@@ -46,7 +46,7 @@ class EmployeeContributionController extends Controller
         // Calculate contributions for each employee
         $employeesWithContributions = $employees->map(function ($employee) {
             $monthlyRate = $employee->getMonthlyRate();
-            
+
             // Get computed contributions based on government rates
             $computedSss = $this->computeSSS($monthlyRate);
             $computedPhilhealth = $this->computePhilHealth($monthlyRate);
@@ -83,10 +83,10 @@ class EmployeeContributionController extends Controller
                 'effective_pagibig' => $employee->has_pagibig ? ($employee->custom_pagibig ?? $computedPagibig) : 0,
                 // Notes
                 'contribution_notes' => $employee->contribution_notes,
-                // Government IDs
-                'sss_number' => $employee->sss_number,
-                'philhealth_number' => $employee->philhealth_number,
-                'pagibig_number' => $employee->pagibig_number,
+                // Government IDs (from employee_government_info — canonical store)
+                'sss_number' => $employee->governmentInfo?->sss_number,
+                'philhealth_number' => $employee->governmentInfo?->philhealth_number,
+                'pagibig_number' => $employee->governmentInfo?->pagibig_number,
             ];
         });
 
@@ -216,7 +216,7 @@ class EmployeeContributionController extends Controller
 
         foreach ($employees as $employee) {
             $monthlyRate = $employee->getMonthlyRate();
-            
+
             if ($employee->has_sss) {
                 $totalSss += $employee->custom_sss ?? $this->computeSSS($monthlyRate);
             }
@@ -226,7 +226,7 @@ class EmployeeContributionController extends Controller
             if ($employee->has_pagibig) {
                 $totalPagibig += $employee->custom_pagibig ?? $this->computePagibig($monthlyRate);
             }
-            
+
             if ($employee->custom_sss !== null || $employee->custom_philhealth !== null || $employee->custom_pagibig !== null) {
                 $customCount++;
             }

@@ -663,7 +663,6 @@ class PayrollService
             'regular_ot_pay' => $regularOtPay,
             'special_ot_hours' => $specialOtHours,
             'special_ot_pay' => $specialOtPay,
-            'cola' => 0, // COLA removed, kept for backward compatibility
             'other_allowances' => $otherAllowances,
             'salary_adjustment' => $salaryAdjustment,
             'allowances_breakdown' => $allowancesBreakdown,

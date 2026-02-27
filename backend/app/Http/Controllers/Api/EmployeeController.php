@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
+use App\Models\EmployeeGovernmentInfo;
 use App\Models\User;
 use App\Models\AuditLog;
 use App\Helpers\DateHelper;
@@ -155,6 +156,20 @@ class EmployeeController extends Controller
             $employee->user_id = $user->id;
             $employee->save();
 
+            // Sync government IDs to employee_government_info (keeps both tables consistent)
+            $govIds = array_filter([
+                'sss_number'        => $validated['sss_number'] ?? null,
+                'philhealth_number' => $validated['philhealth_number'] ?? null,
+                'pagibig_number'    => $validated['pagibig_number'] ?? null,
+                'tin_number'        => $validated['tin_number'] ?? null,
+            ], fn($v) => !is_null($v));
+            if (!empty($govIds)) {
+                EmployeeGovernmentInfo::updateOrCreate(
+                    ['employee_id' => $employee->id],
+                    $govIds
+                );
+            }
+
             // Store temporary password for response (in real app, send via email)
             $employee->temporary_password = $autoPassword;
 
@@ -216,10 +231,30 @@ class EmployeeController extends Controller
 
                     \App\Models\User::where('id', $employee->user_id)->update(['role' => $newRole]);
                 }
+
+                // Sync basic_salary to match the new position's daily_rate (prevents stale salary data)
+                // Only when no custom override is active on this employee
+                if (empty($employee->custom_pay_rate) && empty($validated['custom_pay_rate'])) {
+                    $validated['basic_salary'] = $newPosition->daily_rate;
+                }
             }
         }
 
         $employee->update($validated);
+
+        // Sync any changed government IDs to employee_government_info
+        $govIdFields = ['sss_number', 'philhealth_number', 'pagibig_number', 'tin_number'];
+        $govIds = array_filter(
+            array_intersect_key($validated, array_flip($govIdFields)),
+            fn($v) => !is_null($v)
+        );
+        if (!empty($govIds)) {
+            EmployeeGovernmentInfo::updateOrCreate(
+                ['employee_id' => $employee->id],
+                $govIds
+            );
+        }
+
         $employee->load(['project', 'positionRate']); // Load relationships for response
 
         return response()->json($employee);

@@ -34,6 +34,7 @@ class Attendance extends Model
         'is_holiday',
         'holiday_type',
         'is_manual_entry',
+        'device_name',
         'manual_reason',
         'is_edited',
         'edit_reason',
@@ -307,7 +308,7 @@ class Attendance extends Model
         if ($undertime > 0 && $overtime > 0) {
             // Offset the lesser amount from both
             $offsetAmount = min($undertime, $overtime);
-            
+
             $this->undertime_hours = round($undertime - $offsetAmount, 4);
             $this->overtime_hours = round($overtime - $offsetAmount, 4);
         }

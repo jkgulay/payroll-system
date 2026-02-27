@@ -5,18 +5,8 @@
       <v-row>
         <v-col cols="12" md="3">
           <v-text-field
-            v-model="filters.date_from"
-            label="Date From"
-            type="date"
-            density="compact"
-            variant="outlined"
-            hide-details
-          ></v-text-field>
-        </v-col>
-        <v-col cols="12" md="3">
-          <v-text-field
-            v-model="filters.date_to"
-            label="Date To"
+            v-model="filters.date"
+            label="Date"
             type="date"
             density="compact"
             variant="outlined"
@@ -169,6 +159,13 @@
         <v-icon v-else color="success">mdi-fingerprint</v-icon>
       </template>
 
+      <template v-slot:item.device_name="{ item }">
+        <span v-if="item.device_name" class="text-body-2">{{
+          item.device_name
+        }}</span>
+        <span v-else class="text-medium-emphasis">--</span>
+      </template>
+
       <template v-slot:item.actions="{ item }">
         <v-menu location="bottom end">
           <template v-slot:activator="{ props }">
@@ -238,10 +235,7 @@ const canApproveRole = computed(() =>
 );
 
 const filters = reactive({
-  date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0],
-  date_to: new Date().toISOString().split("T")[0],
+  date: new Date().toISOString().split("T")[0],
   status: null,
 });
 
@@ -257,6 +251,7 @@ const headers = [
   { title: "Status", key: "status" },
   { title: "Approval", key: "approval", sortable: false },
   { title: "Type", key: "is_manual_entry", sortable: false },
+  { title: "Device", key: "device_name", sortable: false },
   { title: "Actions", key: "actions", sortable: false },
 ];
 
@@ -272,7 +267,9 @@ const loadAttendance = async () => {
   loading.value = true;
   try {
     const response = await attendanceService.getAttendance({
-      ...filters,
+      date_from: filters.date,
+      date_to: filters.date,
+      status: filters.status,
       per_page: 10000, // Fetch all records
     });
     attendance.value = response.data || [];
@@ -332,10 +329,9 @@ let unsubscribeAttendance = null;
 onMounted(() => {
   // Apply query parameters if present (from dashboard)
   if (route.query.date_from) {
-    filters.date_from = route.query.date_from;
-  }
-  if (route.query.date_to) {
-    filters.date_to = route.query.date_to;
+    filters.date = route.query.date_from;
+  } else if (route.query.date) {
+    filters.date = route.query.date;
   }
 
   loadAttendance();

@@ -53,14 +53,6 @@ class SalaryAdjustment extends Model
     }
 
     /**
-     * Get the user who approved this adjustment.
-     */
-    public function approvedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
-
-    /**
      * Scope for pending adjustments.
      */
     public function scopePending($query)

@@ -47,11 +47,7 @@ class Employee extends Model
         'salary_type',
         'basic_salary',
         'custom_pay_rate',
-        // Government IDs
-        'sss_number',
-        'philhealth_number',
-        'pagibig_number',
-        'tin_number',
+        // Government IDs are stored in employee_government_info — NOT duplicated here
         // Government Contribution Flags
         'has_sss',
         'has_philhealth',
@@ -63,6 +59,7 @@ class Employee extends Model
         'contribution_notes',
         'bank_name',
         'bank_account_number',
+        'payment_mode',
         'profile_photo',
         'is_active',
         'resignation_id',

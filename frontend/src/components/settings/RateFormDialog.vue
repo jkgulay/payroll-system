@@ -249,8 +249,10 @@ const form = ref({
 
 // Validation rules
 const rules = {
-  required: (v) => !!v || "This field is required",
-  positive: (v) => v >= 0 || "Must be positive",
+  // Use explicit null/empty check so that 0 is treated as a valid value
+  required: (v) =>
+    (v !== null && v !== undefined && v !== "") || "This field is required",
+  positive: (v) => v == null || v >= 0 || "Must be positive",
   rateRange: (v) =>
     !v || (v >= 0 && v <= 100) || "Rate must be between 0 and 100",
   greaterThanMin: (v) => {
@@ -302,7 +304,7 @@ watch(
       };
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const submit = async () => {

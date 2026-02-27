@@ -25,7 +25,7 @@
               <v-file-input
                 v-model="file"
                 label="Biometric File *"
-                accept=".csv,.txt"
+                accept=".xls,.xlsx"
                 :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
@@ -34,7 +34,7 @@
               >
                 <template v-slot:append>
                   <v-tooltip
-                    text="Upload CSV or TXT file exported from biometric device"
+                    text="Upload Excel file (.xlsx or .xls) exported from biometric device"
                   >
                     <template v-slot:activator="{ props }">
                       <v-icon v-bind="props">mdi-help-circle</v-icon>
@@ -45,46 +45,14 @@
             </v-col>
 
             <v-col cols="12">
-              <v-select
-                v-model="fileType"
-                :items="fileTypes"
-                label="File Type *"
-                :rules="[rules.required]"
-                variant="outlined"
-                density="comfortable"
-                prepend-icon="mdi-file-document"
-              ></v-select>
-            </v-col>
-
-            <v-col cols="6">
-              <v-text-field
-                v-model="dateFrom"
-                label="Date From"
-                type="date"
-                variant="outlined"
-                density="comfortable"
-                prepend-icon="mdi-calendar"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="6">
-              <v-text-field
-                v-model="dateTo"
-                label="Date To"
-                type="date"
-                variant="outlined"
-                density="comfortable"
-                prepend-icon="mdi-calendar"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="12">
               <v-alert type="info" variant="tonal" density="compact">
                 <div class="text-body-2">
-                  <strong>CSV Format:</strong>
-                  Badge,Date,Time,State,Person<br />
-                  <strong>Text Format:</strong> UserID DateTime InOut<br />
-                  <strong>State:</strong> 0=In, 1=Out, 2=Break-In, 3=Break-Out
+                  <strong>Required columns:</strong> Staff Code, Name, Punch
+                  Date<br />
+                  <strong>Punch Date format:</strong> YYYY-MM-DD HH:MM (e.g.
+                  2026-02-03 08:30)<br />
+                  <strong>One row per punch event</strong> — multiple punches
+                  are grouped automatically.
                 </div>
               </v-alert>
             </v-col>
@@ -129,14 +97,6 @@ const form = ref(null);
 const valid = ref(false);
 const importing = ref(false);
 const file = ref(null);
-const fileType = ref("csv");
-const dateFrom = ref("");
-const dateTo = ref("");
-
-const fileTypes = [
-  { title: "CSV File", value: "csv" },
-  { title: "Text File", value: "text" },
-];
 
 const rules = {
   required: (v) => !!v || "This field is required",
@@ -149,9 +109,6 @@ const importFile = async () => {
   try {
     const formData = new FormData();
     formData.append("file", file.value[0]);
-    formData.append("file_type", fileType.value);
-    if (dateFrom.value) formData.append("date_from", dateFrom.value);
-    if (dateTo.value) formData.append("date_to", dateTo.value);
 
     const result = await attendanceService.importBiometric(formData);
     emit("imported", result);
@@ -165,9 +122,6 @@ const importFile = async () => {
 
 const close = () => {
   file.value = null;
-  fileType.value = "csv";
-  dateFrom.value = "";
-  dateTo.value = "";
   emit("update:modelValue", false);
 };
 </script>
