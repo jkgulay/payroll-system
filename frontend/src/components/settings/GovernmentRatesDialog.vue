@@ -2,22 +2,21 @@
   <v-dialog
     :model-value="modelValue"
     @update:model-value="handleClose"
-    max-width="1200"
+    max-width="1300"
     persistent
     scrollable
   >
-    <v-card class="government-rates-dialog">
-      <!-- Header -->
+    <v-card class="gov-rates-dialog">
+      <!-- ═══════════════════ Header ═══════════════════ -->
       <div class="dialog-header">
         <div class="header-content">
-          <div class="icon-wrapper">
-            <v-icon size="26" color="white">mdi-cash-multiple</v-icon>
+          <div class="header-icon">
+            <v-icon size="26" color="white">mdi-bank</v-icon>
           </div>
           <div>
-            <h2 class="dialog-title">Manage Government Rates</h2>
-            <p class="dialog-subtitle">
-              Configure SSS, PhilHealth, Pag-IBIG, and withholding tax
-              contribution tables
+            <h2 class="header-title">Government Rates</h2>
+            <p class="header-subtitle">
+              Manage contribution tables and customize employee deductions
             </p>
           </div>
         </div>
@@ -25,14 +24,13 @@
           icon
           variant="text"
           @click="handleClose"
-          class="close-btn"
+          class="header-close"
           :disabled="saving"
         >
           <v-icon color="white">mdi-close</v-icon>
         </v-btn>
       </div>
 
-      <!-- Loading bar -->
       <v-progress-linear
         v-if="loading"
         indeterminate
@@ -40,8 +38,8 @@
         height="3"
       />
 
-      <!-- Tabs -->
-      <div class="tabs-wrapper">
+      <!-- ═══════════════════ Tabs ═══════════════════ -->
+      <div class="tabs-bar">
         <v-tabs
           v-model="activeTab"
           @update:model-value="cancelForm"
@@ -55,117 +53,118 @@
           <v-tab value="sss">
             <v-icon size="18" class="mr-2">mdi-shield-account</v-icon>
             SSS
-            <v-chip
+            <v-badge
               v-if="rates.sss.length"
-              size="x-small"
-              class="ml-2"
-              color="primary"
-              variant="tonal"
-              >{{ rates.sss.length }}</v-chip
-            >
+              :content="rates.sss.length"
+              color="blue"
+              inline
+              class="ml-1"
+            />
           </v-tab>
           <v-tab value="philhealth">
             <v-icon size="18" class="mr-2">mdi-hospital-box</v-icon>
             PhilHealth
-            <v-chip
+            <v-badge
               v-if="rates.philhealth.length"
-              size="x-small"
-              class="ml-2"
-              color="success"
-              variant="tonal"
-              >{{ rates.philhealth.length }}</v-chip
-            >
+              :content="rates.philhealth.length"
+              color="green"
+              inline
+              class="ml-1"
+            />
           </v-tab>
           <v-tab value="pagibig">
             <v-icon size="18" class="mr-2">mdi-home-city</v-icon>
             Pag-IBIG
-            <v-chip
+            <v-badge
               v-if="rates.pagibig.length"
-              size="x-small"
-              class="ml-2"
+              :content="rates.pagibig.length"
               color="orange"
-              variant="tonal"
-              >{{ rates.pagibig.length }}</v-chip
-            >
+              inline
+              class="ml-1"
+            />
           </v-tab>
           <v-tab value="tax">
             <v-icon size="18" class="mr-2">mdi-file-document</v-icon>
             Tax
-            <v-chip
+            <v-badge
               v-if="rates.tax.length"
-              size="x-small"
-              class="ml-2"
+              :content="rates.tax.length"
               color="purple"
-              variant="tonal"
-              >{{ rates.tax.length }}</v-chip
-            >
+              inline
+              class="ml-1"
+            />
+          </v-tab>
+          <v-tab value="calculator">
+            <v-icon size="18" class="mr-2">mdi-calculator-variant</v-icon>
+            Calculator
           </v-tab>
         </v-tabs>
       </div>
 
-      <v-card-text class="dialog-content pa-0">
+      <!-- ═══════════════════ Tab Content ═══════════════════ -->
+      <v-card-text class="tab-content pa-0">
         <v-window v-model="activeTab">
-          <!-- Employee Contributions Tab -->
+          <!-- ──── Employee Contributions ──── -->
           <v-window-item value="employees">
             <employee-contributions-tab ref="employeeContributionsRef" />
           </v-window-item>
 
-          <!-- Rate Tabs -->
+          <!-- ──── Rate Tables (SSS / PhilHealth / PagIBIG / Tax) ──── -->
           <v-window-item
-            v-for="rateTab in rateTabs"
-            :key="rateTab.value"
-            :value="rateTab.value"
+            v-for="rt in rateTabs"
+            :key="rt.value"
+            :value="rt.value"
           >
-            <div class="rate-tab-content">
-              <!-- Toolbar -->
-              <div class="rate-toolbar">
-                <div class="toolbar-left">
-                  <span class="rate-count"
-                    >{{ currentRates(rateTab.value).length }} rate{{
-                      currentRates(rateTab.value).length !== 1 ? "s" : ""
-                    }}
-                    configured</span
-                  >
-                </div>
-                <div class="toolbar-right">
-                  <v-btn
-                    v-if="!showForm || editingForTab !== rateTab.value"
-                    color="primary"
-                    variant="tonal"
-                    size="small"
-                    prepend-icon="mdi-plus"
-                    @click="startAdd(rateTab.value)"
-                  >
-                    Add Rate
-                  </v-btn>
-                  <v-btn
-                    v-if="currentRates(rateTab.value).length > 0"
-                    color="error"
-                    variant="text"
-                    size="small"
-                    prepend-icon="mdi-delete-sweep"
-                    class="ml-2"
-                    @click="clearTabRates(rateTab.value)"
-                    :disabled="loading"
-                  >
-                    Clear All
-                  </v-btn>
-                </div>
+            <div class="rate-panel">
+              <!-- Info Banner -->
+              <div class="rate-info-banner" :class="rt.value">
+                <v-icon size="18" class="mr-2">{{ rt.icon }}</v-icon>
+                <span>{{ rt.description }}</span>
+                <span class="rate-info-note">{{
+                  currentRates(rt.value).length
+                    ? `${currentRates(rt.value).length} bracket(s) configured`
+                    : "Using built-in fallback table"
+                }}</span>
               </div>
 
-              <!-- Inline Add/Edit Form -->
+              <!-- Toolbar -->
+              <div class="rate-toolbar">
+                <v-btn
+                  v-if="!showForm || editingForTab !== rt.value"
+                  :color="rt.color"
+                  variant="tonal"
+                  size="small"
+                  prepend-icon="mdi-plus"
+                  @click="startAdd(rt.value)"
+                >
+                  Add Bracket
+                </v-btn>
+                <v-spacer />
+                <v-btn
+                  v-if="currentRates(rt.value).length > 0"
+                  color="error"
+                  variant="text"
+                  size="small"
+                  prepend-icon="mdi-delete-sweep"
+                  @click="clearTabRates(rt.value)"
+                  :disabled="loading"
+                >
+                  Clear All
+                </v-btn>
+              </div>
+
+              <!-- ──── Inline Add/Edit Form ──── -->
               <v-expand-transition>
                 <div
-                  v-if="showForm && editingForTab === rateTab.value"
+                  v-if="showForm && editingForTab === rt.value"
                   class="form-panel"
                 >
                   <div class="form-panel-header">
                     <div class="form-panel-title">
-                      <v-icon size="18" class="mr-2" :color="rateTab.color">{{
+                      <v-icon size="18" class="mr-2" :color="rt.color">{{
                         editingRate ? "mdi-pencil" : "mdi-plus-circle"
                       }}</v-icon>
-                      {{ editingRate ? "Edit" : "New" }}
-                      {{ rateTab.label }} Rate
+                      {{ editingRate ? "Edit" : "New" }} {{ rt.label }} Bracket
                     </div>
                     <v-btn
                       icon="mdi-close"
@@ -177,47 +176,18 @@
 
                   <v-form ref="formRef" v-model="formValid" class="pa-4">
                     <v-row dense>
-                      <!-- Rate Name -->
-                      <v-col cols="12" md="6">
+                      <v-col cols="12" md="4">
                         <v-text-field
                           v-model="form.name"
-                          label="Rate Name *"
+                          label="Bracket Name *"
                           :rules="[rules.required]"
                           variant="outlined"
-                          density="comfortable"
+                          density="compact"
                           placeholder="e.g., SSS Bracket 1"
                           hide-details="auto"
                         />
                       </v-col>
-
-                      <!-- Effective Date -->
-                      <v-col cols="12" md="3">
-                        <v-text-field
-                          v-model="form.effective_date"
-                          label="Effective Date *"
-                          type="date"
-                          :rules="[rules.required]"
-                          variant="outlined"
-                          density="comfortable"
-                          hide-details="auto"
-                        />
-                      </v-col>
-
-                      <!-- End Date -->
-                      <v-col cols="12" md="3">
-                        <v-text-field
-                          v-model="form.end_date"
-                          label="End Date"
-                          type="date"
-                          variant="outlined"
-                          density="comfortable"
-                          hint="Leave empty if currently active"
-                          hide-details="auto"
-                        />
-                      </v-col>
-
-                      <!-- Salary Range -->
-                      <v-col cols="12" md="3">
+                      <v-col cols="6" md="2">
                         <v-text-field
                           v-model.number="form.min_salary"
                           label="Min Salary *"
@@ -225,25 +195,47 @@
                           prefix="₱"
                           :rules="[rules.requiredNumeric]"
                           variant="outlined"
-                          density="comfortable"
+                          density="compact"
                           hide-details="auto"
                         />
                       </v-col>
-                      <v-col cols="12" md="3">
+                      <v-col cols="6" md="2">
                         <v-text-field
                           v-model.number="form.max_salary"
                           label="Max Salary"
                           type="number"
                           prefix="₱"
                           variant="outlined"
-                          density="comfortable"
-                          hint="Leave empty = no limit"
+                          density="compact"
+                          hint="Empty = no limit"
                           hide-details="auto"
                         />
                       </v-col>
+                      <v-col cols="6" md="2">
+                        <v-text-field
+                          v-model="form.effective_date"
+                          label="Effective Date *"
+                          type="date"
+                          :rules="[rules.required]"
+                          variant="outlined"
+                          density="compact"
+                          hide-details="auto"
+                        />
+                      </v-col>
+                      <v-col cols="6" md="2">
+                        <v-text-field
+                          v-model="form.end_date"
+                          label="End Date"
+                          type="date"
+                          variant="outlined"
+                          density="compact"
+                          hide-details="auto"
+                        />
+                      </v-col>
+                    </v-row>
 
-                      <!-- Employee Contribution -->
-                      <v-col cols="12" md="3">
+                    <v-row dense class="mt-1">
+                      <v-col cols="6" md="3">
                         <v-text-field
                           v-model.number="form.employee_rate"
                           label="Employee Rate (%)"
@@ -251,26 +243,24 @@
                           suffix="%"
                           :rules="[rules.rateRange]"
                           variant="outlined"
-                          density="comfortable"
+                          density="compact"
                           :disabled="!!form.employee_fixed"
                           hide-details="auto"
                         />
                       </v-col>
-                      <v-col cols="12" md="3">
+                      <v-col cols="6" md="3">
                         <v-text-field
                           v-model.number="form.employee_fixed"
                           label="Employee Fixed (₱)"
                           type="number"
                           prefix="₱"
                           variant="outlined"
-                          density="comfortable"
+                          density="compact"
                           :disabled="!!form.employee_rate"
                           hide-details="auto"
                         />
                       </v-col>
-
-                      <!-- Employer Contribution -->
-                      <v-col cols="12" md="3">
+                      <v-col cols="6" md="3">
                         <v-text-field
                           v-model.number="form.employer_rate"
                           label="Employer Rate (%)"
@@ -278,25 +268,26 @@
                           suffix="%"
                           :rules="[rules.rateRange]"
                           variant="outlined"
-                          density="comfortable"
+                          density="compact"
                           :disabled="!!form.employer_fixed"
                           hide-details="auto"
                         />
                       </v-col>
-                      <v-col cols="12" md="3">
+                      <v-col cols="6" md="3">
                         <v-text-field
                           v-model.number="form.employer_fixed"
                           label="Employer Fixed (₱)"
                           type="number"
                           prefix="₱"
                           variant="outlined"
-                          density="comfortable"
+                          density="compact"
                           :disabled="!!form.employer_rate"
                           hide-details="auto"
                         />
                       </v-col>
+                    </v-row>
 
-                      <!-- Total Contribution -->
+                    <v-row dense class="mt-1">
                       <v-col cols="12" md="3">
                         <v-text-field
                           v-model.number="form.total_contribution"
@@ -304,109 +295,135 @@
                           type="number"
                           prefix="₱"
                           variant="outlined"
-                          density="comfortable"
-                          hint="Overrides calculated total"
+                          density="compact"
+                          hint="Overrides computed total"
                           hide-details="auto"
                         />
                       </v-col>
-
-                      <!-- Notes -->
-                      <v-col cols="12" md="6">
+                      <v-col cols="12" md="5">
                         <v-text-field
                           v-model="form.notes"
                           label="Notes"
                           variant="outlined"
-                          density="comfortable"
+                          density="compact"
                           hide-details="auto"
                         />
                       </v-col>
-
-                      <!-- Active toggle -->
-                      <v-col cols="12" md="3" class="d-flex align-center">
+                      <v-col
+                        cols="12"
+                        md="2"
+                        class="d-flex align-center justify-center"
+                      >
                         <v-switch
                           v-model="form.is_active"
                           label="Active"
                           color="primary"
-                          density="comfortable"
+                          density="compact"
                           hide-details
                         />
                       </v-col>
+                      <v-col
+                        cols="12"
+                        md="2"
+                        class="d-flex align-center justify-end ga-2"
+                      >
+                        <v-btn
+                          variant="text"
+                          size="small"
+                          @click="cancelForm"
+                          :disabled="saving"
+                        >
+                          Cancel
+                        </v-btn>
+                        <v-btn
+                          :color="rt.color"
+                          variant="elevated"
+                          size="small"
+                          :loading="saving"
+                          @click="saveRate(rt.value)"
+                          prepend-icon="mdi-content-save"
+                        >
+                          {{ editingRate ? "Update" : "Save" }}
+                        </v-btn>
+                      </v-col>
                     </v-row>
-
-                    <!-- Form Actions -->
-                    <div class="form-actions mt-3">
-                      <v-btn
-                        variant="text"
-                        @click="cancelForm"
-                        :disabled="saving"
-                        >Cancel</v-btn
-                      >
-                      <v-btn
-                        color="primary"
-                        variant="elevated"
-                        :loading="saving"
-                        @click="saveRate(rateTab.value)"
-                        prepend-icon="mdi-content-save"
-                      >
-                        {{ editingRate ? "Update Rate" : "Save Rate" }}
-                      </v-btn>
-                    </div>
                   </v-form>
                 </div>
               </v-expand-transition>
 
-              <!-- Rates Table -->
+              <!-- ──── Rates Table ──── -->
               <div
-                v-if="currentRates(rateTab.value).length > 0"
-                class="rates-table-wrapper"
+                v-if="currentRates(rt.value).length > 0"
+                class="rates-table-wrap"
               >
                 <v-table density="compact" class="rates-table">
                   <thead>
                     <tr>
-                      <th>Name</th>
+                      <th>Bracket</th>
                       <th class="text-right">Min Salary</th>
                       <th class="text-right">Max Salary</th>
                       <th class="text-right">Employee</th>
                       <th class="text-right">Employer</th>
                       <th class="text-right">Total</th>
                       <th>Effective</th>
-                      <th>Until</th>
                       <th class="text-center">Status</th>
-                      <th class="text-center">Actions</th>
+                      <th class="text-center" style="width: 80px">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
-                      v-for="rate in currentRates(rateTab.value)"
+                      v-for="rate in currentRates(rt.value)"
                       :key="rate.id"
                       :class="{ 'row-inactive': !rate.is_active }"
                     >
-                      <td class="font-weight-medium">{{ rate.name }}</td>
-                      <td class="text-right">
+                      <td>
+                        <div class="font-weight-medium text-body-2">
+                          {{ rate.name }}
+                        </div>
+                        <div
+                          v-if="rate.notes"
+                          class="text-caption text-medium-emphasis"
+                        >
+                          {{ rate.notes }}
+                        </div>
+                      </td>
+                      <td class="text-right mono">
                         ₱{{ formatCurrency(rate.min_salary) }}
                       </td>
-                      <td class="text-right">
-                        <span v-if="rate.max_salary"
-                          >₱{{ formatCurrency(rate.max_salary) }}</span
+                      <td class="text-right mono">
+                        <template v-if="rate.max_salary"
+                          >₱{{ formatCurrency(rate.max_salary) }}</template
                         >
                         <span v-else class="text-medium-emphasis text-caption"
                           >No limit</span
                         >
                       </td>
                       <td class="text-right">
-                        <span v-if="rate.employee_rate" class="text-blue"
-                          >{{ rate.employee_rate }}%</span
+                        <v-chip
+                          v-if="rate.employee_rate"
+                          size="x-small"
+                          color="blue"
+                          variant="tonal"
+                          >{{ rate.employee_rate }}%</v-chip
                         >
-                        <span v-else-if="rate.employee_fixed" class="text-blue"
+                        <span
+                          v-else-if="rate.employee_fixed"
+                          class="mono text-blue"
                           >₱{{ formatCurrency(rate.employee_fixed) }}</span
                         >
                         <span v-else class="text-medium-emphasis">—</span>
                       </td>
                       <td class="text-right">
-                        <span v-if="rate.employer_rate" class="text-green"
-                          >{{ rate.employer_rate }}%</span
+                        <v-chip
+                          v-if="rate.employer_rate"
+                          size="x-small"
+                          color="green"
+                          variant="tonal"
+                          >{{ rate.employer_rate }}%</v-chip
                         >
-                        <span v-else-if="rate.employer_fixed" class="text-green"
+                        <span
+                          v-else-if="rate.employer_fixed"
+                          class="mono text-green"
                           >₱{{ formatCurrency(rate.employer_fixed) }}</span
                         >
                         <span v-else class="text-medium-emphasis">—</span>
@@ -414,28 +431,27 @@
                       <td class="text-right">
                         <span
                           v-if="rate.total_contribution"
-                          class="font-weight-medium"
+                          class="font-weight-bold mono"
                           >₱{{ formatCurrency(rate.total_contribution) }}</span
                         >
                         <span v-else class="text-caption text-medium-emphasis"
-                          >Computed</span
+                          >Auto</span
                         >
                       </td>
-                      <td class="text-caption">
-                        {{ formatDate(rate.effective_date) }}
-                      </td>
-                      <td class="text-caption">
-                        <span v-if="rate.end_date">{{
-                          formatDate(rate.end_date)
-                        }}</span>
-                        <span v-else class="text-medium-emphasis">Current</span>
+                      <td>
+                        <div class="text-caption">
+                          {{ formatDate(rate.effective_date) }}
+                          <template v-if="rate.end_date">
+                            → {{ formatDate(rate.end_date) }}
+                          </template>
+                        </div>
                       </td>
                       <td class="text-center">
                         <v-chip
                           :color="rate.is_active ? 'success' : 'default'"
                           size="x-small"
                           variant="tonal"
-                          style="cursor: pointer"
+                          class="status-chip"
                           @click="toggleActive(rate)"
                         >
                           {{ rate.is_active ? "Active" : "Inactive" }}
@@ -443,21 +459,25 @@
                       </td>
                       <td class="text-center">
                         <v-btn
-                          icon="mdi-pencil"
+                          icon
                           size="x-small"
                           variant="text"
                           color="primary"
                           @click="startEdit(rate)"
                           title="Edit"
-                        />
+                        >
+                          <v-icon size="16">mdi-pencil</v-icon>
+                        </v-btn>
                         <v-btn
-                          icon="mdi-delete"
+                          icon
                           size="x-small"
                           variant="text"
                           color="error"
                           @click="deleteRate(rate)"
                           title="Delete"
-                        />
+                        >
+                          <v-icon size="16">mdi-delete</v-icon>
+                        </v-btn>
                       </td>
                     </tr>
                   </tbody>
@@ -466,29 +486,247 @@
 
               <!-- Empty state -->
               <div
-                v-else-if="!showForm || editingForTab !== rateTab.value"
+                v-else-if="!showForm || editingForTab !== rt.value"
                 class="empty-state"
               >
-                <v-icon size="56" color="grey-lighten-2"
-                  >mdi-database-off</v-icon
-                >
+                <v-icon size="52" :color="rt.color" class="empty-icon">{{
+                  rt.icon
+                }}</v-icon>
                 <p class="text-body-1 mt-3 font-weight-medium">
-                  No {{ rateTab.label }} rates configured
+                  No {{ rt.label }} brackets configured
                 </p>
-                <p class="text-caption text-medium-emphasis">
-                  Click "Add Rate" to create the contribution brackets
+                <p class="text-caption text-medium-emphasis mb-3">
+                  The system uses built-in {{ rt.label }} contribution tables as
+                  fallback. Add custom brackets to override them.
                 </p>
+                <v-btn
+                  :color="rt.color"
+                  variant="tonal"
+                  size="small"
+                  prepend-icon="mdi-plus"
+                  @click="startAdd(rt.value)"
+                >
+                  Add First Bracket
+                </v-btn>
               </div>
+            </div>
+          </v-window-item>
+
+          <!-- ──── Calculator ──── -->
+          <v-window-item value="calculator">
+            <div class="calculator-panel">
+              <div class="calc-header">
+                <v-icon size="24" color="primary" class="mr-2"
+                  >mdi-calculator-variant</v-icon
+                >
+                <div>
+                  <div class="text-h6 font-weight-bold">
+                    Contribution Calculator
+                  </div>
+                  <div class="text-caption text-medium-emphasis">
+                    Enter a monthly salary to see the computed government
+                    contributions per cutoff
+                  </div>
+                </div>
+              </div>
+
+              <div class="calc-input-row">
+                <v-text-field
+                  v-model.number="calcSalary"
+                  label="Monthly Basic Salary"
+                  type="number"
+                  prefix="₱"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                  class="calc-input"
+                  @keyup.enter="computeContributions"
+                />
+                <v-btn
+                  color="primary"
+                  variant="elevated"
+                  size="large"
+                  @click="computeContributions"
+                  :loading="calcLoading"
+                  prepend-icon="mdi-calculator"
+                >
+                  Compute
+                </v-btn>
+              </div>
+
+              <v-expand-transition>
+                <div v-if="calcResult" class="calc-results">
+                  <div class="calc-salary-label">
+                    Monthly Salary:
+                    <strong>₱{{ formatCurrency(calcResult.salary) }}</strong>
+                  </div>
+
+                  <div class="calc-cards">
+                    <!-- SSS -->
+                    <div class="calc-card calc-sss">
+                      <div class="calc-card-icon">
+                        <v-icon size="22" color="white"
+                          >mdi-shield-account</v-icon
+                        >
+                      </div>
+                      <div class="calc-card-body">
+                        <div class="calc-card-title">SSS</div>
+                        <div class="calc-card-row">
+                          <span>Employee (monthly)</span>
+                          <span class="mono"
+                            >₱{{
+                              formatCurrency(
+                                calcResult.sss?.employee_share || 0,
+                              )
+                            }}</span
+                          >
+                        </div>
+                        <div class="calc-card-row">
+                          <span>Employer (monthly)</span>
+                          <span class="mono"
+                            >₱{{
+                              formatCurrency(
+                                calcResult.sss?.employer_share || 0,
+                              )
+                            }}</span
+                          >
+                        </div>
+                        <v-divider class="my-1" />
+                        <div class="calc-card-row highlight">
+                          <span>Per Cutoff (employee)</span>
+                          <span class="mono font-weight-bold"
+                            >₱{{
+                              formatCurrency(
+                                (calcResult.sss?.employee_share || 0) / 2,
+                              )
+                            }}</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- PhilHealth -->
+                    <div class="calc-card calc-ph">
+                      <div class="calc-card-icon">
+                        <v-icon size="22" color="white"
+                          >mdi-hospital-box</v-icon
+                        >
+                      </div>
+                      <div class="calc-card-body">
+                        <div class="calc-card-title">PhilHealth</div>
+                        <div class="calc-card-row">
+                          <span>Employee (monthly)</span>
+                          <span class="mono"
+                            >₱{{
+                              formatCurrency(
+                                calcResult.philhealth?.employee_share || 0,
+                              )
+                            }}</span
+                          >
+                        </div>
+                        <div class="calc-card-row">
+                          <span>Employer (monthly)</span>
+                          <span class="mono"
+                            >₱{{
+                              formatCurrency(
+                                calcResult.philhealth?.employer_share || 0,
+                              )
+                            }}</span
+                          >
+                        </div>
+                        <v-divider class="my-1" />
+                        <div class="calc-card-row highlight">
+                          <span>Per Cutoff (employee)</span>
+                          <span class="mono font-weight-bold"
+                            >₱{{
+                              formatCurrency(
+                                (calcResult.philhealth?.employee_share || 0) /
+                                  2,
+                              )
+                            }}</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Pag-IBIG -->
+                    <div class="calc-card calc-pi">
+                      <div class="calc-card-icon">
+                        <v-icon size="22" color="white">mdi-home-city</v-icon>
+                      </div>
+                      <div class="calc-card-body">
+                        <div class="calc-card-title">Pag-IBIG</div>
+                        <div class="calc-card-row">
+                          <span>Employee (monthly)</span>
+                          <span class="mono"
+                            >₱{{
+                              formatCurrency(
+                                calcResult.pagibig?.employee_share || 0,
+                              )
+                            }}</span
+                          >
+                        </div>
+                        <div class="calc-card-row">
+                          <span>Employer (monthly)</span>
+                          <span class="mono"
+                            >₱{{
+                              formatCurrency(
+                                calcResult.pagibig?.employer_share || 0,
+                              )
+                            }}</span
+                          >
+                        </div>
+                        <v-divider class="my-1" />
+                        <div class="calc-card-row highlight">
+                          <span>Per Cutoff (employee)</span>
+                          <span class="mono font-weight-bold"
+                            >₱{{
+                              formatCurrency(
+                                (calcResult.pagibig?.employee_share || 0) / 2,
+                              )
+                            }}</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Total Summary -->
+                  <div class="calc-total-bar">
+                    <div class="calc-total-label">
+                      <v-icon size="18" class="mr-2">mdi-sigma</v-icon>
+                      Total Employee Deduction Per Cutoff
+                    </div>
+                    <div class="calc-total-value">
+                      ₱{{
+                        formatCurrency(
+                          (calcResult.total_employee_deductions || 0) / 2,
+                        )
+                      }}
+                    </div>
+                  </div>
+
+                  <div class="calc-note">
+                    <v-icon size="14" class="mr-1"
+                      >mdi-information-outline</v-icon
+                    >
+                    These are the computed defaults. If an employee has a custom
+                    override set in the Employee Contributions tab, that value
+                    is used instead.
+                  </div>
+                </div>
+              </v-expand-transition>
             </div>
           </v-window-item>
         </v-window>
       </v-card-text>
 
       <v-divider />
-      <v-card-actions class="dialog-foot">
-        <span class="text-caption text-medium-emphasis"
-          >Changes are saved immediately per action</span
-        >
+      <v-card-actions class="dialog-footer">
+        <span class="text-caption text-medium-emphasis">
+          <v-icon size="14" class="mr-1">mdi-lightning-bolt</v-icon>
+          Changes are saved immediately per action
+        </span>
         <v-spacer />
         <v-btn variant="tonal" @click="handleClose" :disabled="saving">
           Close
@@ -499,7 +737,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from "vue";
+import { ref, watch } from "vue";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import EmployeeContributionsTab from "./EmployeeContributionsTab.vue";
@@ -523,12 +761,16 @@ const employeeContributionsRef = ref(null);
 const formRef = ref(null);
 const formValid = ref(false);
 
-// Inline form state
+// Inline form
 const showForm = ref(false);
-const editingForTab = ref(null); // which tab's form is open
-const editingRate = ref(null); // null = adding, object = editing
-
+const editingForTab = ref(null);
+const editingRate = ref(null);
 const form = ref(defaultForm());
+
+// Calculator
+const calcSalary = ref(10000);
+const calcLoading = ref(false);
+const calcResult = ref(null);
 
 function defaultForm() {
   return {
@@ -550,10 +792,38 @@ function defaultForm() {
 const rates = ref({ sss: [], philhealth: [], pagibig: [], tax: [] });
 
 const rateTabs = [
-  { value: "sss", label: "SSS", color: "blue" },
-  { value: "philhealth", label: "PhilHealth", color: "green" },
-  { value: "pagibig", label: "Pag-IBIG", color: "orange" },
-  { value: "tax", label: "Tax", color: "purple" },
+  {
+    value: "sss",
+    label: "SSS",
+    color: "blue",
+    icon: "mdi-shield-account",
+    description:
+      "Social Security System contribution brackets based on Monthly Salary Credit (MSC).",
+  },
+  {
+    value: "philhealth",
+    label: "PhilHealth",
+    color: "green",
+    icon: "mdi-hospital-box",
+    description:
+      "Philippine Health Insurance Corporation premium rates (4.5% of monthly salary, shared 50/50).",
+  },
+  {
+    value: "pagibig",
+    label: "Pag-IBIG",
+    color: "orange",
+    icon: "mdi-home-city",
+    description:
+      "Home Development Mutual Fund (HDMF) contribution rates (2% employee, max ₱200/month).",
+  },
+  {
+    value: "tax",
+    label: "Tax",
+    color: "purple",
+    icon: "mdi-file-document",
+    description:
+      "Withholding tax brackets based on taxable income (TRAIN Law / CREATE Act).",
+  },
 ];
 
 const rules = {
@@ -578,6 +848,7 @@ watch(
     } else {
       activeTab.value = "employees";
       cancelForm();
+      calcResult.value = null;
     }
   },
 );
@@ -645,17 +916,17 @@ const saveRate = async (tabType) => {
 
     if (editingRate.value?.id) {
       await api.put(`/government-rates/${editingRate.value.id}`, payload);
-      toast.success("Rate updated successfully");
+      toast.success("Bracket updated");
     } else {
       await api.post("/government-rates", payload);
-      toast.success("Rate added successfully");
+      toast.success("Bracket added");
     }
 
     cancelForm();
     await loadRates();
   } catch (error) {
     devLog.error("Failed to save rate:", error);
-    const message = error.response?.data?.message || "Failed to save rate";
+    const message = error.response?.data?.message || "Failed to save";
     const errors = error.response?.data?.errors;
     if (errors) {
       toast.error(`${message}: ${Object.values(errors).flat().join(", ")}`);
@@ -668,15 +939,15 @@ const saveRate = async (tabType) => {
 };
 
 const deleteRate = async (rate) => {
-  if (!(await confirmDialog("Delete this rate? This cannot be undone.")))
+  if (!(await confirmDialog("Delete this bracket? This cannot be undone.")))
     return;
   try {
     await api.delete(`/government-rates/${rate.id}`);
-    toast.success("Rate deleted");
+    toast.success("Bracket deleted");
     if (editingRate.value?.id === rate.id) cancelForm();
     await loadRates();
   } catch {
-    toast.error("Failed to delete rate");
+    toast.error("Failed to delete bracket");
   }
 };
 
@@ -685,22 +956,20 @@ const toggleActive = async (rate) => {
     await api.put(`/government-rates/${rate.id}`, {
       is_active: !rate.is_active,
     });
-    toast.success(`Rate ${rate.is_active ? "deactivated" : "activated"}`);
+    toast.success(`Bracket ${rate.is_active ? "deactivated" : "activated"}`);
     await loadRates();
   } catch {
-    toast.error("Failed to update rate status");
+    toast.error("Failed to toggle status");
   }
 };
 
 const clearTabRates = async (tabType) => {
   const tabRates = currentRates(tabType);
-  if (tabRates.length === 0) {
-    toast.info("No rates to delete");
-    return;
-  }
+  if (tabRates.length === 0) return;
+  const label = rateTabs.find((t) => t.value === tabType)?.label || tabType;
   if (
     !(await confirmDialog(
-      `Delete all ${tabRates.length} ${tabType.toUpperCase()} rates? This cannot be undone.`,
+      `Delete all ${tabRates.length} ${label} brackets? The system will use built-in fallback tables.`,
     ))
   )
     return;
@@ -708,21 +977,42 @@ const clearTabRates = async (tabType) => {
     await api.post("/government-rates/bulk-delete", {
       ids: tabRates.map((r) => r.id),
     });
-    toast.success(`Deleted all ${tabRates.length} rates`);
+    toast.success(`Cleared all ${label} brackets`);
     cancelForm();
     await loadRates();
   } catch {
-    toast.error("Failed to clear rates");
+    toast.error("Failed to clear brackets");
+  }
+};
+
+// ─── Calculator ───────────────────────────────────────────────────────────
+const computeContributions = async () => {
+  if (!calcSalary.value || calcSalary.value <= 0) {
+    toast.warning("Please enter a valid salary");
+    return;
+  }
+  calcLoading.value = true;
+  try {
+    const response = await api.post("/government/compute-contributions", {
+      salary: calcSalary.value,
+    });
+    calcResult.value = response.data;
+  } catch (error) {
+    devLog.error("Calculator error:", error);
+    toast.error("Failed to compute contributions");
+  } finally {
+    calcLoading.value = false;
   }
 };
 </script>
 
 <style scoped lang="scss">
-.government-rates-dialog {
+.gov-rates-dialog {
   border-radius: 16px;
   overflow: hidden;
 }
 
+// ─── Header ────────────────────────────────────────────────────────────────
 .dialog-header {
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   padding: 20px 24px;
@@ -739,7 +1029,7 @@ const clearTabRates = async (tabType) => {
   flex: 1;
 }
 
-.icon-wrapper {
+.header-icon {
   width: 48px;
   height: 48px;
   background: rgba(255, 255, 255, 0.2);
@@ -750,27 +1040,28 @@ const clearTabRates = async (tabType) => {
   flex-shrink: 0;
 }
 
-.dialog-title {
+.header-title {
   font-size: 20px;
   font-weight: 700;
   margin: 0;
   color: white;
 }
 
-.dialog-subtitle {
+.header-subtitle {
   font-size: 13px;
   margin: 2px 0 0;
   opacity: 0.88;
   color: white;
 }
 
-.close-btn {
+.header-close {
   position: absolute;
   top: 12px;
   right: 12px;
 }
 
-.tabs-wrapper {
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+.tabs-bar {
   background: white;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 
@@ -782,32 +1073,59 @@ const clearTabRates = async (tabType) => {
   }
 }
 
-.dialog-content {
-  max-height: 62vh;
+.tab-content {
+  max-height: 64vh;
   overflow-y: auto;
 }
 
-// Rate tab layout
-.rate-tab-content {
+// ─── Rate Panel ────────────────────────────────────────────────────────────
+.rate-panel {
   padding: 0;
+}
+
+.rate-info-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+
+  &.sss {
+    background: rgba(33, 150, 243, 0.04);
+    color: #1565c0;
+  }
+  &.philhealth {
+    background: rgba(76, 175, 80, 0.04);
+    color: #2e7d32;
+  }
+  &.pagibig {
+    background: rgba(255, 152, 0, 0.04);
+    color: #e65100;
+  }
+  &.tax {
+    background: rgba(156, 39, 176, 0.04);
+    color: #6a1b9a;
+  }
+}
+
+.rate-info-note {
+  margin-left: auto;
+  font-weight: 400;
+  opacity: 0.7;
+  font-size: 12px;
 }
 
 .rate-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  background: rgba(0, 0, 0, 0.01);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-.rate-count {
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-// Inline form panel
+// ─── Inline Form ───────────────────────────────────────────────────────────
 .form-panel {
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   background: #f8fafc;
@@ -826,17 +1144,10 @@ const clearTabRates = async (tabType) => {
     display: flex;
     align-items: center;
   }
-
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding-top: 4px;
-  }
 }
 
-// Rates table
-.rates-table-wrapper {
+// ─── Rate Table ────────────────────────────────────────────────────────────
+.rates-table-wrap {
   overflow-x: auto;
 }
 
@@ -867,6 +1178,20 @@ const clearTabRates = async (tabType) => {
   }
 }
 
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.status-chip {
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+// ─── Empty State ───────────────────────────────────────────────────────────
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -875,7 +1200,143 @@ const clearTabRates = async (tabType) => {
   color: #94a3b8;
 }
 
-.dialog-foot {
+.empty-icon {
+  opacity: 0.25;
+}
+
+// ─── Calculator ────────────────────────────────────────────────────────────
+.calculator-panel {
+  padding: 24px;
+}
+
+.calc-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.calc-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.calc-input {
+  max-width: 320px;
+}
+
+.calc-results {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.calc-salary-label {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.calc-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.calc-card {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
+}
+
+.calc-card-icon {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+}
+
+.calc-sss .calc-card-icon {
+  background: linear-gradient(135deg, #2196f3, #42a5f5);
+}
+.calc-ph .calc-card-icon {
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
+}
+.calc-pi .calc-card-icon {
+  background: linear-gradient(135deg, #ff9800, #ffa726);
+}
+
+.calc-card-body {
+  padding: 12px 14px;
+}
+
+.calc-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.calc-card-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #475569;
+  padding: 3px 0;
+
+  &.highlight {
+    color: #1e293b;
+    font-weight: 600;
+    padding-top: 6px;
+  }
+}
+
+.calc-total-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #1e293b, #334155);
+  border-radius: 12px;
+  color: white;
+  margin-bottom: 12px;
+}
+
+.calc-total-label {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.calc-total-value {
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.calc-note {
+  font-size: 12px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+
+// ─── Footer ────────────────────────────────────────────────────────────────
+.dialog-footer {
   padding: 12px 20px;
   background: #f8fafc;
 }

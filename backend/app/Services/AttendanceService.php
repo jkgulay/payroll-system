@@ -173,7 +173,7 @@ class AttendanceService
     {
         $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
         $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
-        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 0);
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
 
         if (!$employee || !$employee->project) {
             return [

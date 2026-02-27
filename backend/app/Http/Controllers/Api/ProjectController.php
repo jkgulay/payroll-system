@@ -141,9 +141,9 @@ class ProjectController extends Controller
 
     private function applyDefaultSchedule(array $validated): array
     {
-        $defaultTimeIn = config('payroll.attendance.standard_time_in', '08:00');
+        $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
         $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
-        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 0);
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
 
         if (!array_key_exists('time_in', $validated) || $validated['time_in'] === null) {
             $validated['time_in'] = $defaultTimeIn;

@@ -173,7 +173,10 @@
                   <v-list-item-title>Edit</v-list-item-title>
                 </v-list-item>
                 <v-divider></v-divider>
-                <v-list-item @click="confirmDelete(item)">
+                <v-list-item
+                  v-if="item.status === 'draft'"
+                  @click="confirmDelete(item)"
+                >
                   <template v-slot:prepend>
                     <v-icon size="small" color="error">mdi-delete</v-icon>
                   </template>

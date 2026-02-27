@@ -37,7 +37,7 @@ class PayrollController extends Controller
         $payrolls = Payroll::with(['creator', 'finalizer'])
             ->withCount('items')
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->get();
 
         return response()->json($payrolls);
     }
@@ -97,10 +97,11 @@ class PayrollController extends Controller
                     $sq->whereIn('status', ['present', 'late', 'half_day'])
                         ->whereNull('time_in');
                 })
-                    // Missing time_out
+                    // Missing time_out (excluding half_day which may legitimately lack time_out)
                     ->orWhere(function ($sq) {
                         $sq->whereNotNull('time_in')
-                            ->whereNull('time_out');
+                            ->whereNull('time_out')
+                            ->where('status', '!=', 'half_day');
                     })
                     // OR missing break_end when break_start exists
                     ->orWhere(function ($sq) {
@@ -277,7 +278,7 @@ class PayrollController extends Controller
 
     public function show($id)
     {
-        $payroll = Payroll::with(['items.employee.position', 'items.employee.project', 'creator', 'finalizer'])
+        $payroll = Payroll::with(['items.employee.position', 'items.employee.positionRate', 'items.employee.project', 'creator', 'finalizer'])
             ->findOrFail($id);
 
         return response()->json($payroll);
@@ -346,22 +347,26 @@ class PayrollController extends Controller
 
         $payrollData = $payroll->toArray();
 
+        DB::beginTransaction();
         try {
-            // Reverse loan, deduction, and salary adjustment payments before deleting
+            // Reverse loan, deduction, salary adjustment, and bonus payments before deleting
             $this->reverseLoanPaymentsForPayroll($payroll);
             $this->reverseDeductionPaymentsForPayroll($payroll);
             $this->reverseSalaryAdjustmentsForPayroll($payroll);
+            $this->reverseBonusesForPayroll($payroll);
 
             // Permanently delete payroll items and payroll (no soft delete)
             $payroll->items()->delete();
             $payroll->forceDelete();
+
+            DB::commit();
 
             // Log payroll deletion
             AuditLog::create([
                 'user_id' => auth()->id(),
                 'module' => 'payroll',
                 'action' => 'delete_payroll',
-                'description' => "Payroll '{$payrollData['period_name']}' (ID: {$payrollData['id']}) permanently deleted - loan/deduction payments reversed",
+                'description' => "Payroll '{$payrollData['period_name']}' (ID: {$payrollData['id']}) permanently deleted - all payments reversed",
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
                 'old_values' => $payrollData,
@@ -371,6 +376,7 @@ class PayrollController extends Controller
                 'message' => 'Payroll deleted successfully'
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Payroll deletion error: ' . $e->getMessage(), [
                 'payroll_id' => $payroll->id,
                 'exception' => $e
@@ -431,10 +437,11 @@ class PayrollController extends Controller
 
         DB::beginTransaction();
         try {
-            // First, reverse any loan/deduction/salary adjustment payments that were recorded for this payroll
+            // First, reverse any loan/deduction/salary adjustment/bonus payments that were recorded for this payroll
             $this->reverseLoanPaymentsForPayroll($payroll);
             $this->reverseDeductionPaymentsForPayroll($payroll);
             $this->reverseSalaryAdjustmentsForPayroll($payroll);
+            $this->reverseBonusesForPayroll($payroll);
 
             $payrollService = app(\App\Services\PayrollService::class);
             $payrollService->reprocessPayroll($payroll);
@@ -869,8 +876,17 @@ class PayrollController extends Controller
         $employeeIds = $payroll->items->pluck('employee_id')->unique();
 
         // Fetch one row per attendance day — we only need employee_id + device_name
+        // IMPORTANT: Apply same filters as payroll attendance loading to ensure
+        // device ratio matches the actual records used in payroll calculation
         $attendances = Attendance::whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
             ->whereIn('employee_id', $employeeIds)
+            ->where('status', '!=', 'absent')
+            ->where('approval_status', 'approved')
+            ->whereNotNull('time_in')
+            ->where(function ($sub) {
+                $sub->whereNotNull('time_out')
+                    ->orWhere('status', 'half_day');
+            })
             ->select(['employee_id', 'device_name'])
             ->get();
 
@@ -888,6 +904,10 @@ class PayrollController extends Controller
         // `effective_rate` / `rate` are daily rates and stay unchanged.
         $scalableFields = [
             'days_worked',
+            'regular_days',
+            'holiday_days',
+            'basic_pay',
+            'holiday_pay',
             'gross_pay',
             'net_pay',
             'regular_ot_hours',
@@ -896,13 +916,18 @@ class PayrollController extends Controller
             'special_ot_pay',
             'salary_adjustment',
             'other_allowances',
-            'employee_savings',
-            'loans',
-            'employee_deductions',
+            'undertime_hours',
+            'undertime_deduction',
+            'sss',
             'philhealth',
             'pagibig',
-            'sss',
-            'undertime_hours',
+            'withholding_tax',
+            'employee_savings',
+            'cash_advance',
+            'loans',
+            'employee_deductions',
+            'other_deductions',
+            'total_deductions',
         ];
 
         $deviceGroups = [];
@@ -1023,7 +1048,12 @@ class PayrollController extends Controller
                     ->where('status', '!=', 'absent')
                     ->where('approval_status', 'approved')
                     ->whereNotNull('time_in')
-                    ->whereNotNull('time_out');
+                    ->where(function ($sub) {
+                        // Include records with time_out OR half-day records
+                        // (half-day entries may lack time_out but have valid regular_hours)
+                        $sub->whereNotNull('time_out')
+                            ->orWhere('status', 'half_day');
+                    });
             },
             'allowances' => function ($q) use ($payroll) {
                 $q->where('is_active', true)
@@ -1033,8 +1063,12 @@ class PayrollController extends Controller
                             ->orWhere('end_date', '>=', $payroll->period_start);
                     });
             },
-            'salaryAdjustments' => function ($q) {
-                $q->where('status', 'pending');
+            'salaryAdjustments' => function ($q) use ($payroll) {
+                $q->where('status', 'pending')
+                    ->where(function ($query) use ($payroll) {
+                        $query->whereNull('effective_date')
+                            ->orWhere('effective_date', '<=', $payroll->period_end);
+                    });
             },
             'loans' => function ($q) use ($payroll) {
                 $q->where('status', 'active')
@@ -1052,6 +1086,20 @@ class PayrollController extends Controller
                         $query->whereNull('end_date')
                             ->orWhere('end_date', '>=', $payroll->period_start);
                     });
+            },
+            // Pending bonuses with payment_date within payroll period
+            'bonuses' => function ($q) use ($payroll) {
+                $q->where('payment_status', 'pending')
+                    ->where('payment_date', '>=', $payroll->period_start)
+                    ->where('payment_date', '<=', $payroll->period_end);
+            },
+            // Meal allowance items (via approved MealAllowance within period)
+            'mealAllowanceItems' => function ($q) use ($payroll) {
+                $q->whereHas('mealAllowance', function ($mq) use ($payroll) {
+                    $mq->where('status', 'approved')
+                        ->where('period_start', '<=', $payroll->period_end)
+                        ->where('period_end', '>=', $payroll->period_start);
+                });
             },
             'positionRate',
         ]);
@@ -1079,19 +1127,15 @@ class PayrollController extends Controller
             throw new \Exception($errorMsg);
         }
 
-        // Load holidays for the payroll period (for holiday pay calculations)
-        // Keep as Holiday models (not arrays) so getPayMultiplier() method is available
-        $holidays = \App\Models\Holiday::whereBetween('date', [$payroll->period_start, $payroll->period_end])
-            ->where('is_active', true)
-            ->get()
-            ->keyBy(function ($holiday) {
-                return \Carbon\Carbon::parse($holiday->date)->format('Y-m-d');
-            })
-            ->all();
+        // Load holidays for the payroll period (including recurring holidays)
+        // Uses PayrollService method which handles recurring holidays by month/day matching
+        $holidays = $this->payrollService->getHolidaysForPeriod($payroll->period_start, $payroll->period_end);
 
         $totalGross = 0;
         $totalDeductions = 0;
         $totalNet = 0;
+        $allAdjustmentIds = []; // Track salary adjustment IDs to mark as applied
+        $allBonusIds = []; // Track bonus IDs to mark as paid
 
         foreach ($employees as $employee) {
             try {
@@ -1105,6 +1149,17 @@ class PayrollController extends Controller
                 if (!is_numeric($item['net_pay']) || !is_finite($item['net_pay'])) {
                     throw new \Exception("Invalid net_pay calculated for employee {$employee->employee_number}: {$item['net_pay']}");
                 }
+
+                // Collect salary adjustment IDs before removing internal field
+                if (!empty($item['_adjustment_ids'])) {
+                    $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
+                }
+                // Collect bonus IDs before removing internal field
+                if (!empty($item['_bonus_ids'])) {
+                    $allBonusIds = array_merge($allBonusIds, $item['_bonus_ids']);
+                }
+                unset($item['_adjustment_ids']);
+                unset($item['_bonus_ids']);
 
                 $payrollItem = PayrollItem::create($item);
 
@@ -1125,6 +1180,24 @@ class PayrollController extends Controller
                 ]);
                 throw new \Exception("Failed to calculate payroll for employee {$employee->employee_number}: " . $e->getMessage());
             }
+        }
+
+        // Mark salary adjustments as applied AFTER all items are created successfully
+        if (!empty($allAdjustmentIds)) {
+            SalaryAdjustment::whereIn('id', $allAdjustmentIds)
+                ->update([
+                    'status' => 'applied',
+                    'applied_payroll_id' => $payroll->id,
+                ]);
+        }
+
+        // Mark bonuses as paid AFTER all items are created successfully
+        if (!empty($allBonusIds)) {
+            \App\Models\EmployeeBonus::whereIn('id', $allBonusIds)
+                ->update([
+                    'payment_status' => 'paid',
+                    'paid_at' => now(),
+                ]);
         }
 
         $payroll->update([
@@ -1210,6 +1283,10 @@ class PayrollController extends Controller
         $periodDays = $periodStart->diffInDays($periodEnd) + 1;
         $isSemiMonthly = $periodDays <= 16;
 
+        // For monthly loans on semi-monthly payrolls: only deduct on 2nd cutoff
+        // 2nd cutoff = period ending on 16th or later of the month
+        $isSecondCutoff = !$isSemiMonthly || $periodEnd->day >= 16;
+
         // Get active loans for this employee with balance > 0
         // Start deducting immediately once loan is active (ignore first_payment_date)
         $activeLoans = EmployeeLoan::where('employee_id', $employee->id)
@@ -1232,8 +1309,9 @@ class PayrollController extends Controller
                     ? ($loan->semi_monthly_amortization ?? 0)
                     : ($loan->monthly_amortization ?? 0);
             } else {
-                // Monthly loans: only deduct on monthly payrolls
-                if (!$isSemiMonthly) {
+                // Monthly loans: deduct on 2nd cutoff only (period end day >= 16)
+                // This ensures monthly loans are only deducted once per month
+                if ($isSecondCutoff) {
                     $paymentAmount = $loan->monthly_amortization ?? 0;
                 }
             }
@@ -1343,6 +1421,9 @@ class PayrollController extends Controller
         $periodDays = $periodStart->diffInDays($periodEnd) + 1;
         $isSemiMonthly = $periodDays <= 16;
 
+        // For monthly loans on semi-monthly payrolls: only deduct on 2nd cutoff
+        $isSecondCutoff = !$isSemiMonthly || $periodEnd->day >= 16;
+
         // Get all employees in this payroll
         $employeeIds = PayrollItem::where('payroll_id', $payroll->id)->pluck('employee_id');
 
@@ -1369,8 +1450,8 @@ class PayrollController extends Controller
                         ? ($loan->semi_monthly_amortization ?? 0)
                         : ($loan->monthly_amortization ?? 0);
                 } else {
-                    // Monthly loans: only deduct on monthly payrolls
-                    if (!$isSemiMonthly) {
+                    // Monthly loans: deduct on 2nd cutoff only
+                    if ($isSecondCutoff) {
                         $paymentAmount = $loan->monthly_amortization ?? 0;
                     }
                 }
@@ -1407,6 +1488,55 @@ class PayrollController extends Controller
                 'status' => 'pending',
                 'applied_payroll_id' => null,
             ]);
+    }
+
+    /**
+     * Reverse bonus payments for a payroll (used when reprocessing/deleting)
+     * Bonuses that were marked as 'paid' by this payroll are reset to 'pending'
+     */
+    private function reverseBonusesForPayroll(Payroll $payroll)
+    {
+        // Find bonuses that were paid during this payroll period
+        // Match by employee + payment_date within the payroll period + status = paid
+        $employeeIds = PayrollItem::where('payroll_id', $payroll->id)->pluck('employee_id');
+
+        if ($employeeIds->isEmpty()) {
+            return;
+        }
+
+        // Also check allowances_breakdown in payroll items for specific bonus IDs
+        $bonusIds = [];
+        $payrollItems = PayrollItem::where('payroll_id', $payroll->id)->get();
+        foreach ($payrollItems as $item) {
+            $breakdown = $item->allowances_breakdown;
+            if (is_array($breakdown)) {
+                foreach ($breakdown as $entry) {
+                    if (isset($entry['type']) && $entry['type'] === 'bonus' && isset($entry['id'])) {
+                        $bonusIds[] = $entry['id'];
+                    }
+                }
+            }
+        }
+
+        if (!empty($bonusIds)) {
+            // Precise reversal: use the exact bonus IDs stored in the payroll item breakdown
+            \App\Models\EmployeeBonus::whereIn('id', $bonusIds)
+                ->where('payment_status', 'paid')
+                ->update([
+                    'payment_status' => 'pending',
+                    'paid_at' => null,
+                ]);
+        } else {
+            // Fallback: reverse bonuses by employee + period matching
+            \App\Models\EmployeeBonus::whereIn('employee_id', $employeeIds)
+                ->where('payment_status', 'paid')
+                ->where('payment_date', '>=', $payroll->period_start)
+                ->where('payment_date', '<=', $payroll->period_end)
+                ->update([
+                    'payment_status' => 'pending',
+                    'paid_at' => null,
+                ]);
+        }
     }
 
     /**

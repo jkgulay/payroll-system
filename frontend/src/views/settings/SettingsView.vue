@@ -36,7 +36,7 @@
       </div>
 
       <!-- Government Rates -->
-      <div class="setting-card" @click="openRatesDialog">
+      <div class="setting-card" @click="$router.push('/government-rates')">
         <div class="setting-icon-wrapper rates">
           <v-icon size="32">mdi-bank</v-icon>
         </div>
@@ -146,9 +146,6 @@
       </div>
     </div>
 
-    <!-- Government Rates Dialog -->
-    <GovernmentRatesDialog v-model="showRatesDialog" />
-
     <!-- Payroll Configuration Dialog -->
     <PayrollConfigurationDialog v-model="showPayrollDialog" />
 
@@ -160,18 +157,12 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import GovernmentRatesDialog from "@/components/settings/GovernmentRatesDialog.vue";
 import PayrollConfigurationDialog from "@/components/settings/PayrollConfigurationDialog.vue";
 import BackupSecurityDialog from "@/components/settings/BackupSecurityDialog.vue";
 
 const router = useRouter();
-const showRatesDialog = ref(false);
 const showPayrollDialog = ref(false);
 const showSecurityDialog = ref(false);
-
-const openRatesDialog = () => {
-  showRatesDialog.value = true;
-};
 
 const openPayrollDialog = () => {
   showPayrollDialog.value = true;

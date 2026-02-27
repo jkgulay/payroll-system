@@ -67,6 +67,7 @@ class PayrollService
             $totalNet = 0;
             $payrollItems = []; // Collect items for insert
             $allAdjustmentIds = []; // Collect salary adjustment IDs to mark after successful insert
+            $allBonusIds = []; // Collect bonus IDs to mark as paid after successful insert
 
             foreach ($employees as $employee) {
                 $item = $this->calculatePayrollItem($payroll, $employee, $holidays);
@@ -85,6 +86,11 @@ class PayrollService
                     $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
                 }
 
+                // Collect bonus IDs from this item
+                if (!empty($item['_bonus_ids'])) {
+                    $allBonusIds = array_merge($allBonusIds, $item['_bonus_ids']);
+                }
+
                 $totalGross += $item['gross_pay'];
                 $totalDeductions += $item['total_deductions'];
                 $totalNet += $item['net_pay'];
@@ -93,8 +99,9 @@ class PayrollService
             // Insert payroll items using Eloquent create() to respect model casts
             // (allowances_breakdown and deductions_breakdown are cast to array and need JSON encoding)
             foreach ($payrollItems as $item) {
-                // Remove internal tracking field before creating
+                // Remove internal tracking fields before creating
                 unset($item['_adjustment_ids']);
+                unset($item['_bonus_ids']);
                 PayrollItem::create($item);
             }
 
@@ -104,6 +111,15 @@ class PayrollService
                     ->update([
                         'status' => 'applied',
                         'applied_payroll_id' => $payroll->id,
+                    ]);
+            }
+
+            // Mark bonuses as paid AFTER successful inserts
+            if (!empty($allBonusIds)) {
+                \App\Models\EmployeeBonus::whereIn('id', $allBonusIds)
+                    ->update([
+                        'payment_status' => 'paid',
+                        'paid_at' => now(),
                     ]);
             }
 
@@ -141,7 +157,12 @@ class PayrollService
                         ->where('status', '!=', 'absent')
                         ->where('approval_status', 'approved')
                         ->whereNotNull('time_in')
-                        ->whereNotNull('time_out')
+                        ->where(function ($sub) {
+                            // Include records with time_out OR half-day records
+                            // (half-day entries may lack time_out but have valid regular_hours)
+                            $sub->whereNotNull('time_out')
+                                ->orWhere('status', 'half_day');
+                        })
                         ->select(
                             'id',
                             'employee_id',
@@ -196,7 +217,8 @@ class PayrollService
                             'employee_id',
                             'payment_frequency',
                             'semi_monthly_amortization',
-                            'monthly_amortization'
+                            'monthly_amortization',
+                            'balance'
                         );
                 },
                 // Active deductions
@@ -222,7 +244,31 @@ class PayrollService
                             'installments'
                         );
                 },
+                // Pending bonuses with payment_date within payroll period
+                'bonuses' => function ($q) use ($payroll) {
+                    $q->where('payment_status', 'pending')
+                        ->where('payment_date', '>=', $payroll->period_start)
+                        ->where('payment_date', '<=', $payroll->period_end)
+                        ->select(
+                            'id',
+                            'employee_id',
+                            'bonus_type',
+                            'bonus_name',
+                            'amount',
+                            'is_taxable'
+                        );
+                },
+                // Meal allowance items (via approved MealAllowance within period)
+                'mealAllowanceItems' => function ($q) use ($payroll) {
+                    $q->whereHas('mealAllowance', function ($mq) use ($payroll) {
+                        $mq->where('status', 'approved')
+                            ->where('period_start', '<=', $payroll->period_end)
+                            ->where('period_end', '>=', $payroll->period_start);
+                    })->select('id', 'employee_id', 'total_amount');
+                },
             ])
+            // Eager load positionRate for getBasicSalary() / getMonthlyRate() (avoids N+1)
+            ->with('positionRate')
             ->where(function ($q) use ($payroll) {
                 $q->whereIn('activity_status', ['active', 'on_leave'])
                     ->orWhereHas('attendances', function ($subQ) use ($payroll) {
@@ -251,8 +297,9 @@ class PayrollService
 
     /**
      * OPTIMIZATION: Load holidays ONCE for entire period with caching
+     * Public so PayrollController::generatePayrollItems() can reuse the same recurring-holiday logic
      */
-    private function getHolidaysForPeriod(string $startDate, string $endDate): array
+    public function getHolidaysForPeriod(string $startDate, string $endDate): array
     {
         $cacheKey = "holidays:{$startDate}:{$endDate}";
 
@@ -323,6 +370,10 @@ class PayrollService
 
         // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
         $rate = $employee->getBasicSalary();
+        // Monthly basic salary for government contribution table lookups (SSS/PhilHealth/Pag-IBIG).
+        // Using getMonthlyRate() is correct — contributions are based on BASIC salary, NOT gross pay.
+        // Gross pay includes OT, allowances, and holiday premiums which must NOT inflate MSC/PMB.
+        $monthlyBasicSalary = $employee->getMonthlyRate();
         $standardHours = config('payroll.standard_hours_per_day', 8);
         $hourlyRate = $rate / $standardHours;
 
@@ -460,9 +511,10 @@ class PayrollService
         );
         $regularOtPay = $regularOtHours * $hourlyRate * $regularOtMultiplier;
 
-        // Sunday: rate/8 × 1.3 × hours
+        // Sunday (rest day): rate/8 × 1.3 (rest day premium) × 1.3 (OT on rest day) × hours
+        // DOLE Labor Code Art. 93 & 87: rest day OT = 30% on rest day rate = 130% × 130% = 169% of regular hourly rate
         $sundayOtMultiplier = (float) $this->settings->get('payroll.overtime.sunday', 1.3);
-        $sundayOtPay = $sundayOtHours * $hourlyRate * $sundayOtMultiplier;
+        $sundayOtPay = $sundayOtHours * $hourlyRate * 1.3 * $sundayOtMultiplier;
 
         // Regular holiday (weekday): rate/8 × 2 × 1.3 × hours
         $regularHolidayMultiplier = (float) $this->settings->get(
@@ -503,25 +555,45 @@ class PayrollService
             ];
         })->values()->all();
 
-        // Include approved meal allowances within the payroll period
-        $mealAllowanceTotal = MealAllowanceItem::where('employee_id', $employee->id)
+        // OPTIMIZATION: Use preloaded meal allowance items (no N+1 query)
+        $mealAllowanceTotal = $employee->relationLoaded('mealAllowanceItems')
+            ? $employee->mealAllowanceItems->sum('total_amount')
+            : MealAllowanceItem::where('employee_id', $employee->id)
             ->whereHas('mealAllowance', function ($query) use ($payroll) {
                 $query->where('status', 'approved')
                     ->where('period_start', '<=', $payroll->period_end)
                     ->where('period_end', '>=', $payroll->period_start);
             })
-            ->sum('total_amount') ?? 0;
+            ->sum('total_amount');
+        $mealAllowanceTotal = (float) ($mealAllowanceTotal ?? 0);
 
         if ($mealAllowanceTotal > 0) {
             $allowancesBreakdown[] = [
                 'id' => null,
                 'type' => 'meal_allowance',
-                'name' => 'Allowance',
-                'amount' => (float) $mealAllowanceTotal,
+                'name' => 'Meal Allowance',
+                'amount' => $mealAllowanceTotal,
             ];
         }
 
-        $otherAllowances = $allowances + $mealAllowanceTotal;
+        // OPTIMIZATION: Use preloaded bonuses (pending bonuses with payment_date in period)
+        $pendingBonuses = $employee->relationLoaded('bonuses')
+            ? $employee->bonuses
+            : collect();
+        $bonusTotal = (float) $pendingBonuses->sum('amount');
+        $bonusIds = [];
+
+        foreach ($pendingBonuses as $bonus) {
+            $allowancesBreakdown[] = [
+                'id' => $bonus->id,
+                'type' => 'bonus',
+                'name' => $bonus->bonus_name ?: $bonus->bonus_type,
+                'amount' => (float) $bonus->amount,
+            ];
+            $bonusIds[] = $bonus->id;
+        }
+
+        $otherAllowances = $allowances + $mealAllowanceTotal + $bonusTotal;
 
         // Calculate salary adjustment from pending adjustments (OPTIMIZED - preloaded)
         $totalDaysWorked = $regularDays + $sundayDays + $holidayDays;
@@ -562,21 +634,21 @@ class PayrollService
                 // Use custom SSS if set (already semi-monthly amount), otherwise calculate
                 $sss = $employee->custom_sss !== null
                     ? (float) $employee->custom_sss
-                    : $this->calculateSSS($grossPay);
+                    : $this->calculateSSS($monthlyBasicSalary);
             }
 
             if ($employee->has_philhealth) {
                 // Use custom PhilHealth if set (already semi-monthly amount), otherwise calculate
                 $philhealth = $employee->custom_philhealth !== null
                     ? (float) $employee->custom_philhealth
-                    : $this->calculatePhilHealth($grossPay);
+                    : $this->calculatePhilHealth($monthlyBasicSalary);
             }
 
             if ($employee->has_pagibig) {
                 // Use custom Pag-IBIG if set (already semi-monthly amount), otherwise calculate
                 $pagibig = $employee->custom_pagibig !== null
                     ? (float) $employee->custom_pagibig
-                    : $this->calculatePagibig($grossPay);
+                    : $this->calculatePagibig($monthlyBasicSalary);
             }
         }
 
@@ -585,6 +657,10 @@ class PayrollService
         $periodEnd = Carbon::parse($payroll->period_end);
         $periodDays = $periodStart->diffInDays($periodEnd) + 1;
         $isSemiMonthly = $periodDays <= 16;
+
+        // For monthly loans on semi-monthly payrolls: only deduct on 2nd cutoff
+        // 2nd cutoff = period ending on 16th or later of the month
+        $isSecondCutoff = !$isSemiMonthly || $periodEnd->day >= 16;
 
         // OPTIMIZATION: Use preloaded loans
         $activeLoans = $employee->loans;
@@ -600,8 +676,9 @@ class PayrollService
                     ? ($loan->semi_monthly_amortization ?? 0)
                     : ($loan->monthly_amortization ?? 0);
             } else {
-                // Monthly loans: only deduct on monthly payrolls
-                if (!$isSemiMonthly) {
+                // Monthly loans: deduct on 2nd cutoff only (period end day >= 16)
+                // This ensures monthly loans are only deducted once per month
+                if ($isSecondCutoff) {
                     $amortization = $loan->monthly_amortization ?? 0;
                 }
             }
@@ -682,17 +759,21 @@ class PayrollService
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
             '_adjustment_ids' => $adjustmentIds, // Internal: collected by processPayroll
+            '_bonus_ids' => $bonusIds, // Internal: collected by processPayroll to mark bonuses as paid
         ];
     }
 
     /**
      * Calculate SSS contribution using GovernmentRate settings from /settings dialog
      * Falls back to 2025 hardcoded table if settings not configured
+     *
+     * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
+     *                                   SSS looks up MSC (Monthly Salary Credit) from basic salary only.
      */
-    private function calculateSSS($grossPay)
+    private function calculateSSS($monthlyBasicSalary)
     {
-        // Convert semi-monthly to monthly salary for lookup
-        $monthlySalary = $grossPay * 2;
+        // Use monthly basic salary directly for SSS MSC table lookup
+        $monthlySalary = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
         $contribution = GovernmentRate::getContributionForSalary('sss', $monthlySalary);
@@ -754,11 +835,14 @@ class PayrollService
     /**
      * Calculate PhilHealth contribution using GovernmentRate settings from /settings dialog
      * Falls back to 2025 hardcoded formula if settings not configured
+     *
+     * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
+     *                                   PhilHealth premium base is monthly basic salary per RA 11223.
      */
-    private function calculatePhilHealth($grossPay)
+    private function calculatePhilHealth($monthlyBasicSalary)
     {
-        // Convert semi-monthly to monthly salary for lookup
-        $monthlyGross = $grossPay * 2;
+        // Use monthly basic salary directly for PhilHealth premium computation
+        $monthlyGross = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
         $contribution = GovernmentRate::getContributionForSalary('philhealth', $monthlyGross);
@@ -780,11 +864,14 @@ class PayrollService
     /**
      * Calculate Pag-IBIG contribution using GovernmentRate settings from /settings dialog
      * Falls back to 2024 hardcoded formula if settings not configured
+     *
+     * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
+     *                                   HDMF contribution is based on monthly basic compensation.
      */
-    private function calculatePagibig($grossPay)
+    private function calculatePagibig($monthlyBasicSalary)
     {
-        // Convert semi-monthly to monthly salary for lookup
-        $monthlyGross = $grossPay * 2;
+        // Use monthly basic salary directly for Pag-IBIG contribution computation
+        $monthlyGross = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
         $contribution = GovernmentRate::getContributionForSalary('pagibig', $monthlyGross);
@@ -798,7 +885,9 @@ class PayrollService
         $contribution = $monthlyGross * 0.02;
         $semiMonthlyContribution = $contribution / 2;
 
-        // Minimum: ₱50/month (₱25 semi-monthly), Maximum: ₱200/month (₱100 semi-monthly)
+        // Per HDMF 2024 rules:
+        // Maximum monthly employee contribution = ₱200 → semi-monthly = ₱100
+        // Minimum semi-monthly = ₱25 (₱50/month floor)
         return round(min(max($semiMonthlyContribution, 25), 100), 2);
     }
 }

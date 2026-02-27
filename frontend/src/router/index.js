@@ -351,6 +351,15 @@ const router = createRouter({
           meta: { title: "Attendance Settings", roles: ["admin"] },
         },
         {
+          path: "government-rates",
+          name: "government-rates",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/GovernmentRatesView.vue"
+            ),
+          meta: { title: "Government Rates", roles: ["admin"] },
+        },
+        {
           path: "maintenance",
           name: "maintenance",
           component: () =>

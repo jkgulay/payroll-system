@@ -199,17 +199,10 @@
               </div>
             </template>
 
-            <!-- Amount = Rate × Days -->
+            <!-- Amount (Basic Pay) -->
             <template v-slot:item.amount="{ item }">
               <div class="text-right">
-                <div>
-                  ₱{{
-                    formatCurrency(
-                      (item.effective_rate || item.rate || 0) *
-                        (item.days_worked || 0),
-                    )
-                  }}
-                </div>
+                <div>₱{{ formatCurrency(item.basic_pay || 0) }}</div>
                 <div
                   v-if="item.holiday_pay > 0"
                   class="text-caption text-success"
@@ -223,11 +216,26 @@
             <template v-slot:item.overtime="{ item }">
               <div>
                 <div v-if="item.regular_ot_hours > 0" class="text-caption">
-                  {{ item.regular_ot_hours }}h: ₱{{
+                  Reg: {{ item.regular_ot_hours }}h — ₱{{
                     formatCurrency(item.regular_ot_pay)
                   }}
                 </div>
-                <div v-else class="text-caption text-medium-emphasis">-</div>
+                <div
+                  v-if="item.special_ot_hours > 0"
+                  class="text-caption text-orange"
+                >
+                  Sun/Hol: {{ item.special_ot_hours }}h — ₱{{
+                    formatCurrency(item.special_ot_pay)
+                  }}
+                </div>
+                <div
+                  v-if="
+                    !(item.regular_ot_hours > 0) && !(item.special_ot_hours > 0)
+                  "
+                  class="text-caption text-medium-emphasis"
+                >
+                  -
+                </div>
               </div>
             </template>
 
@@ -240,14 +248,57 @@
                 >
                   {{ formatUndertime(item.undertime_hours) }}
                 </div>
-                <div v-else class="text-caption text-medium-emphasis">-</div>
+                <div
+                  v-if="item.undertime_deduction > 0"
+                  class="text-caption text-warning"
+                >
+                  -₱{{ formatCurrency(item.undertime_deduction) }}
+                </div>
+                <div
+                  v-if="
+                    !(item.undertime_hours > 0) &&
+                    !(item.undertime_deduction > 0)
+                  "
+                  class="text-caption text-medium-emphasis"
+                >
+                  -
+                </div>
               </div>
             </template>
 
             <!-- Gross Pay -->
             <template v-slot:item.gross_pay="{ item }">
-              <div class="text-right font-weight-bold" style="color: #ed985f">
-                ₱{{ formatCurrency(item.gross_pay) }}
+              <div class="text-right">
+                <div class="font-weight-bold" style="color: #ed985f">
+                  ₱{{ formatCurrency(item.gross_pay) }}
+                </div>
+                <div
+                  v-if="item.salary_adjustment > 0"
+                  class="text-caption text-info"
+                >
+                  +₱{{ formatCurrency(item.salary_adjustment) }} adj
+                </div>
+                <div
+                  v-else-if="item.salary_adjustment < 0"
+                  class="text-caption text-error"
+                >
+                  -₱{{ formatCurrency(Math.abs(item.salary_adjustment)) }} adj
+                </div>
+                <template
+                  v-if="
+                    item.allowances_breakdown &&
+                    item.allowances_breakdown.length > 0
+                  "
+                >
+                  <div
+                    v-for="(a, idx) in item.allowances_breakdown"
+                    :key="idx"
+                    class="text-caption text-success"
+                  >
+                    +₱{{ formatCurrency(a.amount) }}
+                    {{ a.label || a.name || a.type }}
+                  </div>
+                </template>
               </div>
             </template>
 
@@ -290,13 +341,41 @@
                   >
                   Pag-IBIG: N/A
                 </div>
-                <div v-if="item.total_loan_deductions > 0">
-                  Loans: ₱{{ formatCurrency(item.total_loan_deductions) }}
+                <div v-if="item.undertime_deduction > 0">
+                  <v-icon size="12" color="warning" class="mr-1"
+                    >mdi-clock-minus-outline</v-icon
+                  >
+                  Undertime: ₱{{ formatCurrency(item.undertime_deduction) }}
+                </div>
+                <div v-if="item.loans > 0">
+                  <v-icon size="12" color="red" class="mr-1"
+                    >mdi-bank-outline</v-icon
+                  >
+                  Loans: ₱{{ formatCurrency(item.loans) }}
+                </div>
+                <div v-if="item.cash_advance > 0">
+                  <v-icon size="12" color="deep-orange" class="mr-1"
+                    >mdi-cash-fast</v-icon
+                  >
+                  Cash Advance: ₱{{ formatCurrency(item.cash_advance) }}
+                </div>
+                <div v-if="item.employee_savings > 0">
+                  <v-icon size="12" color="teal" class="mr-1"
+                    >mdi-piggy-bank-outline</v-icon
+                  >
+                  Savings: ₱{{ formatCurrency(item.employee_savings) }}
+                </div>
+                <div v-if="item.withholding_tax > 0">
+                  <v-icon size="12" color="purple" class="mr-1"
+                    >mdi-file-document-outline</v-icon
+                  >
+                  Tax: ₱{{ formatCurrency(item.withholding_tax) }}
                 </div>
                 <div v-if="item.employee_deductions > 0" class="text-warning">
-                  Other Deductions: ₱{{
-                    formatCurrency(item.employee_deductions)
-                  }}
+                  Other: ₱{{ formatCurrency(item.employee_deductions) }}
+                </div>
+                <div v-if="item.other_deductions > 0" class="text-warning">
+                  Misc: ₱{{ formatCurrency(item.other_deductions) }}
                 </div>
               </div>
             </template>
@@ -325,338 +404,352 @@
       </div>
     </div>
 
-    <!-- Export Filter Dialog -->
+    <!-- Export Payroll Dialog -->
     <v-dialog
       v-model="showExportDialog"
-      max-width="600px"
+      max-width="660px"
       persistent
       scrollable
     >
-      <v-card class="modern-dialog">
-        <!-- Enhanced Header -->
-        <v-card-title class="dialog-header">
-          <div class="dialog-icon-wrapper primary">
-            <v-icon size="24">mdi-download</v-icon>
+      <v-card class="export-dialog">
+        <!-- Header -->
+        <div class="export-dialog-header">
+          <div class="export-header-icon">
+            <v-icon size="22">mdi-download</v-icon>
           </div>
-          <div>
-            <div class="dialog-title">Export Payroll</div>
-            <div class="dialog-subtitle">Choose export type and format</div>
+          <div class="export-header-text">
+            <h2 class="export-header-title">Export Payroll</h2>
+            <p class="export-header-subtitle">
+              {{ payroll?.payroll_number }} &middot; {{ payroll?.period_name }}
+            </p>
           </div>
-        </v-card-title>
+          <button
+            class="export-close-btn"
+            @click="showExportDialog = false"
+            :disabled="downloadingRegister"
+          >
+            <v-icon size="20">mdi-close</v-icon>
+          </button>
+        </div>
 
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content">
-          <!-- Section: Export Format -->
-          <v-col cols="12" class="px-0">
-            <div class="section-header">
-              <div class="section-icon">
-                <v-icon size="18">mdi-file-document</v-icon>
-              </div>
-              <h3 class="section-title">Select Format</h3>
-            </div>
-          </v-col>
-
-          <v-radio-group
-            v-model="exportFilter.format"
-            hide-details
-            class="mb-6"
-          >
-            <v-radio value="pdf" class="mb-3">
-              <template v-slot:label>
-                <div class="d-flex align-center">
-                  <v-icon size="24" class="mr-3" color="#D32F2F"
-                    >mdi-file-pdf-box</v-icon
-                  >
-                  <div>
-                    <div class="text-subtitle-1 font-weight-medium">
-                      PDF Document
-                    </div>
-                    <div class="text-caption text-grey">
-                      Best for printing and viewing
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </v-radio>
-            <v-radio value="excel" class="mb-3">
-              <template v-slot:label>
-                <div class="d-flex align-center">
-                  <v-icon size="24" class="mr-3" color="#217346"
-                    >mdi-file-excel-box</v-icon
-                  >
-                  <div>
-                    <div class="text-subtitle-1 font-weight-medium">
-                      Excel Spreadsheet
-                    </div>
-                    <div class="text-caption text-grey">
-                      Editable data for calculations
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </v-radio>
-            <v-radio value="word" class="mb-3">
-              <template v-slot:label>
-                <div class="d-flex align-center">
-                  <v-icon size="24" class="mr-3" color="#2B579A"
-                    >mdi-file-word-box</v-icon
-                  >
-                  <div>
-                    <div class="text-subtitle-1 font-weight-medium">
-                      Word Document
-                    </div>
-                    <div class="text-caption text-grey">
-                      Editable formatted document
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </v-radio>
-          </v-radio-group>
-
-          <v-divider class="my-4"></v-divider>
-
-          <!-- Section: Department Filter -->
-          <v-col cols="12" class="px-0">
-            <div class="section-header">
-              <div class="section-icon">
-                <v-icon size="18">mdi-filter</v-icon>
-              </div>
-              <h3 class="section-title">Filter Employees (Optional)</h3>
-            </div>
-          </v-col>
-
-          <v-select
-            v-model="exportFilter.departments"
-            :items="availableDepartments"
-            label="Filter by Department"
-            prepend-inner-icon="mdi-office-building"
-            variant="outlined"
-            density="comfortable"
-            multiple
-            chips
-            closable-chips
-            clearable
-            hint="Leave empty to include all departments"
-            persistent-hint
-            class="mb-4"
-          >
-            <template v-slot:selection="{ item, index }">
-              <v-chip v-if="index < 2" size="small" color="primary">
-                {{ item.title }}
-              </v-chip>
-              <span
-                v-if="index === 2"
-                class="text-grey text-caption align-self-center"
+        <v-card-text class="export-dialog-body">
+          <!-- Format Selection -->
+          <div class="export-section">
+            <div class="export-section-label">
+              <v-icon size="16" class="mr-2" color="#64748b"
+                >mdi-file-document-outline</v-icon
               >
-                (+{{ exportFilter.departments.length - 2 }} others)
-              </span>
-            </template>
-          </v-select>
-
-          <v-select
-            v-model="exportFilter.positions"
-            :items="availablePositions"
-            label="Filter by Position"
-            prepend-inner-icon="mdi-briefcase"
-            variant="outlined"
-            density="comfortable"
-            multiple
-            chips
-            closable-chips
-            clearable
-            hint="Leave empty to include all positions"
-            persistent-hint
-            class="mb-4"
-          >
-            <template v-slot:selection="{ item, index }">
-              <v-chip v-if="index < 2" size="small" color="#ED985F">
-                {{ item.title }}
-              </v-chip>
-              <span
-                v-if="index === 2"
-                class="text-grey text-caption align-self-center"
-              >
-                (+{{ exportFilter.positions.length - 2 }} others)
-              </span>
-            </template>
-          </v-select>
-
-          <v-autocomplete
-            v-model="exportFilter.employees"
-            :items="availableEmployees"
-            item-title="name"
-            item-value="id"
-            label="Filter by Employee"
-            prepend-inner-icon="mdi-account"
-            variant="outlined"
-            density="comfortable"
-            multiple
-            chips
-            closable-chips
-            clearable
-            hint="Leave empty to include all employees"
-            persistent-hint
-            class="mb-2"
-          >
-            <template v-slot:selection="{ item, index }">
-              <v-chip v-if="index < 2" size="small" color="#00897B">
-                {{ item.raw.name }}
-              </v-chip>
-              <span
-                v-if="index === 2"
-                class="text-grey text-caption align-self-center"
-              >
-                (+{{ exportFilter.employees.length - 2 }} others)
-              </span>
-            </template>
-            <template v-slot:item="{ props, item }">
-              <v-list-item v-bind="props" :title="item.raw.name">
-                <template v-slot:subtitle>
-                  {{ item.raw.employee_number }} · {{ item.raw.position }}
-                </template>
-              </v-list-item>
-            </template>
-          </v-autocomplete>
-
-          <div class="text-caption text-grey">
-            <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
-            Filtering will only include selected employees from departments and
-            positions
-          </div>
-
-          <v-divider class="my-4"></v-divider>
-
-          <!-- Section: Special Exports -->
-          <v-col cols="12" class="px-0 pb-2">
-            <div class="section-header">
-              <div class="section-icon">
-                <v-icon size="18">mdi-lightning-bolt</v-icon>
-              </div>
-              <h3 class="section-title">Special Exports</h3>
+              Export Format
             </div>
-          </v-col>
 
-          <!-- Payslips card -->
-          <div
-            class="special-export-card mb-3"
-            :class="{
-              'special-export-card--active': exportFilter.format === 'payslips',
-            }"
-            @click="exportFilter.format = 'payslips'"
-          >
-            <v-icon size="22" color="#FF6F00" class="mr-3"
-              >mdi-file-document-multiple</v-icon
-            >
-            <div class="flex-grow-1">
-              <div class="text-subtitle-2 font-weight-medium">
-                Payslips (Compact)
-              </div>
-              <div class="text-caption text-grey">
-                4 payslips per page · portrait · PDF
-              </div>
-            </div>
-            <v-icon
-              size="18"
-              :color="
-                exportFilter.format === 'payslips' ? '#ed985f' : '#bdbdbd'
-              "
-            >
-              {{
-                exportFilter.format === "payslips"
-                  ? "mdi-check-circle"
-                  : "mdi-circle-outline"
-              }}
-            </v-icon>
-          </div>
-
-          <!-- By Device card -->
-          <div
-            class="special-export-card"
-            :class="{
-              'special-export-card--active': [
-                'by_device',
-                'by_device_pdf',
-              ].includes(exportFilter.format),
-            }"
-          >
-            <v-icon size="22" color="#00897B" class="mr-3 mt-1"
-              >mdi-devices</v-icon
-            >
-            <div class="flex-grow-1">
-              <div class="text-subtitle-2 font-weight-medium">
-                By Biometric Device
-              </div>
-              <div class="text-caption text-grey mb-2">
-                Separate section per device · grouped from attendance records
-              </div>
-              <div class="d-flex">
-                <v-chip
-                  size="small"
-                  :color="
-                    exportFilter.format === 'by_device' ? '#217346' : undefined
-                  "
-                  :variant="
-                    exportFilter.format === 'by_device' ? 'flat' : 'outlined'
-                  "
-                  prepend-icon="mdi-file-excel-box"
-                  class="mr-2"
-                  @click.stop="exportFilter.format = 'by_device'"
-                  >Excel</v-chip
+            <div class="format-grid">
+              <!-- PDF -->
+              <div
+                class="format-card"
+                :class="{ active: exportFilter.format === 'pdf' }"
+                @click="exportFilter.format = 'pdf'"
+              >
+                <div class="format-card-icon pdf">
+                  <v-icon size="22">mdi-file-pdf-box</v-icon>
+                </div>
+                <div class="format-card-info">
+                  <div class="format-card-name">PDF</div>
+                  <div class="format-card-desc">Best for printing</div>
+                </div>
+                <v-icon
+                  v-if="exportFilter.format === 'pdf'"
+                  size="18"
+                  class="format-check"
+                  >mdi-check-circle</v-icon
                 >
-                <v-chip
-                  size="small"
-                  :color="
-                    exportFilter.format === 'by_device_pdf'
-                      ? '#D32F2F'
-                      : undefined
-                  "
-                  :variant="
-                    exportFilter.format === 'by_device_pdf'
-                      ? 'flat'
-                      : 'outlined'
-                  "
-                  prepend-icon="mdi-file-pdf-box"
-                  @click.stop="exportFilter.format = 'by_device_pdf'"
-                  >PDF</v-chip
+              </div>
+
+              <!-- Excel -->
+              <div
+                class="format-card"
+                :class="{ active: exportFilter.format === 'excel' }"
+                @click="exportFilter.format = 'excel'"
+              >
+                <div class="format-card-icon excel">
+                  <v-icon size="22">mdi-file-excel-box</v-icon>
+                </div>
+                <div class="format-card-info">
+                  <div class="format-card-name">Excel</div>
+                  <div class="format-card-desc">Editable spreadsheet</div>
+                </div>
+                <v-icon
+                  v-if="exportFilter.format === 'excel'"
+                  size="18"
+                  class="format-check"
+                  >mdi-check-circle</v-icon
+                >
+              </div>
+
+              <!-- Word -->
+              <div
+                class="format-card"
+                :class="{ active: exportFilter.format === 'word' }"
+                @click="exportFilter.format = 'word'"
+              >
+                <div class="format-card-icon word">
+                  <v-icon size="22">mdi-file-word-box</v-icon>
+                </div>
+                <div class="format-card-info">
+                  <div class="format-card-name">Word</div>
+                  <div class="format-card-desc">Formatted document</div>
+                </div>
+                <v-icon
+                  v-if="exportFilter.format === 'word'"
+                  size="18"
+                  class="format-check"
+                  >mdi-check-circle</v-icon
+                >
+              </div>
+
+              <!-- Payslips -->
+              <div
+                class="format-card"
+                :class="{ active: exportFilter.format === 'payslips' }"
+                @click="exportFilter.format = 'payslips'"
+              >
+                <div class="format-card-icon payslips">
+                  <v-icon size="22">mdi-file-document-multiple</v-icon>
+                </div>
+                <div class="format-card-info">
+                  <div class="format-card-name">Payslips</div>
+                  <div class="format-card-desc">4 per page &middot; PDF</div>
+                </div>
+                <v-icon
+                  v-if="exportFilter.format === 'payslips'"
+                  size="18"
+                  class="format-check"
+                  >mdi-check-circle</v-icon
+                >
+              </div>
+
+              <!-- By Device (Excel) -->
+              <div
+                class="format-card"
+                :class="{ active: exportFilter.format === 'by_device' }"
+                @click="exportFilter.format = 'by_device'"
+              >
+                <div class="format-card-icon device-excel">
+                  <v-icon size="22">mdi-devices</v-icon>
+                </div>
+                <div class="format-card-info">
+                  <div class="format-card-name">By Device</div>
+                  <div class="format-card-desc">Grouped &middot; Excel</div>
+                </div>
+                <v-icon
+                  v-if="exportFilter.format === 'by_device'"
+                  size="18"
+                  class="format-check"
+                  >mdi-check-circle</v-icon
+                >
+              </div>
+
+              <!-- By Device (PDF) -->
+              <div
+                class="format-card"
+                :class="{ active: exportFilter.format === 'by_device_pdf' }"
+                @click="exportFilter.format = 'by_device_pdf'"
+              >
+                <div class="format-card-icon device-pdf">
+                  <v-icon size="22">mdi-devices</v-icon>
+                </div>
+                <div class="format-card-info">
+                  <div class="format-card-name">By Device</div>
+                  <div class="format-card-desc">Grouped &middot; PDF</div>
+                </div>
+                <v-icon
+                  v-if="exportFilter.format === 'by_device_pdf'"
+                  size="18"
+                  class="format-check"
+                  >mdi-check-circle</v-icon
                 >
               </div>
             </div>
+          </div>
+
+          <!-- Filter Section (Collapsible) -->
+          <div class="export-section">
+            <button
+              class="export-section-label clickable"
+              @click="showExportFilters = !showExportFilters"
+            >
+              <v-icon size="16" class="mr-2" color="#64748b"
+                >mdi-filter-variant</v-icon
+              >
+              Filter Employees
+              <v-chip
+                v-if="activeFilterCount > 0"
+                size="x-small"
+                color="#ed985f"
+                variant="flat"
+                class="ml-2"
+                >{{ activeFilterCount }} active</v-chip
+              >
+              <v-spacer></v-spacer>
+              <span class="filter-optional-hint">Optional</span>
+              <v-icon
+                size="18"
+                color="#94a3b8"
+                :style="{
+                  transform: showExportFilters ? 'rotate(180deg)' : 'rotate(0)',
+                  transition: 'transform 0.25s ease',
+                }"
+                >mdi-chevron-down</v-icon
+              >
+            </button>
+
+            <v-expand-transition>
+              <div v-show="showExportFilters" class="filter-panel">
+                <v-select
+                  v-model="exportFilter.departments"
+                  :items="availableDepartments"
+                  label="Department"
+                  prepend-inner-icon="mdi-office-building"
+                  variant="outlined"
+                  density="comfortable"
+                  multiple
+                  chips
+                  closable-chips
+                  clearable
+                  hide-details
+                  class="mb-3"
+                >
+                  <template v-slot:selection="{ item, index }">
+                    <v-chip
+                      v-if="index < 2"
+                      size="small"
+                      color="primary"
+                      variant="tonal"
+                    >
+                      {{ item.title }}
+                    </v-chip>
+                    <span
+                      v-if="index === 2"
+                      class="text-grey text-caption align-self-center"
+                    >
+                      (+{{ exportFilter.departments.length - 2 }} more)
+                    </span>
+                  </template>
+                </v-select>
+
+                <v-select
+                  v-model="exportFilter.positions"
+                  :items="availablePositions"
+                  label="Position"
+                  prepend-inner-icon="mdi-briefcase"
+                  variant="outlined"
+                  density="comfortable"
+                  multiple
+                  chips
+                  closable-chips
+                  clearable
+                  hide-details
+                  class="mb-3"
+                >
+                  <template v-slot:selection="{ item, index }">
+                    <v-chip
+                      v-if="index < 2"
+                      size="small"
+                      color="#ED985F"
+                      variant="tonal"
+                    >
+                      {{ item.title }}
+                    </v-chip>
+                    <span
+                      v-if="index === 2"
+                      class="text-grey text-caption align-self-center"
+                    >
+                      (+{{ exportFilter.positions.length - 2 }} more)
+                    </span>
+                  </template>
+                </v-select>
+
+                <v-autocomplete
+                  v-model="exportFilter.employees"
+                  :items="availableEmployees"
+                  item-title="name"
+                  item-value="id"
+                  label="Specific Employees"
+                  prepend-inner-icon="mdi-account-search"
+                  variant="outlined"
+                  density="comfortable"
+                  multiple
+                  chips
+                  closable-chips
+                  clearable
+                  hide-details
+                >
+                  <template v-slot:selection="{ item, index }">
+                    <v-chip
+                      v-if="index < 2"
+                      size="small"
+                      color="#00897B"
+                      variant="tonal"
+                    >
+                      {{ item.raw.name }}
+                    </v-chip>
+                    <span
+                      v-if="index === 2"
+                      class="text-grey text-caption align-self-center"
+                    >
+                      (+{{ exportFilter.employees.length - 2 }} more)
+                    </span>
+                  </template>
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props" :title="item.raw.name">
+                      <template v-slot:subtitle>
+                        {{ item.raw.employee_number }} &middot;
+                        {{ item.raw.position }}
+                      </template>
+                    </v-list-item>
+                  </template>
+                </v-autocomplete>
+              </div>
+            </v-expand-transition>
           </div>
         </v-card-text>
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
-          <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
-            :disabled="downloadingRegister"
-            @click="showExportDialog = false"
-          >
-            Cancel
-          </button>
-          <v-btn
-            class="dialog-btn dialog-btn-primary"
-            :loading="downloadingRegister"
-            :disabled="downloadingRegister"
-            @click="downloadRegister"
-          >
-            <v-icon size="20" class="mr-2">mdi-download</v-icon>
-            Download
-            {{
-              {
-                pdf: "PDF",
-                excel: "EXCEL",
-                word: "WORD",
-                payslips: "PAYSLIPS",
-                by_device: "BY DEVICE (XLS)",
-                by_device_pdf: "BY DEVICE (PDF)",
-              }[exportFilter.format] || exportFilter.format.toUpperCase()
-            }}
-          </v-btn>
-        </v-card-actions>
+        <!-- Footer -->
+        <div class="export-dialog-footer">
+          <div class="export-summary">
+            <v-icon size="14" class="mr-1" color="#94a3b8"
+              >mdi-information-outline</v-icon
+            >
+            <span>{{ exportSummaryText }}</span>
+          </div>
+          <div class="export-actions">
+            <button
+              class="dialog-btn dialog-btn-cancel"
+              :disabled="downloadingRegister"
+              @click="showExportDialog = false"
+            >
+              Cancel
+            </button>
+            <button
+              class="export-download-btn"
+              :disabled="downloadingRegister"
+              @click="downloadRegister"
+            >
+              <v-progress-circular
+                v-if="downloadingRegister"
+                indeterminate
+                size="18"
+                width="2"
+                class="mr-2"
+              ></v-progress-circular>
+              <v-icon v-else size="18" class="mr-2">mdi-download</v-icon>
+              Download {{ exportFormatLabel }}
+            </button>
+          </div>
+        </div>
       </v-card>
     </v-dialog>
   </div>
@@ -682,6 +775,7 @@ const positionFilter = ref(null);
 const payroll = ref(null);
 const showExportDialog = ref(false);
 const downloadingRegister = ref(false);
+const showExportFilters = ref(false);
 const exportFilter = ref({
   format: "pdf", // pdf, excel, word
   departments: [], // Array of department names
@@ -711,10 +805,13 @@ const availableEmployees = computed(() => {
   const employees = payroll.value.items
     .map((item) => {
       if (!item.employee) return null;
-      
+
       const emp = item.employee;
-      const fullName = `${emp.first_name || ""} ${emp.middle_name || ""} ${emp.last_name || ""}`.replace(/\s+/g, " ").trim();
-      
+      const fullName =
+        `${emp.first_name || ""} ${emp.middle_name || ""} ${emp.last_name || ""}`
+          .replace(/\s+/g, " ")
+          .trim();
+
       return {
         id: emp.id,
         name: fullName,
@@ -726,6 +823,57 @@ const availableEmployees = computed(() => {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return employees;
+});
+
+// Active filter count for the badge
+const activeFilterCount = computed(() => {
+  let count = 0;
+  if (exportFilter.value.departments?.length) count++;
+  if (exportFilter.value.positions?.length) count++;
+  if (exportFilter.value.employees?.length) count++;
+  return count;
+});
+
+// Format label for the download button
+const exportFormatLabel = computed(() => {
+  const labels = {
+    pdf: "PDF",
+    excel: "Excel",
+    word: "Word",
+    payslips: "Payslips",
+    by_device: "By Device (XLS)",
+    by_device_pdf: "By Device (PDF)",
+  };
+  return labels[exportFilter.value.format] || exportFilter.value.format;
+});
+
+// Summary text for the footer
+const exportSummaryText = computed(() => {
+  const totalEmployees = payroll.value?.items?.length || 0;
+  const parts = [];
+
+  if (exportFilter.value.employees?.length) {
+    parts.push(
+      `${exportFilter.value.employees.length} employee${exportFilter.value.employees.length > 1 ? "s" : ""} selected`,
+    );
+  } else if (
+    exportFilter.value.departments?.length ||
+    exportFilter.value.positions?.length
+  ) {
+    if (exportFilter.value.departments?.length)
+      parts.push(
+        `${exportFilter.value.departments.length} dept${exportFilter.value.departments.length > 1 ? "s" : ""}`,
+      );
+    if (exportFilter.value.positions?.length)
+      parts.push(
+        `${exportFilter.value.positions.length} position${exportFilter.value.positions.length > 1 ? "s" : ""}`,
+      );
+    return `Filtered by ${parts.join(" & ")} · ${totalEmployees} total in payroll`;
+  } else {
+    return `All ${totalEmployees} employees · ${exportFormatLabel.value} format`;
+  }
+
+  return `${parts.join(" · ")} · ${totalEmployees} total in payroll`;
 });
 
 // Filter items by position
@@ -744,7 +892,7 @@ const filteredItems = computed(() => {
 const headers = [
   { title: "Employee", key: "employee", sortable: true },
   { title: "Rate & Days", key: "rate_days", sortable: false },
-  { title: "Amount", key: "amount", sortable: true, align: "end" },
+  { title: "Basic Pay", key: "amount", sortable: true, align: "end" },
   { title: "Overtime", key: "overtime", sortable: false },
   { title: "UT", key: "undertime", sortable: false },
   { title: "Gross Pay", key: "gross_pay", sortable: true, align: "end" },
@@ -1477,66 +1625,329 @@ function formatUndertime(hours) {
 
 /* Dialog & section styles from _shared-layout.scss */
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 31, 61, 0.02) 0%,
-    rgba(237, 152, 95, 0.02) 100%
-  );
-  border-radius: 12px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  margin-bottom: 16px;
+/* ── Export Dialog ── */
+.export-dialog {
+  border-radius: 16px !important;
+  overflow: hidden;
 }
 
-.section-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+.export-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #eef1f5 100%);
+}
+
+.export-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(237, 152, 95, 0.25);
 }
 
-.section-icon .v-icon {
-  color: #ffffff !important;
+.export-header-text {
+  flex: 1;
+  min-width: 0;
 }
 
-.section-title {
-  font-size: 16px;
+.export-header-title {
+  font-size: 18px;
   font-weight: 700;
   color: #001f3d;
   margin: 0;
-  letter-spacing: -0.3px;
+  line-height: 1.3;
 }
 
-.special-export-card {
-  display: flex;
-  align-items: flex-start;
-  padding: 12px 14px;
+.export-header-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.export-close-btn {
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
-  border: 1.5px solid rgba(0, 31, 61, 0.1);
-  background: rgba(0, 31, 61, 0.02);
+  border: none;
+  background: rgba(0, 31, 61, 0.06);
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.special-export-card:hover {
-  border-color: rgba(0, 31, 61, 0.22);
-  background: rgba(0, 31, 61, 0.05);
+.export-close-btn:hover {
+  background: rgba(0, 31, 61, 0.1);
+  color: #001f3d;
 }
 
-.special-export-card--active {
+.export-dialog-body {
+  padding: 20px 24px !important;
+}
+
+/* Sections */
+.export-section {
+  margin-bottom: 20px;
+}
+
+.export-section:last-child {
+  margin-bottom: 0;
+}
+
+.export-section-label {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  width: 100%;
+}
+
+.export-section-label.clickable {
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f8f9fb;
+  border: 1px solid rgba(0, 31, 61, 0.06);
+  margin-bottom: 0;
+  transition: all 0.2s ease;
+}
+
+.export-section-label.clickable:hover {
+  background: #f1f3f6;
+  border-color: rgba(0, 31, 61, 0.1);
+}
+
+.filter-optional-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-right: 6px;
+}
+
+.filter-panel {
+  padding: 16px 14px 4px 14px;
+  background: #fafbfc;
+  border: 1px solid rgba(0, 31, 61, 0.06);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+}
+
+/* Format Grid */
+.format-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.format-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(0, 31, 61, 0.08);
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.format-card:hover {
+  border-color: rgba(0, 31, 61, 0.16);
+  background: #fafbfc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.format-card.active {
   border-color: #ed985f;
-  background: rgba(237, 152, 95, 0.06);
+  background: rgba(237, 152, 95, 0.04);
+  box-shadow: 0 0 0 3px rgba(237, 152, 95, 0.1);
+}
+
+.format-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.format-card-icon.pdf {
+  background: rgba(211, 47, 47, 0.1);
+  color: #d32f2f;
+}
+
+.format-card-icon.excel {
+  background: rgba(33, 115, 70, 0.1);
+  color: #217346;
+}
+
+.format-card-icon.word {
+  background: rgba(43, 87, 154, 0.1);
+  color: #2b579a;
+}
+
+.format-card-icon.payslips {
+  background: rgba(255, 111, 0, 0.1);
+  color: #ff6f00;
+}
+
+.format-card-icon.device-excel {
+  background: rgba(0, 137, 123, 0.1);
+  color: #00897b;
+}
+
+.format-card-icon.device-pdf {
+  background: rgba(0, 137, 123, 0.1);
+  color: #00897b;
+}
+
+.format-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.format-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #001f3d;
+  line-height: 1.3;
+}
+
+.format-card-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+
+.format-check {
+  color: #ed985f;
+  flex-shrink: 0;
+}
+
+/* Footer */
+.export-dialog-footer {
+  padding: 14px 24px;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.export-summary {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #94a3b8;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.export-summary span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.export-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.dialog-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.dialog-btn-cancel {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.dialog-btn-cancel:hover {
+  background: #cbd5e1;
+}
+
+.export-download-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  white-space: nowrap;
+}
+
+.export-download-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(237, 152, 95, 0.4);
+}
+
+.export-download-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .format-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .export-dialog-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .export-summary {
+    justify-content: center;
+  }
+
+  .export-actions {
+    justify-content: flex-end;
+  }
 }
 
 .form-field-wrapper {

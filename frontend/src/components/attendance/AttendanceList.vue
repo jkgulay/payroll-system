@@ -25,10 +25,16 @@
           ></v-select>
         </v-col>
         <v-col cols="12" md="3">
-          <v-btn color="#ED985F" block @click="loadAttendance">
-            <v-icon start>mdi-magnify</v-icon>
-            Search
-          </v-btn>
+          <v-text-field
+            v-model="filters.search"
+            label="Search Employee"
+            density="compact"
+            variant="outlined"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+            hide-details
+            placeholder="Name or staff code..."
+          ></v-text-field>
         </v-col>
       </v-row>
     </v-card-text>
@@ -36,7 +42,7 @@
     <!-- Data Table -->
     <v-data-table
       :headers="headers"
-      :items="attendance"
+      :items="filteredAttendance"
       :loading="loading"
       :items-per-page="10"
       :items-per-page-options="[
@@ -55,12 +61,6 @@
             {{ item.employee.employee_number }}
           </div>
         </div>
-      </template>
-
-      <template v-slot:item.employee.employee_number="{ item }">
-        <v-chip size="small" variant="tonal">
-          {{ item.employee.employee_number }}
-        </v-chip>
       </template>
 
       <template v-slot:item.attendance_date="{ item }">
@@ -121,14 +121,14 @@
 
       <template v-slot:item.hours_worked="{ item }">
         <span>{{ formatHoursWorked(item.regular_hours) }}</span>
-        <span v-if="item.overtime_hours >= 1" class="text-warning">
-          +{{ Math.floor(item.overtime_hours) }}h OT
+        <span v-if="item.overtime_hours > 0" class="text-warning">
+          +{{ formatOvertimeHours(item.overtime_hours) }} OT
         </span>
       </template>
 
       <template v-slot:item.status="{ item }">
         <v-chip :color="getStatusColor(item.status)" size="small">
-          {{ item.status }}
+          {{ formatStatusLabel(item.status) }}
         </v-chip>
       </template>
 
@@ -212,7 +212,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, onUnmounted } from "vue";
+import { ref, reactive, onMounted, computed, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
@@ -237,11 +237,11 @@ const canApproveRole = computed(() =>
 const filters = reactive({
   date: new Date().toISOString().split("T")[0],
   status: null,
+  search: "",
 });
 
 const headers = [
   { title: "Employee", key: "employee", sortable: false },
-  { title: "Staff Code", key: "employee.employee_number", sortable: false },
   { title: "Date", key: "attendance_date" },
   { title: "Time In", key: "time_in" },
   { title: "Break Out", key: "break_start" },
@@ -280,6 +280,32 @@ const loadAttendance = async () => {
   }
 };
 
+// Filtered attendance based on search
+const filteredAttendance = computed(() => {
+  if (!filters.search) return attendance.value;
+  const q = filters.search.toLowerCase();
+  return attendance.value.filter((a) => {
+    const name = (a.employee?.full_name || "").toLowerCase();
+    const code = (a.employee?.employee_number || "").toLowerCase();
+    return name.includes(q) || code.includes(q);
+  });
+});
+
+// Auto-load when date or status changes
+watch(
+  () => filters.date,
+  (newDate) => {
+    if (newDate) loadAttendance();
+  },
+);
+
+watch(
+  () => filters.status,
+  () => {
+    loadAttendance();
+  },
+);
+
 // formatDate imported from @/utils/formatters
 
 const getStatusColor = (status) => {
@@ -307,6 +333,27 @@ const formatHoursWorked = (hours) => {
   } else {
     return `${hrs}h ${mins}m`;
   }
+};
+
+const formatOvertimeHours = (hours) => {
+  if (!hours || hours <= 0) return "";
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hrs === 0) return `${mins}m`;
+  if (mins === 0) return `${hrs}h`;
+  return `${hrs}h ${mins}m`;
+};
+
+const formatStatusLabel = (status) => {
+  const labels = {
+    present: "Present",
+    absent: "Absent",
+    late: "Late",
+    half_day: "Half Day",
+    on_leave: "On Leave",
+  };
+  return labels[status] || status;
 };
 
 const canEdit = (item) => {

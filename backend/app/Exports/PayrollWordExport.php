@@ -269,9 +269,9 @@ class PayrollWordExport
 
         $signatureTable->addRow(200);
         $signatureTable->addCell(3500)->addText('', $sigNameStyle);
-        $signatureTable->addCell(3500)->addText('PAICA CRISTEL MAE SUGABO', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText('JAMAICA CRISTEL MAE SUGABO', $sigNameStyle, ['alignment' => 'center']);
         $signatureTable->addCell(3500)->addText('ENGR. OSTRIC C. RIVERA, III', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText('ENG. ELISA MAY PARCON', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText('ENGR. ELISA MAY PARCON', $sigNameStyle, ['alignment' => 'center']);
 
         return $phpWord;
     }

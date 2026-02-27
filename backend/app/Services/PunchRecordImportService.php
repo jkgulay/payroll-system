@@ -241,8 +241,17 @@ class PunchRecordImportService
                 $timeIn = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $attendance->time_in);
                 $hoursAfterTimeIn = $timeIn->diffInHours($timestamp);
 
-                // If within configured hours after time_in, likely break start
-                if ($hoursAfterTimeIn >= $breakMinHours && $hoursAfterTimeIn <= $breakMaxHours) {
+                // Also check against scheduled time_in as fallback
+                // When an employee arrives very late, the break detection window shifts too far
+                // Using the scheduled time_in ensures lunch breaks are still detected correctly
+                $scheduledTimeIn = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $schedule['standard_time_in']);
+                $hoursAfterScheduledTimeIn = $scheduledTimeIn->diffInHours($timestamp);
+
+                // If within configured hours after EITHER actual or scheduled time_in, likely break start
+                $isBreakAfterActual = $hoursAfterTimeIn >= $breakMinHours && $hoursAfterTimeIn <= $breakMaxHours;
+                $isBreakAfterScheduled = $hoursAfterScheduledTimeIn >= $breakMinHours && $hoursAfterScheduledTimeIn <= $breakMaxHours;
+
+                if ($isBreakAfterActual || $isBreakAfterScheduled) {
                     $attendance->break_start = $timeString;
                 } else {
                     // Otherwise it's time_out (no automatic OT splitting for 2-punch scenarios)
@@ -315,11 +324,15 @@ class PunchRecordImportService
 
         // Only calculate hours if we have complete attendance (both time_in and time_out)
         if ($attendance->time_in && $attendance->time_out) {
+            // calculateHours() handles status internally (present/late/half_day)
+            // based on schedule, grace period, and half-day threshold rules.
+            // Do NOT call adjustAttendanceStatus() after this — it would overwrite
+            // the correct status (e.g., revert half_day back to present).
             $attendance->calculateHours();
+        } else {
+            // Incomplete attendance (no time_out) — apply fallback status logic
+            $this->adjustAttendanceStatus($attendance);
         }
-
-        // Auto-adjust status based on actual attendance
-        $this->adjustAttendanceStatus($attendance);
 
         return ['action' => $action, 'attendance' => $attendance->fresh()];
     }
@@ -342,10 +355,10 @@ class PunchRecordImportService
         }
 
         // If both time_in and time_out exist, check regular_hours to determine status
-        // Less than 5 hours = half_day, >= 5 hours = present
-        if ($attendance->regular_hours > 0 && $attendance->regular_hours < 5) {
+        $halfDayThreshold = (float) config('payroll.attendance.half_day_hours_threshold', 5.0);
+        if ($attendance->regular_hours > 0 && $attendance->regular_hours < $halfDayThreshold) {
             $attendance->status = 'half_day';
-        } elseif ($attendance->regular_hours >= 5) {
+        } elseif ($attendance->regular_hours >= $halfDayThreshold) {
             $attendance->status = 'present';
         }
 
@@ -372,7 +385,7 @@ class PunchRecordImportService
     {
         $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
         $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
-        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 0);
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
 
         if (!$employee || !$employee->project) {
             return [

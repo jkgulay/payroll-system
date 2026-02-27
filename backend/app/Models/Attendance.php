@@ -255,10 +255,15 @@ class Attendance extends Model
         $halfDayLateMinutes = (int) config('payroll.attendance.half_day_late_minutes', 61);
         $halfDayHoursThreshold = (float) config('payroll.attendance.half_day_hours_threshold', 5.0);
 
+        // Half-day late check: measure from STANDARD time-in (NOT grace-adjusted)
+        // Site: 7:30 + 61 min = 8:31 → half-day.  Admin: 8:00 + 61 min = 9:01 → half-day.
+        $rawStdTimeIn = Carbon::parse($dateString . ' ' . $schedule['standard_time_in']);
+        $rawLateMinutes = $timeIn->gt($rawStdTimeIn) ? $rawStdTimeIn->diffInMinutes($timeIn) : 0;
+
         // Detect half-day based on:
-        // 1. Late arrival exceeds threshold OR
+        // 1. Late arrival exceeds threshold (measured from standard time-in) OR
         // 2. Total regular hours worked is less than half-day threshold (e.g., less than 5 hours)
-        $isHalfDayDueToLate = $this->late_hours > 0 && ($this->late_hours * 60) >= $halfDayLateMinutes;
+        $isHalfDayDueToLate = $rawLateMinutes >= $halfDayLateMinutes;
         $isHalfDayDueToShortHours = $regularHours > 0 && $regularHours < $halfDayHoursThreshold;
 
         if ($isHalfDayDueToLate || $isHalfDayDueToShortHours) {
@@ -278,7 +283,8 @@ class Attendance extends Model
             // Half-day: calculate undertime as shortage from standard hours
             // This replaces the separate late/early undertime to avoid double penalty
             $shortage = $standardHours - $this->regular_hours;
-            $this->undertime_hours = max(0, round($shortage, 4));
+            // Round up to nearest 0.1 hour (company policy: undertime in 0.1h increments)
+            $this->undertime_hours = max(0, ceil($shortage * 10) / 10);
         } else {
             // Always use schedule-based calculation (project settings from Attendance Settings UI)
             $this->undertime_hours = $this->calculateUndertimeHoursForSchedule(
@@ -344,7 +350,7 @@ class Attendance extends Model
     {
         $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
         $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
-        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 0);
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
         $defaultHours = (float) config('payroll.standard_hours_per_day', 8);
 
         $project = $this->employee?->project;
@@ -407,12 +413,16 @@ class Attendance extends Model
         // Use grace period from project/department schedule (from attendance settings)
         $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
 
-        $undertimeMinutes = 0;
+        // Undertime is accumulated in 0.1-hour increments (ceil per component).
+        // Company policy: 3 min late past grace → 3/60 = 0.05h → ceil to 0.1h.
+        // Formula: rate ÷ 8 × undertime_hours  (0.1 undertime = 3 min late)
+        $undertimeHours = 0;
 
         // Calculate late arrival undertime (only if late MORE than grace period)
         $allowedTimeIn = $standardTimeIn->copy()->addMinutes($gracePeriodMinutes);
         if ($timeIn->gt($allowedTimeIn)) {
-            $undertimeMinutes += $allowedTimeIn->diffInMinutes($timeIn);
+            $lateMinutes = $allowedTimeIn->diffInMinutes($timeIn);
+            $undertimeHours += ceil($lateMinutes / 60 * 10) / 10;
         }
 
         // Calculate early departure undertime
@@ -425,11 +435,11 @@ class Attendance extends Model
             // If employee left before scheduled time out, count as undertime
             if ($timeOut->lt($standardTimeOut)) {
                 $earlyDepartureMinutes = $timeOut->diffInMinutes($standardTimeOut);
-                $undertimeMinutes += $earlyDepartureMinutes;
+                $undertimeHours += ceil($earlyDepartureMinutes / 60 * 10) / 10;
             }
         }
 
-        return round($undertimeMinutes / 60, 4);
+        return $undertimeHours;
     }
 
     /**

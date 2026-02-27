@@ -563,9 +563,8 @@ async function cleanDatabase() {
 
 .header-main {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-}
+  }
 
 .action-btn {
   display: inline-flex;

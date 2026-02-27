@@ -33,7 +33,7 @@
           <button
             v-if="canManualEntry"
             class="action-btn action-btn-secondary"
-            @click="openImportDialog"
+            @click="goToImport"
           >
             <v-icon size="20">mdi-upload</v-icon>
             <span>Import</span>
@@ -158,9 +158,6 @@
       @saved="handleSaved"
     />
 
-    <!-- Import Dialog -->
-    <ImportBiometricDialog v-model="importDialog" @imported="handleImported" />
-
     <!-- Mark Absent Dialog -->
     <MarkAbsentDialog v-model="markAbsentDialog" @marked="handleMarkedAbsent" />
 
@@ -209,7 +206,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useAuthStore } from "@/stores/auth";
 import attendanceService from "@/services/attendanceService";
@@ -219,7 +216,6 @@ import AttendanceSummary from "@/components/attendance/AttendanceSummary.vue";
 import MissingAttendance from "@/components/attendance/MissingAttendance.vue";
 import DeviceManagement from "@/components/attendance/DeviceManagement.vue";
 import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
-import ImportBiometricDialog from "@/components/attendance/ImportBiometricDialog.vue";
 import MarkAbsentDialog from "@/components/attendance/MarkAbsentDialog.vue";
 import GenerateDTRDialog from "@/components/attendance/GenerateDTRDialog.vue";
 import RejectDialog from "@/components/attendance/RejectDialog.vue";
@@ -227,6 +223,7 @@ import RejectDialog from "@/components/attendance/RejectDialog.vue";
 const toast = useToast();
 const authStore = useAuthStore();
 const route = useRoute();
+const router = useRouter();
 const tab = ref("list");
 const listView = ref(null);
 
@@ -240,7 +237,6 @@ const canApprove = computed(() =>
 
 // Dialogs
 const manualEntryDialog = ref(false);
-const importDialog = ref(false);
 const markAbsentDialog = ref(false);
 const dtrDialog = ref(false);
 const rejectDialog = ref(false);
@@ -259,6 +255,10 @@ const openManualEntryDialog = () => {
   manualEntryDialog.value = true;
 };
 
+const goToImport = () => {
+  router.push("/biometric-import");
+};
+
 const openEditDialog = (data) => {
   // Handle both old format (just attendance object) and new format (object with attendance and date)
   if (data && data.attendance) {
@@ -271,10 +271,6 @@ const openEditDialog = (data) => {
     prefilledDate.value = data?.attendance_date || null;
   }
   manualEntryDialog.value = true;
-};
-
-const openImportDialog = () => {
-  importDialog.value = true;
 };
 
 const openMarkAbsentDialog = () => {
@@ -295,14 +291,6 @@ const handleSaved = () => {
   toast.success("Attendance saved successfully");
   manualEntryDialog.value = false;
   selectedAttendance.value = null;
-  refreshData();
-};
-
-const handleImported = (result) => {
-  toast.success(
-    `Imported ${result.imported} records. Failed: ${result.failed}`,
-  );
-  importDialog.value = false;
   refreshData();
 };
 

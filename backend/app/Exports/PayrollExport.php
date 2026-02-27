@@ -306,9 +306,9 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->getStyle("A{$sigNameRow}:T{$sigNameRow}")->getFont()->setBold(true)->setSize(8);
 
                 $sigNameRow2 = $sigNameRow + 1;
-                $sheet->setCellValue("F{$sigNameRow2}", 'PAICA CRISTEL MAE SUGABO');
+                $sheet->setCellValue("F{$sigNameRow2}", 'JAMAICA CRISTEL MAE SUGABO');
                 $sheet->setCellValue("L{$sigNameRow2}", 'ENGR. OSTRIC C. RIVERA, III');
-                $sheet->setCellValue("Q{$sigNameRow2}", 'ENG. ELISA MAY PARCON');
+                $sheet->setCellValue("Q{$sigNameRow2}", 'ENGR. ELISA MAY PARCON');
                 $sheet->getStyle("A{$sigNameRow2}:T{$sigNameRow2}")->getFont()->setBold(true)->setSize(8);
 
                 // Set column widths

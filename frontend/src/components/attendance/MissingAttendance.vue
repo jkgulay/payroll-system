@@ -24,7 +24,7 @@
             hide-details
           ></v-select>
         </v-col>
-        <v-col cols="12" md="3">
+        <v-col cols="12" md="6">
           <v-text-field
             v-model="searchEmployee"
             label="Search Employee"
@@ -35,51 +35,46 @@
             hide-details
           ></v-text-field>
         </v-col>
-        <v-col cols="12" md="3">
-          <v-btn
-            color="#ED985F"
-            block
-            @click="loadMissingAttendance"
-            :loading="loading"
-          >
-            <v-icon start>mdi-magnify</v-icon>
-            Search
-          </v-btn>
-        </v-col>
       </v-row>
 
       <!-- Summary Cards -->
       <v-row v-if="summary" class="mt-4">
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="3">
+          <v-card flat class="text-center pa-2" color="blue-grey-lighten-5">
+            <div class="text-h5 font-weight-bold text-blue-grey">
+              {{ summary.total_employees }}
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              Total Active Employees
+            </div>
+          </v-card>
+        </v-col>
+        <v-col cols="12" md="3">
           <v-card flat class="text-center pa-2" color="blue-lighten-5">
             <div class="text-h5 font-weight-bold text-blue">
               {{ summary.total_attendance_records }}
             </div>
             <div class="text-caption text-medium-emphasis">
-              Total Attendance Records
+              With Attendance Records
             </div>
           </v-card>
         </v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="3">
           <v-card flat class="text-center pa-2" color="red-lighten-5">
             <div class="text-h5 font-weight-bold text-red">
               {{ summary.employees_with_issues }}
             </div>
             <div class="text-caption text-medium-emphasis">
-              Records With Missing Data
+              With Issues / Missing
             </div>
           </v-card>
         </v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="3">
           <v-card flat class="text-center pa-2" color="green-lighten-5">
             <div class="text-h5 font-weight-bold text-green">
-              {{
-                summary.total_attendance_records - summary.employees_with_issues
-              }}
+              {{ summary.total_employees - summary.employees_with_issues }}
             </div>
-            <div class="text-caption text-medium-emphasis">
-              Complete Records
-            </div>
+            <div class="text-caption text-medium-emphasis">Complete / OK</div>
           </v-card>
         </v-col>
       </v-row>
@@ -235,6 +230,7 @@
             $emit('edit-attendance', {
               attendance: item.attendance,
               date: selectedDate,
+              employee_id: item.employee_id,
             })
           "
         ></v-btn>
@@ -262,7 +258,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
 
@@ -278,6 +274,7 @@ const summary = ref(null);
 
 const filterOptions = [
   { title: "All Issues", value: "all" },
+  { title: "No Attendance Record", value: "no_record" },
   { title: "Missing Time Out", value: "missing_timeout" },
   { title: "Missing Break Out", value: "missing_breakout" },
   { title: "Missing OT Time Out", value: "missing_ot_timeout" },
@@ -332,6 +329,7 @@ const loadMissingAttendance = async () => {
 
     missingRecords.value = response.missing_records || [];
     summary.value = {
+      total_employees: response.total_employees,
       total_attendance_records: response.total_attendance_records,
       employees_with_issues: response.employees_with_issues,
     };
@@ -345,6 +343,7 @@ const loadMissingAttendance = async () => {
 };
 
 const getIssueColor = (issue) => {
+  if (issue.includes("No attendance record")) return "blue-grey";
   if (issue.includes("Missing time out")) return "error";
   if (issue.includes("Missing break out")) return "warning";
   if (issue.includes("Missing OT")) return "orange";
@@ -352,11 +351,19 @@ const getIssueColor = (issue) => {
 };
 
 const getIssueIcon = (issue) => {
+  if (issue.includes("No attendance record")) return "mdi-account-off";
   if (issue.includes("Missing time out")) return "mdi-logout-variant";
   if (issue.includes("Missing break out")) return "mdi-coffee-off";
   if (issue.includes("Missing OT")) return "mdi-clock-alert";
   return "mdi-alert-circle";
 };
+
+// Auto-fetch when date or filter type changes
+watch([selectedDate, filterType], () => {
+  if (selectedDate.value) {
+    loadMissingAttendance();
+  }
+});
 
 onMounted(() => {
   loadMissingAttendance();
