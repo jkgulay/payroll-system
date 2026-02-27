@@ -27,7 +27,7 @@ return [
     'attendance' => [
         'standard_time_in' => env('PAYROLL_STANDARD_TIME_IN', '07:30'),
         'standard_time_out' => env('PAYROLL_STANDARD_TIME_OUT', '17:00'),
-        'grace_period_minutes' => env('PAYROLL_GRACE_PERIOD', 1),
+        'grace_period_minutes' => env('PAYROLL_GRACE_PERIOD', 3),
         'half_day_late_minutes' => env('PAYROLL_HALF_DAY_LATE_MINUTES', 61),
         // Hours threshold below which attendance is considered half-day (e.g., less than 5 hours = half day)
         'half_day_hours_threshold' => env('PAYROLL_HALF_DAY_HOURS_THRESHOLD', 5.0),
@@ -105,5 +105,17 @@ return [
     */
 
     'rest_day' => env('PAYROLL_REST_DAY', 0), // Default: Sunday
+
+    /*
+    |--------------------------------------------------------------------------
+    | Working Days Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Number of working days per payroll period.
+    |
+    */
+
+    'working_days_per_month' => env('PAYROLL_WORKING_DAYS_PER_MONTH', 22),
+    'working_days_per_semi_month' => env('PAYROLL_WORKING_DAYS_PER_SEMI_MONTH', 11),
 
 ];

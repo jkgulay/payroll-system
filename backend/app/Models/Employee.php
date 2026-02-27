@@ -170,6 +170,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeBonus::class);
     }
 
+    public function mealAllowanceItems(): HasMany
+    {
+        return $this->hasMany(\App\Models\MealAllowanceItem::class);
+    }
+
     public function deductions(): HasMany
     {
         return $this->hasMany(EmployeeDeduction::class);

@@ -729,54 +729,65 @@ class AttendanceController extends Controller
     {
         $validated = $request->validate([
             'date' => 'required|date',
-            'type' => 'nullable|in:missing_timeout,missing_breakout,missing_ot_timeout,all',
+            'type' => 'nullable|in:missing_timeout,missing_breakout,missing_ot_timeout,no_record,all',
         ]);
 
         $date = $validated['date'];
         $type = $validated['type'] ?? 'all';
 
-        // Get attendance records for the specified date with employee data
-        $attendances = Attendance::with(['employee.project', 'employee.positionRate'])
-            ->whereDate('attendance_date', $date)
-            ->whereHas('employee', function ($query) {
-                $query->where('is_active', true)
-                    ->where('activity_status', 'active');
-            })
+        // Get ALL active employees
+        $allActiveEmployees = \App\Models\Employee::with(['project', 'positionRate'])
+            ->where('is_active', true)
+            ->where('activity_status', 'active')
             ->get();
 
-        $missingRecords = [];
+        // Get attendance records for the specified date
+        $attendances = Attendance::whereDate('attendance_date', $date)
+            ->whereIn('employee_id', $allActiveEmployees->pluck('id'))
+            ->get()
+            ->keyBy('employee_id');
 
-        foreach ($attendances as $attendance) {
+        $missingRecords = [];
+        $totalWithAttendance = $attendances->count();
+
+        foreach ($allActiveEmployees as $employee) {
+            $attendance = $attendances->get($employee->id);
             $issues = [];
 
-            // Check for missing time out (has time_in but no time_out)
-            if (($type === 'all' || $type === 'missing_timeout')
-                && $attendance->time_in
-                && !$attendance->time_out
-                && $attendance->status !== 'absent'
-            ) {
-                $issues[] = 'Missing time out';
-            }
+            if (!$attendance) {
+                // Employee has NO attendance record for this date
+                if ($type === 'all' || $type === 'no_record') {
+                    $issues[] = 'No attendance record';
+                }
+            } else {
+                // Check for missing time out (has time_in but no time_out)
+                if (($type === 'all' || $type === 'missing_timeout')
+                    && $attendance->time_in
+                    && !$attendance->time_out
+                    && $attendance->status !== 'absent'
+                ) {
+                    $issues[] = 'Missing time out';
+                }
 
-            // Check for missing break end (has break_start but no break_end)
-            if (($type === 'all' || $type === 'missing_breakout')
-                && $attendance->break_start
-                && !$attendance->break_end
-            ) {
-                $issues[] = 'Missing break out';
-            }
+                // Check for missing break end (has break_start but no break_end)
+                if (($type === 'all' || $type === 'missing_breakout')
+                    && $attendance->break_start
+                    && !$attendance->break_end
+                ) {
+                    $issues[] = 'Missing break out';
+                }
 
-            // Check for missing OT time out (has ot_time_in but no ot_time_out)
-            if (($type === 'all' || $type === 'missing_ot_timeout')
-                && $attendance->ot_time_in
-                && !$attendance->ot_time_out
-            ) {
-                $issues[] = 'Missing OT time out';
+                // Check for missing OT time out (has ot_time_in but no ot_time_out)
+                if (($type === 'all' || $type === 'missing_ot_timeout')
+                    && $attendance->ot_time_in
+                    && !$attendance->ot_time_out
+                ) {
+                    $issues[] = 'Missing OT time out';
+                }
             }
 
             // If there are any issues, add to missing records
             if (!empty($issues)) {
-                $employee = $attendance->employee;
                 $missingRecords[] = [
                     'employee_id' => $employee->id,
                     'employee_number' => $employee->employee_number,
@@ -784,10 +795,10 @@ class AttendanceController extends Controller
                     'position' => $employee->positionRate?->position_name ?? $employee->position ?? 'N/A',
                     'department' => $employee->project?->name ?? $employee->department ?? 'N/A',
                     'issues' => $issues,
-                    'attendance' => [
+                    'attendance' => $attendance ? [
                         'id' => $attendance->id,
-                        'employee_id' => $employee->id, // Added for edit dialog
-                        'attendance_date' => $attendance->attendance_date, // Added for edit dialog
+                        'employee_id' => $employee->id,
+                        'attendance_date' => $attendance->attendance_date,
                         'time_in' => $attendance->time_in,
                         'time_out' => $attendance->time_out,
                         'break_start' => $attendance->break_start,
@@ -795,14 +806,15 @@ class AttendanceController extends Controller
                         'ot_time_in' => $attendance->ot_time_in,
                         'ot_time_out' => $attendance->ot_time_out,
                         'status' => $attendance->status,
-                    ],
+                    ] : null,
                 ];
             }
         }
 
         return response()->json([
             'date' => $date,
-            'total_attendance_records' => $attendances->count(),
+            'total_employees' => $allActiveEmployees->count(),
+            'total_attendance_records' => $totalWithAttendance,
             'employees_with_issues' => count($missingRecords),
             'missing_records' => $missingRecords,
         ]);

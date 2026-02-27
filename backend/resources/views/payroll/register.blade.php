@@ -238,13 +238,13 @@
             <tr>
                 <td style="width: 25%;"></td>
                 <td style="width: 25%;">
-                    <div class="footer-signature-name">PAICA CRISTEL MAE SUGABO</div>
+                    <div class="footer-signature-name">JAMAICA CRISTEL MAE SUGABO</div>
                 </td>
                 <td style="width: 25%;">
                     <div class="footer-signature-name">ENGR. OSTRIC C. RIVERA, III</div>
                 </td>
                 <td style="width: 25%;">
-                    <div class="footer-signature-name">ENG. ELISA MAY PARCON</div>
+                    <div class="footer-signature-name">ENGR. ELISA MAY PARCON</div>
                 </td>
             </tr>
         </table>
@@ -331,10 +331,10 @@
             </tr>
             @php
             $totalUndertimeDeduction = $items->sum(function($item) {
-                return $item->undertime_deduction ?? 0;
+            return $item->undertime_deduction ?? 0;
             });
             $totalAmount = $items->sum(function($item) {
-                return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+            return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             });
             @endphp
             <tr class="total-row">
@@ -367,7 +367,11 @@
     @if($filterInfo)
     <div class="project-info">
         <div><strong>{{ strtoupper(explode(':', $filterInfo)[0]) }}:</strong> {{ explode(':', $filterInfo)[1] ?? '' }}</div>
+        @if(str_starts_with($filterInfo, 'Employee:'))
+        <div><strong>POSITION:</strong> {{ $payroll->items->first()?->employee?->position ?? 'N/A' }}</div>
+        @else
         <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee?->project?->description ?? 'N/A' }}</div>
+        @endif
     </div>
     @else
     <div class="project-info">
@@ -439,10 +443,10 @@
             </tr>
             @php
             $totalUndertimeDeduction = $payroll->items->sum(function($item) {
-                return $item->undertime_deduction ?? 0;
+            return $item->undertime_deduction ?? 0;
             });
             $totalAmount = $payroll->items->sum(function($item) {
-                return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+            return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
             });
             @endphp
             <tr class="total-row">
@@ -498,7 +502,7 @@
     <div class="signature-section" style="margin-top: 40px;">
         <div class="signature-box">
             <div class="signature-line"></div>
-            <div class="signature-name">PAICA CRISTEL MAE SUGABO</div>
+            <div class="signature-name">JAMAICA CRISTEL MAE SUGABOO</div>
         </div>
         <div class="signature-box">
             <div class="signature-line"></div>
@@ -506,7 +510,7 @@
         </div>
         <div class="signature-box">
             <div class="signature-line"></div>
-            <div class="signature-name">ENG. ELISA MAY PARCON</div>
+            <div class="signature-name">ENGR. ELISA MAY PARCON</div>
         </div>
     </div>
 </body>

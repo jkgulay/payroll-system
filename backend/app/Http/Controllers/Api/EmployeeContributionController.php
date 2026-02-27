@@ -247,81 +247,88 @@ class EmployeeContributionController extends Controller
 
     /**
      * Compute SSS contribution based on 2025 table
-     * Returns monthly employee share
+     * Returns semi-monthly employee share (per cutoff amount)
      */
     private function computeSSS(float $monthlySalary): float
     {
-        if ($monthlySalary < 4250) return 180.00;
-        if ($monthlySalary < 4750) return 202.50;
-        if ($monthlySalary < 5250) return 225.00;
-        if ($monthlySalary < 5750) return 247.50;
-        if ($monthlySalary < 6250) return 270.00;
-        if ($monthlySalary < 6750) return 292.50;
-        if ($monthlySalary < 7250) return 315.00;
-        if ($monthlySalary < 7750) return 337.50;
-        if ($monthlySalary < 8250) return 360.00;
-        if ($monthlySalary < 8750) return 382.50;
-        if ($monthlySalary < 9250) return 405.00;
-        if ($monthlySalary < 9750) return 427.50;
-        if ($monthlySalary < 10250) return 450.00;
-        if ($monthlySalary < 10750) return 472.50;
-        if ($monthlySalary < 11250) return 495.00;
-        if ($monthlySalary < 11750) return 517.50;
-        if ($monthlySalary < 12250) return 540.00;
-        if ($monthlySalary < 12750) return 562.50;
-        if ($monthlySalary < 13250) return 585.00;
-        if ($monthlySalary < 13750) return 607.50;
-        if ($monthlySalary < 14250) return 630.00;
-        if ($monthlySalary < 14750) return 652.50;
-        if ($monthlySalary < 15250) return 675.00;
-        if ($monthlySalary < 15750) return 697.50;
-        if ($monthlySalary < 16250) return 720.00;
-        if ($monthlySalary < 16750) return 742.50;
-        if ($monthlySalary < 17250) return 765.00;
-        if ($monthlySalary < 17750) return 787.50;
-        if ($monthlySalary < 18250) return 810.00;
-        if ($monthlySalary < 18750) return 832.50;
-        if ($monthlySalary < 19250) return 855.00;
-        if ($monthlySalary < 19750) return 877.50;
-        if ($monthlySalary < 20250) return 900.00;
-        if ($monthlySalary < 20750) return 922.50;
-        if ($monthlySalary < 21250) return 945.00;
-        if ($monthlySalary < 21750) return 967.50;
-        if ($monthlySalary < 22250) return 990.00;
-        if ($monthlySalary < 22750) return 1012.50;
-        if ($monthlySalary < 23250) return 1035.00;
-        if ($monthlySalary < 23750) return 1057.50;
-        if ($monthlySalary < 24250) return 1080.00;
-        if ($monthlySalary < 24750) return 1102.50;
-        if ($monthlySalary >= 25000) return 1125.00;
+        $monthly = 0;
+        if ($monthlySalary < 4250) $monthly = 180.00;
+        elseif ($monthlySalary < 4750) $monthly = 202.50;
+        elseif ($monthlySalary < 5250) $monthly = 225.00;
+        elseif ($monthlySalary < 5750) $monthly = 247.50;
+        elseif ($monthlySalary < 6250) $monthly = 270.00;
+        elseif ($monthlySalary < 6750) $monthly = 292.50;
+        elseif ($monthlySalary < 7250) $monthly = 315.00;
+        elseif ($monthlySalary < 7750) $monthly = 337.50;
+        elseif ($monthlySalary < 8250) $monthly = 360.00;
+        elseif ($monthlySalary < 8750) $monthly = 382.50;
+        elseif ($monthlySalary < 9250) $monthly = 405.00;
+        elseif ($monthlySalary < 9750) $monthly = 427.50;
+        elseif ($monthlySalary < 10250) $monthly = 450.00;
+        elseif ($monthlySalary < 10750) $monthly = 472.50;
+        elseif ($monthlySalary < 11250) $monthly = 495.00;
+        elseif ($monthlySalary < 11750) $monthly = 517.50;
+        elseif ($monthlySalary < 12250) $monthly = 540.00;
+        elseif ($monthlySalary < 12750) $monthly = 562.50;
+        elseif ($monthlySalary < 13250) $monthly = 585.00;
+        elseif ($monthlySalary < 13750) $monthly = 607.50;
+        elseif ($monthlySalary < 14250) $monthly = 630.00;
+        elseif ($monthlySalary < 14750) $monthly = 652.50;
+        elseif ($monthlySalary < 15250) $monthly = 675.00;
+        elseif ($monthlySalary < 15750) $monthly = 697.50;
+        elseif ($monthlySalary < 16250) $monthly = 720.00;
+        elseif ($monthlySalary < 16750) $monthly = 742.50;
+        elseif ($monthlySalary < 17250) $monthly = 765.00;
+        elseif ($monthlySalary < 17750) $monthly = 787.50;
+        elseif ($monthlySalary < 18250) $monthly = 810.00;
+        elseif ($monthlySalary < 18750) $monthly = 832.50;
+        elseif ($monthlySalary < 19250) $monthly = 855.00;
+        elseif ($monthlySalary < 19750) $monthly = 877.50;
+        elseif ($monthlySalary < 20250) $monthly = 900.00;
+        elseif ($monthlySalary < 20750) $monthly = 922.50;
+        elseif ($monthlySalary < 21250) $monthly = 945.00;
+        elseif ($monthlySalary < 21750) $monthly = 967.50;
+        elseif ($monthlySalary < 22250) $monthly = 990.00;
+        elseif ($monthlySalary < 22750) $monthly = 1012.50;
+        elseif ($monthlySalary < 23250) $monthly = 1035.00;
+        elseif ($monthlySalary < 23750) $monthly = 1057.50;
+        elseif ($monthlySalary < 24250) $monthly = 1080.00;
+        elseif ($monthlySalary < 24750) $monthly = 1102.50;
+        elseif ($monthlySalary >= 25000) $monthly = 1125.00;
+        else $monthly = 1125.00;
 
-        return 1125.00;
+        // Return semi-monthly (per cutoff) amount
+        return round($monthly / 2, 2);
     }
 
     /**
      * Compute PhilHealth contribution
-     * Returns monthly employee share (2.25% of salary)
+     * Returns semi-monthly employee share (per cutoff amount)
      */
     private function computePhilHealth(float $monthlySalary): float
     {
         // PhilHealth 2024-2026: 4.5% of monthly salary (2.25% employee share)
         $contribution = $monthlySalary * 0.045;
         $employeeShare = $contribution / 2;
+        $semiMonthlyShare = $employeeShare / 2;
 
-        // Minimum: ₱225, Maximum: ₱1,800 per month
-        return round(min(max($employeeShare, 225), 1800), 2);
+        // Minimum: ₱112.50, Maximum: ₱900 per semi-month
+        return round(min(max($semiMonthlyShare, 112.50), 900), 2);
     }
 
     /**
      * Compute Pag-IBIG contribution
-     * Returns monthly employee share (2% of salary, max ₱200)
+     * Returns semi-monthly employee share (per cutoff amount)
      */
     private function computePagibig(float $monthlySalary): float
     {
         // Pag-IBIG: Employee share is 2% of monthly salary
         $contribution = $monthlySalary * 0.02;
+        $semiMonthlyContribution = $contribution / 2;
 
-        // Minimum: ₱50/month, Maximum: ₱200/month
-        return round(min(max($contribution, 50), 200), 2);
+        // Per HDMF 2024 rules:
+        // Maximum monthly employee contribution = ₱200 → semi-monthly = ₱100
+        // Minimum semi-monthly = ₱25 (₱50/month floor)
+        return round(min(max($semiMonthlyContribution, 25), 100), 2);
     }
 }
