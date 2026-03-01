@@ -345,6 +345,60 @@
               class="mb-4"
             ></v-checkbox>
 
+            <!-- Section 3: Government Contributions -->
+            <v-col cols="12" class="px-0 mt-5">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-bank</v-icon>
+                </div>
+                <h3 class="section-title">Government Contributions</h3>
+              </div>
+            </v-col>
+
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                <strong>Note:</strong> Select which government contributions to
+                deduct for this payroll period. Unchecked contributions will not
+                be deducted, even if enabled for the employee.
+              </div>
+            </v-alert>
+
+            <v-row>
+              <v-col cols="4">
+                <v-checkbox
+                  v-model="formData.deduct_sss"
+                  label="SSS"
+                  prepend-icon="mdi-shield-account"
+                  hint="Social Security System"
+                  persistent-hint
+                  color="#ed985f"
+                ></v-checkbox>
+              </v-col>
+              <v-col cols="4">
+                <v-checkbox
+                  v-model="formData.deduct_philhealth"
+                  label="PhilHealth"
+                  prepend-icon="mdi-medical-bag"
+                  hint="Philippine Health Insurance"
+                  persistent-hint
+                  color="#ed985f"
+                ></v-checkbox>
+              </v-col>
+              <v-col cols="4">
+                <v-checkbox
+                  v-model="formData.deduct_pagibig"
+                  label="Pag-IBIG"
+                  prepend-icon="mdi-home-account"
+                  hint="Home Development Mutual Fund"
+                  persistent-hint
+                  color="#ed985f"
+                ></v-checkbox>
+              </v-col>
+            </v-row>
+
             <v-textarea
               v-model="formData.notes"
               label="Notes (Optional)"
@@ -667,6 +721,9 @@ const formData = ref({
   payment_date: "",
   notes: "",
   has_attendance: false,
+  deduct_sss: true,
+  deduct_philhealth: true,
+  deduct_pagibig: true,
 });
 
 const headers = [
@@ -713,6 +770,9 @@ function openCreateDialog() {
     payment_date: "",
     notes: "",
     has_attendance: false,
+    deduct_sss: true,
+    deduct_philhealth: true,
+    deduct_pagibig: true,
   };
   dialog.value = true;
 }
@@ -726,6 +786,9 @@ function editPayroll(item) {
     period_end: item.period_end,
     payment_date: item.payment_date,
     notes: item.notes || "",
+    deduct_sss: item.deduct_sss !== false,
+    deduct_philhealth: item.deduct_philhealth !== false,
+    deduct_pagibig: item.deduct_pagibig !== false,
   };
   dialog.value = true;
 }
@@ -746,6 +809,9 @@ async function savePayroll(forceCreate = false) {
     period_end: formData.value.period_end,
     payment_date: formData.value.payment_date,
     notes: formData.value.notes,
+    deduct_sss: formData.value.deduct_sss,
+    deduct_philhealth: formData.value.deduct_philhealth,
+    deduct_pagibig: formData.value.deduct_pagibig,
   };
 
   // Add attendance filter if enabled
