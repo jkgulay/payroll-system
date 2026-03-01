@@ -625,26 +625,30 @@ class PayrollService
         // Calculate government deductions (only if enabled for the employee)
         // Use custom contributions if set, otherwise calculate based on salary
         // IMPORTANT: Skip government contributions if gross pay is ₱0 or negative
+        // Also respect payroll-level deduction flags
         $sss = 0;
         $philhealth = 0;
         $pagibig = 0;
 
         if ($grossPay > 0) {
-            if ($employee->has_sss) {
+            // SSS: Check both employee flag AND payroll flag
+            if ($employee->has_sss && ($payroll->deduct_sss ?? true)) {
                 // Use custom SSS if set (already semi-monthly amount), otherwise calculate
                 $sss = $employee->custom_sss !== null
                     ? (float) $employee->custom_sss
                     : $this->calculateSSS($monthlyBasicSalary);
             }
 
-            if ($employee->has_philhealth) {
+            // PhilHealth: Check both employee flag AND payroll flag
+            if ($employee->has_philhealth && ($payroll->deduct_philhealth ?? true)) {
                 // Use custom PhilHealth if set (already semi-monthly amount), otherwise calculate
                 $philhealth = $employee->custom_philhealth !== null
                     ? (float) $employee->custom_philhealth
                     : $this->calculatePhilHealth($monthlyBasicSalary);
             }
 
-            if ($employee->has_pagibig) {
+            // Pag-IBIG: Check both employee flag AND payroll flag
+            if ($employee->has_pagibig && ($payroll->deduct_pagibig ?? true)) {
                 // Use custom Pag-IBIG if set (already semi-monthly amount), otherwise calculate
                 $pagibig = $employee->custom_pagibig !== null
                     ? (float) $employee->custom_pagibig

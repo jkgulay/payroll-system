@@ -24,6 +24,9 @@ class Payroll extends Model
         'total_deductions',
         'total_net',
         'notes',
+        'deduct_sss',
+        'deduct_philhealth',
+        'deduct_pagibig',
         'created_by',
         'finalized_by',
         'finalized_at',
@@ -40,6 +43,9 @@ class Payroll extends Model
         'total_gross' => 'decimal:2',
         'total_deductions' => 'decimal:2',
         'total_net' => 'decimal:2',
+        'deduct_sss' => 'boolean',
+        'deduct_philhealth' => 'boolean',
+        'deduct_pagibig' => 'boolean',
     ];
 
     public function items(): HasMany

@@ -188,6 +188,10 @@ class PayrollController extends Controller
             'period_end' => 'required|date|after_or_equal:period_start',
             'payment_date' => 'required|date',
             'notes' => 'nullable|string',
+            // Government deduction flags
+            'deduct_sss' => 'nullable|boolean',
+            'deduct_philhealth' => 'nullable|boolean',
+            'deduct_pagibig' => 'nullable|boolean',
             // Only employees with attendance
             'has_attendance' => 'nullable|boolean',
             // Allow force create to bypass validation
@@ -219,6 +223,9 @@ class PayrollController extends Controller
                 'status' => 'draft',
                 'created_by' => auth()->id(),
                 'notes' => $validated['notes'] ?? null,
+                'deduct_sss' => $validated['deduct_sss'] ?? true,
+                'deduct_philhealth' => $validated['deduct_philhealth'] ?? true,
+                'deduct_pagibig' => $validated['deduct_pagibig'] ?? true,
             ]);
 
             // Explicitly save and ensure the ID is generated before proceeding
@@ -300,6 +307,9 @@ class PayrollController extends Controller
             'period_end' => 'sometimes|date|after_or_equal:' . ($request->has('period_start') ? 'period_start' : $payroll->period_start->format('Y-m-d')),
             'payment_date' => 'sometimes|date',
             'notes' => 'nullable|string',
+            'deduct_sss' => 'sometimes|boolean',
+            'deduct_philhealth' => 'sometimes|boolean',
+            'deduct_pagibig' => 'sometimes|boolean',
         ]);
 
         $oldValues = $payroll->toArray();
