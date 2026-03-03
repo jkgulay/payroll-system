@@ -20,7 +20,7 @@ class ChatController extends Controller
     }
 
     /**
-     * Handle chat messages
+     * Handle chat messages with AI function calling
      */
     public function chat(Request $request)
     {
@@ -44,14 +44,17 @@ class ChatController extends Controller
                 ], 200);
             }
 
-            // Analyze query intent (now more robust)
+            // Analyze query intent for logging/analytics
             $intent = $this->aiService->analyzeIntent($userMessage);
 
-            // Get relevant database context
-            $databaseContext = $this->dbContextService->getContextForQuery($userMessage, $intent);
+            Log::info('Chat Request', [
+                'message' => substr($userMessage, 0, 100),
+                'intent' => $intent,
+            ]);
 
-            // Get AI response
-            $response = $this->aiService->chat($userMessage, $conversationHistory, $databaseContext);
+            // The AIService now handles function calling internally
+            // It will query the database as needed through ChatToolService
+            $response = $this->aiService->chat($userMessage, $conversationHistory);
 
             if ($response['success']) {
                 return response()->json([
@@ -59,6 +62,7 @@ class ChatController extends Controller
                     'message' => $response['message'],
                     'intent' => $intent,
                     'usage' => $response['usage'] ?? null,
+                    'tool_iterations' => $response['iterations'] ?? 1,
                 ], 200);
             }
 
