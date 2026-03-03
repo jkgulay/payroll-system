@@ -10,17 +10,21 @@ class AIService
     protected $apiKey;
     protected $apiUrl;
     protected $model;
+    protected $chatToolService;
+    protected $maxToolIterations = 5;
 
-    public function __construct()
+    public function __construct(?ChatToolService $chatToolService = null)
     {
         $this->apiKey = env('OPENROUTER_API_KEY');
         $this->apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-        // Using Llama 3.3 70B - free and very powerful
-        $this->model = 'meta-llama/llama-3.3-70b-instruct:free';
+        // Using a model that supports function calling well
+        // Options: 'anthropic/claude-3-haiku', 'openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-instruct:free'
+        $this->model = env('OPENROUTER_MODEL', 'anthropic/claude-3.5-haiku');
+        $this->chatToolService = $chatToolService ?? new ChatToolService();
     }
 
     /**
-     * Send a chat message to the AI with context
+     * Send a chat message to the AI with function calling support
      */
     public function chat(string $userMessage, array $conversationHistory = [], array $databaseContext = [])
     {
@@ -44,8 +48,8 @@ class AIService
                 ];
             }
 
-            // Build system prompt with database context
-            $systemPrompt = $this->buildSystemPrompt($databaseContext);
+            // Build system prompt
+            $systemPrompt = $this->buildSystemPromptForTools();
 
             // Prepare messages
             $messages = [
@@ -69,57 +73,17 @@ class AIService
                 'content' => $userMessage
             ];
 
-            Log::info('AI Request', [
+            // Get tool definitions
+            $tools = $this->chatToolService->getToolDefinitions();
+
+            Log::info('AI Request with Tools', [
                 'model' => $this->model,
                 'message' => substr($userMessage, 0, 100),
-                'has_context' => !empty($databaseContext),
+                'tools_count' => count($tools),
             ]);
 
-            // Make API request
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
-                'HTTP-Referer' => env('APP_URL'),
-                'X-Title' => env('APP_NAME'),
-                'Content-Type' => 'application/json',
-            ])->timeout(60)->post($this->apiUrl, [
-                'model' => $this->model,
-                'messages' => $messages,
-                'temperature' => 0.3, // Lower for more focused, consistent responses
-                'max_tokens' => 2000, // Increased for more detailed responses
-                'top_p' => 0.9,
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                Log::info('AI Response Success', [
-                    'response_length' => strlen($data['choices'][0]['message']['content'] ?? ''),
-                ]);
-                
-                return [
-                    'success' => true,
-                    'message' => $data['choices'][0]['message']['content'] ?? 'No response',
-                    'usage' => $data['usage'] ?? null,
-                ];
-            }
-
-            $errorBody = $response->body();
-            $statusCode = $response->status();
-            
-            Log::error('OpenRouter API Error', [
-                'status' => $statusCode,
-                'body' => $errorBody,
-                'model' => $this->model,
-            ]);
-
-            // Try to parse error message
-            $errorData = json_decode($errorBody, true);
-            $errorMessage = $errorData['error']['message'] ?? 'Unable to connect to AI service. Please try again.';
-
-            return [
-                'success' => false,
-                'message' => $errorMessage,
-            ];
+            // Execute with tool calling loop
+            return $this->executeWithTools($messages, $tools);
 
         } catch (\Exception $e) {
             Log::error('AI Service Exception', [
@@ -136,65 +100,154 @@ class AIService
     }
 
     /**
-     * Build system prompt with database context
+     * Execute API request with tool calling loop
      */
-    protected function buildSystemPrompt(array $databaseContext): string
+    protected function executeWithTools(array $messages, array $tools): array
     {
-        $prompt = "You are an AI assistant for a Construction Payroll System called 'GIOVANNI CONSTRUCTION'. ";
+        $iteration = 0;
+        $totalUsage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
+
+        while ($iteration < $this->maxToolIterations) {
+            $iteration++;
+
+            // Make API request
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'HTTP-Referer' => env('APP_URL'),
+                'X-Title' => env('APP_NAME'),
+                'Content-Type' => 'application/json',
+            ])->timeout(60)->post($this->apiUrl, [
+                'model' => $this->model,
+                'messages' => $messages,
+                'tools' => $tools,
+                'tool_choice' => 'auto',
+                'temperature' => 0.3,
+                'max_tokens' => 2000,
+                'top_p' => 0.9,
+            ]);
+
+            if (!$response->successful()) {
+                $errorBody = $response->body();
+                $statusCode = $response->status();
+                
+                Log::error('OpenRouter API Error', [
+                    'status' => $statusCode,
+                    'body' => $errorBody,
+                    'model' => $this->model,
+                ]);
+
+                $errorData = json_decode($errorBody, true);
+                $errorMessage = $errorData['error']['message'] ?? 'Unable to connect to AI service.';
+
+                return [
+                    'success' => false,
+                    'message' => $errorMessage,
+                ];
+            }
+
+            $data = $response->json();
+            
+            // Accumulate usage
+            if (isset($data['usage'])) {
+                $totalUsage['prompt_tokens'] += $data['usage']['prompt_tokens'] ?? 0;
+                $totalUsage['completion_tokens'] += $data['usage']['completion_tokens'] ?? 0;
+                $totalUsage['total_tokens'] += $data['usage']['total_tokens'] ?? 0;
+            }
+
+            $choice = $data['choices'][0] ?? null;
+            if (!$choice) {
+                return ['success' => false, 'message' => 'No response from AI'];
+            }
+
+            $message = $choice['message'];
+            $finishReason = $choice['finish_reason'] ?? 'stop';
+
+            // Check if the model wants to call tools
+            if ($finishReason === 'tool_calls' || !empty($message['tool_calls'])) {
+                Log::info('AI Tool Calls', [
+                    'iteration' => $iteration,
+                    'tool_calls' => count($message['tool_calls'] ?? []),
+                ]);
+
+                // Add assistant message with tool calls to conversation
+                $messages[] = $message;
+
+                // Execute each tool call
+                foreach ($message['tool_calls'] as $toolCall) {
+                    $toolName = $toolCall['function']['name'];
+                    $arguments = json_decode($toolCall['function']['arguments'], true) ?? [];
+
+                    Log::info('Executing Tool', [
+                        'tool' => $toolName,
+                        'arguments' => $arguments,
+                    ]);
+
+                    // Execute the tool
+                    $toolResult = $this->chatToolService->executeTool($toolName, $arguments);
+
+                    // Add tool result to messages
+                    $messages[] = [
+                        'role' => 'tool',
+                        'tool_call_id' => $toolCall['id'],
+                        'content' => json_encode($toolResult, JSON_PRETTY_PRINT),
+                    ];
+                }
+
+                // Continue loop to get final response
+                continue;
+            }
+
+            // No tool calls, return the final response
+            Log::info('AI Response Success', [
+                'iterations' => $iteration,
+                'response_length' => strlen($message['content'] ?? ''),
+                'total_usage' => $totalUsage,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => $message['content'] ?? 'No response',
+                'usage' => $totalUsage,
+                'iterations' => $iteration,
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => 'Maximum tool iterations reached. Please try a simpler question.',
+        ];
+    }
+
+    /**
+     * Build system prompt optimized for tool usage
+     */
+    protected function buildSystemPromptForTools(): string
+    {
+        $prompt = "You are an AI assistant for 'GIOVANNI CONSTRUCTION' Payroll System. ";
         $prompt .= "You help HR administrators and managers with payroll, employee, attendance, and leave management queries.\n\n";
         
-        $prompt .= "CORE CAPABILITIES:\n";
-        $prompt .= "1. Answer questions about employees, payroll, attendance, leaves, and system operations\n";
-        $prompt .= "2. Analyze data from the database context provided\n";
-        $prompt .= "3. Calculate and explain payroll-related computations\n";
-        $prompt .= "4. Provide guidance on HR processes and policies\n";
-        $prompt .= "5. Generate summaries and reports based on data\n\n";
+        $prompt .= "AVAILABLE TOOLS:\n";
+        $prompt .= "You have access to database query tools to get real-time information. USE THESE TOOLS to answer questions accurately.\n\n";
+        
+        $prompt .= "WHEN TO USE TOOLS:\n";
+        $prompt .= "- Questions about employee counts, details, or searches → use get_employee_statistics or search_employees\n";
+        $prompt .= "- Questions about payroll totals, expenses, or records → use get_payroll_summary or calculate_payroll_totals\n";
+        $prompt .= "- Questions about attendance → use get_attendance_summary\n";
+        $prompt .= "- Questions about leaves → use get_leave_information\n";
+        $prompt .= "- Questions about projects → use get_project_summary\n";
+        $prompt .= "- Questions about salaries → use get_salary_information\n";
+        $prompt .= "- Questions about SSS, PhilHealth, Pag-IBIG → use get_government_contributions\n\n";
         
         $prompt .= "RESPONSE GUIDELINES:\n";
-        $prompt .= "- ALWAYS provide a helpful answer, even for simple questions\n";
-        $prompt .= "- Understand user intent, not just exact wording (be flexible with grammar/typos)\n";
-        $prompt .= "- When asked \"how many\" or counts, provide clear numbers from the database context\n";
-        $prompt .= "- For simple queries like 'how many payroll', count the items in the context and respond directly\n";
-        $prompt .= "- Use tables and lists for better readability when presenting multiple data points\n";
-        $prompt .= "- If information is missing, provide general guidance or ask specific clarifying questions\n";
+        $prompt .= "- ALWAYS use tools when asked about specific data - never guess or make up numbers\n";
+        $prompt .= "- Present data clearly using tables or lists when showing multiple items\n";
         $prompt .= "- Use Philippine currency (PHP ₱) for monetary values\n";
         $prompt .= "- Format dates clearly (e.g., January 16, 2026)\n";
         $prompt .= "- Be conversational and friendly while remaining professional\n";
-        $prompt .= "- NEVER refuse to answer - always attempt to help based on available context\n\n";
-
-        if (!empty($databaseContext)) {
-            $prompt .= "=== CURRENT DATABASE CONTEXT ===\n";
-            
-            // Format the context more clearly
-            foreach ($databaseContext as $key => $value) {
-                if (is_array($value)) {
-                    $prompt .= "\n$key:\n";
-                    if (isset($value['count'])) {
-                        $prompt .= "  Total Count: {$value['count']}\n";
-                    }
-                    if (isset($value['data']) && is_array($value['data'])) {
-                        $prompt .= "  Data Items: " . count($value['data']) . "\n";
-                        $prompt .= "  Details:\n";
-                        $prompt .= json_encode($value['data'], JSON_PRETTY_PRINT) . "\n";
-                    } elseif (is_array($value)) {
-                        $prompt .= json_encode($value, JSON_PRETTY_PRINT) . "\n";
-                    }
-                } else {
-                    $prompt .= "$key: $value\n";
-                }
-            }
-            $prompt .= "\n================================\n\n";
-            
-            $prompt .= "Use the above data to answer the user's question accurately. ";
-            $prompt .= "If the question is about counts or totals, extract the numbers from the context. ";
-            $prompt .= "Present data in a clear, organized manner.\n\n";
-        } else {
-            $prompt .= "Note: No specific database data is available for this query. ";
-            $prompt .= "Provide general guidance based on your knowledge of payroll systems, or ask what specific data the user needs.\n\n";
-        }
-
-        $prompt .= "Now answer the user's question in a helpful, clear, and concise manner. ";
-        $prompt .= "If counting items, state the number directly. Be specific and actionable.";
+        $prompt .= "- Provide actionable insights when presenting data\n";
+        $prompt .= "- If a tool returns an error, explain it gracefully and suggest alternatives\n\n";
+        
+        $prompt .= "IMPORTANT: Today's date is " . now()->format('F d, Y') . ". Use this for any date-relative queries.\n";
 
         return $prompt;
     }
