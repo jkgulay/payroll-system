@@ -609,7 +609,7 @@
                 <v-select
                   v-model="exportFilter.departments"
                   :items="availableDepartments"
-                  label="Department"
+                  label="Project"
                   prepend-inner-icon="mdi-office-building"
                   variant="outlined"
                   density="comfortable"

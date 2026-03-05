@@ -52,7 +52,7 @@
               :items="departments"
               item-title="title"
               item-value="value"
-              label="Filter by Department"
+              label="Filter by Project"
               variant="outlined"
               density="comfortable"
               clearable
@@ -297,7 +297,7 @@
                   </v-btn>
                   <v-btn value="department" size="small">
                     <v-icon start>mdi-office-building</v-icon>
-                    By Department
+                    By Project
                   </v-btn>
                   <v-btn value="position" size="small">
                     <v-icon start>mdi-briefcase</v-icon>
@@ -419,7 +419,7 @@
                 </v-autocomplete>
               </v-col>
 
-              <!-- Department Selection -->
+              <!-- Project Selection -->
               <v-col
                 cols="12"
                 v-if="!editMode && selectionMode === 'department'"
@@ -429,7 +429,7 @@
                   :items="departments"
                   item-title="title"
                   item-value="value"
-                  label="Select Department *"
+                  label="Select Project *"
                   placeholder="Choose a department"
                   variant="outlined"
                   density="comfortable"
@@ -1172,8 +1172,8 @@ const fetchDepartments = async () => {
     const response = await deductionService.getDepartments();
     departments.value = response.data;
   } catch (error) {
-    devLog.error("Failed to load departments:", error);
-    toast.error("Failed to load departments");
+    devLog.error("Failed to load projects:", error);
+    toast.error("Failed to load projects");
   } finally {
     loadingDepartments.value = false;
   }

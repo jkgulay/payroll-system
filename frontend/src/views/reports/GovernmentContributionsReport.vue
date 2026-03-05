@@ -72,7 +72,7 @@
                 <v-select
                   v-model="selectedDepartment"
                   :items="departments"
-                  label="Department"
+                  label="Project"
                   prepend-inner-icon="mdi-office-building"
                   variant="outlined"
                   density="comfortable"
@@ -537,7 +537,7 @@
                   <v-text-field
                     v-model="search"
                     prepend-inner-icon="mdi-magnify"
-                    label="Search by name, number, or department"
+                    label="Search by name, number, or project"
                     single-line
                     hide-details
                     variant="outlined"
@@ -851,11 +851,11 @@ for (let i = currentYear; i >= currentYear - 5; i--) {
 }
 
 const departments = computed(() => {
-  if (!reportData.value?.employees) return ["All Departments"];
+  if (!reportData.value?.employees) return ["All Projects"];
   const depts = [
     ...new Set(reportData.value.employees.map((e) => e.department)),
   ];
-  return ["All Departments", ...depts.sort()];
+  return ["All Projects", ...depts.sort()];
 });
 
 const filteredEmployees = computed(() => {
@@ -864,10 +864,7 @@ const filteredEmployees = computed(() => {
   let filtered = reportData.value.employees;
 
   // Filter by department
-  if (
-    selectedDepartment.value &&
-    selectedDepartment.value !== "All Departments"
-  ) {
+  if (selectedDepartment.value && selectedDepartment.value !== "All Projects") {
     filtered = filtered.filter(
       (emp) => emp.department === selectedDepartment.value,
     );
@@ -891,7 +888,7 @@ const filteredEmployees = computed(() => {
 const headers = [
   { title: "Employee #", key: "employee_number", sortable: true },
   { title: "Employee Name", key: "full_name", sortable: true },
-  { title: "Department", key: "department", sortable: true },
+  { title: "Project", key: "department", sortable: true },
   { title: "SSS (EE)", key: "sss_employee", align: "end" },
   { title: "SSS (ER)", key: "sss_employer", align: "end" },
   { title: "SSS Total", key: "sss_total", align: "end" },
@@ -1200,7 +1197,7 @@ const exportReport = async () => {
     const detailHeaders = detailSheet.addRow([
       "Employee #",
       "Employee Name",
-      "Department",
+      "Project",
       "Position",
       "SSS (EE)",
       "SSS (ER)",
@@ -1250,7 +1247,7 @@ const exportReport = async () => {
       if (index === 1)
         column.width = 30; // Employee Name
       else if (index === 2 || index === 3)
-        column.width = 20; // Department, Position
+        column.width = 20; // Project, Position
       else column.width = 15;
     });
 

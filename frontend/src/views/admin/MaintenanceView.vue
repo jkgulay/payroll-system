@@ -230,7 +230,7 @@
                 class="stat-row alert"
                 v-if="healthData.employees?.without_project > 0"
               >
-                <span>Without Department</span>
+                <span>Without Project</span>
                 <strong class="warning">{{
                   healthData.employees?.without_project
                 }}</strong>

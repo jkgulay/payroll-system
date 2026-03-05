@@ -27,7 +27,7 @@
             <div>
               <h1 class="page-title">Attendance Settings</h1>
               <p class="page-subtitle">
-                Configure per-department schedules for accurate attendance and
+                Configure per-project schedules for accurate attendance and
                 payroll
               </p>
             </div>
@@ -52,7 +52,7 @@
           <v-icon size="20">mdi-folder-multiple</v-icon>
         </div>
         <div class="stat-content">
-          <div class="stat-label">Total Departments</div>
+          <div class="stat-label">Total Projects</div>
           <div class="stat-value">{{ stats.total }}</div>
         </div>
       </div>
@@ -61,7 +61,7 @@
           <v-icon size="20">mdi-check-circle</v-icon>
         </div>
         <div class="stat-content">
-          <div class="stat-label">Active Departments</div>
+          <div class="stat-label">Active Projects</div>
           <div class="stat-value success">{{ stats.active }}</div>
         </div>
       </div>
@@ -91,7 +91,7 @@
         <v-text-field
           v-model="search"
           prepend-inner-icon="mdi-magnify"
-          label="Search departments..."
+          label="Search projects..."
           variant="outlined"
           density="comfortable"
           hide-details
@@ -405,7 +405,7 @@
                     <v-icon size="small" color="primary"
                       >mdi-minus-circle</v-icon
                     >
-                    Exclude Departments
+                    Exclude Projects
                   </label>
                   <v-autocomplete
                     v-model="bulkFormData.exclude_project_ids"
@@ -418,7 +418,7 @@
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="mdi-filter-variant"
-                    placeholder="Select departments to exclude"
+                    placeholder="Select projects to exclude"
                   ></v-autocomplete>
                 </div>
               </v-col>
@@ -506,7 +506,7 @@ const bulkFormData = ref({
 });
 
 const headers = [
-  { title: "Department", key: "department", sortable: true },
+  { title: "Project", key: "department", sortable: true },
   { title: "Designation", key: "designation", sortable: false },
   { title: "Time In", key: "time_in", sortable: false },
   { title: "Time Out", key: "time_out", sortable: false },
@@ -546,7 +546,7 @@ const fetchProjects = async () => {
     const response = await api.get("/projects");
     projects.value = response.data;
   } catch (error) {
-    showSnackbar("Failed to load departments", "error");
+    showSnackbar("Failed to load projects", "error");
     devLog.error("Error fetching projects:", error);
   } finally {
     loading.value = false;

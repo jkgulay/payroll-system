@@ -177,7 +177,7 @@
             <div class="info-value">{{ $payslip->payroll->paid_at ? date('M d, Y', strtotime($payslip->payroll->paid_at)) : 'Pending' }}</div>
         </div>
         <div class="info-row">
-            <div class="info-label">Department:</div>
+            <div class="info-label">Project:</div>
             <div class="info-value">{{ $employee->department->name ?? 'N/A' }}</div>
             <div class="info-label">Job Site:</div>
             <div class="info-value">{{ $employee->location->name ?? 'N/A' }}</div>

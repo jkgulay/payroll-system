@@ -329,7 +329,7 @@
               </template>
               <div class="text-caption">
                 <strong>Note:</strong> Payroll will include all active
-                employees. You can filter by department or staff type when
+                employees. You can filter by project or staff type when
                 exporting/downloading the payroll.
               </div>
             </v-alert>

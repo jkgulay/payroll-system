@@ -55,7 +55,7 @@
             color: #333;
         }
 
-        /* ===== PROJECT / DEPARTMENT INFO ===== */
+        /* ===== PROJECT INFO ===== */
         .project-info {
             margin: 8px 0 4px 0;
             font-size: 9px;
@@ -264,7 +264,7 @@
     {{-- Multiple groups: separate table for each --}}
     @foreach($groupedItems as $groupName => $items)
     <div class="project-info" @if(!$loop->first) style="margin-top: 30px; page-break-before: always;" @endif>
-        <div><strong>{{ $filterType === 'staff_type' ? 'STAFF TYPE' : 'DEPARTMENT' }}:</strong> {{ $groupName }}</div>
+        <div><strong>{{ $filterType === 'staff_type' ? 'STAFF TYPE' : 'PROJECT' }}:</strong> {{ $groupName }}</div>
         <div><strong>DESIGNATION:</strong> {{ $items->first()?->employee?->project?->description ?? 'N/A' }}</div>
     </div>
 
@@ -375,7 +375,7 @@
     </div>
     @else
     <div class="project-info">
-        <div><strong>DEPARTMENT:</strong> {{ $payroll->items->first()?->employee->department ?? 'N/A' }}</div>
+        <div><strong>PROJECT:</strong> {{ $payroll->items->first()?->employee->department ?? 'N/A' }}</div>
         <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee?->project?->description ?? 'N/A' }}</div>
     </div>
     @endif

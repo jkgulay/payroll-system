@@ -301,7 +301,7 @@
           </div>
 
           <div v-if="selectedResume.department_preference" class="detail-row">
-            <div class="detail-label">Department</div>
+            <div class="detail-label">Project</div>
             <div class="detail-value">
               {{ selectedResume.department_preference }}
             </div>
