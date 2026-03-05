@@ -136,7 +136,7 @@
             <tr>
                 <td class="label">POSITION</td>
                 <td>{{ $employee->position ?? ($employee->staff_type ?? 'N/A') }}</td>
-                <td class="label">DEPARTMENT</td>
+                <td class="label">PROJECT</td>
                 <td>{{ $employee->department ?? 'N/A' }}</td>
             </tr>
         </table>

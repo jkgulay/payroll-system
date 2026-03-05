@@ -511,10 +511,12 @@ class PayrollService
         );
         $regularOtPay = $regularOtHours * $hourlyRate * $regularOtMultiplier;
 
-        // Sunday (rest day): rate/8 × 1.3 (rest day premium) × 1.3 (OT on rest day) × hours
-        // DOLE Labor Code Art. 93 & 87: rest day OT = 30% on rest day rate = 130% × 130% = 169% of regular hourly rate
+        // Sunday (rest day): rate/8 × multiplier × hours
+        // The multiplier from settings IS the full rate applied to hourly rate.
+        // Default 1.3 = 30% premium for rest day OT (matching company payroll).
+        // For DOLE Art. 93 & 87 compliance (130% × 130% = 169%), set to 1.69 in Payroll Configuration.
         $sundayOtMultiplier = (float) $this->settings->get('payroll.overtime.sunday', 1.3);
-        $sundayOtPay = $sundayOtHours * $hourlyRate * 1.3 * $sundayOtMultiplier;
+        $sundayOtPay = $sundayOtHours * $hourlyRate * $sundayOtMultiplier;
 
         // Regular holiday (weekday): rate/8 × 2 × 1.3 × hours
         $regularHolidayMultiplier = (float) $this->settings->get(

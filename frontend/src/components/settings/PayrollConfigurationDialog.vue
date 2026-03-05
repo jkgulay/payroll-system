@@ -163,7 +163,7 @@
                   <div class="rate-details">
                     <h4 class="rate-label">Regular Holiday on Sunday</h4>
                     <p class="rate-formula">
-                      Formula: rate/8 × 1.3 × multiplier × hours
+                      Formula: rate/8 × 2 × 1.3 × multiplier × hours
                     </p>
                     <div class="rate-input-group">
                       <v-text-field
@@ -177,10 +177,11 @@
                         class="rate-input"
                       />
                       <div class="rate-example">
-                        Example: ₱71.25/hr × 1.3 ×
+                        Example: ₱71.25/hr × 2 × 1.3 ×
                         {{ config.holidays.regularHolidaySunday }} = ₱{{
                           (
                             71.25 *
+                            2 *
                             1.3 *
                             config.holidays.regularHolidaySunday
                           ).toFixed(2)

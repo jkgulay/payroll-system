@@ -667,7 +667,7 @@ class DeductionController extends Controller
             // Create audit log
             $description = "Bulk deduction created for " . count($employeeIds) . " employee(s)";
             if ($validated['selection_mode'] === 'department') {
-                $description .= " in department: {$validated['department']}";
+                $description .= " in project: {$validated['department']}";
             } elseif ($validated['selection_mode'] === 'position') {
                 $description .= " with position: {$validated['position']}";
             }
@@ -713,7 +713,7 @@ class DeductionController extends Controller
     }
 
     /**
-     * Get list of unique departments (projects) from active employees
+     * Get list of unique projects from active employees
      */
     public function getDepartments()
     {
@@ -735,8 +735,8 @@ class DeductionController extends Controller
 
             return response()->json($departments);
         } catch (\Exception $e) {
-            Log::error('Error fetching departments: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch departments'], 500);
+            Log::error('Error fetching projects: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch projects'], 500);
         }
     }
 
@@ -769,7 +769,7 @@ class DeductionController extends Controller
     }
 
     /**
-     * Get employees by department or position
+     * Get employees by project or position
      */
     public function getEmployeesByFilter(Request $request)
     {

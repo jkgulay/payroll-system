@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BiometricImportController extends Controller
 {
@@ -23,12 +24,32 @@ class BiometricImportController extends Controller
     }
 
     /**
+     * Send a Server-Sent Events progress line.
+     */
+    private function sendProgress(string $phase, int $current, int $total, string $detail = ''): void
+    {
+        $pct = $total > 0 ? round(($current / $total) * 100) : 0;
+        echo json_encode([
+            'type'    => 'progress',
+            'phase'   => $phase,
+            'current' => $current,
+            'total'   => $total,
+            'percent' => $pct,
+            'detail'  => $detail,
+        ]) . "\n";
+
+        if (ob_get_level()) {
+            ob_flush();
+        }
+        flush();
+    }
+
+    /**
      * Import staff information from biometric device export
-     * Accepts Excel/CSV files with staff data
+     * Uses streaming response for real-time progress
      */
     public function importStaffInformation(Request $request)
     {
-        // Increase execution time for large imports
         set_time_limit(300);
         ini_set('memory_limit', '1024M');
 
@@ -38,73 +59,97 @@ class BiometricImportController extends Controller
             'default_project_id' => 'nullable|integer|exists:projects,id',
         ]);
 
-        try {
-            $file = $request->file('file');
-            $filePath = $file->storeAs('biometric_imports', 'staff_import_' . time() . '.' . $file->getClientOriginalExtension());
-            $fullPath = Storage::path($filePath);
+        $file = $request->file('file');
+        $originalName = $file->getClientOriginalName();
+        $filePath = $file->storeAs('biometric_imports', 'staff_import_' . time() . '.' . $file->getClientOriginalExtension());
+        $fullPath = Storage::path($filePath);
 
-            // Parse Excel file
-            $staffData = $this->parseExcelFile($fullPath);
+        $defaults = [
+            'position' => $validated['default_position'] ?? null,
+            'project_id' => $validated['default_project_id'] ?? null,
+        ];
 
-            if (empty($staffData)) {
-                return response()->json([
-                    'message' => 'No valid data found in file',
-                ], 422);
-            }
+        $userId = $request->user()->id;
+        $ip = $request->ip();
+        $ua = $request->userAgent();
 
-            // Import staff data with optional defaults
-            $defaults = [
-                'position' => $validated['default_position'] ?? null,
-                'project_id' => $validated['default_project_id'] ?? null,
-            ];
+        return new StreamedResponse(function () use ($fullPath, $filePath, $defaults, $originalName, $userId, $ip, $ua) {
+            try {
+                // Phase 1: Parsing file
+                $this->sendProgress('parsing', 0, 1, 'Reading Excel file...');
+                $staffData = $this->parseExcelFile($fullPath);
+                $this->sendProgress('parsing', 1, 1, 'File parsed');
 
-            $result = $this->staffImportService->importStaffInformation($staffData, $defaults);
+                if (empty($staffData)) {
+                    echo json_encode([
+                        'type' => 'error',
+                        'message' => 'No valid data found in file',
+                    ]) . "\n";
+                    return;
+                }
 
-            // Log the import
-            AuditLog::create([
-                'user_id' => $request->user()->id,
-                'module' => 'employees',
-                'action' => 'staff_import',
-                'description' => 'Staff information imported from biometric device export',
-                'old_values' => null,
-                'new_values' => [
-                    'file' => $file->getClientOriginalName(),
+                // Phase 2: Processing records with real-time progress
+                $total = count($staffData);
+                $this->sendProgress('processing', 0, $total, "Processing {$total} records...");
+
+                $result = $this->staffImportService->importStaffInformationWithProgress(
+                    $staffData,
+                    $defaults,
+                    function ($current, $total, $detail) {
+                        $this->sendProgress('processing', $current, $total, $detail);
+                    }
+                );
+
+                // Log the import
+                AuditLog::create([
+                    'user_id' => $userId,
+                    'module' => 'employees',
+                    'action' => 'staff_import',
+                    'description' => 'Staff information imported from biometric device export',
+                    'old_values' => null,
+                    'new_values' => [
+                        'file' => $originalName,
+                        'imported' => $result['imported'],
+                        'updated' => $result['updated'],
+                        'skipped' => $result['skipped'],
+                        'failed' => $result['failed'],
+                    ],
+                    'ip_address' => $ip,
+                    'user_agent' => $ua,
+                ]);
+
+                Storage::delete($filePath);
+
+                echo json_encode([
+                    'type' => 'complete',
+                    'message' => 'Staff information imported successfully',
                     'imported' => $result['imported'],
                     'updated' => $result['updated'],
                     'skipped' => $result['skipped'],
                     'failed' => $result['failed'],
-                ],
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
-
-            // Clean up temp file
-            Storage::delete($filePath);
-
-            return response()->json([
-                'message' => 'Staff information imported successfully',
-                'imported' => $result['imported'],
-                'updated' => $result['updated'],
-                'skipped' => $result['skipped'],
-                'failed' => $result['failed'],
-                'errors' => $result['error_details'] ?? [],
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Staff import failed: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to import staff information',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+                    'errors' => $result['error_details'] ?? [],
+                ]) . "\n";
+            } catch (\Exception $e) {
+                Log::error('Staff import failed: ' . $e->getMessage());
+                Storage::delete($filePath);
+                echo json_encode([
+                    'type' => 'error',
+                    'message' => 'Failed to import staff information: ' . $e->getMessage(),
+                ]) . "\n";
+            }
+        }, 200, [
+            'Content-Type' => 'text/plain',
+            'Cache-Control' => 'no-cache',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     /**
      * Import punch records (attendance) from biometric device export
-     * Accepts Excel/CSV files with date-based columns
+     * Uses streaming response for real-time progress
      */
     public function importPunchRecords(Request $request)
     {
-        // Increase execution time for large imports
         set_time_limit(300);
         ini_set('memory_limit', '1024M');
 
@@ -112,58 +157,83 @@ class BiometricImportController extends Controller
             'file' => 'required|file|mimes:xlsx,xls,csv',
         ]);
 
-        try {
-            $file = $request->file('file');
-            $filePath = $file->storeAs('biometric_imports', 'punch_import_' . time() . '.' . $file->getClientOriginalExtension());
-            $fullPath = Storage::path($filePath);
+        $file = $request->file('file');
+        $originalName = $file->getClientOriginalName();
+        $filePath = $file->storeAs('biometric_imports', 'punch_import_' . time() . '.' . $file->getClientOriginalExtension());
+        $fullPath = Storage::path($filePath);
 
-            // Parse Excel file
-            $punchData = $this->parseExcelFile($fullPath);
+        $userId = $request->user()->id;
+        $ip = $request->ip();
+        $ua = $request->userAgent();
 
-            if (empty($punchData)) {
-                return response()->json([
-                    'message' => 'No valid data found in file',
-                ], 422);
-            }
+        return new StreamedResponse(function () use ($fullPath, $filePath, $originalName, $userId, $ip, $ua) {
+            try {
+                // Phase 1: Parsing file
+                $this->sendProgress('parsing', 0, 1, 'Reading Excel file...');
+                $punchData = $this->parseExcelFile($fullPath);
+                $this->sendProgress('parsing', 1, 1, 'File parsed');
 
-            $result = $this->punchRecordImportService->importPunchRecords($punchData);
+                if (empty($punchData)) {
+                    echo json_encode([
+                        'type' => 'error',
+                        'message' => 'No valid data found in file',
+                    ]) . "\n";
+                    return;
+                }
 
-            // Log the import
-            AuditLog::create([
-                'user_id' => $request->user()->id,
-                'module' => 'attendance',
-                'action' => 'punch_record_import',
-                'description' => 'Punch records imported from biometric device export',
-                'old_values' => null,
-                'new_values' => [
-                    'file' => $file->getClientOriginalName(),
+                // Phase 2: Processing records with real-time progress
+                $total = count($punchData);
+                $this->sendProgress('processing', 0, $total, "Processing {$total} punch records...");
+
+                $result = $this->punchRecordImportService->importPunchRecordsWithProgress(
+                    $punchData,
+                    function ($current, $total, $detail) {
+                        $this->sendProgress('processing', $current, $total, $detail);
+                    }
+                );
+
+                // Log the import
+                AuditLog::create([
+                    'user_id' => $userId,
+                    'module' => 'attendance',
+                    'action' => 'punch_record_import',
+                    'description' => 'Punch records imported from biometric device export',
+                    'old_values' => null,
+                    'new_values' => [
+                        'file' => $originalName,
+                        'imported' => $result['imported'],
+                        'updated' => $result['updated'],
+                        'skipped' => $result['skipped'],
+                        'failed' => $result['failed'],
+                    ],
+                    'ip_address' => $ip,
+                    'user_agent' => $ua,
+                ]);
+
+                Storage::delete($filePath);
+
+                echo json_encode([
+                    'type' => 'complete',
+                    'message' => 'Punch records imported successfully',
                     'imported' => $result['imported'],
                     'updated' => $result['updated'],
                     'skipped' => $result['skipped'],
                     'failed' => $result['failed'],
-                ],
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
-
-            // Clean up temp file
-            Storage::delete($filePath);
-
-            return response()->json([
-                'message' => 'Punch records imported successfully',
-                'imported' => $result['imported'],
-                'updated' => $result['updated'],
-                'skipped' => $result['skipped'],
-                'failed' => $result['failed'],
-                'errors' => $result['error_details'] ?? [],
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Punch record import failed: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to import punch records',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+                    'errors' => $result['error_details'] ?? [],
+                ]) . "\n";
+            } catch (\Exception $e) {
+                Log::error('Punch record import failed: ' . $e->getMessage());
+                Storage::delete($filePath);
+                echo json_encode([
+                    'type' => 'error',
+                    'message' => 'Failed to import punch records: ' . $e->getMessage(),
+                ]) . "\n";
+            }
+        }, 200, [
+            'Content-Type' => 'text/plain',
+            'Cache-Control' => 'no-cache',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     /**
@@ -232,7 +302,7 @@ class BiometricImportController extends Controller
             'staff_information_template' => [
                 'description' => 'Import staff/employee information from biometric device',
                 'required_columns' => ['Staff Code', 'Name'],
-                'optional_columns' => ['User ID', 'Email', 'Mobile No', 'Gender', 'Entry Date', 'Entry Status', 'Position', 'Department'],
+                'optional_columns' => ['User ID', 'Email', 'Mobile No', 'Gender', 'Entry Date', 'Entry Status', 'Position', 'Project'],
                 'format' => 'Excel (.xls, .xlsx) or CSV',
             ],
             'punch_records_template' => [

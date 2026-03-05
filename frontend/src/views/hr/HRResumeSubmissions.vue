@@ -230,7 +230,7 @@
           </div>
 
           <div class="detail-row">
-            <div class="detail-label">Department</div>
+            <div class="detail-label">Project</div>
             <div class="detail-value">{{ selectedResume.department_preference || 'Not specified' }}</div>
           </div>
 

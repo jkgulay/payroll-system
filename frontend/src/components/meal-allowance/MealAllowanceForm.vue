@@ -164,7 +164,7 @@
                       size="small"
                       prepend-icon="mdi-account-multiple-plus"
                     >
-                      Bulk Add by Department
+                      Bulk Add by Project
                     </v-btn>
                   </template>
 
@@ -235,7 +235,7 @@
                   <v-card>
                     <v-card-title class="bg-secondary">
                       <v-icon left>mdi-magnify</v-icon>
-                      Search Employees from Other Departments
+                      Search Employees from Other Projects
                     </v-card-title>
 
                     <v-card-text class="pt-4">
@@ -317,7 +317,7 @@
                 >
                   <v-btn value="individual">Individual</v-btn>
                   <v-btn value="multiple">Multiple</v-btn>
-                  <v-btn value="department">Department</v-btn>
+                  <v-btn value="department">Project</v-btn>
                   <v-btn value="position">Position</v-btn>
                 </v-btn-toggle>
               </v-col>
@@ -356,7 +356,7 @@
                   :items="departments"
                   item-title="title"
                   item-value="value"
-                  label="Select Department"
+                  label="Select Project"
                   variant="outlined"
                   density="comfortable"
                   clearable

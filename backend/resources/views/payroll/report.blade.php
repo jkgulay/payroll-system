@@ -107,7 +107,7 @@
                 <th>Employee No.</th>
                 <th>Employee Name</th>
                 <th>Position</th>
-                <th>Dept.</th>
+                <th>Project</th>
                 <th>Basic Salary</th>
                 <th>Allowances</th>
                 <th>Gross Pay</th>

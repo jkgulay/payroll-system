@@ -219,7 +219,7 @@
     $departmentCount++;
     @endphp
 
-    <!-- Department Table -->
+    <!-- Project Table -->
     <table class="main-table">
         <thead>
             <tr>
@@ -252,7 +252,7 @@
             </tr>
             @endforeach
 
-            <!-- Department Subtotal -->
+            <!-- Project Subtotal -->
             <tr class="subtotal-row">
                 <td class="name-col"></td>
                 <td class="amount-col">{{ number_format($departmentTotal, 2) }}</td>
