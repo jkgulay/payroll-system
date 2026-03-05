@@ -28,11 +28,22 @@ class StaffImportService
      */
     public function importStaffInformation(array $staffData, array $defaults = []): array
     {
+        return $this->importStaffInformationWithProgress($staffData, $defaults);
+    }
+
+    /**
+     * Import staff information with real-time progress callback.
+     *
+     * @param callable|null $onProgress fn($current, $total, $detail)
+     */
+    public function importStaffInformationWithProgress(array $staffData, array $defaults = [], ?callable $onProgress = null): array
+    {
         $imported = 0;
         $updated = 0;
         $skipped = 0;
         $failed = 0;
         $errors = [];
+        $total = count($staffData);
 
         DB::beginTransaction();
 
@@ -42,6 +53,9 @@ class StaffImportService
                     // Skip if no staff code
                     if (empty($data['Staff Code'])) {
                         $skipped++;
+                        if ($onProgress) {
+                            $onProgress($index + 1, $total, 'Skipped row ' . ($index + 1) . ' (no staff code)');
+                        }
                         continue;
                     }
 
@@ -53,6 +67,9 @@ class StaffImportService
                             'error' => 'Name is required',
                         ];
                         $failed++;
+                        if ($onProgress) {
+                            $onProgress($index + 1, $total, 'Row ' . ($index + 1) . ': Name required');
+                        }
                         continue;
                     }
 
@@ -65,6 +82,11 @@ class StaffImportService
                     } elseif ($result['action'] === 'skipped') {
                         $skipped++;
                     }
+
+                    if ($onProgress) {
+                        $name = trim($data['Name'] ?? '');
+                        $onProgress($index + 1, $total, ucfirst($result['action']) . ': ' . $name);
+                    }
                 } catch (\Exception $e) {
                     $errors[] = [
                         'row' => $index + 1,
@@ -72,6 +94,9 @@ class StaffImportService
                         'error' => $e->getMessage(),
                     ];
                     $failed++;
+                    if ($onProgress) {
+                        $onProgress($index + 1, $total, 'Error row ' . ($index + 1));
+                    }
                     Log::error('Staff import error: ' . $e->getMessage(), ['data' => $data]);
                 }
             }

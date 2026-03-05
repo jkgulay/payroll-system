@@ -710,14 +710,14 @@ class PayrollController extends Controller
                 }
             } elseif ($validated['filter_type'] === 'department' && !empty($validated['departments'])) {
                 if (count($validated['departments']) == 1) {
-                    $filterInfo = 'Department: ' . implode(', ', $validated['departments']);
+                    $filterInfo = 'Project: ' . implode(', ', $validated['departments']);
                 }
             } elseif ($validated['filter_type'] === 'position' && !empty($validated['positions'])) {
                 if (count($validated['positions']) == 1) {
                     $filterInfo = 'Position: ' . implode(', ', $validated['positions']);
                 }
             } elseif ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
-                $filterInfo = 'Filtered by Department & Position';
+                $filterInfo = 'Filtered by Project & Position';
             }
             if ($filterInfo && !str_contains($filenameBase, '_filtered') && $validated['filter_type'] !== 'employee') {
                 $filenameBase .= '_filtered';
@@ -765,7 +765,7 @@ class PayrollController extends Controller
                             return $item->employee->department ?? 'N/A';
                         });
                     } else {
-                        $filterInfo = 'Department: ' . implode(', ', $validated['departments']);
+                        $filterInfo = 'Project: ' . implode(', ', $validated['departments']);
                     }
                 } elseif ($validated['filter_type'] === 'position' && !empty($validated['positions'])) {
                     // Group by position if multiple positions selected
@@ -777,7 +777,7 @@ class PayrollController extends Controller
                         $filterInfo = 'Position: ' . implode(', ', $validated['positions']);
                     }
                 } elseif ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
-                    $filterInfo = 'Department: ' . implode(', ', $validated['departments']) . ' | Position: ' . implode(', ', $validated['positions']);
+                    $filterInfo = 'Project: ' . implode(', ', $validated['departments']) . ' | Position: ' . implode(', ', $validated['positions']);
                 }
             }
 

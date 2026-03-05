@@ -64,7 +64,7 @@
                     <div class="requirement-content">
                       <div class="requirement-label">Optional Fields</div>
                       <div class="requirement-value">
-                        Email, Mobile, Gender, Position, Department
+                        Email, Mobile, Gender, Position, Project
                       </div>
                     </div>
                   </div>
@@ -109,7 +109,7 @@
                 <v-autocomplete
                   v-model="defaultProject"
                   :items="projectOptions"
-                  label="Default Department"
+                  label="Default Project"
                   placeholder="Select department"
                   density="compact"
                   variant="outlined"
@@ -179,7 +179,7 @@
               <span class="progress-label">
                 {{
                   staffProcessing
-                    ? "Processing records..."
+                    ? staffProgressDetail || "Processing records..."
                     : "Uploading file..."
                 }}
               </span>
@@ -379,7 +379,7 @@
               <span class="progress-label">
                 {{
                   punchProcessing
-                    ? "Processing records..."
+                    ? punchProgressDetail || "Processing records..."
                     : "Uploading file..."
                 }}
               </span>
@@ -493,16 +493,14 @@
                       <li>
                         Entry Status (Official/Regular/Probationary/Contractual)
                       </li>
-                      <li>Position, Department</li>
+                      <li>Position, Project</li>
                     </ul>
                   </div>
                   <div class="info-section">
                     <div class="info-section-title">Field Mapping</div>
                     <ul class="info-list">
                       <li><strong>Staff Type</strong> → Position (job role)</li>
-                      <li>
-                        <strong>Department</strong> → Department (auto-created)
-                      </li>
+                      <li><strong>Project</strong> → Project (auto-created)</li>
                     </ul>
                   </div>
                 </div>
@@ -574,7 +572,7 @@ const importingStaff = ref(false);
 const staffImportResult = ref(null);
 const staffUploadProgress = ref(0);
 const staffProcessing = ref(false);
-let staffProgressTimer = null;
+const staffProgressDetail = ref("");
 
 // Default values for missing data
 const defaultPosition = ref(null);
@@ -609,7 +607,7 @@ const importingPunch = ref(false);
 const punchImportResult = ref(null);
 const punchUploadProgress = ref(0);
 const punchProcessing = ref(false);
-let punchProgressTimer = null;
+const punchProgressDetail = ref("");
 
 // Template Dialog
 const templateDialog = ref(false);
@@ -633,15 +631,55 @@ const handleStaffDrop = (event) => {
   }
 };
 
-// Simulate processing progress
-const simulateProgress = (progressRef, maxProgress = 95) => {
-  return setInterval(() => {
-    if (progressRef.value < maxProgress) {
-      // Slower increment as it approaches max
-      const increment = maxProgress - progressRef.value > 20 ? 2 : 0.5;
-      progressRef.value = Math.min(progressRef.value + increment, maxProgress);
+// Read a streaming response (JSON lines) and call handlers for progress/complete/error
+const readStream = async (response, { onProgress, onComplete, onError }) => {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop(); // keep incomplete last line in buffer
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const msg = JSON.parse(line);
+        if (msg.type === "progress" && onProgress) onProgress(msg);
+        else if (msg.type === "complete" && onComplete) onComplete(msg);
+        else if (msg.type === "error" && onError) onError(msg);
+      } catch {
+        // skip malformed lines
+      }
     }
-  }, 500);
+  }
+
+  // Process any remaining buffer
+  if (buffer.trim()) {
+    try {
+      const msg = JSON.parse(buffer);
+      if (msg.type === "complete" && onComplete) onComplete(msg);
+      else if (msg.type === "error" && onError) onError(msg);
+    } catch {
+      // ignore
+    }
+  }
+};
+
+// Build fetch headers with auth token
+const getAuthHeaders = () => {
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+};
+
+const getApiBaseUrl = () => {
+  return import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 };
 
 const importStaffInformation = async () => {
@@ -651,12 +689,7 @@ const importStaffInformation = async () => {
   staffImportResult.value = null;
   staffUploadProgress.value = 0;
   staffProcessing.value = false;
-
-  // Clear any existing timer
-  if (staffProgressTimer) {
-    clearInterval(staffProgressTimer);
-    staffProgressTimer = null;
-  }
+  staffProgressDetail.value = "";
 
   try {
     const formData = new FormData();
@@ -670,65 +703,78 @@ const importStaffInformation = async () => {
       formData.append("default_project_id", defaultProject.value);
     }
 
-    const response = await api.post("/biometric/import-staff", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-      timeout: 300000, // 5 minutes for large staff imports
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total,
-        );
-        staffUploadProgress.value = percentCompleted;
+    // Use fetch for streaming response
+    const response = await fetch(getApiBaseUrl() + "/biometric/import-staff", {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: formData,
+    });
 
-        // Switch to processing mode when upload completes
-        if (percentCompleted === 100) {
-          staffProcessing.value = true;
-          // Start simulated progress for processing
-          staffProgressTimer = simulateProgress(staffUploadProgress);
-        }
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMsg = "Failed to import staff information";
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMsg = errorJson.message || errorMsg;
+      } catch {
+        // not JSON
+      }
+      throw new Error(errorMsg);
+    }
+
+    // Switch to processing mode — upload is done
+    staffProcessing.value = true;
+    staffUploadProgress.value = 0;
+
+    let completed = false;
+
+    await readStream(response, {
+      onProgress: (msg) => {
+        staffUploadProgress.value = msg.percent || 0;
+        staffProgressDetail.value = msg.detail || msg.phase || "Processing...";
+      },
+      onComplete: (msg) => {
+        completed = true;
+        staffUploadProgress.value = 100;
+        staffProgressDetail.value = "Complete!";
+
+        staffImportResult.value = {
+          success: true,
+          imported: msg.imported || 0,
+          updated: msg.updated || 0,
+          skipped: msg.skipped || 0,
+          failed: msg.failed || 0,
+          errors: msg.errors || [],
+        };
+
+        toast.success(
+          `Staff information imported successfully! ${msg.imported || 0} employees created, ${msg.updated || 0} updated.`,
+        );
+      },
+      onError: (msg) => {
+        completed = true;
+        throw new Error(msg.message || "Import failed on server");
       },
     });
 
-    // Clear timer and set to 100% on completion
-    if (staffProgressTimer) {
-      clearInterval(staffProgressTimer);
-      staffProgressTimer = null;
+    if (!completed) {
+      throw new Error("Stream ended without completion message");
     }
-    staffUploadProgress.value = 100;
-
-    staffImportResult.value = {
-      success: true,
-      imported: response.data.imported,
-      updated: response.data.updated,
-      skipped: response.data.skipped,
-      failed: response.data.failed,
-      errors: response.data.errors || [],
-    };
-
-    toast.success(
-      `Staff information imported successfully! ${response.data.imported} employees created, ${response.data.updated} updated.`,
-    );
   } catch (error) {
-    toast.error(
-      error.response?.data?.message || "Failed to import staff information",
-    );
+    toast.error(error.message || "Failed to import staff information");
     staffImportResult.value = {
       success: false,
       imported: 0,
       updated: 0,
       skipped: 0,
       failed: 0,
-      errors: [
-        { row: 0, error: error.response?.data?.message || error.message },
-      ],
+      errors: [{ row: 0, error: error.message }],
     };
   } finally {
-    if (staffProgressTimer) {
-      clearInterval(staffProgressTimer);
-      staffProgressTimer = null;
-    }
     importingStaff.value = false;
     staffUploadProgress.value = 0;
     staffProcessing.value = false;
+    staffProgressDetail.value = "";
   }
 };
 
@@ -759,80 +805,87 @@ const importPunchRecords = async () => {
   punchImportResult.value = null;
   punchUploadProgress.value = 0;
   punchProcessing.value = false;
-
-  // Clear any existing timer
-  if (punchProgressTimer) {
-    clearInterval(punchProgressTimer);
-    punchProgressTimer = null;
-  }
+  punchProgressDetail.value = "";
 
   try {
     const formData = new FormData();
     formData.append("file", punchFile.value);
 
-    const response = await api.post(
-      "/biometric/import-punch-records",
-      formData,
+    // Use fetch for streaming response
+    const response = await fetch(
+      getApiBaseUrl() + "/biometric/import-punch-records",
       {
-        headers: { "Content-Type": "multipart/form-data" },
-        timeout: 300000, // 5 minutes for large punch record imports
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total,
-          );
-          punchUploadProgress.value = percentCompleted;
-
-          // Switch to processing mode when upload completes
-          if (percentCompleted === 100) {
-            punchProcessing.value = true;
-            // Start simulated progress for processing
-            punchProgressTimer = simulateProgress(punchUploadProgress);
-          }
-        },
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: formData,
       },
     );
 
-    // Clear timer and set to 100% on completion
-    if (punchProgressTimer) {
-      clearInterval(punchProgressTimer);
-      punchProgressTimer = null;
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMsg = "Failed to import punch records";
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMsg = errorJson.message || errorMsg;
+      } catch {
+        // not JSON
+      }
+      throw new Error(errorMsg);
     }
-    punchUploadProgress.value = 100;
 
-    punchImportResult.value = {
-      success: true,
-      imported: response.data.imported,
-      updated: response.data.updated,
-      skipped: response.data.skipped,
-      failed: response.data.failed,
-      errors: response.data.errors || [],
-    };
+    // Switch to processing mode — upload is done
+    punchProcessing.value = true;
+    punchUploadProgress.value = 0;
 
-    toast.success(
-      `Punch records imported successfully! ${response.data.imported} records created, ${response.data.updated} updated.`,
-    );
+    let completed = false;
+
+    await readStream(response, {
+      onProgress: (msg) => {
+        punchUploadProgress.value = msg.percent || 0;
+        punchProgressDetail.value = msg.detail || msg.phase || "Processing...";
+      },
+      onComplete: (msg) => {
+        completed = true;
+        punchUploadProgress.value = 100;
+        punchProgressDetail.value = "Complete!";
+
+        punchImportResult.value = {
+          success: true,
+          imported: msg.imported || 0,
+          updated: msg.updated || 0,
+          skipped: msg.skipped || 0,
+          failed: msg.failed || 0,
+          errors: msg.errors || [],
+        };
+
+        toast.success(
+          `Punch records imported successfully! ${msg.imported || 0} records created, ${msg.updated || 0} updated.`,
+        );
+      },
+      onError: (msg) => {
+        completed = true;
+        throw new Error(msg.message || "Import failed on server");
+      },
+    });
+
+    if (!completed) {
+      throw new Error("Stream ended without completion message");
+    }
   } catch (error) {
-    toast.error(
-      error.response?.data?.message || "Failed to import punch records",
-    );
+    toast.error(error.message || "Failed to import punch records");
     punchImportResult.value = {
       success: false,
       imported: 0,
       updated: 0,
       skipped: 0,
       failed: 0,
-      errors: [
-        { row: 0, error: error.response?.data?.message || error.message },
-      ],
+      errors: [{ row: 0, error: error.message }],
     };
   } finally {
-    if (punchProgressTimer) {
-      clearInterval(punchProgressTimer);
-      punchProgressTimer = null;
-    }
     importingPunch.value = false;
     punchUploadProgress.value = 0;
     punchProcessing.value = false;
+    punchProgressDetail.value = "";
   }
 };
 

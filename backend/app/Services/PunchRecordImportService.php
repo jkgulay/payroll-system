@@ -22,6 +22,16 @@ class PunchRecordImportService
      */
     public function importPunchRecords(array $punchData): array
     {
+        return $this->importPunchRecordsWithProgress($punchData);
+    }
+
+    /**
+     * Import punch records with real-time progress callback.
+     *
+     * @param callable|null $onProgress fn($current, $total, $detail)
+     */
+    public function importPunchRecordsWithProgress(array $punchData, ?callable $onProgress = null): array
+    {
         $imported = 0;
         $updated  = 0;
         $skipped  = 0;
@@ -88,6 +98,13 @@ class PunchRecordImportService
             'unique_employees' => count($grouped),
         ]);
 
+        // Count total employee+date combinations for progress tracking
+        $totalTasks = 0;
+        foreach ($grouped as $dates) {
+            $totalTasks += count($dates);
+        }
+        $currentTask = 0;
+
         // ── Process each employee's punches per date ──────────────────────────
         foreach ($grouped as $staffCode => $dates) {
             $employee = Employee::where('employee_number', $staffCode)->first();
@@ -97,10 +114,17 @@ class PunchRecordImportService
                     'staff_code' => $staffCode,
                     'error' => 'Employee not found. Please import staff information first.',
                 ];
+                $currentTask += count($dates);
+                if ($onProgress) {
+                    $onProgress($currentTask, $totalTasks, "Skipped {$staffCode} (not found)");
+                }
                 continue;
             }
 
+            $empName = $employee->first_name . ' ' . $employee->last_name;
+
             foreach ($dates as $dateStr => $times) {
+                $currentTask++;
                 // Sort times chronologically before passing to processPunchRecord
                 sort($times);
                 $attendanceDate = Carbon::parse($dateStr);
@@ -116,6 +140,10 @@ class PunchRecordImportService
                     if ($result['action'] === 'created')      $imported++;
                     elseif ($result['action'] === 'updated')  $updated++;
                     else                                       $skipped++;
+
+                    if ($onProgress) {
+                        $onProgress($currentTask, $totalTasks, ucfirst($result['action']) . ": {$empName} ({$dateStr})");
+                    }
                 } catch (\Exception $e) {
                     DB::rollBack();
                     $errors[] = [
@@ -124,6 +152,9 @@ class PunchRecordImportService
                         'error'      => $e->getMessage(),
                     ];
                     Log::error("Punch import error [{$staffCode} {$dateStr}]: " . $e->getMessage());
+                    if ($onProgress) {
+                        $onProgress($currentTask, $totalTasks, "Error: {$empName} ({$dateStr})");
+                    }
                 }
             }
         }
@@ -282,27 +313,56 @@ class PunchRecordImportService
             }
             // 5. Fifth+ punch - check if OT (>configured grace period after time_out)
             elseif ($attendance->time_out) {
-                $actualTimeOut = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $attendance->time_out);
+                $dateStr = $attendanceDate->format('Y-m-d');
+                $actualTimeOut = Carbon::parse($dateStr . ' ' . $attendance->time_out);
 
-                // If current punch is AFTER time_out + configured grace period, it's an OT session
-                if ($timestamp->gt($actualTimeOut->copy()->addMinutes($otGracePeriodMinutes))) {
+                // Use the LATER of actual time_out or scheduled time_out as the OT baseline.
+                // This prevents early clock-outs from falsely triggering OT,
+                // while still respecting employees who stay past their scheduled shift.
+                $otBaseline = $actualTimeOut->gt($scheduledTimeOut)
+                    ? $actualTimeOut->copy()
+                    : $scheduledTimeOut->copy();
+
+                // If current punch is AFTER baseline + configured grace period, it's an OT session
+                if ($timestamp->gt($otBaseline->copy()->addMinutes($otGracePeriodMinutes))) {
+                    // Determine OT start time: use the later of actual time_out or scheduled time_out
+                    // so OT hours accurately reflect time worked beyond the shift
+                    $otStartTime = $actualTimeOut->gt($scheduledTimeOut)
+                        ? $attendance->time_out
+                        : $scheduledTimeOut->format('H:i:s');
+
                     // Track OT sessions (up to 2 sessions)
-                    // OT starts from actual time_out (not scheduled), respects employee's actual punch times
                     if (!$attendance->ot_time_in) {
-                        // First OT punch - set OT session starting from actual time_out
-                        $attendance->ot_time_in = $attendance->time_out;
+                        // First OT punch - set OT session starting from shift end
+                        $attendance->ot_time_in = $otStartTime;
                         $attendance->ot_time_out = $timeString;
                     } elseif (!$attendance->ot_time_out) {
-                        // Second OT punch - close first OT session
+                        // Close first OT session
                         $attendance->ot_time_out = $timeString;
                     } elseif (!$attendance->ot_time_in_2) {
-                        // Third OT punch - start second OT session
-                        $attendance->ot_time_in_2 = $timeString;
+                        // OT1 is complete — check if it was trivially short (< 60 min).
+                        // A short OT1 typically means punch 5 was an OT clock-in (not end),
+                        // and this punch is the actual OT end. Extend OT1 instead of
+                        // starting a new OT2 session.
+                        $ot1In = Carbon::parse($dateStr . ' ' . $attendance->ot_time_in);
+                        $ot1Out = Carbon::parse($dateStr . ' ' . $attendance->ot_time_out);
+                        if ($ot1Out->lt($ot1In)) {
+                            $ot1Out->addDay();
+                        }
+                        $ot1Minutes = $ot1In->diffInMinutes($ot1Out);
+
+                        if ($ot1Minutes < 60) {
+                            // OT1 rounds to 0h via floor() — extend it with this punch
+                            $attendance->ot_time_out = $timeString;
+                        } else {
+                            // Genuine first session — start second OT session
+                            $attendance->ot_time_in_2 = $timeString;
+                        }
                     } elseif (!$attendance->ot_time_out_2) {
-                        // Fourth OT punch - close second OT session
+                        // Close second OT session
                         $attendance->ot_time_out_2 = $timeString;
                     } else {
-                        // More than 2 OT sessions, update last OT out
+                        // More than 2 OT sessions, extend last OT out
                         $attendance->ot_time_out_2 = $timeString;
                     }
                 } else {

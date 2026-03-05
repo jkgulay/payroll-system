@@ -78,14 +78,12 @@ class ChatController extends Controller
                 'success' => true, // Keep true to avoid error UI
                 'message' => $response['message'] ?? 'I\'m having trouble processing that request. Please try again later.',
             ], 200);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Handle validation errors gracefully
             return response()->json([
                 'success' => true,
                 'message' => 'Your message seems to have some formatting issues. Please make sure it\'s between 2 and 1000 characters.',
             ], 200);
-            
         } catch (\Exception $e) {
             Log::error('Chat Controller Error', [
                 'message' => $e->getMessage(),
@@ -96,7 +94,7 @@ class ChatController extends Controller
             ]);
 
             $errorMessage = 'I encountered a small hiccup while processing your request. Please try again, or rephrase your question.';
-            
+
             // In development, show more details
             if (config('app.debug')) {
                 $errorMessage .= ' (Debug: ' . $e->getMessage() . ')';
@@ -119,7 +117,7 @@ class ChatController extends Controller
         $suggestions = [
             'employee' => [
                 'How many employees are currently active?',
-                'Show me employees in the IT department',
+                'Show me employees in the IT project',
                 'Who joined the company in the last 3 months?',
                 'What positions do we have in the company?',
             ],
@@ -128,7 +126,7 @@ class ChatController extends Controller
                 'Compare payroll costs between Q3 and Q4 2025',
                 'Who are the top 5 highest-paid employees?',
                 'Calculate total overtime pay for this month',
-                'What\'s the average salary in the Sales department?',
+                'What\'s the average salary in the Sales project?',
             ],
             'attendance' => [
                 'Who was absent yesterday?',

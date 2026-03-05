@@ -75,7 +75,7 @@
         </template>
 
         <template #[`item.department`]="{ item }">
-          {{ item.department || "All Departments" }}
+          {{ item.department || "All Projects" }}
         </template>
 
         <template #[`item.employee_count`]="{ item }">
@@ -268,25 +268,25 @@
                 </v-select>
               </v-col>
 
-              <!-- Section 2: Department Filter -->
+              <!-- Section 2: Project Filter -->
               <v-col cols="12" class="mt-4">
                 <div class="section-header">
                   <div class="section-icon">
                     <v-icon size="18">mdi-office-building</v-icon>
                   </div>
-                  <h3 class="section-title">Department Filter</h3>
+                  <h3 class="section-title">Project Filter</h3>
                 </div>
               </v-col>
 
-              <!-- Department Selection -->
+              <!-- Project Selection -->
               <v-col cols="12">
                 <v-select
                   v-model="calculateForm.department"
                   :items="departments"
                   item-title="title"
                   item-value="value"
-                  label="Department"
-                  placeholder="All Departments"
+                  label="Project"
+                  placeholder="All Projects"
                   prepend-inner-icon="mdi-office-building"
                   clearable
                   variant="outlined"
@@ -296,7 +296,7 @@
                 >
                   <template v-slot:prepend-item>
                     <v-list-item
-                      title="All Departments"
+                      title="All Projects"
                       @click="calculateForm.department = null"
                     >
                       <template v-slot:prepend>
@@ -382,9 +382,9 @@
                   }}</v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
-                  <v-list-item-title>Department:</v-list-item-title>
+                  <v-list-item-title>Project:</v-list-item-title>
                   <v-list-item-subtitle>{{
-                    selectedItem.department || "All Departments"
+                    selectedItem.department || "All Projects"
                   }}</v-list-item-subtitle>
                 </v-list-item>
               </v-list>
@@ -495,7 +495,7 @@ const snackbar = ref({
 const headers = [
   { title: "Batch Number", key: "batch_number", sortable: true },
   { title: "Year/Period", key: "year_period", sortable: false },
-  { title: "Department", key: "department", sortable: true },
+  { title: "Project", key: "department", sortable: true },
   { title: "Employees", key: "employee_count", sortable: false },
   { title: "Total Amount", key: "total_amount", sortable: true },
   { title: "Payment Date", key: "payment_date", sortable: true },
@@ -505,7 +505,7 @@ const headers = [
 
 const detailHeaders = [
   { title: "Employee", key: "employee", sortable: true },
-  { title: "Department", key: "department", sortable: true },
+  { title: "Project", key: "department", sortable: true },
   { title: "Total Basic Salary", key: "total_basic_salary", sortable: true },
   { title: "Net Pay", key: "net_pay", sortable: true },
 ];

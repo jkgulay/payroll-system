@@ -8,9 +8,9 @@
             <v-icon size="20">mdi-office-building</v-icon>
           </div>
           <div>
-            <h1 class="page-title">Department Management</h1>
+            <h1 class="page-title">Project Management</h1>
             <p class="page-subtitle">
-              Manage departments and track employee assignments
+              Manage projects and track employee assignments
             </p>
           </div>
         </div>
@@ -20,7 +20,7 @@
             @click="openCreateDialog"
           >
             <v-icon size="20">mdi-plus</v-icon>
-            <span>New Department</span>
+            <span>New Project</span>
           </button>
         </div>
       </div>
@@ -34,7 +34,7 @@
         @click="filterTab = 'all'"
       >
         <v-icon size="18">mdi-folder-multiple</v-icon>
-        <span>All Departments</span>
+        <span>All Projects</span>
       </button>
       <button
         class="filter-tab"
@@ -58,7 +58,7 @@
     <v-text-field
       v-model="search"
       prepend-inner-icon="mdi-magnify"
-      label="Search departments..."
+      label="Search projects..."
       variant="outlined"
       density="compact"
       clearable
@@ -119,7 +119,7 @@
                   <v-icon size="18">mdi-account-hard-hat</v-icon>
                 </div>
                 <div>
-                  <div class="info-label">Department Head</div>
+                  <div class="info-label">Project Head</div>
                   <div class="info-value">
                     {{
                       project.head_employee
@@ -211,7 +211,7 @@
       class="pa-8 text-center"
     >
       <v-icon size="64" color="grey-lighten-1">mdi-folder-open</v-icon>
-      <div class="text-h6 mt-4 text-grey">No departments found</div>
+      <div class="text-h6 mt-4 text-grey">No projects found</div>
       <div class="text-body-2 text-grey">
         {{
           search
@@ -234,7 +234,7 @@
             </div>
             <div class="header-text">
               <h2 class="dialog-title">
-                {{ editMode ? "Edit Department" : "New Department" }}
+                {{ editMode ? "Edit Project" : "New Project" }}
               </h2>
               <p class="dialog-subtitle">
                 {{
@@ -266,7 +266,7 @@
                 <div class="form-field-wrapper">
                   <label class="form-label">
                     <v-icon size="small" color="primary">mdi-barcode</v-icon>
-                    Department Code
+                    Project Code
                     <v-chip size="x-small" color="info" class="ml-2"
                       >Auto-generated</v-chip
                     >
@@ -289,7 +289,7 @@
                 <div class="form-field-wrapper">
                   <label class="form-label">
                     <v-icon size="small" color="primary">mdi-folder</v-icon>
-                    Department Name <span class="text-error">*</span>
+                    Project Name <span class="text-error">*</span>
                   </label>
                   <v-text-field
                     v-model="formData.name"
@@ -382,7 +382,7 @@
                     <v-icon size="small" color="primary"
                       >mdi-account-tie</v-icon
                     >
-                    Department Head
+                    Project Head
                   </label>
                   <v-autocomplete
                     v-model="formData.head_employee_id"
@@ -464,7 +464,7 @@
           <v-tabs v-model="detailsTab" class="config-tabs">
             <v-tab value="info">
               <v-icon start>mdi-information-outline</v-icon>
-              Department Info
+              Project Info
             </v-tab>
             <v-tab value="employees">
               <v-icon start>mdi-account-group</v-icon>
@@ -473,7 +473,7 @@
           </v-tabs>
 
           <v-window v-model="detailsTab" class="config-window">
-            <!-- Department Info Tab -->
+            <!-- Project Info Tab -->
             <v-window-item value="info">
               <div class="config-section">
                 <!-- Designation -->
@@ -493,12 +493,12 @@
                   </div>
                 </div>
 
-                <!-- Department Head -->
+                <!-- Project Head -->
                 <div class="setting-group">
                   <div class="group-header">
                     <h4 class="group-title">
                       <v-icon size="20" class="mr-2">mdi-account-tie</v-icon>
-                      Department Head
+                      Project Head
                     </h4>
                   </div>
                   <div class="group-content">
@@ -733,7 +733,7 @@
                     <v-icon size="small" color="primary"
                       >mdi-office-building</v-icon
                     >
-                    Target Department <span class="text-error">*</span>
+                    Target Project <span class="text-error">*</span>
                   </label>
                   <v-autocomplete
                     v-model="bulkTransferData.target_project_id"
@@ -746,7 +746,7 @@
                     prepend-inner-icon="mdi-office-building"
                     color="primary"
                     clearable
-                    :rules="[(v) => !!v || 'Department is required']"
+                    :rules="[(v) => !!v || 'Project is required']"
                   >
                     <template v-slot:item="{ props, item }">
                       <v-list-item v-bind="props">
@@ -1008,7 +1008,7 @@ const employeeHeaders = [
 const transferHeaders = [
   { title: "Employee", key: "full_name", sortable: true },
   { title: "Position", key: "position", sortable: true },
-  { title: "Target Department", key: "target_project", sortable: false },
+  { title: "Target Project", key: "target_project", sortable: false },
 ];
 
 // Computed
@@ -1057,7 +1057,7 @@ const fetchProjects = async () => {
     const response = await api.get("/projects");
     projects.value = response.data;
   } catch (error) {
-    showSnackbar("Failed to load departments", "error");
+    showSnackbar("Failed to load projects", "error");
     devLog.error("Error fetching projects:", error);
   } finally {
     loading.value = false;
@@ -1135,16 +1135,16 @@ const saveProject = async () => {
     const payload = normalizeSchedulePayload(formData.value);
     if (editMode.value) {
       await api.put(`/projects/${formData.value.id}`, payload);
-      showSnackbar("Department updated successfully", "success");
+      showSnackbar("Project updated successfully", "success");
     } else {
       await api.post("/projects", payload);
-      showSnackbar("Department created successfully", "success");
+      showSnackbar("Project created successfully", "success");
     }
     await fetchProjects();
     closeDialog();
   } catch (error) {
     const message =
-      error.response?.data?.message || "Failed to save department";
+      error.response?.data?.message || "Failed to save project";
     showSnackbar(message, "error");
     devLog.error("Error saving project:", error);
   } finally {
@@ -1247,7 +1247,7 @@ const fetchProjectEmployees = async (projectId) => {
     const response = await api.get(`/projects/${projectId}/employees`);
     projectEmployees.value = response.data;
   } catch (error) {
-    showSnackbar("Failed to load department employees", "error");
+    showSnackbar("Failed to load project employees", "error");
     devLog.error("Error fetching project employees:", error);
   } finally {
     loadingDetails.value = false;
@@ -1361,7 +1361,7 @@ const completeProject = async (project) => {
     await api.post(`/projects/${project.id}/mark-complete`);
     await fetchProjects();
   } catch (error) {
-    showSnackbar("Failed to update department status", "error");
+    showSnackbar("Failed to update project status", "error");
     devLog.error("Error marking project complete:", error);
   }
 };
@@ -1369,10 +1369,10 @@ const completeProject = async (project) => {
 const reactivateProject = async (project) => {
   try {
     await api.post(`/projects/${project.id}/reactivate`);
-    showSnackbar("Department reactivated", "success");
+    showSnackbar("Project reactivated", "success");
     await fetchProjects();
   } catch (error) {
-    showSnackbar("Failed to reactivate department", "error");
+    showSnackbar("Failed to reactivate project", "error");
     devLog.error("Error reactivating project:", error);
   }
 };
@@ -1385,11 +1385,11 @@ const deleteProject = async (project) => {
 
   try {
     await api.delete(`/projects/${project.id}`);
-    showSnackbar("Department deleted successfully", "success");
+    showSnackbar("Project deleted successfully", "success");
     await fetchProjects();
   } catch (error) {
     const message =
-      error.response?.data?.message || "Failed to delete department";
+      error.response?.data?.message || "Failed to delete project";
     showSnackbar(message, "error");
     devLog.error("Error deleting project:", error);
   }

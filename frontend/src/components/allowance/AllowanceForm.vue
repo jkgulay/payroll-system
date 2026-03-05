@@ -158,7 +158,7 @@
                 >
                   <v-btn value="individual">Individual</v-btn>
                   <v-btn value="multiple">Multiple</v-btn>
-                  <v-btn value="department">Department</v-btn>
+                  <v-btn value="department">Project</v-btn>
                   <v-btn value="position">Position</v-btn>
                 </v-btn-toggle>
               </v-col>
@@ -197,7 +197,7 @@
                   :items="departments"
                   item-title="title"
                   item-value="value"
-                  label="Select Department"
+                  label="Select Project"
                   variant="outlined"
                   density="comfortable"
                   clearable

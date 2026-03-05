@@ -734,7 +734,7 @@
                   :items="departments"
                   item-title="name"
                   item-value="name"
-                  label="Department Preference"
+                  label="Project Preference"
                   prepend-inner-icon="mdi-office-building"
                   variant="outlined"
                   density="comfortable"
@@ -1053,7 +1053,7 @@ const attendanceHeaders = [
 const applicationHeaders = [
   { title: "Name", key: "name", sortable: true },
   { title: "Position", key: "position", sortable: true },
-  { title: "Department", key: "project", sortable: true },
+  { title: "Project", key: "project", sortable: true },
   { title: "Submitted", key: "created_at", sortable: true },
   { title: "Actions", key: "actions", sortable: false },
 ];

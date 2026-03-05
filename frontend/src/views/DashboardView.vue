@@ -590,7 +590,7 @@
             <v-col cols="12" md="6">
               <v-text-field
                 :model-value="selectedApplication.project?.name"
-                label="Department"
+                label="Project"
                 readonly
                 variant="outlined"
                 density="comfortable"

@@ -255,7 +255,7 @@
     </div>
     @endif
 
-    <!-- Department Table -->
+    <!-- Project Table -->
     <table class="main-table">
         <thead>
             <tr>
@@ -325,7 +325,7 @@
                     @php $rowNumber++; @endphp
                     @endforeach
 
-                    <!-- Department Subtotal -->
+                    <!-- Project Subtotal -->
                     <tr class="subtotal-row">
                         <td class="text-left" colspan="6"></td>
                         <td class="text-right">{{ number_format($departmentTotalGross, 2) }}</td>

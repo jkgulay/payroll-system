@@ -145,7 +145,7 @@ const router = createRouter({
               /* webpackChunkName: "projects" */ "@/views/projects/ProjectManagementView.vue"
             ),
           meta: {
-            title: "Department Management",
+            title: "Project Management",
             roles: ["admin", "payrollist"],
           },
         },

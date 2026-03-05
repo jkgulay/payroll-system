@@ -21,7 +21,7 @@
           >
             <v-radio label="All Employees" value="all"></v-radio>
             <v-radio label="By Employee" value="employee"></v-radio>
-            <v-radio label="By Department/Location" value="project"></v-radio>
+            <v-radio label="By Project/Location" value="project"></v-radio>
           </v-radio-group>
 
           <!-- Employee Filter -->
@@ -37,17 +37,17 @@
             clearable
           ></v-autocomplete>
 
-          <!-- Department Filter -->
+          <!-- Project Filter -->
           <v-autocomplete
             v-if="exportType === 'project'"
             v-model="selectedProject"
             :items="projects"
             item-title="name"
             item-value="id"
-            label="Select Department/Location"
+            label="Select Project/Location"
             prepend-icon="mdi-briefcase"
-            :rules="[(v) => !!v || 'Department is required']"
-            hint="Departments are grouped by location/description"
+            :rules="[(v) => !!v || 'Project is required']"
+            hint="Projects are grouped by location/description"
             persistent-hint
             clearable
           ></v-autocomplete>
@@ -238,7 +238,7 @@ const loadData = async () => {
     projects.value = projResponse.data.data || projResponse.data;
   } catch (error) {
     devLog.error("Error loading data:", error);
-    toast.error("Failed to load employees and departments");
+    toast.error("Failed to load employees and projects");
   }
 };
 

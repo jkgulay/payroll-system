@@ -108,7 +108,7 @@
             <div><span class="info-label">Employee No:</span> {{ $payslip->employee->employee_number }}</div>
         </div>
         <div class="info-row">
-            <div><span class="info-label">Department:</span> {{ $payslip->employee->department->name ?? 'N/A' }}</div>
+            <div><span class="info-label">Project:</span> {{ $payslip->employee->department->name ?? 'N/A' }}</div>
             <div><span class="info-label">Position:</span> {{ $payslip->employee->position->position_name ?? ($payslip->employee->staff_type ?? 'N/A') }}</div>
         </div>
         <div class="info-row">

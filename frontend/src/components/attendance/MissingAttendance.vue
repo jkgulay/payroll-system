@@ -283,7 +283,7 @@ const filterOptions = [
 const headers = [
   { title: "Employee", key: "employee_number", sortable: true },
   { title: "Position", key: "position", sortable: true },
-  { title: "Department", key: "department", sortable: true },
+  { title: "Project", key: "department", sortable: true },
   { title: "Issues", key: "issues", sortable: false },
   { title: "Time In", key: "time_in", sortable: false },
   { title: "Time Out", key: "time_out", sortable: false },

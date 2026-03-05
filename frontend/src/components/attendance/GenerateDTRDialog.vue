@@ -41,7 +41,7 @@
               <v-autocomplete
                 v-model="filterDepartment"
                 :items="departments"
-                label="Department"
+                label="Project"
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-domain"
