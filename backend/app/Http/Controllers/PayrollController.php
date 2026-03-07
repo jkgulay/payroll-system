@@ -532,14 +532,24 @@ class PayrollController extends Controller
             }
         }
 
-        $pdf = Pdf::loadView('payroll.payslip', [
-            'payroll' => $payroll,
-            'item' => $item,
-            'employee' => $item->employee,
-            'companyInfo' => $companyInfo,
-        ]);
+        try {
+            $pdf = Pdf::loadView('payroll.payslip', [
+                'payroll' => $payroll,
+                'item' => $item,
+                'employee' => $item->employee,
+                'companyInfo' => $companyInfo,
+            ]);
 
-        return $pdf->download("payslip_{$item->employee->employee_number}_{$payroll->period_name}.pdf");
+            return $pdf->download("payslip_{$item->employee->employee_number}_{$payroll->period_name}.pdf");
+        } catch (\Throwable $e) {
+            Log::error('Payslip PDF Error: ' . $e->getMessage(), [
+                'payroll_id' => $payrollId,
+                'employee_id' => $employeeId,
+            ]);
+            return response()->json([
+                'message' => 'Failed to generate payslip PDF: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -548,7 +558,7 @@ class PayrollController extends Controller
     public function downloadPayslips(Request $request, Payroll $payroll)
     {
         // Increase memory limit for PDF generation
-        ini_set('memory_limit', '1024M');
+        ini_set('memory_limit', '2048M');
         ini_set('max_execution_time', '300');
 
         // Validate filter parameters
@@ -617,10 +627,14 @@ class PayrollController extends Controller
             $pdf = Pdf::loadView('payroll.payslips-compact', [
                 'payroll' => $payroll,
                 'companyInfo' => $companyInfo,
+            ])->setOptions([
+                'isHtml5ParserEnabled'    => false,
+                'isRemoteEnabled'         => false,
+                'isFontSubsettingEnabled' => false,
             ])->setPaper('A4', 'portrait');
 
             return $pdf->download($filenameBase . '.pdf');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Payslips PDF Export Error: ' . $e->getMessage(), [
                 'payroll_id' => $payroll->id,
                 'trace' => $e->getTraceAsString(),
@@ -634,7 +648,7 @@ class PayrollController extends Controller
     public function downloadRegister(Request $request, Payroll $payroll)
     {
         // Increase memory limit for PDF generation
-        ini_set('memory_limit', '1024M');
+        ini_set('memory_limit', '2048M');
         ini_set('max_execution_time', '300');
 
         // Validate filter parameters
@@ -795,9 +809,14 @@ class PayrollController extends Controller
             }
 
             $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
+                ->setOptions([
+                    'isHtml5ParserEnabled'    => false,
+                    'isRemoteEnabled'         => false,
+                    'isFontSubsettingEnabled' => false,
+                ])
                 ->setPaper([0, 0, 612, 936], 'landscape'); // Long bond paper 8.5x13in landscape
             return $pdf->download($filenameBase . '.pdf');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('PDF Export Error: ' . $e->getMessage(), [
                 'payroll_id' => $payroll->id,
                 'trace' => $e->getTraceAsString(),
@@ -828,6 +847,9 @@ class PayrollController extends Controller
 
     private function exportRegisterByDevicePdf(Payroll $payroll, string $filenameBase)
     {
+        // Allow more memory for large multi-device PDFs (overrides the 1024M set upstream)
+        ini_set('memory_limit', '2048M');
+
         try {
             // $groupedItems is keyed by device name — the register blade reuses the
             // per-group rendering logic (same as department grouping) to print a
@@ -848,16 +870,21 @@ class PayrollController extends Controller
             }
 
             $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
+                ->setOptions([
+                    'isHtml5ParserEnabled'    => false,
+                    'isRemoteEnabled'         => false,
+                    'isFontSubsettingEnabled' => false,
+                ])
                 ->setPaper([0, 0, 612, 936], 'landscape');
 
             return $pdf->download($filenameBase . '_by_device.pdf');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('By-Device PDF Export Error: ' . $e->getMessage(), [
                 'payroll_id' => $payroll->id,
                 'trace'      => $e->getTraceAsString(),
             ]);
             return response()->json([
-                'message' => 'Failed to generate by-device PDF: ' . $e->getMessage(),
+                'message' => 'Failed to generate by-device PDF. The payroll is too large — please use the Excel (By Device) format instead.',
             ], 500);
         }
     }
@@ -990,7 +1017,7 @@ class PayrollController extends Controller
             return response()->download($tempFile, $filename, [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             ])->deleteFileAfterSend(true);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Word Export Error: ' . $e->getMessage(), [
                 'payroll_id' => $payroll->id,
                 'trace' => $e->getTraceAsString(),

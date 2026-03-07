@@ -102,14 +102,8 @@
 
         /* Data cells */
         table.payroll-table tbody td {
-            background-color: #fff;
             color: #222;
             border-color: #999;
-        }
-
-        /* Zebra striping for readability */
-        table.payroll-table tbody tr:nth-child(even) td {
-            background-color: #f5f7fa;
         }
 
         /* Text alignment helpers */
@@ -137,7 +131,6 @@
         .total-row td {
             font-weight: bold;
             font-size: 7.5px;
-            background-color: #ebedef !important;
             border-top: 2px solid #2c3e50 !important;
             color: #111;
         }
