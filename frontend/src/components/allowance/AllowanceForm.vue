@@ -515,7 +515,7 @@ async function loadEmployees() {
       name: `${emp.first_name || ""} ${emp.last_name || ""}`.trim(),
     }));
   } catch (error) {
-    console.error("Failed to load employees:", error);
+    devLog.error("Failed to load employees:", error);
     toast.error("Failed to load employees");
   } finally {
     loadingEmployees.value = false;

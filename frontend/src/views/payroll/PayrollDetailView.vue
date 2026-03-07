@@ -1027,9 +1027,18 @@ async function downloadRegister() {
       ? `/payrolls/${payroll.value.id}/download-payslips`
       : `/payrolls/${payroll.value.id}/download-register`;
 
+    // Use a longer timeout for large exports (by_device can be slow to generate)
+    const isLargeExport = [
+      "by_device",
+      "by_device_pdf",
+      "excel",
+      "word",
+    ].includes(exportFilter.value.format);
+
     const response = await api.get(endpoint, {
       params: params,
       responseType: "blob",
+      timeout: isLargeExport ? 300000 : 60000, // 5 min for large exports, 1 min otherwise
     });
 
     const url = window.URL.createObjectURL(new Blob([response.data]));

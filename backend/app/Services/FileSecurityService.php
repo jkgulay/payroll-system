@@ -268,11 +268,19 @@ class FileSecurityService
 
     /**
      * Basic virus scan simulation (placeholder for real AV integration)
+     * 
+     * TODO: For production deployment, integrate with ClamAV antivirus:
+     * 1. Install ClamAV: apt-get install clamav clamav-daemon
+     * 2. Install PHP ClamAV extension or use exec() with clamscan
+     * 3. Example: exec("clamscan --no-summary " . escapeshellarg($path), $output, $return);
+     * 4. Check $return === 0 for clean file
+     * 
+     * Alternative: Use cloud-based scanning services (VirusTotal API, MetaDefender)
      */
     public function scanForViruses(UploadedFile $file): array
     {
-        // TODO: Integrate with ClamAV or similar antivirus solution
-        // For now, perform basic checks
+        // Currently performs heuristic-based checks only
+        // For production, replace with actual antivirus integration
 
         $path = $file->getRealPath();
         $suspicious = false;

@@ -358,7 +358,7 @@ class PayrollService
 
         // Calculate days worked and hours
         $regularDays = 0;
-        $sundayDays = 0; // Track Sunday regular days separately (paid at 1.3x)
+        $sundayRegularHours = 0; // Track Sunday regular hours (not days) separately - will be added to special_ot_hours
         $holidayDays = 0;
         $regularOtHours = 0;
         $sundayOtHours = 0;
@@ -424,13 +424,18 @@ class PayrollService
                 // Regular working day or Sunday
                 if ($attendance->status === 'present' || $attendance->status === 'late') {
                     if ($isSunday) {
-                        $sundayDays++; // Sunday regular hours paid at 1.3x
+                        // Sunday regular hours - track as hours, not days
+                        // Use actual hours worked from attendance, default to 8
+                        $hoursWorked = $attendance->regular_hours ?? $standardHours;
+                        $sundayRegularHours += $hoursWorked;
                     } else {
                         $regularDays++;
                     }
                 } elseif ($attendance->status === 'half_day') {
                     if ($isSunday) {
-                        $sundayDays += 0.5; // Half day on Sunday
+                        // Half day on Sunday - add 4 hours (half of standard 8)
+                        $hoursWorked = ($attendance->regular_hours ?? $standardHours) / 2;
+                        $sundayRegularHours += $hoursWorked;
                     } else {
                         $regularDays += 0.5; // Half day counts as 0.5
                     }
@@ -499,9 +504,10 @@ class PayrollService
         }
         // ===== END OFFSET =====
 
-        // Calculate basic pay (excluding holiday days)
-        // Weekday regular pay at 1.0x, Sunday regular pay at 1.3x
-        $basicPay = ($rate * $regularDays) + ($rate * $sundayDays * 1.3);
+        // Calculate basic pay (excluding holiday days and Sunday)
+        // Only weekday regular pay at 1.0x
+        // Sunday regular hours are NOT included in basic pay - they go to special_ot_pay
+        $basicPay = ($rate * $regularDays);
 
         // Calculate overtime pay with different rates
         // Regular days: rate/8 × 1.25 × hours
@@ -511,7 +517,11 @@ class PayrollService
         );
         $regularOtPay = $regularOtHours * $hourlyRate * $regularOtMultiplier;
 
-        // Sunday (rest day): rate/8 × multiplier × hours
+        // Sunday regular hours pay: rate/8 × 1.3 × hours
+        // These are regular hours worked on Sunday (not OT), paid at 1.3x
+        $sundayRegularPay = $sundayRegularHours * $hourlyRate * 1.3;
+
+        // Sunday (rest day) OT: rate/8 × multiplier × hours
         // The multiplier from settings IS the full rate applied to hourly rate.
         // Default 1.3 = 30% premium for rest day OT (matching company payroll).
         // For DOLE Art. 93 & 87 compliance (130% × 130% = 169%), set to 1.69 in Payroll Configuration.
@@ -539,10 +549,16 @@ class PayrollService
         );
         $specialHolidayOtPay = $specialHolidayOtHours * $hourlyRate * 1.3 * $specialHolidayMultiplier;
 
-        // Total overtime pay
-        $specialOtHours = $sundayOtHours + $regularHolidayOtHours + $regularHolidaySundayOtHours + $specialHolidayOtHours;
-        $specialOtPay = $sundayOtPay + $regularHolidayOtPay + $regularHolidaySundayOtPay + $specialHolidayOtPay;
-        $totalOtPay = $regularOtPay + $specialOtPay;
+        // Calculate total Sunday hours and pay separately
+        // Total Sunday hours = Sunday regular hours + Sunday OT hours
+        $totalSundayHours = $sundayRegularHours + $sundayOtHours;
+        $totalSundayPay = $sundayRegularPay + $sundayOtPay;
+
+        // Total special OT hours and pay (EXCLUDES Sunday hours - they are tracked separately)
+        // Only includes holiday OT hours
+        $specialOtHours = $regularHolidayOtHours + $regularHolidaySundayOtHours + $specialHolidayOtHours;
+        $specialOtPay = $regularHolidayOtPay + $regularHolidaySundayOtPay + $specialHolidayOtPay;
+        $totalOtPay = $regularOtPay + $totalSundayPay + $specialOtPay;
 
         // OPTIMIZATION: Use preloaded relationships (no queries)
         $activeAllowances = $employee->allowances;
@@ -598,7 +614,8 @@ class PayrollService
         $otherAllowances = $allowances + $mealAllowanceTotal + $bonusTotal;
 
         // Calculate salary adjustment from pending adjustments (OPTIMIZED - preloaded)
-        $totalDaysWorked = $regularDays + $sundayDays + $holidayDays;
+        // Note: Sunday hours are NOT counted in days_worked - they appear in the sunday_hours column
+        $totalDaysWorked = $regularDays + $holidayDays;
 
         // OPTIMIZATION: Use preloaded salary adjustments
         $pendingAdjustments = $employee->salaryAdjustments;
@@ -746,6 +763,8 @@ class PayrollService
             'regular_ot_pay' => $regularOtPay,
             'special_ot_hours' => $specialOtHours,
             'special_ot_pay' => $specialOtPay,
+            'sunday_hours' => $totalSundayHours,
+            'sunday_pay' => $totalSundayPay,
             'other_allowances' => $otherAllowances,
             'salary_adjustment' => $salaryAdjustment,
             'allowances_breakdown' => $allowancesBreakdown,
