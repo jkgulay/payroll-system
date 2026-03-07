@@ -389,6 +389,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/reports/payroll-summary', [App\Http\Controllers\Api\ReportController::class, 'payrollSummary']);
     Route::get('/reports/employee-earnings', [App\Http\Controllers\Api\ReportController::class, 'employeeEarnings']);
     Route::get('/reports/government-remittance', [App\Http\Controllers\Api\ReportController::class, 'governmentRemittance']);
+    Route::get('/reports/government-contributions-pdf', [App\Http\Controllers\Api\ReportController::class, 'exportGovernmentContributionsPdf']);
     Route::get('/reports/attendance-summary', [App\Http\Controllers\Api\ReportController::class, 'attendanceSummary']);
     Route::get('/reports/loan-ledger', [App\Http\Controllers\Api\ReportController::class, 'loanLedger']);
 

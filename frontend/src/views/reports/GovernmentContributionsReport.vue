@@ -111,6 +111,15 @@
                     Export to Excel
                   </v-btn>
                   <v-btn
+                    color="error"
+                    prepend-icon="mdi-file-pdf-box"
+                    @click="showPdfExportDialog = true"
+                    :disabled="!reportData"
+                    variant="elevated"
+                  >
+                    Export to PDF
+                  </v-btn>
+                  <v-btn
                     color="info"
                     prepend-icon="mdi-printer"
                     @click="printReport"
@@ -772,6 +781,91 @@
       </v-card>
     </v-dialog>
 
+    <!-- PDF Export Dialog -->
+    <v-dialog v-model="showPdfExportDialog" max-width="600px">
+      <v-card rounded="lg">
+        <v-card-title class="pa-6 d-flex align-center bg-error">
+          <v-icon class="mr-3" color="white">mdi-file-pdf-box</v-icon>
+          <span class="text-h6 font-weight-bold text-white">Export to PDF</span>
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text class="pa-6">
+          <p class="text-body-1 mb-4">
+            Select which government contributions to include in the PDF export:
+          </p>
+          <v-checkbox
+            v-model="pdfExportTypes"
+            label="SSS Contributions"
+            value="sss"
+            color="primary"
+            hide-details
+            class="mb-2"
+          >
+            <template v-slot:label>
+              <div class="d-flex align-center">
+                <v-icon color="blue" class="mr-2">mdi-shield-account</v-icon>
+                <span class="font-weight-medium">SSS Contributions</span>
+              </div>
+            </template>
+          </v-checkbox>
+          <v-checkbox
+            v-model="pdfExportTypes"
+            label="PhilHealth Contributions"
+            value="philhealth"
+            color="success"
+            hide-details
+            class="mb-2"
+          >
+            <template v-slot:label>
+              <div class="d-flex align-center">
+                <v-icon color="green" class="mr-2">mdi-hospital-box</v-icon>
+                <span class="font-weight-medium">PhilHealth Contributions</span>
+              </div>
+            </template>
+          </v-checkbox>
+          <v-checkbox
+            v-model="pdfExportTypes"
+            label="Pag-IBIG Contributions"
+            value="pagibig"
+            color="orange"
+            hide-details
+            class="mb-4"
+          >
+            <template v-slot:label>
+              <div class="d-flex align-center">
+                <v-icon color="orange" class="mr-2">mdi-home-city</v-icon>
+                <span class="font-weight-medium">Pag-IBIG Contributions</span>
+              </div>
+            </template>
+          </v-checkbox>
+          <v-alert
+            v-if="pdfExportTypes.length === 0"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mt-4"
+          >
+            Please select at least one contribution type
+          </v-alert>
+        </v-card-text>
+        <v-divider></v-divider>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="showPdfExportDialog = false">Cancel</v-btn>
+          <v-btn
+            color="error"
+            variant="elevated"
+            @click="exportPdf"
+            :disabled="pdfExportTypes.length === 0"
+            :loading="exportingPdf"
+          >
+            <v-icon start>mdi-file-pdf-box</v-icon>
+            Export PDF
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Success Snackbar -->
     <v-snackbar
       v-model="snackbar"
@@ -825,6 +919,10 @@ const showEmailDialog = ref(false);
 const emailAddress = ref("");
 const emailMessage = ref("");
 const sendingEmail = ref(false);
+
+const showPdfExportDialog = ref(false);
+const pdfExportTypes = ref(["sss", "philhealth", "pagibig"]);
+const exportingPdf = ref(false);
 
 const contributionChart = ref(null);
 const shareChart = ref(null);
@@ -982,6 +1080,65 @@ const sendEmail = async () => {
     showSnackbar("Failed to send email", "error");
   } finally {
     sendingEmail.value = false;
+  }
+};
+
+const exportPdf = async () => {
+  if (pdfExportTypes.value.length === 0) {
+    showSnackbar("Please select at least one contribution type", "error");
+    return;
+  }
+
+  exportingPdf.value = true;
+  try {
+    // Build query parameters
+    const params = {
+      month: selectedMonth.value,
+      year: selectedYear.value,
+      types: pdfExportTypes.value,
+    };
+
+    // Add department filter if specified
+    if (selectedDepartment.value && selectedDepartment.value !== "All Projects") {
+      params.department = selectedDepartment.value;
+    }
+
+    // Build URL with query parameters
+    const queryString = new URLSearchParams();
+    queryString.append("month", params.month);
+    queryString.append("year", params.year);
+    params.types.forEach((type) => queryString.append("types[]", type));
+    if (params.department) {
+      queryString.append("department", params.department);
+    }
+
+    // Make request to download PDF
+    const response = await api.get(
+      `/reports/government-contributions-pdf?${queryString.toString()}`,
+      {
+        responseType: "blob",
+      },
+    );
+
+    // Create blob and download
+    const blob = new Blob([response.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `government-contributions-${selectedYear.value}-${String(selectedMonth.value).padStart(2, "0")}.pdf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
+    showSnackbar("PDF exported successfully", "success");
+    showPdfExportDialog.value = false;
+  } catch (error) {
+    devLog.error("Error exporting PDF:", error);
+    showSnackbar(
+      error.response?.data?.message || "Failed to export PDF",
+      "error",
+    );
+  } finally {
+    exportingPdf.value = false;
   }
 };
 

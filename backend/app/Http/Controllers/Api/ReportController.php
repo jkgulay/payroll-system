@@ -8,9 +8,11 @@ use App\Models\PayrollItem;
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeLoan;
+use App\Models\CompanyInfo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
@@ -239,5 +241,136 @@ class ReportController extends Controller
         ];
 
         return response()->json($ledger);
+    }
+
+    /**
+     * Export Government Contributions Report as PDF
+     */
+    public function exportGovernmentContributionsPdf(Request $request)
+    {
+        $month = $request->input('month', Carbon::now()->month);
+        $year = $request->input('year', Carbon::now()->year);
+        $contributionTypes = $request->input('types', ['sss', 'philhealth', 'pagibig']); // Default all types
+        $department = $request->input('department');
+
+        // Validate contribution types
+        $validTypes = ['sss', 'philhealth', 'pagibig'];
+        $contributionTypes = array_intersect($contributionTypes, $validTypes);
+        
+        if (empty($contributionTypes)) {
+            $contributionTypes = $validTypes; // If nothing valid, export all
+        }
+
+        // Query payroll items for the selected month/year
+        $payrollItemsQuery = PayrollItem::whereHas('payroll', function ($query) use ($month, $year) {
+            $query->where(function ($q) use ($month, $year) {
+                $q->whereMonth('period_start', $month)
+                  ->whereYear('period_start', $year);
+            })
+            ->orWhere(function ($q) use ($month, $year) {
+                $q->whereMonth('period_end', $month)
+                  ->whereYear('period_end', $year);
+            });
+        })->with(['employee', 'payroll']);
+
+        // Apply department filter if specified
+        if ($department) {
+            $payrollItemsQuery->whereHas('employee', function ($q) use ($department) {
+                $q->where('department', $department);
+            });
+        }
+
+        $payrollItems = $payrollItemsQuery->get();
+
+        // Group by employee and calculate contributions
+        $employees = $payrollItems->groupBy('employee_id')->map(function ($items, $employeeId) use ($contributionTypes) {
+            $employee = $items->first()->employee;
+            
+            // Skip if employee doesn't exist
+            if (!$employee) {
+                return null;
+            }
+            
+            $data = [
+                'employee_number' => $employee->employee_number ?? 'N/A',
+                'full_name' => $employee->full_name,
+                'position' => $employee->position ?? 'N/A',
+                'department' => $employee->department ?? 'N/A',
+            ];
+
+            // Add contribution data based on selected types
+            if (in_array('sss', $contributionTypes)) {
+                $data['sss'] = (float) $items->sum('sss');
+                $data['sss_employer'] = (float) $items->sum('sss');
+                $data['sss_total'] = (float) $items->sum('sss') * 2;
+            }
+            
+            if (in_array('philhealth', $contributionTypes)) {
+                $data['philhealth'] = (float) $items->sum('philhealth');
+                $data['philhealth_employer'] = (float) $items->sum('philhealth');
+                $data['philhealth_total'] = (float) $items->sum('philhealth') * 2;
+            }
+            
+            if (in_array('pagibig', $contributionTypes)) {
+                $data['pagibig'] = (float) $items->sum('pagibig');
+                $data['pagibig_employer'] = (float) $items->sum('pagibig');
+                $data['pagibig_total'] = (float) $items->sum('pagibig') * 2;
+            }
+
+            return $data;
+        })->filter()->values()->sortBy('full_name')->values();
+
+        // Calculate totals for each contribution type
+        $totals = [];
+        if (in_array('sss', $contributionTypes)) {
+            $totals['sss_employee'] = $employees->sum('sss');
+            $totals['sss_employer'] = $employees->sum('sss_employer');
+            $totals['sss_total'] = $employees->sum('sss_total');
+        }
+        if (in_array('philhealth', $contributionTypes)) {
+            $totals['philhealth_employee'] = $employees->sum('philhealth');
+            $totals['philhealth_employer'] = $employees->sum('philhealth_employer');
+            $totals['philhealth_total'] = $employees->sum('philhealth_total');
+        }
+        if (in_array('pagibig', $contributionTypes)) {
+            $totals['pagibig_employee'] = $employees->sum('pagibig');
+            $totals['pagibig_employer'] = $employees->sum('pagibig_employer');
+            $totals['pagibig_total'] = $employees->sum('pagibig_total');
+        }
+
+        // Get company info
+        $companyInfo = CompanyInfo::first();
+
+        // Ensure installed-fonts.json exists
+        $fontCache = storage_path('fonts');
+        $installedFonts = $fontCache . '/installed-fonts.json';
+        if (!file_exists($installedFonts)) {
+            $distFonts = base_path('vendor/dompdf/dompdf/lib/fonts/installed-fonts.dist.json');
+            if (file_exists($distFonts)) {
+                copy($distFonts, $installedFonts);
+            }
+        }
+
+        try {
+            $pdf = Pdf::loadView('reports.government-contributions', [
+                'period' => Carbon::createFromDate($year, $month, 1)->format('F Y'),
+                'month' => $month,
+                'year' => $year,
+                'employees' => $employees,
+                'totals' => $totals,
+                'contributionTypes' => $contributionTypes,
+                'companyInfo' => $companyInfo,
+                'department' => $department,
+                'employeeCount' => $employees->count(),
+            ]);
+
+            $filename = 'government-contributions-' . Carbon::createFromDate($year, $month, 1)->format('Y-m') . '.pdf';
+            return $pdf->download($filename);
+        } catch (\Throwable $e) {
+            Log::error('Government Contributions PDF Error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to generate PDF: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
