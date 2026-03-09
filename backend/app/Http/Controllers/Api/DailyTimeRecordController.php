@@ -83,14 +83,26 @@ class DailyTimeRecordController extends Controller
             'company_name' => config('payroll.company.name'),
         ];
 
-        $pdf = Pdf::loadView('dtr.daily-time-record', $data);
-        $pdf->setPaper('legal', 'portrait');
+        try {
+            $pdf = Pdf::loadView('dtr.daily-time-record', $data)
+                ->setOptions([
+                    'isHtml5ParserEnabled' => false,
+                    'isRemoteEnabled' => false,
+                    'isFontSubsettingEnabled' => false,
+                ])
+                ->setPaper('legal', 'portrait');
 
-        $filename = 'DTR_' . $employee->employee_number . '_' .
-            Carbon::parse($validated['date_from'])->format('Ymd') . '-' .
-            Carbon::parse($validated['date_to'])->format('Ymd') . '.pdf';
+            $filename = 'DTR_' . $employee->employee_number . '_' .
+                Carbon::parse($validated['date_from'])->format('Ymd') . '-' .
+                Carbon::parse($validated['date_to'])->format('Ymd') . '.pdf';
 
-        return $pdf->download($filename);
+            return $pdf->download($filename);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate DTR PDF: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -128,13 +140,25 @@ class DailyTimeRecordController extends Controller
             'company_name' => config('payroll.company.name'),
         ];
 
-        $pdf = Pdf::loadView('dtr.daily-attendance', $data);
-        $pdf->setPaper('a4', 'portrait');
+        try {
+            $pdf = Pdf::loadView('dtr.daily-attendance', $data)
+                ->setOptions([
+                    'isHtml5ParserEnabled' => false,
+                    'isRemoteEnabled' => false,
+                    'isFontSubsettingEnabled' => false,
+                ])
+                ->setPaper('a4', 'portrait');
 
-        $filename = 'DTR_' . $employee->employee_number . '_' .
-            Carbon::parse($validated['date'])->format('Ymd') . '.pdf';
+            $filename = 'DTR_' . $employee->employee_number . '_' .
+                Carbon::parse($validated['date'])->format('Ymd') . '.pdf';
 
-        return $pdf->download($filename);
+            return $pdf->download($filename);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate DTR PDF: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
