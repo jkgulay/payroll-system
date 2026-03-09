@@ -25,23 +25,10 @@
         <v-form ref="form" v-model="valid">
           <v-row>
             <v-col cols="6">
-              <v-text-field
-                v-model="searchQuery"
-                label="Search Employees"
-                variant="outlined"
-                density="comfortable"
-                prepend-inner-icon="mdi-magnify"
-                clearable
-                placeholder="Search by name, number..."
-                @input="filterEmployees"
-              ></v-text-field>
-            </v-col>
-
-            <v-col cols="3">
               <v-autocomplete
                 v-model="filterDepartment"
                 :items="departments"
-                label="Project"
+                label="Filter by Project"
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-domain"
@@ -50,11 +37,11 @@
               ></v-autocomplete>
             </v-col>
 
-            <v-col cols="3">
+            <v-col cols="6">
               <v-autocomplete
                 v-model="filterStaffType"
                 :items="staffTypes"
-                label="Staff Type"
+                label="Filter by Staff Type"
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-account-group"
@@ -164,7 +151,8 @@
             <strong>Total Hours:</strong> {{ preview.totals.regular_hours }} hrs
           </div>
           <div>
-            <strong>Overtime:</strong> {{ Math.floor(preview.totals.overtime_hours || 0) }} hrs
+            <strong>Overtime:</strong>
+            {{ Math.floor(preview.totals.overtime_hours || 0) }} hrs
           </div>
         </v-alert>
       </v-card-text>
@@ -225,7 +213,6 @@ const employees = ref([]);
 const filteredEmployees = ref([]);
 const reportType = ref("range");
 const preview = ref(null);
-const searchQuery = ref("");
 const filterDepartment = ref(null);
 const filterStaffType = ref(null);
 const departments = ref([]);
@@ -285,19 +272,6 @@ const loadEmployees = async () => {
 const filterEmployees = () => {
   let result = [...employees.value];
 
-  // Filter by search query
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    result = result.filter(
-      (emp) =>
-        emp.full_name?.toLowerCase().includes(query) ||
-        emp.employee_number?.toLowerCase().includes(query) ||
-        emp.first_name?.toLowerCase().includes(query) ||
-        emp.last_name?.toLowerCase().includes(query) ||
-        emp.position?.toLowerCase().includes(query),
-    );
-  }
-
   // Filter by department
   if (filterDepartment.value) {
     result = result.filter((emp) => emp.department === filterDepartment.value);
@@ -309,6 +283,11 @@ const filterEmployees = () => {
   }
 
   filteredEmployees.value = result;
+
+  // Clear selection so the selected value doesn't go missing from the new items list
+  // (Vuetify marks the autocomplete invalid when v-model value isn't in :items)
+  formData.employee_id = null;
+  preview.value = null;
 };
 
 const setThisMonth = () => {
@@ -366,6 +345,7 @@ const generate = async () => {
 
     const response = await api.post(endpoint, payload, {
       responseType: "blob",
+      timeout: reportType.value === "daily" ? 60000 : 300000,
     });
 
     // Create download link
@@ -412,7 +392,6 @@ watch(
       formData.date_to = today;
       reportType.value = "range";
       preview.value = null;
-      searchQuery.value = "";
       filterDepartment.value = null;
       filterStaffType.value = null;
       filteredEmployees.value = employees.value;

@@ -58,7 +58,6 @@
         }
 
         th {
-            background-color: #f0f0f0;
             font-weight: bold;
         }
 
@@ -163,7 +162,7 @@
             @endforeach
         </tbody>
         <tfoot>
-            <tr style="font-weight: bold; background-color: #f0f0f0;">
+            <tr style="font-weight: bold;">
                 <td colspan="5" style="text-align: right;">TOTALS:</td>
                 <td>{{ number_format($totals['regular_hours'], 2) }}</td>
                 <td>{{ number_format($totals['overtime_hours'], 2) }}</td>
@@ -187,8 +186,8 @@
         <strong>Earnings & Deductions Summary:</strong><br>
         <table style="margin-top: 10px;">
             <tr>
-                <th colspan="2" style="background-color: #e8f5e9;">EARNINGS</th>
-                <th colspan="2" style="background-color: #ffebee;">DEDUCTIONS</th>
+                <th colspan="2">EARNINGS</th>
+                <th colspan="2">DEDUCTIONS</th>
             </tr>
             <tr>
                 <td style="text-align: left; padding: 5px;">Daily Rate:</td>
@@ -208,13 +207,13 @@
                 <td style="text-align: left; padding: 5px;">Pag-IBIG Contribution:</td>
                 <td style="text-align: right; padding: 5px;">PHP {{ number_format($deductions['pagibig'], 2) }}</td>
             </tr>
-            <tr style="font-weight: bold; background-color: #f0f0f0;">
+            <tr style="font-weight: bold;">
                 <td style="text-align: left; padding: 5px;">GROSS PAY:</td>
                 <td style="text-align: right; padding: 5px;">PHP {{ number_format($earnings['gross_pay'], 2) }}</td>
                 <td style="text-align: left; padding: 5px;">TOTAL DEDUCTIONS:</td>
                 <td style="text-align: right; padding: 5px;">PHP {{ number_format($deductions['total'], 2) }}</td>
             </tr>
-            <tr style="font-weight: bold; background-color: #4CAF50; color: white;">
+            <tr style="font-weight: bold;">
                 <td colspan="3" style="text-align: left; padding: 8px; font-size: 13px;">NET PAY:</td>
                 <td style="text-align: right; padding: 8px; font-size: 13px;">PHP {{ number_format($net_pay, 2) }}</td>
             </tr>

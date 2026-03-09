@@ -257,25 +257,30 @@ class PunchRecordImportService
         $breakMinHours = (int) config('payroll.attendance.break_detection_min_hours', 3);
         $breakMaxHours = (int) config('payroll.attendance.break_detection_max_hours', 6);
         $smartDetectionMinutes = (int) config('payroll.attendance.smart_detection_window_minutes', 120);
-        $otGracePeriodMinutes = (int) config('payroll.attendance.ot_grace_period_minutes', 15);
+
+        // Track whether OT was auto-created by setTimeOutWithOtSplit (not from explicit OT punches).
+        // When auto-split, subsequent punches should extend ot_time_out rather than starting OT2,
+        // because the employee never explicitly clocked out for their regular shift.
+        $otAutoSplit = false;
 
         // Process each punch time individually to properly assign to regular shift or OT sessions
         foreach ($times as $timestamp) {
             $timeString = $timestamp->format('H:i:s');
+            $dateStr = $attendanceDate->format('Y-m-d');
 
             // 1. First punch = time_in
             if (!$attendance->time_in) {
                 $attendance->time_in = $timeString;
             }
-            // 2. Second punch - could be break_start (if configured hours after time_in) or early time_out
+            // 2. Second punch - could be break_start (if configured hours after time_in) or time_out
             elseif (!$attendance->break_start && !$attendance->time_out) {
-                $timeIn = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $attendance->time_in);
+                $timeIn = Carbon::parse($dateStr . ' ' . $attendance->time_in);
                 $hoursAfterTimeIn = $timeIn->diffInHours($timestamp);
 
                 // Also check against scheduled time_in as fallback
                 // When an employee arrives very late, the break detection window shifts too far
                 // Using the scheduled time_in ensures lunch breaks are still detected correctly
-                $scheduledTimeIn = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $schedule['standard_time_in']);
+                $scheduledTimeIn = Carbon::parse($dateStr . ' ' . $schedule['standard_time_in']);
                 $hoursAfterScheduledTimeIn = $scheduledTimeIn->diffInHours($timestamp);
 
                 // If within configured hours after EITHER actual or scheduled time_in, likely break start
@@ -285,9 +290,10 @@ class PunchRecordImportService
                 if ($isBreakAfterActual || $isBreakAfterScheduled) {
                     $attendance->break_start = $timeString;
                 } else {
-                    // Otherwise it's time_out (no automatic OT splitting for 2-punch scenarios)
-                    // Employee must punch in explicitly for OT to get OT credit
-                    $attendance->time_out = $timeString;
+                    // It's time_out — but check if it's far past scheduled time_out (OT split needed)
+                    if ($this->setTimeOutWithOtSplit($attendance, $timestamp, $scheduledTimeOut, $smartDetectionMinutes, $dateStr)) {
+                        $otAutoSplit = true;
+                    }
                 }
             }
             // 3. Third punch - if we have break_start, check if this is break_end or time_out
@@ -298,38 +304,36 @@ class PunchRecordImportService
 
                 // If punch is within configured window of scheduled time_out, assume it's time_out (not break_end)
                 if ($minutesBeforeScheduledOut >= -$smartDetectionMinutes) {
-                    // This is the end of day punch
-                    $attendance->time_out = $timeString;
+                    // This is end of day — clear orphan break_start since we never got break_end
+                    $attendance->break_start = null;
+                    if ($this->setTimeOutWithOtSplit($attendance, $timestamp, $scheduledTimeOut, $smartDetectionMinutes, $dateStr)) {
+                        $otAutoSplit = true;
+                    }
                 } else {
                     // Still early in the day, this is break_end
                     $attendance->break_end = $timeString;
                 }
             }
-            // 4. Fourth punch - if we had break, this is time_out
+            // 4. Fourth punch - if we had break, this is time_out (with OT split check)
             elseif ($attendance->break_start && $attendance->break_end && !$attendance->time_out) {
-                // Set time_out without automatic OT splitting
-                // Employee must punch in explicitly for OT (5th+ punch) to get OT credit
-                $attendance->time_out = $timeString;
+                if ($this->setTimeOutWithOtSplit($attendance, $timestamp, $scheduledTimeOut, $smartDetectionMinutes, $dateStr)) {
+                    $otAutoSplit = true;
+                }
             }
-            // 5. Fifth+ punch - check if OT (>configured grace period after time_out)
+            // 5. Fifth+ punch - check if OT (> 2h past scheduled time_out)
             elseif ($attendance->time_out) {
-                $dateStr = $attendanceDate->format('Y-m-d');
-                $actualTimeOut = Carbon::parse($dateStr . ' ' . $attendance->time_out);
+                // Use the same 2-hour window as setTimeOutWithOtSplit for consistency.
+                // Punch beyond scheduledTimeOut + 2h = OT. Within = adjust time_out.
+                if ($timestamp->gt($scheduledTimeOut->copy()->addMinutes($smartDetectionMinutes))) {
+                    $actualTimeOut = Carbon::parse($dateStr . ' ' . $attendance->time_out);
 
-                // Use the LATER of actual time_out or scheduled time_out as the OT baseline.
-                // This prevents early clock-outs from falsely triggering OT,
-                // while still respecting employees who stay past their scheduled shift.
-                $otBaseline = $actualTimeOut->gt($scheduledTimeOut)
-                    ? $actualTimeOut->copy()
-                    : $scheduledTimeOut->copy();
+                    // If time_out was set past schedule (within the 2h window), snap it back
+                    // now that a subsequent punch confirms the employee was working OT all along.
+                    if ($actualTimeOut->gt($scheduledTimeOut) && !$attendance->ot_time_in) {
+                        $attendance->time_out = $scheduledTimeOut->format('H:i:s');
+                    }
 
-                // If current punch is AFTER baseline + configured grace period, it's an OT session
-                if ($timestamp->gt($otBaseline->copy()->addMinutes($otGracePeriodMinutes))) {
-                    // Determine OT start time: use the later of actual time_out or scheduled time_out
-                    // so OT hours accurately reflect time worked beyond the shift
-                    $otStartTime = $actualTimeOut->gt($scheduledTimeOut)
-                        ? $attendance->time_out
-                        : $scheduledTimeOut->format('H:i:s');
+                    $otStartTime = $scheduledTimeOut->format('H:i:s');
 
                     // Track OT sessions (up to 2 sessions)
                     if (!$attendance->ot_time_in) {
@@ -338,6 +342,11 @@ class PunchRecordImportService
                         $attendance->ot_time_out = $timeString;
                     } elseif (!$attendance->ot_time_out) {
                         // Close first OT session
+                        $attendance->ot_time_out = $timeString;
+                    } elseif ($otAutoSplit) {
+                        // OT1 was auto-created by setTimeOutWithOtSplit (employee never explicitly
+                        // clocked out for their regular shift). All subsequent punches are part of
+                        // the same continuous work session — extend OT1 end time.
                         $attendance->ot_time_out = $timeString;
                     } elseif (!$attendance->ot_time_in_2) {
                         // OT1 is complete — check if it was trivially short (< 60 min).
@@ -395,6 +404,32 @@ class PunchRecordImportService
         }
 
         return ['action' => $action, 'attendance' => $attendance->fresh()];
+    }
+
+    /**
+     * Set time_out with automatic OT split when punch is far past scheduled time_out.
+     *
+     * If the punch is within the OT grace period of the scheduled end, it's just time_out.
+     * If the punch is AFTER scheduled end + grace, set time_out to the scheduled end
+     * and create an OT session from scheduled end to the punch time.
+     *
+     * @return bool True if an OT split was created, false if just time_out was set.
+     */
+    protected function setTimeOutWithOtSplit(Attendance $attendance, Carbon $timestamp, Carbon $scheduledTimeOut, int $smartDetectionMinutes, string $dateStr): bool
+    {
+        $timeString = $timestamp->format('H:i:s');
+
+        // If punch is within 2 hours of scheduled time_out, just set as time_out (not OT)
+        if ($timestamp->lte($scheduledTimeOut->copy()->addMinutes($smartDetectionMinutes))) {
+            $attendance->time_out = $timeString;
+            return false;
+        }
+
+        // Punch is well past scheduled time_out — split into regular + OT
+        $attendance->time_out = $scheduledTimeOut->format('H:i:s');
+        $attendance->ot_time_in = $scheduledTimeOut->format('H:i:s');
+        $attendance->ot_time_out = $timeString;
+        return true;
     }
 
     /**
