@@ -185,81 +185,81 @@
 
 <body>
     @php
-        $items = $payroll->items;
-        $chunks = $items->chunk(4);
-        $periodStart = \Carbon\Carbon::parse($payroll->period_start)->format('F d');
-        $periodEnd = \Carbon\Carbon::parse($payroll->period_end)->format('M d, Y');
-        $periodDisplay = $periodStart . ' - ' . $periodEnd;
-        
-        // Signature names from company info or defaults
-        $preparedBy = $companyInfo->prepared_by ?? 'JERCIEL';
-        $checkedBy = $companyInfo->checked_by ?? 'JAMAICA';
-        $recommendedBy = $companyInfo->recommended_by ?? 'ENGR. FGCR';
-        $approvedBy = $companyInfo->approved_by ?? 'ENGR. ORR. JR.';
+    $items = $payroll->items;
+    $chunks = $items->chunk(4);
+    $periodStart = \Carbon\Carbon::parse($payroll->period_start)->format('F d');
+    $periodEnd = \Carbon\Carbon::parse($payroll->period_end)->format('M d, Y');
+    $periodDisplay = $periodStart . ' - ' . $periodEnd;
+
+    // Signature names from company info or defaults
+    $preparedBy = $companyInfo->sig_prepared_by ?? 'MERCIEL LAVASAN';
+    $checkedBy = $companyInfo->sig_checked_by ?? 'SAIRAH JENITA';
+    $recommendedBy = $companyInfo->sig_recommended_by ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA';
+    $approvedBy = $companyInfo->sig_approved_by ?? 'ENGR. OSTRIC R. RIVERA JR.';
     @endphp
 
     @foreach($chunks as $chunkIndex => $chunk)
     @php
-        $chunkArray = $chunk->values()->all();
+    $chunkArray = $chunk->values()->all();
     @endphp
     <div class="page-wrapper">
         <table class="payslips-grid">
             @for($row = 0; $row < 2; $row++)
-            <tr>
+                <tr>
                 @for($col = 0; $col < 2; $col++)
-                @php
-                    $idx = $row * 2 + $col;
-                    $item = $chunkArray[$idx] ?? null;
-                @endphp
-                <td class="payslip-cell">
+                    @php
+                    $idx=$row * 2 + $col;
+                    $item=$chunkArray[$idx] ?? null;
+                    @endphp
+                    <td class="payslip-cell">
                     @if($item)
                     @php
-                        $employee = $item->employee;
-                        $rate = $item->effective_rate ?? $item->rate ?? 0;
-                        $daysWorked = $item->days_worked ?? 0;
-                        $basicAmount = $rate * $daysWorked;
-                        
-                        $regOtHours = $item->regular_ot_hours ?? 0;
-                        $regOtPay = $item->regular_ot_pay ?? 0;
-                        $splHolHours = $item->special_ot_hours ?? 0;
-                        $splHolPay = $item->special_ot_pay ?? 0;
-                        $allowances = $item->other_allowances ?? 0;
-                        $salaryAdj = $item->salary_adjustment ?? 0;
-                        $grossAmount = $item->gross_pay ?? 0;
-                        
-                        // Deductions
-                        $cashAdvance = $item->cash_advance ?? 0;
-                        $undertime = $item->undertime_deduction ?? 0;
-                        $sssPrem = $item->sss ?? 0;
-                        $phicPrem = $item->philhealth ?? 0;
-                        $hdmfPrem = $item->pagibig ?? 0;
-                        $totalDeductions = $item->total_deductions ?? 0;
-                        $netAmount = $item->net_pay ?? 0;
-                        
-                        // Parse deductions breakdown
-                        $ppeBoots = 0;
-                        $cashBond = 0;
-                        $sssLoan = 0;
-                        $hdmfLoan = 0;
-                        
-                        if (!empty($item->deductions_breakdown) && is_array($item->deductions_breakdown)) {
-                            foreach ($item->deductions_breakdown as $deduction) {
-                                $deductionName = strtolower($deduction['name'] ?? $deduction['type'] ?? '');
-                                $deductionAmount = $deduction['amount'] ?? 0;
-                                
-                                if (str_contains($deductionName, 'ppe') || str_contains($deductionName, 'safety') || str_contains($deductionName, 'boots')) {
-                                    $ppeBoots += $deductionAmount;
-                                } elseif (str_contains($deductionName, 'cash bond')) {
-                                    $cashBond += $deductionAmount;
-                                } elseif (str_contains($deductionName, 'sss loan')) {
-                                    $sssLoan += $deductionAmount;
-                                } elseif (str_contains($deductionName, 'hdmf loan') || str_contains($deductionName, 'pag-ibig loan') || str_contains($deductionName, 'pagibig loan')) {
-                                    $hdmfLoan += $deductionAmount;
-                                }
-                            }
-                        }
+                    $employee = $item->employee;
+                    $rate = $item->effective_rate ?? $item->rate ?? 0;
+                    $daysWorked = $item->days_worked ?? 0;
+                    $basicAmount = $rate * $daysWorked;
+
+                    $regOtHours = $item->regular_ot_hours ?? 0;
+                    $regOtPay = $item->regular_ot_pay ?? 0;
+                    $splHolHours = $item->special_ot_hours ?? 0;
+                    $splHolPay = $item->special_ot_pay ?? 0;
+                    $allowances = $item->other_allowances ?? 0;
+                    $salaryAdj = $item->salary_adjustment ?? 0;
+                    $grossAmount = $item->gross_pay ?? 0;
+
+                    // Deductions
+                    $cashAdvance = $item->cash_advance ?? 0;
+                    $undertime = $item->undertime_deduction ?? 0;
+                    $sssPrem = $item->sss ?? 0;
+                    $phicPrem = $item->philhealth ?? 0;
+                    $hdmfPrem = $item->pagibig ?? 0;
+                    $totalDeductions = $item->total_deductions ?? 0;
+                    $netAmount = $item->net_pay ?? 0;
+
+                    // Parse deductions breakdown
+                    $ppeBoots = 0;
+                    $cashBond = 0;
+                    $sssLoan = 0;
+                    $hdmfLoan = 0;
+
+                    if (!empty($item->deductions_breakdown) && is_array($item->deductions_breakdown)) {
+                    foreach ($item->deductions_breakdown as $deduction) {
+                    $deductionName = strtolower($deduction['name'] ?? $deduction['type'] ?? '');
+                    $deductionAmount = $deduction['amount'] ?? 0;
+
+                    if (str_contains($deductionName, 'ppe') || str_contains($deductionName, 'safety') || str_contains($deductionName, 'boots')) {
+                    $ppeBoots += $deductionAmount;
+                    } elseif (str_contains($deductionName, 'cash bond')) {
+                    $cashBond += $deductionAmount;
+                    } elseif (str_contains($deductionName, 'sss loan')) {
+                    $sssLoan += $deductionAmount;
+                    } elseif (str_contains($deductionName, 'hdmf loan') || str_contains($deductionName, 'pag-ibig loan') || str_contains($deductionName, 'pagibig loan')) {
+                    $hdmfLoan += $deductionAmount;
+                    }
+                    }
+                    }
                     @endphp
-                    
+
                     <div class="payslip">
                         <!-- Header -->
                         <div class="slip-header">
@@ -267,7 +267,7 @@
                             <div class="company-address">{{ $companyInfo->address ?? '863 Capitol-Bonbon Road, Imadejas Subd., Butuan City' }}</div>
                             <div class="company-phone">Tel. No. {{ $companyInfo->phone ?? '(085) 817-1833' }}</div>
                         </div>
-                        
+
                         <!-- Main Table -->
                         <table class="slip-table">
                             <tr>
@@ -372,7 +372,7 @@
                                 <td class="amount-col bold">{{ number_format($netAmount, 2) }}</td>
                             </tr>
                         </table>
-                        
+
                         <!-- Payslip Signature -->
                         <table class="slip-signature">
                             <tr>
@@ -389,46 +389,55 @@
                         </table>
                     </div>
                     @endif
-                </td>
-                @endfor
-            </tr>
-            @endfor
+                    </td>
+                    @endfor
+                    </tr>
+                    @endfor
         </table>
 
         <!-- Page Footer Signature Section (same as payroll register) -->
         <div class="page-footer">
             <table class="footer-sig-table">
                 <tr>
-                    <td style="text-align: left;">
+                    <td style="text-align: left; width: 25%;">
                         <div class="footer-sig-label">PREPARED BY:</div>
                     </td>
-                    <td style="text-align: center;">
+                    <td style="text-align: center; width: 25%;">
                         <div class="footer-sig-label">CHECKED & VERIFIED:</div>
                     </td>
-                    <td style="text-align: right;">
+                    <td style="text-align: center; width: 25%;">
                         <div class="footer-sig-label">RECOMMENDED BY:</div>
+                    </td>
+                    <td style="text-align: right; width: 25%;">
+                        <div class="footer-sig-label">APPROVED BY:</div>
                     </td>
                 </tr>
                 <tr>
                     <td style="text-align: left;">
-                        <div class="footer-sig-name">JERCIEL LAYASAN</div>
+                        <div class="footer-sig-name">{{ $companyInfo->sig_prepared_by ?? 'MERCIEL LAVASAN' }}</div>
                     </td>
                     <td style="text-align: center;">
-                        <div class="footer-sig-name">SAIRAH JENITA</div>
+                        <div class="footer-sig-name">{{ $companyInfo->sig_checked_by ?? 'SAIRAH JENITA' }}</div>
+                    </td>
+                    <td style="text-align: center;">
+                        <div class="footer-sig-name">{{ $companyInfo->sig_recommended_by ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA' }}</div>
                     </td>
                     <td style="text-align: right;">
-                        <div class="footer-sig-name">ENGR. FRANCIS GIOVANNI C. RIVERA</div>
+                        <div class="footer-sig-name">{{ $companyInfo->sig_approved_by ?? 'ENGR. OSTRIC R. RIVERA JR.' }}</div>
                     </td>
                 </tr>
                 <tr>
                     <td style="text-align: left; padding-top: 8px;">
-                        <div class="footer-sig-name">JAMAICA CRISTEL MAE SUGABO</div>
+                        <div class="footer-sig-name">{{ $companyInfo->sig_prepared_by_2 ?? '' }}</div>
                     </td>
                     <td style="text-align: center; padding-top: 8px;">
-                        <div class="footer-sig-name">ENGR. ELISA MAY PARCON</div>
+                        <div class="footer-sig-name">{{ $companyInfo->sig_checked_by_2 ?? 'JAMAICA CRISTEL MAE SUGABO' }}</div>
+                    </td>
+                    <td style="text-align: center; padding-top: 8px;">
+                        <div class="footer-sig-name">{{ $companyInfo->sig_recommended_by_2 ?? 'ENGR. OSTRIC C. RIVERA, III' }}</div>
                     </td>
                     <td style="text-align: right; padding-top: 8px;">
-                        <div class="footer-sig-name">ENGR. OSTRIC C. RIVERA, III</div>
+                        <div class="footer-sig-name">{{ $companyInfo->sig_approved_by_2 ?? 'ENGR. ELISA MAY PARCON' }}</div>
                     </td>
                 </tr>
             </table>

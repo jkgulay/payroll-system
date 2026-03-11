@@ -48,6 +48,15 @@ class CompanyInfoController extends Controller
             'report_footer' => 'nullable|string|max:255',
             'prepared_by_title' => 'nullable|string|max:255',
             'approved_by_title' => 'nullable|string|max:255',
+            'sig_prepared_by' => 'nullable|string|max:255',
+            'sig_prepared_by_2' => 'nullable|string|max:255',
+            'sig_checked_by' => 'nullable|string|max:255',
+            'sig_recommended_by' => 'nullable|string|max:255',
+            'sig_approved_by' => 'nullable|string|max:255',
+            'sig_approved_by_position' => 'nullable|string|max:255',
+            'sig_checked_by_2' => 'nullable|string|max:255',
+            'sig_recommended_by_2' => 'nullable|string|max:255',
+            'sig_approved_by_2' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {

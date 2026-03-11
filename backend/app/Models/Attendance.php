@@ -35,6 +35,7 @@ class Attendance extends Model
         'holiday_type',
         'is_manual_entry',
         'device_name',
+        'device_hours',
         'manual_reason',
         'is_edited',
         'edit_reason',
@@ -68,6 +69,7 @@ class Attendance extends Model
         'edited_at' => 'datetime',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'device_hours' => 'array',
     ];
 
     protected $appends = ['hours_worked', 'actual_time_out'];

@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Style\Font;
+use App\Models\CompanyInfo;
 use Carbon\Carbon;
 
 class PayrollWordExport
@@ -245,6 +246,8 @@ class PayrollWordExport
         );
 
         // Add signature section
+        $ci = CompanyInfo::first();
+
         $signatureTable = $section->addTable([
             'width' => 100 * 50,
             'unit' => 'pct',
@@ -260,18 +263,18 @@ class PayrollWordExport
         $signatureTable->addCell(3500)->addText('APPROVED BY:', $sigHeaderStyle, ['alignment' => 'center']);
 
         $signatureTable->addRow(200);
-        $signatureTable->addCell(3500)->addText('MERCIEL LAVASAN', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText('SAIRAH JENITA', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText('ENGR. FRANCIS GIOVANNI C. RIVERA', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_prepared_by ?? 'MERCIEL LAVASAN', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_checked_by ?? 'SAIRAH JENITA', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_recommended_by ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA', $sigNameStyle, ['alignment' => 'center']);
         $cell = $signatureTable->addCell(3500);
-        $cell->addText('ENGR. OSTRIC R. RIVERA JR.', $sigNameStyle, ['alignment' => 'center']);
-        $cell->addText('Proprietor/Manager', ['name' => 'Arial', 'size' => 6], ['alignment' => 'center']);
+        $cell->addText($ci->sig_approved_by ?? 'ENGR. OSTRIC R. RIVERA JR.', $sigNameStyle, ['alignment' => 'center']);
+        $cell->addText($ci->sig_approved_by_position ?? 'Proprietor/Manager', ['name' => 'Arial', 'size' => 6], ['alignment' => 'center']);
 
         $signatureTable->addRow(200);
-        $signatureTable->addCell(3500)->addText('', $sigNameStyle);
-        $signatureTable->addCell(3500)->addText('JAMAICA CRISTEL MAE SUGABO', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText('ENGR. OSTRIC C. RIVERA, III', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText('ENGR. ELISA MAY PARCON', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_prepared_by_2 ?? '', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_checked_by_2 ?? 'JAMAICA CRISTEL MAE SUGABO', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_recommended_by_2 ?? 'ENGR. OSTRIC C. RIVERA, III', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_approved_by_2 ?? 'ENGR. ELISA MAY PARCON', $sigNameStyle, ['alignment' => 'center']);
 
         return $phpWord;
     }

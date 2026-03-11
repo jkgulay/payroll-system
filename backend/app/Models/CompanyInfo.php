@@ -30,5 +30,14 @@ class CompanyInfo extends Model
         'report_footer',
         'prepared_by_title',
         'approved_by_title',
+        'sig_prepared_by',
+        'sig_prepared_by_2',
+        'sig_checked_by',
+        'sig_recommended_by',
+        'sig_approved_by',
+        'sig_approved_by_position',
+        'sig_checked_by_2',
+        'sig_recommended_by_2',
+        'sig_approved_by_2',
     ];
 }

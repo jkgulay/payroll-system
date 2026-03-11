@@ -1039,6 +1039,7 @@ const baseDeductionTypes = [
   { title: "Uniform", value: "uniform" },
   { title: "Absence", value: "absence" },
   { title: "Cash Advance", value: "cash_advance" },
+  { title: "Damages", value: "damages" },
   { title: "Insurance", value: "insurance" },
   { title: "Cooperative", value: "cooperative" },
   { title: "Loan Repayment", value: "loan" },
@@ -1360,6 +1361,10 @@ const formatDeductionType = (type) => {
     pagibig: "Pag-IBIG",
     tax: "Tax",
     loan: "Loan",
+    cash_advance: "Cash Advance",
+    damages: "Damages",
+    insurance: "Insurance",
+    cooperative: "Cooperative",
     other: "Other",
   };
   if (types[type]) return types[type];
@@ -1401,6 +1406,10 @@ const getDeductionTypeColor = (type) => {
     tools: "purple",
     uniform: "green",
     absence: "red",
+    cash_advance: "deep-orange",
+    damages: "pink",
+    insurance: "teal",
+    cooperative: "indigo",
     loan: "cyan",
     other: "grey",
   };
