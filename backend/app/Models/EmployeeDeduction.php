@@ -13,7 +13,7 @@ class EmployeeDeduction extends Model
 
     protected $fillable = [
         'employee_id',
-        'deduction_type', // 'ppe', 'tools', 'uniform', 'absence', 'sss', 'philhealth', 'pagibig', 'tax', 'loan', 'other'
+        'deduction_type', // 'ppe', 'tools', 'uniform', 'absence', 'sss', 'philhealth', 'pagibig', 'tax', 'loan', 'insurance', 'cooperative', 'damages', 'cash_advance', 'other'
         'deduction_name',
         'total_amount',
         'amount_per_cutoff',
@@ -72,6 +72,11 @@ class EmployeeDeduction extends Model
 
     public function scopeCompany($query)
     {
-        return $query->whereIn('deduction_type', ['ppe', 'tools', 'uniform', 'absence', 'loan', 'other']);
+        return $query->whereIn('deduction_type', ['ppe', 'tools', 'uniform', 'absence', 'loan', 'insurance', 'cooperative', 'other']);
+    }
+
+    public function scopeOtherDeductions($query)
+    {
+        return $query->whereIn('deduction_type', ['damages', 'cash_advance']);
     }
 }

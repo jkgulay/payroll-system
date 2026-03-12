@@ -7,58 +7,51 @@
     <style>
         @page {
             size: 13in 8.5in;
-            margin: 8mm 8mm 52mm 8mm;
+            margin: 6mm 10mm 6mm 8mm;
         }
 
         body {
-            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-family: 'Times New Roman', Times, serif;
             margin: 0;
-            padding: 6px 8px;
-            font-size: 8px;
-            color: #222;
+            padding: 0;
+            font-size: 11px;
+            color: #000;
         }
 
         /* ===== HEADER ===== */
         .header {
             text-align: center;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #333;
+            margin-bottom: 8px;
         }
 
         .company-name {
             font-size: 18px;
             font-weight: bold;
-            letter-spacing: 1px;
             text-transform: uppercase;
-            color: #111;
         }
 
         .company-address {
-            font-size: 9px;
+            font-size: 11px;
             margin-top: 2px;
-            color: #444;
         }
 
         .title {
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
-            letter-spacing: 10px;
-            margin-top: 10px;
+            letter-spacing: 8px;
+            margin-top: 8px;
             text-transform: uppercase;
-            color: #111;
         }
 
         .period {
-            font-size: 10px;
+            font-size: 12px;
             margin-top: 3px;
-            color: #333;
         }
 
         /* ===== PROJECT INFO ===== */
         .project-info {
-            margin: 8px 0 4px 0;
-            font-size: 9px;
+            margin: 6px 0 4px 0;
+            font-size: 11px;
         }
 
         .project-info div {
@@ -69,41 +62,29 @@
         table.payroll-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
+            table-layout: fixed;
+            margin-top: 4px;
         }
 
-        /* Every cell gets all 4 borders — dompdf-safe, no missing edges */
         table.payroll-table th,
         table.payroll-table td {
-            border: 1px solid #444;
-            padding: 3px 2px;
-            font-size: 7.5px;
+            border: 1px solid #000;
+            padding: 2px 1px;
+            font-size: 8px;
             text-align: center;
             vertical-align: middle;
+            overflow: hidden;
         }
 
-        /* Header row styling — dark background for formal look */
         table.payroll-table thead th {
-            background-color: #2c3e50;
-            color: #fff;
             font-weight: bold;
-            font-size: 7px;
+            font-size: 7.5px;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-            padding: 4px 2px;
-            border-color: #1a252f;
+            padding: 3px 1px;
         }
 
-        /* Sub-header row (HRS, REG OT, SSS, etc) — slightly lighter */
         table.payroll-table thead tr:last-child th {
-            background-color: #34495e;
-            font-size: 6.5px;
-        }
-
-        /* Data cells */
-        table.payroll-table tbody td {
-            color: #222;
-            border-color: #999;
+            font-size: 7px;
         }
 
         /* Text alignment helpers */
@@ -121,128 +102,74 @@
         .nothing-follows {
             text-align: center !important;
             font-style: italic;
-            font-size: 8px;
+            font-size: 9px;
             padding: 4px !important;
-            background-color: #fff !important;
-            color: #666;
         }
 
-        /* Total row — bold with top accent border */
+        /* Total row */
         .total-row td {
             font-weight: bold;
-            font-size: 7.5px;
-            border-top: 2px solid #2c3e50 !important;
-            color: #111;
+            font-size: 9px;
         }
 
-        /* ===== FIXED FOOTER — SIGNATURES ===== */
-        .page-footer {
-            position: fixed;
-            bottom: -44mm;
-            left: 0mm;
-            right: 0mm;
-            height: 44mm;
-            background-color: white;
-            padding: 0 2mm;
+        /* Footer block: nothing-follows + total + signature kept together */
+        .table-footer-block {
+            page-break-inside: avoid;
         }
 
-        .footer-acknowledgment {
-            font-size: 7px;
+        .table-footer-block table.payroll-table {
+            margin-top: 0;
+        }
+
+        /* ===== SIGNATURE SECTION (inline, under table) ===== */
+        .signature-section {
+            margin-top: 10px;
+        }
+
+        .signature-acknowledgment {
+            font-size: 9px;
             font-style: italic;
             text-align: center;
             margin-bottom: 6px;
-            color: #444;
         }
 
-        table.footer-signature-table {
+        table.signature-table {
             width: 100%;
             border: none;
             border-collapse: collapse;
         }
 
-        table.footer-signature-table td {
+        table.signature-table td {
             border: none;
             text-align: center;
             padding: 1px 4px;
             vertical-align: top;
         }
 
-        .footer-signature-title {
-            font-size: 6.5px;
+        .signature-title {
+            font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 0.3px;
-            color: #555;
             margin-bottom: 14px;
         }
 
-        .footer-signature-name {
-            font-size: 7px;
+        .signature-name {
+            font-size: 9px;
             font-weight: bold;
-            color: #111;
-            border-top: 1px solid #333;
+            border-top: 1px solid #000;
             display: inline-block;
             padding-top: 2px;
             min-width: 80%;
         }
 
-        .footer-signature-position {
-            font-size: 6px;
-            color: #555;
+        .signature-position {
+            font-size: 8px;
             font-style: italic;
-        }
-
-        /* Hide the inline signature section (footer handles it) */
-        .signature-section {
-            display: none;
         }
     </style>
 </head>
 
 <body>
-    <!-- Fixed footer signature section that appears on every page -->
-    <div class="page-footer">
-        <div class="footer-acknowledgment">
-            "I hereby acknowledge that the computation and total of my salary stated above for the given period is correct."
-        </div>
-
-        <table class="footer-signature-table">
-            <tr>
-                <td style="width: 25%;">
-                    <div class="footer-signature-title">PREPARED BY:</div>
-                    <div class="footer-signature-name">MERCIEL LAVASAN</div>
-                </td>
-                <td style="width: 25%;">
-                    <div class="footer-signature-title">CHECKED AND VERIFIED BY:</div>
-                    <div class="footer-signature-name">SAIRAH JENITA</div>
-                </td>
-                <td style="width: 25%;">
-                    <div class="footer-signature-title">RECOMMENDED BY:</div>
-                    <div class="footer-signature-name">ENGR. FRANCIS GIOVANNI C. RIVERA</div>
-                </td>
-                <td style="width: 25%;">
-                    <div class="footer-signature-title">APPROVED BY:</div>
-                    <div class="footer-signature-name">ENGR. OSTRIC R. RIVERA JR.</div>
-                    <div class="footer-signature-position">Proprietor/Manager</div>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="4" style="height: 5px;"></td>
-            </tr>
-            <tr>
-                <td style="width: 25%;"></td>
-                <td style="width: 25%;">
-                    <div class="footer-signature-name">JAMAICA CRISTEL MAE SUGABO</div>
-                </td>
-                <td style="width: 25%;">
-                    <div class="footer-signature-name">ENGR. OSTRIC C. RIVERA, III</div>
-                </td>
-                <td style="width: 25%;">
-                    <div class="footer-signature-name">ENGR. ELISA MAY PARCON</div>
-                </td>
-            </tr>
-        </table>
-    </div>
-
     <div class="header">
         <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
         <div class="company-address">{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
@@ -262,6 +189,29 @@
     </div>
 
     <table class="payroll-table">
+        <colgroup>
+            <col style="width: 13.5%">
+            <col style="width: 4.5%">
+            <col style="width: 3%">
+            <col style="width: 5%">
+            <col style="width: 2.8%">
+            <col style="width: 4.5%">
+            <col style="width: 2.8%">
+            <col style="width: 4.5%">
+            <col style="width: 4.3%">
+            <col style="width: 4.3%">
+            <col style="width: 5.5%">
+            <col style="width: 3.8%">
+            <col style="width: 3.5%">
+            <col style="width: 3%">
+            <col style="width: 3.8%">
+            <col style="width: 3.8%">
+            <col style="width: 3.5%">
+            <col style="width: 3.5%">
+            <col style="width: 3.5%">
+            <col style="width: 5.5%">
+            <col style="width: 7%">
+        </colgroup>
         <thead>
             <tr>
                 <th rowspan="2">NAME</th>
@@ -276,6 +226,7 @@
                 <th rowspan="2">Loans</th>
                 <th rowspan="2">UT</th>
                 <th rowspan="2">Deductions</th>
+                <th rowspan="2">Other<br>Ded.</th>
                 <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
                 <th rowspan="2">SIGNATURE</th>
@@ -312,6 +263,7 @@
                 <td class="text-right">{{ $item->loans > 0 ? number_format($item->loans, 2) : '' }}</td>
                 <td class="text-right">{{ $undertimeDeduction > 0 ? number_format($undertimeDeduction, 2) : '' }}</td>
                 <td class="text-right">{{ $item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '' }}</td>
+                <td class="text-right">{{ $item->other_deductions > 0 ? number_format($item->other_deductions, 2) : '' }}</td>
                 <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
@@ -319,41 +271,73 @@
                 <td></td>
             </tr>
             @endforeach
-            <tr>
-                <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
-            </tr>
-            @php
-            $totalUndertimeDeduction = $items->sum(function($item) {
-            return $item->undertime_deduction ?? 0;
-            });
-            $totalAmount = $items->sum(function($item) {
-            return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
-            });
-            @endphp
-            <tr class="total-row">
-                <td class="text-left"><strong>T O T A L</strong></td>
-                <td></td>
-                <td></td>
-                <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
-                <td>{{ number_format($items->sum('regular_ot_hours'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('regular_ot_pay'), 2) }}</td>
-                <td>{{ number_format($items->sum('special_ot_hours'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('special_ot_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('salary_adjustment'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('other_allowances'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('gross_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('employee_savings'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('loans'), 2) }}</td>
-                <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
-                <td class="text-right">{{ number_format($items->sum('employee_deductions'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('sss'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('philhealth'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('net_pay'), 2) }}</td>
-                <td></td>
-            </tr>
         </tbody>
     </table>
+
+    <div class="table-footer-block">
+        @php
+        $totalUndertimeDeduction = $items->sum(function($item) {
+        return $item->undertime_deduction ?? 0;
+        });
+        $totalAmount = $items->sum(function($item) {
+        return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+        });
+        @endphp
+        <table class="payroll-table">
+            <colgroup>
+                <col style="width: 13.5%">
+                <col style="width: 4.5%">
+                <col style="width: 3%">
+                <col style="width: 5%">
+                <col style="width: 2.8%">
+                <col style="width: 4.5%">
+                <col style="width: 2.8%">
+                <col style="width: 4.5%">
+                <col style="width: 4.3%">
+                <col style="width: 4.3%">
+                <col style="width: 5.5%">
+                <col style="width: 3.8%">
+                <col style="width: 3.5%">
+                <col style="width: 3%">
+                <col style="width: 3.8%">
+                <col style="width: 3.8%">
+                <col style="width: 3.5%">
+                <col style="width: 3.5%">
+                <col style="width: 3.5%">
+                <col style="width: 5.5%">
+                <col style="width: 7%">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
+                </tr>
+                <tr class="total-row">
+                    <td class="text-left"><strong>T O T A L</strong></td>
+                    <td></td>
+                    <td></td>
+                    <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
+                    <td>{{ number_format($items->sum('regular_ot_hours'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('regular_ot_pay'), 2) }}</td>
+                    <td>{{ number_format($items->sum('special_ot_hours'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('special_ot_pay'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('salary_adjustment'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('other_allowances'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('gross_pay'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('employee_savings'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('loans'), 2) }}</td>
+                    <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
+                    <td class="text-right">{{ number_format($items->sum('employee_deductions'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('other_deductions'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('sss'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('philhealth'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('pagibig'), 2) }}</td>
+                    <td class="text-right">{{ number_format($items->sum('net_pay'), 2) }}</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+        @include('payroll.partials.signature')
+    </div>
     @endforeach
     @else
     {{-- Single table for all employees --}}
@@ -374,6 +358,29 @@
     @endif
 
     <table class="payroll-table">
+        <colgroup>
+            <col style="width: 13.5%">
+            <col style="width: 4.5%">
+            <col style="width: 3%">
+            <col style="width: 5%">
+            <col style="width: 2.8%">
+            <col style="width: 4.5%">
+            <col style="width: 2.8%">
+            <col style="width: 4.5%">
+            <col style="width: 4.3%">
+            <col style="width: 4.3%">
+            <col style="width: 5.5%">
+            <col style="width: 3.8%">
+            <col style="width: 3.5%">
+            <col style="width: 3%">
+            <col style="width: 3.8%">
+            <col style="width: 3.8%">
+            <col style="width: 3.5%">
+            <col style="width: 3.5%">
+            <col style="width: 3.5%">
+            <col style="width: 5.5%">
+            <col style="width: 7%">
+        </colgroup>
         <thead>
             <tr>
                 <th rowspan="2">NAME</th>
@@ -388,6 +395,7 @@
                 <th rowspan="2">Loans</th>
                 <th rowspan="2">UT</th>
                 <th rowspan="2">Deductions</th>
+                <th rowspan="2">Other<br>Ded.</th>
                 <th colspan="3">PREMIUMS</th>
                 <th rowspan="2">NET<br>AMOUNT</th>
                 <th rowspan="2">SIGNATURE</th>
@@ -424,6 +432,7 @@
                 <td class="text-right">{{ $item->loans > 0 ? number_format($item->loans, 2) : '' }}</td>
                 <td class="text-right">{{ $undertimeDeduction > 0 ? number_format($undertimeDeduction, 2) : '' }}</td>
                 <td class="text-right">{{ $item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '' }}</td>
+                <td class="text-right">{{ $item->other_deductions > 0 ? number_format($item->other_deductions, 2) : '' }}</td>
                 <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
                 <td class="text-right">{{ $item->pagibig > 0 ? number_format($item->pagibig, 2) : '' }}</td>
@@ -431,81 +440,74 @@
                 <td></td>
             </tr>
             @endforeach
-            <tr>
-                <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
-            </tr>
-            @php
-            $totalUndertimeDeduction = $payroll->items->sum(function($item) {
-            return $item->undertime_deduction ?? 0;
-            });
-            $totalAmount = $payroll->items->sum(function($item) {
-            return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
-            });
-            @endphp
-            <tr class="total-row">
-                <td class="text-left"><strong>T O T A L</strong></td>
-                <td></td>
-                <td></td>
-                <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
-                <td>{{ number_format($payroll->items->sum('regular_ot_hours'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('regular_ot_pay'), 2) }}</td>
-                <td>{{ number_format($payroll->items->sum('special_ot_hours'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('special_ot_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('salary_adjustment'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('other_allowances'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('gross_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('loans'), 2) }}</td>
-                <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('employee_deductions'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('net_pay'), 2) }}</td>
-                <td></td>
-            </tr>
         </tbody>
     </table>
+
+    <div class="table-footer-block">
+        @php
+        $totalUndertimeDeduction = $payroll->items->sum(function($item) {
+        return $item->undertime_deduction ?? 0;
+        });
+        $totalAmount = $payroll->items->sum(function($item) {
+        return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+        });
+        @endphp
+        <table class="payroll-table">
+            <colgroup>
+                <col style="width: 13.5%">
+                <col style="width: 4.5%">
+                <col style="width: 3%">
+                <col style="width: 5%">
+                <col style="width: 2.8%">
+                <col style="width: 4.5%">
+                <col style="width: 2.8%">
+                <col style="width: 4.5%">
+                <col style="width: 4.3%">
+                <col style="width: 4.3%">
+                <col style="width: 5.5%">
+                <col style="width: 3.8%">
+                <col style="width: 3.5%">
+                <col style="width: 3%">
+                <col style="width: 3.8%">
+                <col style="width: 3.8%">
+                <col style="width: 3.5%">
+                <col style="width: 3.5%">
+                <col style="width: 3.5%">
+                <col style="width: 5.5%">
+                <col style="width: 7%">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
+                </tr>
+                <tr class="total-row">
+                    <td class="text-left"><strong>T O T A L</strong></td>
+                    <td></td>
+                    <td></td>
+                    <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
+                    <td>{{ number_format($payroll->items->sum('regular_ot_hours'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('regular_ot_pay'), 2) }}</td>
+                    <td>{{ number_format($payroll->items->sum('special_ot_hours'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('special_ot_pay'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('salary_adjustment'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('other_allowances'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('gross_pay'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('loans'), 2) }}</td>
+                    <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('employee_deductions'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('other_deductions'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
+                    <td class="text-right">{{ number_format($payroll->items->sum('net_pay'), 2) }}</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+        @include('payroll.partials.signature')
+    </div>
     @endif
-
-    <div class="signature-section">
-        <div class="signature-box">
-            <div class="signature-title">PREPARED BY:</div>
-            <div class="signature-line"></div>
-            <div class="signature-name">MERCIEL LAVASAN</div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-title">CHECKED AND VERIFIED BY:</div>
-            <div class="signature-line"></div>
-            <div class="signature-name">SAIRAH JENITA</div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-title">RECOMMENDED BY:</div>
-            <div class="signature-line"></div>
-            <div class="signature-name">ENGR. FRANCIS GIOVANNI C. RIVERA</div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-title">APPROVED BY:</div>
-            <div class="signature-line"></div>
-            <div class="signature-name">ENGR. OSTRIC R. RIVERA JR.</div>
-            <div class="signature-position">Proprietor/Manager</div>
-        </div>
-    </div>
-
-    <div class="signature-section" style="margin-top: 40px;">
-        <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-name">JAMAICA CRISTEL MAE SUGABOO</div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-name">ENGR. OSTRIC C. RIVERA, III</div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-name">ENGR. ELISA MAY PARCON</div>
-        </div>
-    </div>
 </body>
 
 </html>

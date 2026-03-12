@@ -13,7 +13,7 @@
           </p>
         </div>
         <button
-          v-if="userRole !== 'employee'"
+          v-if="userRole !== 'employee' && hasAccess"
           class="action-btn action-btn-primary"
           @click="openAddDialog"
         >
@@ -21,6 +21,66 @@
           <span>Add Cash Bond</span>
         </button>
       </div>
+
+      <!-- Access Gate for Payrollist -->
+      <template v-if="!isAdminOrHr && !hasAccess">
+        <v-alert v-if="accessStatus === 'none'" type="info" variant="tonal" prominent class="ma-4" icon="mdi-lock-outline">
+          <v-alert-title>Access Required</v-alert-title>
+          <p class="mt-1">You need to request access from an administrator before you can manage cash bonds.</p>
+          <v-btn color="primary" variant="flat" class="mt-3" prepend-icon="mdi-send" @click="accessRequestDialog = true">Request Access</v-btn>
+        </v-alert>
+        <v-alert v-else-if="accessStatus === 'pending'" type="warning" variant="tonal" prominent class="ma-4" icon="mdi-clock-outline">
+          <v-alert-title>Pending Approval</v-alert-title>
+          <p class="mt-1">Your access request is pending admin approval. You will be able to manage cash bonds once approved.</p>
+        </v-alert>
+        <v-alert v-else-if="accessStatus === 'rejected'" type="error" variant="tonal" prominent class="ma-4" icon="mdi-close-circle-outline">
+          <v-alert-title>Request Rejected</v-alert-title>
+          <p class="mt-1">{{ accessMessage }}</p>
+          <v-btn color="primary" variant="flat" class="mt-3" prepend-icon="mdi-send" @click="accessRequestDialog = true">Submit New Request</v-btn>
+        </v-alert>
+        <v-expansion-panels v-model="accessRequestsPanel" class="mx-4 mb-4">
+          <v-expansion-panel>
+            <v-expansion-panel-title><v-icon class="mr-2">mdi-history</v-icon>My Access Requests</v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <v-list v-if="myAccessRequests.length > 0" density="compact">
+                <v-list-item v-for="req in myAccessRequests" :key="req.id" :subtitle="req.reason">
+                  <template v-slot:prepend><v-icon :color="getAccessRequestStatusColor(req.status)">{{ req.status === 'pending' ? 'mdi-clock-outline' : req.status === 'approved' ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon></template>
+                  <template v-slot:append><v-chip :color="getAccessRequestStatusColor(req.status)" size="x-small" variant="flat">{{ req.status }}</v-chip></template>
+                </v-list-item>
+              </v-list>
+              <p v-else class="text-center text-medium-emphasis py-4">No requests yet.</p>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+        <v-dialog v-model="accessRequestDialog" max-width="500" persistent>
+          <v-card rounded="lg">
+            <v-card-title class="d-flex align-center pa-4"><v-icon color="primary" class="mr-2">mdi-lock-open-variant</v-icon>Request Cash Bonds Access</v-card-title>
+            <v-divider></v-divider>
+            <v-card-text class="pa-4">
+              <p class="text-body-2 mb-4">Please provide a reason for needing access to the Cash Bonds module.</p>
+              <v-textarea v-model="accessRequestReason" label="Reason" variant="outlined" rows="3" :rules="[v => !!v || 'Reason is required']" placeholder="Explain why you need access"></v-textarea>
+            </v-card-text>
+            <v-divider></v-divider>
+            <v-card-actions class="pa-4">
+              <v-spacer></v-spacer>
+              <v-btn variant="text" @click="accessRequestDialog = false; accessRequestReason = ''">Cancel</v-btn>
+              <v-btn color="primary" variant="flat" :loading="submittingAccessRequest" :disabled="!accessRequestReason" prepend-icon="mdi-send" @click="submitAccessRequest">Submit Request</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </template>
+
+      <!-- Admin/HR Tabs -->
+      <v-tabs v-if="isAdminOrHr" v-model="adminTab" class="mb-4">
+        <v-tab value="main">Cash Bonds</v-tab>
+        <v-tab value="access-requests">Access Requests<v-badge v-if="moduleRequestCount > 0" :content="moduleRequestCount" color="error" class="ml-2" inline></v-badge></v-tab>
+      </v-tabs>
+      <template v-if="isAdminOrHr && adminTab === 'access-requests'">
+        <ModificationRequestsManager module="cash-bonds" @update-count="(c) => moduleRequestCount = c" />
+      </template>
+
+      <!-- Main Content -->
+      <template v-if="hasAccess && (adminTab === 'main' || !isAdminOrHr)">
 
       <!-- Summary Cards -->
       <div class="stats-grid">
@@ -253,6 +313,7 @@
           </v-menu>
         </template>
       </v-data-table>
+      </template>
     </div>
 
     <!-- Add/Edit Cash Bond Dialog -->
@@ -716,15 +777,65 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
+import ModificationRequestsManager from "@/components/attendance/ModificationRequestsManager.vue";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import moduleAccessService from "@/services/moduleAccessService";
 
+const route = useRoute();
 const authStore = useAuthStore();
 const { confirm: confirmDialog } = useConfirmDialog();
 const userRole = computed(() => authStore.user?.role);
+const isAdminOrHr = computed(() => ['admin', 'hr'].includes(authStore.user?.role));
+
+// Access control
+const accessStatus = ref('none');
+const accessMessage = ref('');
+const accessRequestDialog = ref(false);
+const accessRequestReason = ref('');
+const submittingAccessRequest = ref(false);
+const myAccessRequests = ref([]);
+const accessRequestsPanel = ref(null);
+const moduleRequestCount = ref(0);
+const adminTab = ref(route.query.tab || 'main');
+const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin');
+
+const getAccessRequestStatusColor = (status) => ({ pending: 'warning', approved: 'success', rejected: 'error' }[status] || 'grey');
+
+const checkModuleAccess = async () => {
+  if (isAdminOrHr.value) return;
+  try {
+    const response = await moduleAccessService.checkAccess('cash-bonds');
+    accessStatus.value = response.status;
+    accessMessage.value = response.message || '';
+  } catch { accessStatus.value = 'none'; }
+};
+
+const loadMyAccessRequests = async () => {
+  if (isAdminOrHr.value) return;
+  try {
+    const response = await moduleAccessService.getRequests('cash-bonds');
+    myAccessRequests.value = response.data || [];
+  } catch { myAccessRequests.value = []; }
+};
+
+const submitAccessRequest = async () => {
+  if (!accessRequestReason.value) return;
+  submittingAccessRequest.value = true;
+  try {
+    await moduleAccessService.submitRequest('cash-bonds', { reason: accessRequestReason.value });
+    accessRequestDialog.value = false;
+    accessRequestReason.value = '';
+    accessStatus.value = 'pending';
+    await loadMyAccessRequests();
+  } catch (error) {
+    showNotification(error.response?.data?.message || 'Failed to submit request', 'error');
+  } finally { submittingAccessRequest.value = false; }
+};
 
 // Data
 const cashBonds = ref([]);
@@ -1097,10 +1208,20 @@ const showSnackbar = (message, color = "success") => {
 };
 
 // Lifecycle
-onMounted(() => {
-  fetchCashBonds();
-  if (userRole.value !== "employee") {
-    fetchEmployees();
+onMounted(async () => {
+  await checkModuleAccess();
+  loadMyAccessRequests();
+  if (hasAccess.value) {
+    fetchCashBonds();
+    if (userRole.value !== "employee") {
+      fetchEmployees();
+    }
+  }
+  if (isAdminOrHr.value) {
+    try {
+      const res = await moduleAccessService.getPendingCount('cash-bonds');
+      moduleRequestCount.value = res.count || 0;
+    } catch {}
   }
 });
 </script>

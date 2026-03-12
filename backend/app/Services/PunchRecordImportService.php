@@ -43,7 +43,8 @@ class PunchRecordImportService
 
         // ── Group all rows by (staffCode → date → [HH:mm, ...]) ──────────────
         $grouped = [];
-        $deviceNames = []; // Capture first non-empty device name per employee+date
+        $deviceCounts = []; // Track device punch counts per employee+date
+        $punchDeviceMap = []; // staffCode → dateKey → [HH:MM → deviceName]
         foreach ($punchData as $row) {
             $staffCode    = trim($row['Staff Code'] ?? '');
             $rawPunchDate = trim($row['Punch Date'] ?? '');
@@ -84,12 +85,21 @@ class PunchRecordImportService
 
             $grouped[$staffCode][$dateKey][] = $timeKey;
 
-            // Store first non-empty device name seen for this employee+date
-            if (!isset($deviceNames[$staffCode][$dateKey])) {
-                $deviceName = trim($row['Device Name'] ?? '');
-                if ($deviceName !== '') {
-                    $deviceNames[$staffCode][$dateKey] = $deviceName;
-                }
+            // Track device punch counts per employee+date for majority-device resolution
+            $deviceName = trim($row['Device Name'] ?? '');
+            if ($deviceName !== '') {
+                $deviceCounts[$staffCode][$dateKey][$deviceName] =
+                    ($deviceCounts[$staffCode][$dateKey][$deviceName] ?? 0) + 1;
+                $punchDeviceMap[$staffCode][$dateKey][$timeKey] = $deviceName;
+            }
+        }
+
+        // Resolve to majority device per employee+date (most punches wins)
+        $deviceNames = [];
+        foreach ($deviceCounts as $sc => $dates) {
+            foreach ($dates as $dk => $counts) {
+                arsort($counts);
+                $deviceNames[$sc][$dk] = array_key_first($counts);
             }
         }
 
@@ -131,10 +141,11 @@ class PunchRecordImportService
                 // processPunchRecord expects newline-separated HH:MM strings
                 $timeEntries = implode("\n", $times);
                 $deviceName = $deviceNames[$staffCode][$dateStr] ?? null;
+                $punchMap = $punchDeviceMap[$staffCode][$dateStr] ?? [];
 
                 DB::beginTransaction();
                 try {
-                    $result = $this->processPunchRecord($employee, $attendanceDate, $timeEntries, $deviceName);
+                    $result = $this->processPunchRecord($employee, $attendanceDate, $timeEntries, $deviceName, $punchMap);
                     DB::commit();
 
                     if ($result['action'] === 'created')      $imported++;
@@ -180,7 +191,7 @@ class PunchRecordImportService
      * Time entries can be multiple lines like "06:10\n11:39\n11:51\n17:02"
      * Now processes each punch individually to properly track OT sessions
      */
-    protected function processPunchRecord(Employee $employee, Carbon $attendanceDate, string $timeEntries, ?string $deviceName = null): array
+    protected function processPunchRecord(Employee $employee, Carbon $attendanceDate, string $timeEntries, ?string $deviceName = null, array $punchDeviceMap = []): array
     {
         // Parse time entries (multiple times may be on separate lines or separated by \n)
         $times = [];
@@ -272,22 +283,30 @@ class PunchRecordImportService
             if (!$attendance->time_in) {
                 $attendance->time_in = $timeString;
             }
-            // 2. Second punch - could be break_start (if configured hours after time_in) or time_out
+            // 2. Second punch - could be break_start (if 3+ punches and configured hours after time_in) or time_out
             elseif (!$attendance->break_start && !$attendance->time_out) {
-                $timeIn = Carbon::parse($dateStr . ' ' . $attendance->time_in);
-                $hoursAfterTimeIn = $timeIn->diffInHours($timestamp);
+                $canBeBreak = false;
 
-                // Also check against scheduled time_in as fallback
-                // When an employee arrives very late, the break detection window shifts too far
-                // Using the scheduled time_in ensures lunch breaks are still detected correctly
-                $scheduledTimeIn = Carbon::parse($dateStr . ' ' . $schedule['standard_time_in']);
-                $hoursAfterScheduledTimeIn = $scheduledTimeIn->diffInHours($timestamp);
+                // Only consider break detection when there are 3+ punches.
+                // With exactly 2 punches the second is always time_out — there
+                // won't be a subsequent punch to close the break, which would
+                // leave an orphan break_start and no time_out (half_day fallback).
+                if (count($times) >= 3) {
+                    $timeIn = Carbon::parse($dateStr . ' ' . $attendance->time_in);
+                    $hoursAfterTimeIn = $timeIn->diffInHours($timestamp);
 
-                // If within configured hours after EITHER actual or scheduled time_in, likely break start
-                $isBreakAfterActual = $hoursAfterTimeIn >= $breakMinHours && $hoursAfterTimeIn <= $breakMaxHours;
-                $isBreakAfterScheduled = $hoursAfterScheduledTimeIn >= $breakMinHours && $hoursAfterScheduledTimeIn <= $breakMaxHours;
+                    // Also check against scheduled time_in as fallback
+                    // When an employee arrives very late, the break detection window shifts too far
+                    // Using the scheduled time_in ensures lunch breaks are still detected correctly
+                    $scheduledTimeIn = Carbon::parse($dateStr . ' ' . $schedule['standard_time_in']);
+                    $hoursAfterScheduledTimeIn = $scheduledTimeIn->diffInHours($timestamp);
 
-                if ($isBreakAfterActual || $isBreakAfterScheduled) {
+                    $isBreakAfterActual = $hoursAfterTimeIn >= $breakMinHours && $hoursAfterTimeIn <= $breakMaxHours;
+                    $isBreakAfterScheduled = $hoursAfterScheduledTimeIn >= $breakMinHours && $hoursAfterScheduledTimeIn <= $breakMaxHours;
+                    $canBeBreak = $isBreakAfterActual || $isBreakAfterScheduled;
+                }
+
+                if ($canBeBreak) {
                     $attendance->break_start = $timeString;
                 } else {
                     // It's time_out — but check if it's far past scheduled time_out (OT split needed)
@@ -403,7 +422,85 @@ class PunchRecordImportService
             $this->adjustAttendanceStatus($attendance);
         }
 
+        // Calculate per-device hour distribution from punch-device mapping
+        if (!empty($punchDeviceMap)) {
+            $attendance->device_hours = $this->calculateDeviceHours($attendance, $punchDeviceMap, $attendanceDate->format('Y-m-d'));
+            $attendance->save();
+        }
+
         return ['action' => $action, 'attendance' => $attendance->fresh()];
+    }
+
+    /**
+     * Calculate per-device hour distribution from punch-device mapping.
+     *
+     * Splits the attendance's working segments across devices based on which
+     * biometric device recorded each punch. For multi-device days this produces
+     * e.g. {"CSU Med": 5.98, "PIGLAWIGAN": 4.0}.
+     */
+    protected function calculateDeviceHours(Attendance $attendance, array $punchDeviceMap, string $dateStr): array
+    {
+        $deviceHours = [];
+        $defaultDevice = $attendance->device_name ?? 'Unassigned';
+
+        // Lookup device for a given HH:MM:SS time string via the punch map (keyed by HH:MM)
+        $findDevice = function (string $timeStr) use ($punchDeviceMap, $defaultDevice) {
+            $short = substr($timeStr, 0, 5); // HH:MM
+            return $punchDeviceMap[$short] ?? $defaultDevice;
+        };
+
+        $addHours = function (string $device, float $hours) use (&$deviceHours) {
+            if ($hours <= 0) return;
+            $deviceHours[$device] = ($deviceHours[$device] ?? 0) + $hours;
+        };
+
+        // ── Regular work segments ────────────────────────────────────────────
+        if ($attendance->time_in && $attendance->time_out) {
+            if ($attendance->break_start && $attendance->break_end) {
+                // Morning: time_in → break_start
+                $mStart = Carbon::parse($dateStr . ' ' . $attendance->time_in);
+                $mEnd   = Carbon::parse($dateStr . ' ' . $attendance->break_start);
+                $addHours($findDevice($attendance->time_in), $mStart->diffInMinutes($mEnd) / 60);
+
+                // Afternoon: break_end → time_out
+                $aStart = Carbon::parse($dateStr . ' ' . $attendance->break_end);
+                $aEnd   = Carbon::parse($dateStr . ' ' . $attendance->time_out);
+                $addHours($findDevice($attendance->break_end), $aStart->diffInMinutes($aEnd) / 60);
+            } else {
+                // No break: time_in → time_out
+                $start = Carbon::parse($dateStr . ' ' . $attendance->time_in);
+                $end   = Carbon::parse($dateStr . ' ' . $attendance->time_out);
+                $addHours($findDevice($attendance->time_in), $start->diffInMinutes($end) / 60);
+            }
+        } elseif ($attendance->time_in && !$attendance->time_out) {
+            // Half-day fallback — attribute fixed hours to time_in device
+            $addHours($findDevice($attendance->time_in), (float) ($attendance->regular_hours ?: 4));
+        }
+
+        // ── OT Session 1 ────────────────────────────────────────────────────
+        if ($attendance->ot_time_in && $attendance->ot_time_out) {
+            $otS = Carbon::parse($dateStr . ' ' . $attendance->ot_time_in);
+            $otE = Carbon::parse($dateStr . ' ' . $attendance->ot_time_out);
+            if ($otE->lt($otS)) $otE->addDay();
+            // Use ot_time_out device (ot_time_in is often synthetic/scheduledTimeOut)
+            $addHours($findDevice($attendance->ot_time_out), $otS->diffInMinutes($otE) / 60);
+        }
+
+        // ── OT Session 2 ────────────────────────────────────────────────────
+        if ($attendance->ot_time_in_2 && $attendance->ot_time_out_2) {
+            $otS2 = Carbon::parse($dateStr . ' ' . $attendance->ot_time_in_2);
+            $otE2 = Carbon::parse($dateStr . ' ' . $attendance->ot_time_out_2);
+            if ($otE2->lt($otS2)) $otE2->addDay();
+            $addHours($findDevice($attendance->ot_time_out_2), $otS2->diffInMinutes($otE2) / 60);
+        }
+
+        // If nothing was computed, at least record the default device
+        if (empty($deviceHours)) {
+            $deviceHours[$defaultDevice] = (float) ($attendance->regular_hours ?: 0);
+        }
+
+        // Round to 2 decimals for cleanliness
+        return array_map(fn($h) => round($h, 2), $deviceHours);
     }
 
     /**

@@ -197,6 +197,56 @@
               </div>
             </div>
 
+            <!-- Pending Modification Requests -->
+            <div
+              v-if="stats.pendingModificationRequests > 0"
+              class="action-item"
+              @click="
+                $router.push({
+                  path: '/attendance',
+                  query: { tab: 'mod-requests' },
+                })
+              "
+            >
+              <div class="action-item-icon action-icon-warning">
+                <v-icon size="24">mdi-file-document-edit-outline</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Attendance Modification Requests</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingModificationRequests }} awaiting approval
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingModificationRequests }}
+              </div>
+            </div>
+
+            <!-- Pending Deduction Access Requests -->
+            <div
+              v-if="stats.pendingDeductionRequests > 0"
+              class="action-item"
+              @click="
+                $router.push({
+                  path: '/deductions',
+                  query: { tab: 'access-requests' },
+                })
+              "
+            >
+              <div class="action-item-icon action-icon-warning">
+                <v-icon size="24">mdi-cash-lock</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Deduction Access Requests</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingDeductionRequests }} awaiting approval
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingDeductionRequests }}
+              </div>
+            </div>
+
             <!-- Draft Payrolls -->
             <div
               v-if="stats.draftPayrolls > 0"
@@ -848,6 +898,8 @@ const totalPendingActions = computed(() => {
     stats.value.pendingApplications +
     stats.value.pendingLeaves +
     stats.value.pendingAttendanceCorrections +
+    (stats.value.pendingModificationRequests || 0) +
+    (stats.value.pendingDeductionRequests || 0) +
     stats.value.draftPayrolls +
     (stats.value.pendingResignations || 0) +
     (stats.value.pendingMealAllowances || 0) +
@@ -926,6 +978,10 @@ function goToPendingActions() {
     router.push("/leave-approval");
   } else if (stats.value.pendingAttendanceCorrections > 0) {
     router.push({ path: "/attendance", query: { tab: "approvals" } });
+  } else if (stats.value.pendingModificationRequests > 0) {
+    router.push({ path: "/attendance", query: { tab: "mod-requests" } });
+  } else if (stats.value.pendingDeductionRequests > 0) {
+    router.push({ path: "/deductions", query: { tab: "access-requests" } });
   } else if (stats.value.draftPayrolls > 0) {
     router.push("/payroll");
   } else {

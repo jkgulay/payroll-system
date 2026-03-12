@@ -719,7 +719,11 @@ class PayrollService
         // OPTIMIZATION: Use preloaded deductions
         $activeDeductions = $employee->deductions;
 
+        // Types that go into "Other Deductions" column (damages, cash advances)
+        $otherDeductionTypes = ['damages', 'cash_advance'];
+
         $employeeDeductions = 0;
+        $otherDeductions = 0;
         $deductionsBreakdown = [];
 
         foreach ($activeDeductions as $deduction) {
@@ -729,7 +733,12 @@ class PayrollService
             }
 
             $deductionAmount = min($amountPerCutoff, $deduction->balance);
-            $employeeDeductions += $deductionAmount;
+
+            if (in_array($deduction->deduction_type, $otherDeductionTypes)) {
+                $otherDeductions += $deductionAmount;
+            } else {
+                $employeeDeductions += $deductionAmount;
+            }
 
             // Store breakdown by deduction type and name
             $deductionsBreakdown[] = [
@@ -739,9 +748,6 @@ class PayrollService
                 'amount' => $deductionAmount,
             ];
         }
-
-        // Other deductions
-        $otherDeductions = 0;
 
         // Total deductions (including undertime deduction)
         $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +

@@ -16,6 +16,13 @@
         </div>
         <div class="action-buttons">
           <button
+            class="action-btn action-btn-secondary"
+            @click="openSignatureSettings"
+          >
+            <v-icon size="20">mdi-cog-outline</v-icon>
+            <span>Signature Settings</span>
+          </button>
+          <button
             class="action-btn action-btn-primary"
             @click="openCreateDialog"
           >
@@ -686,6 +693,135 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Signature Settings Dialog -->
+    <v-dialog v-model="signatureDialog" max-width="750px" persistent scrollable>
+      <v-card>
+        <v-card-title class="d-flex align-center pa-4">
+          <v-icon class="mr-2">mdi-signature-freehand</v-icon>
+          Payroll Signature Settings
+          <v-spacer />
+          <v-btn icon variant="text" @click="signatureDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-4">
+          <p class="text-body-2 text-medium-emphasis mb-4">
+            Configure the signatory names that appear on all payroll PDF
+            exports.
+          </p>
+
+          <div class="text-subtitle-2 font-weight-bold mb-2">
+            Row 1 — Primary Signatories
+          </div>
+          <v-row dense>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_prepared_by"
+                label="Prepared By"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_checked_by"
+                label="Checked & Verified By"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_recommended_by"
+                label="Recommended By"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_approved_by"
+                label="Approved By"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_approved_by_position"
+                label="Approved By — Position / Title"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-4" />
+
+          <div class="text-subtitle-2 font-weight-bold mb-2">
+            Row 2 — Secondary Signatories
+          </div>
+          <v-row dense>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_prepared_by_2"
+                label="Prepared By (2nd)"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_checked_by_2"
+                label="Checked & Verified By (2nd)"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_recommended_by_2"
+                label="Recommended By (2nd)"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_approved_by_2"
+                label="Approved By (2nd)"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+          </v-row>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions class="pa-4">
+          <v-spacer />
+          <v-btn variant="text" @click="signatureDialog = false">Cancel</v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
+            :loading="savingSignature"
+            @click="saveSignatureSettings"
+          >
+            Save
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -713,6 +849,20 @@ const form = ref(null);
 
 const payrolls = ref([]);
 const selectedPayroll = ref(null);
+
+const signatureDialog = ref(false);
+const savingSignature = ref(false);
+const signatureForm = ref({
+  sig_prepared_by: "",
+  sig_prepared_by_2: "",
+  sig_checked_by: "",
+  sig_recommended_by: "",
+  sig_approved_by: "",
+  sig_approved_by_position: "",
+  sig_checked_by_2: "",
+  sig_recommended_by_2: "",
+  sig_approved_by_2: "",
+});
 
 const formData = ref({
   period_name: "",
@@ -934,6 +1084,41 @@ function getStatusColor(status) {
 }
 
 // formatDate, formatCurrency imported from @/utils/formatters
+
+// Signature Settings
+async function openSignatureSettings() {
+  try {
+    const response = await api.get("/company-info");
+    const data = response.data.data || {};
+    signatureForm.value = {
+      sig_prepared_by: data.sig_prepared_by || "",
+      sig_prepared_by_2: data.sig_prepared_by_2 || "",
+      sig_checked_by: data.sig_checked_by || "",
+      sig_recommended_by: data.sig_recommended_by || "",
+      sig_approved_by: data.sig_approved_by || "",
+      sig_approved_by_position: data.sig_approved_by_position || "",
+      sig_checked_by_2: data.sig_checked_by_2 || "",
+      sig_recommended_by_2: data.sig_recommended_by_2 || "",
+      sig_approved_by_2: data.sig_approved_by_2 || "",
+    };
+  } catch {
+    toast.error("Failed to load signature settings");
+  }
+  signatureDialog.value = true;
+}
+
+async function saveSignatureSettings() {
+  savingSignature.value = true;
+  try {
+    await api.post("/company-info", signatureForm.value);
+    toast.success("Signature settings saved");
+    signatureDialog.value = false;
+  } catch {
+    toast.error("Failed to save signature settings");
+  } finally {
+    savingSignature.value = false;
+  }
+}
 </script>
 
 <style scoped lang="scss">

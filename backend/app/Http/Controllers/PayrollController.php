@@ -912,9 +912,7 @@ class PayrollController extends Controller
     {
         $employeeIds = $payroll->items->pluck('employee_id')->unique();
 
-        // Fetch one row per attendance day — we only need employee_id + device_name
-        // IMPORTANT: Apply same filters as payroll attendance loading to ensure
-        // device ratio matches the actual records used in payroll calculation
+        // Fetch attendance with device_hours JSON for accurate per-device splitting
         $attendances = Attendance::whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
             ->whereIn('employee_id', $employeeIds)
             ->where('status', '!=', 'absent')
@@ -924,17 +922,29 @@ class PayrollController extends Controller
                 $sub->whereNotNull('time_out')
                     ->orWhere('status', 'half_day');
             })
-            ->select(['employee_id', 'device_name'])
+            ->select(['employee_id', 'device_name', 'device_hours', 'regular_hours'])
             ->get();
 
-        // Build: employee_id => [ device_name => day_count ]
-        $employeeDeviceDays = [];
+        // Build: employee_id => [ device_name => total_hours ]
+        $employeeDeviceHours = [];
         foreach ($attendances as $att) {
-            $device = (isset($att->device_name) && $att->device_name !== '')
-                ? $att->device_name
-                : 'Unassigned';
-            $employeeDeviceDays[$att->employee_id][$device] =
-                ($employeeDeviceDays[$att->employee_id][$device] ?? 0) + 1;
+            $dh = $att->device_hours;
+            if (!empty($dh) && is_array($dh)) {
+                // Use granular per-device hours from the JSON column
+                foreach ($dh as $dev => $hrs) {
+                    $devName = ($dev !== '' && $dev !== null) ? $dev : 'Unassigned';
+                    $employeeDeviceHours[$att->employee_id][$devName] =
+                        ($employeeDeviceHours[$att->employee_id][$devName] ?? 0) + (float) $hrs;
+                }
+            } else {
+                // Legacy records without device_hours — fall back to device_name
+                $device = (isset($att->device_name) && $att->device_name !== '')
+                    ? $att->device_name
+                    : 'Unassigned';
+                $hours = (float) ($att->regular_hours ?: 8);
+                $employeeDeviceHours[$att->employee_id][$device] =
+                    ($employeeDeviceHours[$att->employee_id][$device] ?? 0) + $hours;
+            }
         }
 
         // These fields are period totals → scale proportionally by device ratio.
@@ -971,11 +981,11 @@ class PayrollController extends Controller
 
         foreach ($payroll->items as $item) {
             $empId     = $item->employee_id;
-            $deviceMap = $employeeDeviceDays[$empId] ?? ['Unassigned' => 1];
-            $totalDays = array_sum($deviceMap);
+            $deviceMap = $employeeDeviceHours[$empId] ?? ['Unassigned' => 1];
+            $totalHours = array_sum($deviceMap);
 
-            foreach ($deviceMap as $device => $days) {
-                $ratio = $totalDays > 0 ? ($days / $totalDays) : 1;
+            foreach ($deviceMap as $device => $hours) {
+                $ratio = $totalHours > 0 ? ($hours / $totalHours) : 1;
 
                 // Clone the Eloquent model and scale each aggregate field
                 $split = clone $item;

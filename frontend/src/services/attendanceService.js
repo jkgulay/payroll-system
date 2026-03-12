@@ -142,6 +142,60 @@ const attendanceService = {
     const response = await api.post("/attendance/clear-device-logs");
     return response.data;
   },
+
+  // ===== Attendance Modification Requests =====
+
+  /**
+   * Get modification requests
+   */
+  async getModificationRequests(params = {}) {
+    const response = await api.get("/attendance-modification-requests", { params: { ...params, module: 'attendance' } });
+    return response.data;
+  },
+
+  /**
+   * Submit a modification request for a specific date
+   */
+  async submitModificationRequest(data) {
+    const response = await api.post("/attendance-modification-requests", { ...data, module: 'attendance' });
+    return response.data;
+  },
+
+  /**
+   * Check if user has access to modify attendance for a date
+   */
+  async checkModificationAccess(date) {
+    const response = await api.get("/attendance-modification-requests/check-access", {
+      params: { date, module: 'attendance' },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get count of pending modification requests (admin)
+   */
+  async getModificationPendingCount() {
+    const response = await api.get("/attendance-modification-requests/pending-count", {
+      params: { module: 'attendance' },
+    });
+    return response.data;
+  },
+
+  /**
+   * Approve a modification request (admin)
+   */
+  async approveModificationRequest(id, notes = null) {
+    const response = await api.post(`/attendance-modification-requests/${id}/approve`, { notes });
+    return response.data;
+  },
+
+  /**
+   * Reject a modification request (admin)
+   */
+  async rejectModificationRequest(id, notes) {
+    const response = await api.post(`/attendance-modification-requests/${id}/reject`, { notes });
+    return response.data;
+  },
 };
 
 export default attendanceService;
