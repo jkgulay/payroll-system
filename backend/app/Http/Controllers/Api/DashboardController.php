@@ -75,6 +75,9 @@ class DashboardController extends Controller
         // Pending Employee Loans
         $pendingEmployeeLoans = EmployeeLoan::where('status', 'pending')->count();
 
+        // Pending Attendance Modification Requests
+        $pendingModificationRequests = \App\Models\AttendanceModificationRequest::where('status', 'pending')->count();
+
         // Employees with complete data (has government info)
         $employeesCompleteData = Employee::where('is_active', true)
             ->whereHas('governmentInfo')
@@ -131,6 +134,7 @@ class DashboardController extends Controller
                 'pendingMealAllowances' => $pendingMealAllowances,
                 'pending13thMonthPay' => $pending13thMonthPay,
                 'pendingEmployeeLoans' => $pendingEmployeeLoans,
+                'pendingModificationRequests' => $pendingModificationRequests,
                 'employeesCompleteData' => $employeesCompleteData,
                 'monthlyAttendanceRate' => $monthlyAttendanceRate,
                 'lastBiometricImportDate' => $lastBiometricImport ? $lastBiometricImport->created_at : null,

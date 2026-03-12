@@ -218,6 +218,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/attendance/{attendance}/approve', [App\Http\Controllers\Api\AttendanceController::class, 'approve']);
     Route::post('/attendance/{attendance}/reject', [App\Http\Controllers\Api\AttendanceController::class, 'reject']);
 
+    // Attendance Modification Requests
+    Route::get('/attendance-modification-requests', [App\Http\Controllers\Api\AttendanceModificationRequestController::class, 'index']);
+    Route::post('/attendance-modification-requests', [App\Http\Controllers\Api\AttendanceModificationRequestController::class, 'store']);
+    Route::get('/attendance-modification-requests/check-access', [App\Http\Controllers\Api\AttendanceModificationRequestController::class, 'checkAccess']);
+    Route::get('/attendance-modification-requests/pending-count', [App\Http\Controllers\Api\AttendanceModificationRequestController::class, 'pendingCount']);
+    Route::post('/attendance-modification-requests/{modificationRequest}/approve', [App\Http\Controllers\Api\AttendanceModificationRequestController::class, 'approve']);
+    Route::post('/attendance-modification-requests/{modificationRequest}/reject', [App\Http\Controllers\Api\AttendanceModificationRequestController::class, 'reject']);
+
     // Daily Time Record (DTR) Routes
     Route::post('/attendance/dtr/generate', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'generate']);
     Route::post('/attendance/dtr/generate-daily', [App\Http\Controllers\Api\DailyTimeRecordController::class, 'generateDaily']);

@@ -37,8 +37,141 @@
         </v-col>
       </v-row>
 
+      <!-- Access Notice for Non-Admin Users -->
+      <v-row v-if="!isAdminOrHr && selectedDate" class="mt-4">
+        <v-col cols="12">
+          <!-- Pending Request Notice -->
+          <v-alert
+            v-if="accessStatus === 'pending'"
+            type="info"
+            variant="tonal"
+            prominent
+            border="start"
+            icon="mdi-clock-outline"
+          >
+            <v-alert-title>Request Pending Approval</v-alert-title>
+            <p class="mb-0 mt-1">
+              Your request to modify attendance for <strong>{{ formatDate(selectedDate) }}</strong> is pending admin approval.
+              You will be able to modify records once approved.
+            </p>
+          </v-alert>
+
+          <!-- Rejected Request Notice -->
+          <v-alert
+            v-else-if="accessStatus === 'rejected'"
+            type="error"
+            variant="tonal"
+            prominent
+            border="start"
+            icon="mdi-close-circle-outline"
+          >
+            <v-alert-title>Request Rejected</v-alert-title>
+            <p class="mb-1 mt-1">
+              Your request to modify attendance for <strong>{{ formatDate(selectedDate) }}</strong> was rejected.
+            </p>
+            <p v-if="accessMessage" class="mb-2 text-caption">
+              <strong>Reason:</strong> {{ accessMessage }}
+            </p>
+            <v-btn
+              size="small"
+              variant="outlined"
+              color="error"
+              prepend-icon="mdi-refresh"
+              @click="showRequestDialog = true"
+            >
+              Submit New Request
+            </v-btn>
+          </v-alert>
+
+          <!-- No Request - Must Request Access -->
+          <v-alert
+            v-else-if="accessStatus === 'none'"
+            type="warning"
+            variant="tonal"
+            prominent
+            border="start"
+            icon="mdi-lock-outline"
+          >
+            <v-alert-title>Approval Required</v-alert-title>
+            <p class="mb-2 mt-1">
+              You must request approval from an administrator before you can modify missing attendance records
+              for <strong>{{ formatDate(selectedDate) }}</strong>.
+            </p>
+            <v-btn
+              size="small"
+              color="warning"
+              variant="flat"
+              prepend-icon="mdi-send"
+              @click="showRequestDialog = true"
+            >
+              Request Access
+            </v-btn>
+          </v-alert>
+
+          <!-- Approved - Access Granted -->
+          <v-alert
+            v-else-if="accessStatus === 'approved'"
+            type="success"
+            variant="tonal"
+            border="start"
+            icon="mdi-check-circle-outline"
+            density="compact"
+            closable
+          >
+            Access granted — you can modify attendance records for <strong>{{ formatDate(selectedDate) }}</strong>.
+          </v-alert>
+        </v-col>
+      </v-row>
+
+      <!-- My Requests History (for non-admin users) -->
+      <v-row v-if="!isAdminOrHr && myRequests.length > 0" class="mt-2">
+        <v-col cols="12">
+          <v-expansion-panels variant="accordion">
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon size="20" class="mr-2">mdi-history</v-icon>
+                My Modification Requests
+                <v-chip size="x-small" class="ml-2" color="primary" variant="tonal">
+                  {{ myRequests.length }}
+                </v-chip>
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <v-table density="compact">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Reason</th>
+                      <th>Status</th>
+                      <th>Reviewed By</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="req in myRequests" :key="req.id">
+                      <td>{{ formatDate(req.date) }}</td>
+                      <td>{{ req.reason }}</td>
+                      <td>
+                        <v-chip
+                          :color="getStatusColor(req.status)"
+                          size="x-small"
+                          variant="flat"
+                        >
+                          {{ req.status }}
+                        </v-chip>
+                      </td>
+                      <td>{{ req.reviewer?.name || '—' }}</td>
+                      <td>{{ req.review_notes || '—' }}</td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </v-col>
+      </v-row>
+
       <!-- Summary Cards -->
-      <v-row v-if="summary" class="mt-4">
+      <v-row v-if="summary && hasAccess" class="mt-4">
         <v-col cols="12" md="3">
           <v-card flat class="text-center pa-2" color="blue-grey-lighten-5">
             <div class="text-h5 font-weight-bold text-blue-grey">
@@ -80,8 +213,9 @@
       </v-row>
     </v-card-text>
 
-    <!-- Data Table -->
+    <!-- Data Table (only shown when user has access) -->
     <v-data-table
+      v-if="hasAccess"
       :headers="headers"
       :items="filteredRecords"
       :loading="loading"
@@ -254,16 +388,66 @@
         </div>
       </template>
     </v-data-table>
+
+    <!-- Request Access Dialog -->
+    <v-dialog v-model="showRequestDialog" max-width="500" persistent>
+      <v-card rounded="lg">
+        <v-card-title class="d-flex align-center pa-4">
+          <v-icon color="warning" class="mr-2">mdi-lock-open-variant-outline</v-icon>
+          Request Attendance Modification Access
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text class="pa-4">
+          <p class="text-body-2 mb-4">
+            You are requesting access to modify missing attendance records for
+            <strong>{{ formatDate(selectedDate) }}</strong>.
+            Please provide a reason for this request.
+          </p>
+          <v-textarea
+            v-model="requestReason"
+            label="Reason for Request"
+            variant="outlined"
+            rows="3"
+            :rules="[v => !!v || 'Reason is required']"
+            counter="500"
+            maxlength="500"
+            placeholder="e.g., Need to update missing time-out records for employees who forgot to punch out"
+          ></v-textarea>
+        </v-card-text>
+        <v-divider></v-divider>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            @click="showRequestDialog = false; requestReason = ''"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :loading="submittingRequest"
+            :disabled="!requestReason"
+            prepend-icon="mdi-send"
+            @click="submitRequest"
+          >
+            Submit Request
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import attendanceService from "@/services/attendanceService";
+import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
 
 const emit = defineEmits(["edit-attendance"]);
 const toast = useToast();
+const authStore = useAuthStore();
 
 const loading = ref(false);
 const selectedDate = ref(getTodayDate());
@@ -271,6 +455,23 @@ const filterType = ref("all");
 const searchEmployee = ref("");
 const missingRecords = ref([]);
 const summary = ref(null);
+
+// Access control state
+const accessStatus = ref("none"); // 'none', 'pending', 'approved', 'rejected', 'admin'
+const accessMessage = ref("");
+const checkingAccess = ref(false);
+const showRequestDialog = ref(false);
+const requestReason = ref("");
+const submittingRequest = ref(false);
+const myRequests = ref([]);
+
+const isAdminOrHr = computed(() =>
+  ["admin", "hr"].includes(authStore.userRole)
+);
+
+const hasAccess = computed(() =>
+  isAdminOrHr.value || accessStatus.value === "approved"
+);
 
 const filterOptions = [
   { title: "All Issues", value: "all" },
@@ -299,6 +500,78 @@ function getTodayDate() {
   return today.toISOString().split("T")[0];
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function getStatusColor(status) {
+  const colors = { pending: "warning", approved: "success", rejected: "error" };
+  return colors[status] || "grey";
+}
+
+// Check if user has access for the selected date
+const checkAccess = async () => {
+  if (isAdminOrHr.value) {
+    accessStatus.value = "admin";
+    return;
+  }
+
+  if (!selectedDate.value) return;
+
+  checkingAccess.value = true;
+  try {
+    const response = await attendanceService.checkModificationAccess(selectedDate.value);
+    accessStatus.value = response.status;
+    accessMessage.value = response.message || "";
+  } catch {
+    accessStatus.value = "none";
+  } finally {
+    checkingAccess.value = false;
+  }
+};
+
+// Load user's own requests
+const loadMyRequests = async () => {
+  if (isAdminOrHr.value) return;
+
+  try {
+    const response = await attendanceService.getModificationRequests();
+    myRequests.value = response.data || [];
+  } catch {
+    myRequests.value = [];
+  }
+};
+
+// Submit access request
+const submitRequest = async () => {
+  if (!requestReason.value || !selectedDate.value) return;
+
+  submittingRequest.value = true;
+  try {
+    await attendanceService.submitModificationRequest({
+      date: selectedDate.value,
+      reason: requestReason.value,
+    });
+    toast.success("Access request submitted. Waiting for admin approval.");
+    showRequestDialog.value = false;
+    requestReason.value = "";
+    accessStatus.value = "pending";
+    await loadMyRequests();
+  } catch (error) {
+    const msg = error.response?.data?.message || "Failed to submit request";
+    toast.error(msg);
+  } finally {
+    submittingRequest.value = false;
+  }
+};
+
 // Computed: Filtered Records based on search
 const filteredRecords = computed(() => {
   if (!searchEmployee.value) return missingRecords.value;
@@ -317,6 +590,18 @@ const filteredRecords = computed(() => {
 const loadMissingAttendance = async () => {
   if (!selectedDate.value) {
     toast.warning("Please select a date");
+    return;
+  }
+
+  // Check access first for non-admin users
+  await checkAccess();
+
+  // Only load data if user has access
+  if (!hasAccess.value) {
+    // Still load data for display purposes but don't allow editing
+    // The table is hidden so just clear the data
+    missingRecords.value = [];
+    summary.value = null;
     return;
   }
 
@@ -367,6 +652,7 @@ watch([selectedDate, filterType], () => {
 
 onMounted(() => {
   loadMissingAttendance();
+  loadMyRequests();
 });
 </script>
 
