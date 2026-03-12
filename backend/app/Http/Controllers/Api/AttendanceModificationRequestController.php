@@ -45,7 +45,7 @@ class AttendanceModificationRequestController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'module' => 'required|string|in:attendance,deductions,government-rates',
+            'module' => 'required|string|in:attendance,deductions,government-rates,allowances,thirteenth-month-pay,loans,cash-bonds,salary-adjustments',
             'date' => 'nullable|date',
             'reason' => 'required|string|max:500',
         ]);
@@ -105,7 +105,7 @@ class AttendanceModificationRequestController extends Controller
     public function checkAccess(Request $request)
     {
         $request->validate([
-            'module' => 'required|string|in:attendance,deductions,government-rates',
+            'module' => 'required|string|in:attendance,deductions,government-rates,allowances,thirteenth-month-pay,loans,cash-bonds,salary-adjustments',
             'date' => 'nullable|date',
         ]);
 
@@ -135,6 +135,11 @@ class AttendanceModificationRequestController extends Controller
             $moduleLabels = [
                 'deductions' => 'deductions',
                 'government-rates' => 'government rates',
+                'allowances' => 'allowances',
+                'thirteenth-month-pay' => '13th month pay',
+                'loans' => 'loans',
+                'cash-bonds' => 'cash bonds',
+                'salary-adjustments' => 'salary adjustments',
             ];
             $moduleLabel = $moduleLabels[$module] ?? 'attendance for this date';
             return response()->json([

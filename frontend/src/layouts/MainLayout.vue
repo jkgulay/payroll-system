@@ -327,19 +327,34 @@ const isMobile = computed(() => mdAndDown.value);
 const pendingAttendanceRequests = ref(0);
 const pendingDeductionRequests = ref(0);
 const pendingGovRatesRequests = ref(0);
+const pendingAllowanceRequests = ref(0);
+const pendingThirteenthMonthRequests = ref(0);
+const pendingLoanRequests = ref(0);
+const pendingCashBondRequests = ref(0);
+const pendingSalaryAdjustmentRequests = ref(0);
 
 async function loadAccessRequestCounts() {
   const role = authStore.user?.role;
   if (!role || !['admin', 'hr'].includes(role)) return;
   try {
-    const [attRes, dedRes, govRes] = await Promise.all([
+    const [attRes, dedRes, govRes, allRes, tmpRes, loanRes, cbRes, saRes] = await Promise.all([
       moduleAccessService.getPendingCount('attendance'),
       moduleAccessService.getPendingCount('deductions'),
       moduleAccessService.getPendingCount('government-rates'),
+      moduleAccessService.getPendingCount('allowances'),
+      moduleAccessService.getPendingCount('thirteenth-month-pay'),
+      moduleAccessService.getPendingCount('loans'),
+      moduleAccessService.getPendingCount('cash-bonds'),
+      moduleAccessService.getPendingCount('salary-adjustments'),
     ]);
     pendingAttendanceRequests.value = attRes.count || 0;
     pendingDeductionRequests.value = dedRes.count || 0;
     pendingGovRatesRequests.value = govRes.count || 0;
+    pendingAllowanceRequests.value = allRes.count || 0;
+    pendingThirteenthMonthRequests.value = tmpRes.count || 0;
+    pendingLoanRequests.value = loanRes.count || 0;
+    pendingCashBondRequests.value = cbRes.count || 0;
+    pendingSalaryAdjustmentRequests.value = saRes.count || 0;
   } catch {
     // ignore
   }
@@ -901,6 +916,46 @@ const menuSections = computed(() => {
       to: { path: '/government-rates', query: { tab: 'access-requests' } },
       roles: ["admin"],
       badge: pendingGovRatesRequests.value,
+    },
+    {
+      title: "Allowance Requests",
+      icon: "mdi-hand-coin-outline",
+      value: "allowance-access-requests",
+      to: { path: '/allowances', query: { tab: 'access-requests' } },
+      roles: ["admin", "hr"],
+      badge: pendingAllowanceRequests.value,
+    },
+    {
+      title: "13th Month Requests",
+      icon: "mdi-gift",
+      value: "thirteenth-month-access-requests",
+      to: { path: '/thirteenth-month-pay', query: { tab: 'access-requests' } },
+      roles: ["admin", "hr"],
+      badge: pendingThirteenthMonthRequests.value,
+    },
+    {
+      title: "Loan Requests",
+      icon: "mdi-hand-coin",
+      value: "loan-access-requests",
+      to: { path: '/loans', query: { tab: 'access-requests' } },
+      roles: ["admin", "hr"],
+      badge: pendingLoanRequests.value,
+    },
+    {
+      title: "Cash Bond Requests",
+      icon: "mdi-cash-lock",
+      value: "cash-bond-access-requests",
+      to: { path: '/cash-bonds', query: { tab: 'access-requests' } },
+      roles: ["admin", "hr"],
+      badge: pendingCashBondRequests.value,
+    },
+    {
+      title: "Salary Adj. Requests",
+      icon: "mdi-cash-plus",
+      value: "salary-adjustment-access-requests",
+      to: { path: '/salary-adjustments', query: { tab: 'access-requests' } },
+      roles: ["admin", "hr"],
+      badge: pendingSalaryAdjustmentRequests.value,
     },
   ];
 

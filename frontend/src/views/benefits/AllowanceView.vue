@@ -13,7 +13,7 @@
           </p>
         </div>
         <button
-          v-if="canCreate"
+          v-if="canCreate && hasAccess"
           class="action-btn action-btn-primary"
           @click="openCreateDialog"
         >
@@ -21,6 +21,66 @@
           <span>Create New Allowance</span>
         </button>
       </div>
+
+      <!-- Access Gate for Payrollist -->
+      <template v-if="!isAdminOrHr && !hasAccess">
+        <v-alert v-if="accessStatus === 'none'" type="info" variant="tonal" prominent class="ma-4" icon="mdi-lock-outline">
+          <v-alert-title>Access Required</v-alert-title>
+          <p class="mt-1">You need to request access from an administrator before you can manage allowances.</p>
+          <v-btn color="primary" variant="flat" class="mt-3" prepend-icon="mdi-send" @click="requestDialog = true">Request Access</v-btn>
+        </v-alert>
+        <v-alert v-else-if="accessStatus === 'pending'" type="warning" variant="tonal" prominent class="ma-4" icon="mdi-clock-outline">
+          <v-alert-title>Pending Approval</v-alert-title>
+          <p class="mt-1">Your access request is pending admin approval. You will be able to manage allowances once approved.</p>
+        </v-alert>
+        <v-alert v-else-if="accessStatus === 'rejected'" type="error" variant="tonal" prominent class="ma-4" icon="mdi-close-circle-outline">
+          <v-alert-title>Request Rejected</v-alert-title>
+          <p class="mt-1">{{ accessMessage }}</p>
+          <v-btn color="primary" variant="flat" class="mt-3" prepend-icon="mdi-send" @click="requestDialog = true">Submit New Request</v-btn>
+        </v-alert>
+        <v-expansion-panels v-model="requestsPanel" class="mx-4 mb-4">
+          <v-expansion-panel>
+            <v-expansion-panel-title><v-icon class="mr-2">mdi-history</v-icon>My Access Requests</v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <v-list v-if="myRequests.length > 0" density="compact">
+                <v-list-item v-for="req in myRequests" :key="req.id" :subtitle="req.reason">
+                  <template v-slot:prepend><v-icon :color="getRequestStatusColor(req.status)">{{ req.status === 'pending' ? 'mdi-clock-outline' : req.status === 'approved' ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon></template>
+                  <template v-slot:append><v-chip :color="getRequestStatusColor(req.status)" size="x-small" variant="flat">{{ req.status }}</v-chip></template>
+                </v-list-item>
+              </v-list>
+              <p v-else class="text-center text-medium-emphasis py-4">No requests yet.</p>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+        <v-dialog v-model="requestDialog" max-width="500" persistent>
+          <v-card rounded="lg">
+            <v-card-title class="d-flex align-center pa-4"><v-icon color="primary" class="mr-2">mdi-lock-open-variant</v-icon>Request Allowances Access</v-card-title>
+            <v-divider></v-divider>
+            <v-card-text class="pa-4">
+              <p class="text-body-2 mb-4">Please provide a reason for needing access to the Allowances module.</p>
+              <v-textarea v-model="requestReason" label="Reason" variant="outlined" rows="3" :rules="[v => !!v || 'Reason is required']" placeholder="Explain why you need access to manage allowances"></v-textarea>
+            </v-card-text>
+            <v-divider></v-divider>
+            <v-card-actions class="pa-4">
+              <v-spacer></v-spacer>
+              <v-btn variant="text" @click="requestDialog = false; requestReason = ''">Cancel</v-btn>
+              <v-btn color="primary" variant="flat" :loading="submittingRequest" :disabled="!requestReason" prepend-icon="mdi-send" @click="submitAccessRequest">Submit Request</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </template>
+
+      <!-- Admin/HR Tabs -->
+      <v-tabs v-if="isAdminOrHr" v-model="adminTab" class="mb-4">
+        <v-tab value="main">Allowances</v-tab>
+        <v-tab value="access-requests">Access Requests<v-badge v-if="moduleRequestCount > 0" :content="moduleRequestCount" color="error" class="ml-2" inline></v-badge></v-tab>
+      </v-tabs>
+      <template v-if="isAdminOrHr && adminTab === 'access-requests'">
+        <ModificationRequestsManager module="allowances" @update-count="(c) => moduleRequestCount = c" />
+      </template>
+
+      <!-- Main Content -->
+      <template v-if="hasAccess && (adminTab === 'main' || !isAdminOrHr)">
 
       <!-- Filters Section -->
       <div class="filters-section">
@@ -197,6 +257,7 @@
           </v-menu>
         </template>
       </v-data-table>
+      </template>
     </div>
 
     <!-- Create/Edit Dialog -->
@@ -224,20 +285,72 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useAuthStore } from "@/stores/auth";
 import allowanceService from "@/services/allowanceService";
 import AllowanceForm from "@/components/allowance/AllowanceForm.vue";
 import AllowanceDetails from "@/components/allowance/AllowanceDetails.vue";
 import AllowanceApproval from "@/components/allowance/AllowanceApproval.vue";
+import ModificationRequestsManager from "@/components/attendance/ModificationRequestsManager.vue";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import moduleAccessService from "@/services/moduleAccessService";
 
 const toast = useToast();
+const route = useRoute();
 const { confirm: confirmDialog } = useConfirmDialog();
 
 const authStore = useAuthStore();
+const isAdminOrHr = computed(() => ['admin', 'hr'].includes(authStore.user?.role));
+const userRole = computed(() => authStore.user?.role);
+
+// Access control
+const accessStatus = ref('none');
+const accessMessage = ref('');
+const requestDialog = ref(false);
+const requestReason = ref('');
+const submittingRequest = ref(false);
+const myRequests = ref([]);
+const requestsPanel = ref(null);
+const moduleRequestCount = ref(0);
+const adminTab = ref(route.query.tab || 'main');
+const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin');
+
+const getRequestStatusColor = (status) => ({ pending: 'warning', approved: 'success', rejected: 'error' }[status] || 'grey');
+
+const checkModuleAccess = async () => {
+  if (isAdminOrHr.value) return;
+  try {
+    const response = await moduleAccessService.checkAccess('allowances');
+    accessStatus.value = response.status;
+    accessMessage.value = response.message || '';
+  } catch { accessStatus.value = 'none'; }
+};
+
+const loadMyRequests = async () => {
+  if (isAdminOrHr.value) return;
+  try {
+    const response = await moduleAccessService.getRequests('allowances');
+    myRequests.value = response.data || [];
+  } catch { myRequests.value = []; }
+};
+
+const submitAccessRequest = async () => {
+  if (!requestReason.value) return;
+  submittingRequest.value = true;
+  try {
+    await moduleAccessService.submitRequest('allowances', { reason: requestReason.value });
+    toast.success('Access request submitted successfully');
+    requestDialog.value = false;
+    requestReason.value = '';
+    accessStatus.value = 'pending';
+    await loadMyRequests();
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Failed to submit request');
+  } finally { submittingRequest.value = false; }
+};
 const loading = ref(false);
 const allowances = ref([]);
 const positions = ref([]);
@@ -291,8 +404,18 @@ const canDelete = computed(() =>
 const isAdmin = computed(() => authStore.user?.role === "admin");
 
 onMounted(async () => {
-  await fetchPositions();
-  await fetchAllowances();
+  await checkModuleAccess();
+  loadMyRequests();
+  if (hasAccess.value) {
+    await fetchPositions();
+    await fetchAllowances();
+  }
+  if (isAdminOrHr.value) {
+    try {
+      const res = await moduleAccessService.getPendingCount('allowances');
+      moduleRequestCount.value = res.count || 0;
+    } catch {}
+  }
 });
 
 async function fetchAllowances() {
