@@ -9,7 +9,7 @@
     >
       <template v-slot:top>
         <v-toolbar flat>
-          <v-toolbar-title>Attendance Modification Requests</v-toolbar-title>
+          <v-toolbar-title>{{ moduleTitle }} Access Requests</v-toolbar-title>
           <v-spacer></v-spacer>
           <v-select
             v-model="statusFilter"
@@ -95,13 +95,13 @@
       <v-card rounded="lg">
         <v-card-title class="d-flex align-center pa-4">
           <v-icon color="error" class="mr-2">mdi-close-circle</v-icon>
-          Reject Modification Request
+          Reject Access Request
         </v-card-title>
         <v-divider></v-divider>
         <v-card-text class="pa-4">
           <p class="text-body-2 mb-4">
             Rejecting request from <strong>{{ selectedRequest?.requester?.name }}</strong>
-            for date <strong>{{ formatDate(selectedRequest?.date) }}</strong>.
+            <span v-if="selectedRequest?.date">for date <strong>{{ formatDate(selectedRequest?.date) }}</strong></span>.
           </p>
           <v-textarea
             v-model="rejectNotes"
@@ -135,12 +135,24 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
-import attendanceService from "@/services/attendanceService";
+import { ref, computed, watch, onMounted } from "vue";
+import moduleAccessService from "@/services/moduleAccessService";
 import { useToast } from "vue-toastification";
+
+const props = defineProps({
+  module: {
+    type: String,
+    default: 'attendance',
+  },
+});
 
 const emit = defineEmits(["update-count"]);
 const toast = useToast();
+
+const moduleTitle = computed(() => {
+  const titles = { attendance: 'Attendance Modification', deductions: 'Deductions' };
+  return titles[props.module] || props.module;
+});
 
 const loading = ref(false);
 const processing = ref(false);
@@ -200,7 +212,7 @@ const loadRequests = async () => {
     if (statusFilter.value !== "all") {
       params.status = statusFilter.value;
     }
-    const response = await attendanceService.getModificationRequests(params);
+    const response = await moduleAccessService.getRequests(props.module, params);
     requests.value = response.data || [];
 
     // Emit pending count
@@ -217,7 +229,7 @@ const loadRequests = async () => {
 const approveRequest = async (request) => {
   processing.value = true;
   try {
-    await attendanceService.approveModificationRequest(request.id);
+    await moduleAccessService.approveRequest(request.id);
     toast.success("Request approved successfully");
     await loadRequests();
   } catch (error) {
@@ -239,7 +251,7 @@ const rejectRequest = async () => {
 
   processing.value = true;
   try {
-    await attendanceService.rejectModificationRequest(
+    await moduleAccessService.rejectRequest(
       selectedRequest.value.id,
       rejectNotes.value
     );

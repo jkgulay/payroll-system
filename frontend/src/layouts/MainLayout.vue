@@ -104,7 +104,11 @@
                   color="hardhat"
                   class="menu-item mb-1"
                   rounded="lg"
-                ></v-list-item>
+                >
+                  <template v-slot:append v-if="item.badge > 0 && !rail">
+                    <v-badge :content="item.badge" color="error" inline></v-badge>
+                  </template>
+                </v-list-item>
               </template>
               <span>{{ item.title }}</span>
             </v-tooltip>
@@ -303,6 +307,7 @@ import { useCompanyInfoStore } from "@/stores/companyInfo";
 import { useToast } from "vue-toastification";
 import { useDisplay } from "vuetify";
 import api from "@/services/api";
+import moduleAccessService from "@/services/moduleAccessService";
 import { devLog } from "@/utils/devLog";
 
 const router = useRouter();
@@ -318,6 +323,25 @@ const logoutDialog = ref(false);
 const loggingOut = ref(false);
 const isMobile = computed(() => mdAndDown.value);
 
+// Access request badge counts
+const pendingAttendanceRequests = ref(0);
+const pendingDeductionRequests = ref(0);
+
+async function loadAccessRequestCounts() {
+  const role = authStore.user?.role;
+  if (!role || !['admin', 'hr'].includes(role)) return;
+  try {
+    const [attRes, dedRes] = await Promise.all([
+      moduleAccessService.getPendingCount('attendance'),
+      moduleAccessService.getPendingCount('deductions'),
+    ]);
+    pendingAttendanceRequests.value = attRes.count || 0;
+    pendingDeductionRequests.value = dedRes.count || 0;
+  } catch {
+    // ignore
+  }
+}
+
 // Handle initial drawer state for mobile
 onMounted(async () => {
   if (isMobile.value) {
@@ -332,6 +356,9 @@ onMounted(async () => {
 
   // Fetch company info for app-wide access
   await companyInfoStore.fetchCompanyInfo();
+
+  // Load access request counts for admin/hr sidebar badges
+  await loadAccessRequestCounts();
 });
 
 const userName = computed(
@@ -838,6 +865,38 @@ const menuSections = computed(() => {
       roles: ["employee", "payrollist"],
     },
   ];
+
+  // Access request items (admin/hr only)
+  const accessRequestItems = [
+    {
+      title: "Attendance Requests",
+      icon: "mdi-clock-alert-outline",
+      value: "attendance-access-requests",
+      to: { path: '/attendance', query: { tab: 'mod-requests' } },
+      roles: ["admin", "hr"],
+      badge: pendingAttendanceRequests.value,
+    },
+    {
+      title: "Deduction Requests",
+      icon: "mdi-cash-lock",
+      value: "deduction-access-requests",
+      to: { path: '/deductions', query: { tab: 'access-requests' } },
+      roles: ["admin", "hr"],
+      badge: pendingDeductionRequests.value,
+    },
+  ];
+
+  // Only show section if there are any pending requests
+  const filteredAccessItems = accessRequestItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole),
+  );
+
+  if (filteredAccessItems.length > 0) {
+    sections.push({
+      title: "ACCESS REQUESTS",
+      items: filteredAccessItems,
+    });
+  }
 
   // Filter and assign items to sections
   sections[0].items = mainMenuItems.filter(

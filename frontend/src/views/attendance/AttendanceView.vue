@@ -157,6 +157,7 @@
         <v-window-item value="mod-requests" v-if="canApprove">
           <div class="tab-content">
             <ModificationRequestsManager
+              module="attendance"
               @update-count="updateModRequestCount"
             />
           </div>

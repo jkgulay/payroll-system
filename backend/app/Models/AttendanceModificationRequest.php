@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AttendanceModificationRequest extends Model
 {
+    protected $table = 'module_access_requests';
+
     protected $fillable = [
+        'module',
         'requested_by',
         'date',
         'reason',
@@ -40,5 +43,10 @@ class AttendanceModificationRequest extends Model
     public function scopeApproved($query)
     {
         return $query->where('status', 'approved');
+    }
+
+    public function scopeForModule($query, $module)
+    {
+        return $query->where('module', $module);
     }
 }

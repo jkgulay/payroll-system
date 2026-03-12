@@ -149,7 +149,7 @@ const attendanceService = {
    * Get modification requests
    */
   async getModificationRequests(params = {}) {
-    const response = await api.get("/attendance-modification-requests", { params });
+    const response = await api.get("/attendance-modification-requests", { params: { ...params, module: 'attendance' } });
     return response.data;
   },
 
@@ -157,7 +157,7 @@ const attendanceService = {
    * Submit a modification request for a specific date
    */
   async submitModificationRequest(data) {
-    const response = await api.post("/attendance-modification-requests", data);
+    const response = await api.post("/attendance-modification-requests", { ...data, module: 'attendance' });
     return response.data;
   },
 
@@ -166,7 +166,7 @@ const attendanceService = {
    */
   async checkModificationAccess(date) {
     const response = await api.get("/attendance-modification-requests/check-access", {
-      params: { date },
+      params: { date, module: 'attendance' },
     });
     return response.data;
   },
@@ -175,7 +175,9 @@ const attendanceService = {
    * Get count of pending modification requests (admin)
    */
   async getModificationPendingCount() {
-    const response = await api.get("/attendance-modification-requests/pending-count");
+    const response = await api.get("/attendance-modification-requests/pending-count", {
+      params: { module: 'attendance' },
+    });
     return response.data;
   },
 

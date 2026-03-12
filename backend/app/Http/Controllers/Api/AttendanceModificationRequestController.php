@@ -8,21 +8,26 @@ use Illuminate\Http\Request;
 
 class AttendanceModificationRequestController extends Controller
 {
+    private function resolveModule(Request $request): string
+    {
+        return $request->input('module', $request->query('module', 'attendance'));
+    }
+
     /**
      * List requests - admins see all, payrollists see their own
      */
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = AttendanceModificationRequest::with(['requester', 'reviewer']);
+        $module = $this->resolveModule($request);
+        $query = AttendanceModificationRequest::with(['requester', 'reviewer'])
+            ->forModule($module);
 
         if (in_array($user->role, ['admin', 'hr'])) {
-            // Admin/HR can see all requests, optionally filter by status
             if ($request->has('status')) {
                 $query->where('status', $request->status);
             }
         } else {
-            // Payrollists only see their own requests
             $query->where('requested_by', $user->id);
         }
 
@@ -35,18 +40,19 @@ class AttendanceModificationRequestController extends Controller
     }
 
     /**
-     * Create a new modification request
+     * Create a new access request
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'date' => 'required|date',
+            'module' => 'required|string|in:attendance,deductions',
+            'date' => 'nullable|date',
             'reason' => 'required|string|max:500',
         ]);
 
         $user = $request->user();
+        $module = $validated['module'];
 
-        // Admin/HR don't need requests - they have direct access
         if (in_array($user->role, ['admin', 'hr'])) {
             return response()->json([
                 'success' => false,
@@ -54,24 +60,32 @@ class AttendanceModificationRequestController extends Controller
             ], 422);
         }
 
-        // Check if there's already a pending/approved request for this date by this user
-        $existing = AttendanceModificationRequest::where('requested_by', $user->id)
-            ->where('date', $validated['date'])
-            ->whereIn('status', ['pending', 'approved'])
-            ->first();
+        // Build the uniqueness check
+        $existingQuery = AttendanceModificationRequest::where('requested_by', $user->id)
+            ->where('module', $module)
+            ->whereIn('status', ['pending', 'approved']);
+
+        if (!empty($validated['date'])) {
+            $existingQuery->where('date', $validated['date']);
+        } else {
+            $existingQuery->whereNull('date');
+        }
+
+        $existing = $existingQuery->first();
 
         if ($existing) {
             return response()->json([
                 'success' => false,
                 'message' => $existing->status === 'pending'
-                    ? 'You already have a pending request for this date.'
-                    : 'You already have an approved request for this date.',
+                    ? 'You already have a pending request.'
+                    : 'You already have an approved request.',
             ], 422);
         }
 
         $modRequest = AttendanceModificationRequest::create([
+            'module' => $module,
             'requested_by' => $user->id,
-            'date' => $validated['date'],
+            'date' => $validated['date'] ?? null,
             'reason' => $validated['reason'],
             'status' => 'pending',
         ]);
@@ -80,23 +94,24 @@ class AttendanceModificationRequestController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Modification request submitted successfully.',
+            'message' => 'Access request submitted successfully.',
             'data' => $modRequest,
         ], 201);
     }
 
     /**
-     * Check if user has access to modify attendance for a specific date
+     * Check if user has access for a specific module (and optionally date)
      */
     public function checkAccess(Request $request)
     {
-        $validated = $request->validate([
-            'date' => 'required|date',
+        $request->validate([
+            'module' => 'required|string|in:attendance,deductions',
+            'date' => 'nullable|date',
         ]);
 
         $user = $request->user();
+        $module = $request->query('module', 'attendance');
 
-        // Admin/HR always have access
         if (in_array($user->role, ['admin', 'hr'])) {
             return response()->json([
                 'has_access' => true,
@@ -104,16 +119,24 @@ class AttendanceModificationRequestController extends Controller
             ]);
         }
 
-        $modRequest = AttendanceModificationRequest::where('requested_by', $user->id)
-            ->where('date', $validated['date'])
-            ->orderBy('created_at', 'desc')
-            ->first();
+        $query = AttendanceModificationRequest::where('requested_by', $user->id)
+            ->where('module', $module)
+            ->orderBy('created_at', 'desc');
+
+        if ($request->has('date') && $request->date) {
+            $query->where('date', $request->date);
+        } else {
+            $query->whereNull('date');
+        }
+
+        $modRequest = $query->first();
 
         if (!$modRequest) {
+            $moduleLabel = $module === 'deductions' ? 'deductions' : 'attendance for this date';
             return response()->json([
                 'has_access' => false,
                 'status' => 'none',
-                'message' => 'No request found. You must request access to modify attendance for this date.',
+                'message' => "No request found. You must request access to manage {$moduleLabel}.",
             ]);
         }
 
@@ -123,14 +146,14 @@ class AttendanceModificationRequestController extends Controller
             'request' => $modRequest,
             'message' => match ($modRequest->status) {
                 'pending' => 'Your request is pending admin approval.',
-                'approved' => 'Access granted. You can modify attendance records.',
+                'approved' => 'Access granted.',
                 'rejected' => 'Your request was rejected. ' . ($modRequest->review_notes ?? ''),
             },
         ]);
     }
 
     /**
-     * Approve a modification request (admin/hr only)
+     * Approve a request (admin/hr only)
      */
     public function approve(Request $request, AttendanceModificationRequest $modificationRequest)
     {
@@ -167,7 +190,7 @@ class AttendanceModificationRequestController extends Controller
     }
 
     /**
-     * Reject a modification request (admin/hr only)
+     * Reject a request (admin/hr only)
      */
     public function reject(Request $request, AttendanceModificationRequest $modificationRequest)
     {
@@ -218,7 +241,8 @@ class AttendanceModificationRequestController extends Controller
             return response()->json(['count' => 0]);
         }
 
-        $count = AttendanceModificationRequest::pending()->count();
+        $module = $this->resolveModule($request);
+        $count = AttendanceModificationRequest::pending()->forModule($module)->count();
 
         return response()->json(['count' => $count]);
     }
