@@ -45,7 +45,7 @@ class AttendanceModificationRequestController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'module' => 'required|string|in:attendance,deductions',
+            'module' => 'required|string|in:attendance,deductions,government-rates',
             'date' => 'nullable|date',
             'reason' => 'required|string|max:500',
         ]);
@@ -105,7 +105,7 @@ class AttendanceModificationRequestController extends Controller
     public function checkAccess(Request $request)
     {
         $request->validate([
-            'module' => 'required|string|in:attendance,deductions',
+            'module' => 'required|string|in:attendance,deductions,government-rates',
             'date' => 'nullable|date',
         ]);
 
@@ -132,7 +132,11 @@ class AttendanceModificationRequestController extends Controller
         $modRequest = $query->first();
 
         if (!$modRequest) {
-            $moduleLabel = $module === 'deductions' ? 'deductions' : 'attendance for this date';
+            $moduleLabels = [
+                'deductions' => 'deductions',
+                'government-rates' => 'government rates',
+            ];
+            $moduleLabel = $moduleLabels[$module] ?? 'attendance for this date';
             return response()->json([
                 'has_access' => false,
                 'status' => 'none',

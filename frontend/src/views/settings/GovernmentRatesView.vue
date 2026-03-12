@@ -4,9 +4,9 @@
     <div class="page-header">
       <div class="header-content">
         <div class="back-button-wrapper">
-          <button class="back-button" @click="$router.push('/settings')">
+          <button class="back-button" @click="goBack">
             <v-icon size="20">mdi-arrow-left</v-icon>
-            <span>Back to Settings</span>
+            <span>{{ isAdmin ? 'Back to Settings' : 'Back' }}</span>
           </button>
         </div>
 
@@ -25,6 +25,155 @@
         </div>
       </div>
     </div>
+
+    <!-- Access Gate for Payrollist -->
+    <template v-if="!isAdminOrHr && !hasAccess">
+      <!-- No request yet -->
+      <v-alert
+        v-if="accessStatus === 'none'"
+        type="info"
+        variant="tonal"
+        prominent
+        class="ma-4"
+        icon="mdi-lock-outline"
+      >
+        <v-alert-title>Access Required</v-alert-title>
+        <p class="mt-1">You need to request access from an administrator before you can manage government rates.</p>
+        <v-btn
+          color="primary"
+          variant="flat"
+          class="mt-3"
+          prepend-icon="mdi-send"
+          @click="requestDialog = true"
+        >
+          Request Access
+        </v-btn>
+      </v-alert>
+
+      <!-- Pending -->
+      <v-alert
+        v-else-if="accessStatus === 'pending'"
+        type="warning"
+        variant="tonal"
+        prominent
+        class="ma-4"
+        icon="mdi-clock-outline"
+      >
+        <v-alert-title>Pending Approval</v-alert-title>
+        <p class="mt-1">Your access request is pending admin approval. You will be able to manage government rates once approved.</p>
+      </v-alert>
+
+      <!-- Rejected -->
+      <v-alert
+        v-else-if="accessStatus === 'rejected'"
+        type="error"
+        variant="tonal"
+        prominent
+        class="ma-4"
+        icon="mdi-close-circle-outline"
+      >
+        <v-alert-title>Request Rejected</v-alert-title>
+        <p class="mt-1">{{ accessMessage }}</p>
+        <v-btn
+          color="primary"
+          variant="flat"
+          class="mt-3"
+          prepend-icon="mdi-send"
+          @click="requestDialog = true"
+        >
+          Submit New Request
+        </v-btn>
+      </v-alert>
+
+      <!-- My Requests History -->
+      <v-expansion-panels v-model="requestsPanel" class="mx-4 mb-4">
+        <v-expansion-panel>
+          <v-expansion-panel-title>
+            <v-icon class="mr-2">mdi-history</v-icon>
+            My Access Requests
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <v-list v-if="myRequests.length > 0" density="compact">
+              <v-list-item
+                v-for="req in myRequests"
+                :key="req.id"
+                :subtitle="req.reason"
+              >
+                <template v-slot:prepend>
+                  <v-icon :color="getRequestStatusColor(req.status)">
+                    {{ req.status === 'pending' ? 'mdi-clock-outline' : req.status === 'approved' ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                  </v-icon>
+                </template>
+                <template v-slot:append>
+                  <v-chip :color="getRequestStatusColor(req.status)" size="x-small" variant="flat">
+                    {{ req.status }}
+                  </v-chip>
+                </template>
+              </v-list-item>
+            </v-list>
+            <p v-else class="text-center text-medium-emphasis py-4">No requests yet.</p>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
+
+      <!-- Request Access Dialog -->
+      <v-dialog v-model="requestDialog" max-width="500" persistent>
+        <v-card rounded="lg">
+          <v-card-title class="d-flex align-center pa-4">
+            <v-icon color="primary" class="mr-2">mdi-lock-open-variant</v-icon>
+            Request Government Rates Access
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-4">
+            <p class="text-body-2 mb-4">
+              Please provide a reason for needing access to the Government Rates module.
+            </p>
+            <v-textarea
+              v-model="requestReason"
+              label="Reason"
+              variant="outlined"
+              rows="3"
+              :rules="[v => !!v || 'Reason is required']"
+              placeholder="Explain why you need access to manage government rates"
+            ></v-textarea>
+          </v-card-text>
+          <v-divider></v-divider>
+          <v-card-actions class="pa-4">
+            <v-spacer></v-spacer>
+            <v-btn variant="text" @click="requestDialog = false; requestReason = ''">
+              Cancel
+            </v-btn>
+            <v-btn
+              color="primary"
+              variant="flat"
+              :loading="submittingRequest"
+              :disabled="!requestReason"
+              prepend-icon="mdi-send"
+              @click="submitAccessRequest"
+            >
+              Submit Request
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </template>
+
+    <!-- Admin/HR Tabs -->
+    <v-tabs v-if="isAdminOrHr" v-model="adminTab" class="mb-4">
+      <v-tab value="government-rates">Government Rates</v-tab>
+      <v-tab value="access-requests">
+        Access Requests
+        <v-badge v-if="govRatesRequestCount > 0" :content="govRatesRequestCount" color="error" class="ml-2" inline></v-badge>
+      </v-tab>
+    </v-tabs>
+
+    <!-- Access Requests Manager Tab (admin/hr only) -->
+    <template v-if="isAdminOrHr && adminTab === 'access-requests'">
+      <ModificationRequestsManager module="government-rates" @update-count="updateGovRatesRequestCount" />
+    </template>
+
+    <!-- Main Content (only when access granted) -->
+    <template v-if="hasAccess && (adminTab === 'government-rates' || !isAdminOrHr)">
 
     <!-- Stats Cards -->
     <div class="stats-grid">
@@ -675,20 +824,100 @@
         </v-expand-transition>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import EmployeeContributionsTab from "@/components/settings/EmployeeContributionsTab.vue";
+import ModificationRequestsManager from "@/components/attendance/ModificationRequestsManager.vue";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { formatCurrency, formatDate } from "@/utils/formatters";
+import { useAuthStore } from "@/stores/auth";
+import moduleAccessService from "@/services/moduleAccessService";
 
 const toast = useToast();
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
 const { confirm: confirmDialog } = useConfirmDialog();
+
+const isAdmin = computed(() => authStore.userRole === 'admin');
+const isAdminOrHr = computed(() => ['admin', 'hr'].includes(authStore.userRole));
+const userRole = computed(() => authStore.userRole);
+
+const goBack = () => {
+  if (isAdmin.value) {
+    router.push('/settings');
+  } else {
+    router.back();
+  }
+};
+
+// Access control
+const accessStatus = ref('none');
+const accessMessage = ref('');
+const requestDialog = ref(false);
+const requestReason = ref('');
+const submittingRequest = ref(false);
+const myRequests = ref([]);
+const requestsPanel = ref(null);
+const govRatesRequestCount = ref(0);
+const adminTab = ref(route.query.tab || 'government-rates');
+const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin');
+
+const getRequestStatusColor = (status) => {
+  const colors = { pending: 'warning', approved: 'success', rejected: 'error' };
+  return colors[status] || 'grey';
+};
+
+const checkGovRatesAccess = async () => {
+  if (isAdminOrHr.value) return;
+  try {
+    const response = await moduleAccessService.checkAccess('government-rates');
+    accessStatus.value = response.status;
+    accessMessage.value = response.message || '';
+  } catch {
+    accessStatus.value = 'none';
+  }
+};
+
+const loadMyRequests = async () => {
+  if (isAdminOrHr.value) return;
+  try {
+    const response = await moduleAccessService.getRequests('government-rates');
+    myRequests.value = response.data || [];
+  } catch {
+    myRequests.value = [];
+  }
+};
+
+const submitAccessRequest = async () => {
+  if (!requestReason.value) return;
+  submittingRequest.value = true;
+  try {
+    await moduleAccessService.submitRequest('government-rates', { reason: requestReason.value });
+    toast.success('Access request submitted successfully');
+    requestDialog.value = false;
+    requestReason.value = '';
+    accessStatus.value = 'pending';
+    await loadMyRequests();
+  } catch (error) {
+    const msg = error.response?.data?.message || 'Failed to submit request';
+    toast.error(msg);
+  } finally {
+    submittingRequest.value = false;
+  }
+};
+
+const updateGovRatesRequestCount = (count) => {
+  govRatesRequestCount.value = count;
+};
 
 // ─── State ────────────────────────────────────────────────────────────────
 const activeTab = ref("employees");
@@ -774,8 +1003,24 @@ const rules = {
 const currentRates = (type) => rates.value[type] ?? [];
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────
-onMounted(() => {
-  loadRates();
+onMounted(async () => {
+  // Check access first for payrollist
+  await checkGovRatesAccess();
+  loadMyRequests();
+
+  if (hasAccess.value) {
+    loadRates();
+  }
+
+  // Load pending request count for admin badge
+  if (isAdminOrHr.value) {
+    try {
+      const res = await moduleAccessService.getPendingCount('government-rates');
+      govRatesRequestCount.value = res.count || 0;
+    } catch {
+      // ignore
+    }
+  }
 });
 
 // ─── Methods ──────────────────────────────────────────────────────────────

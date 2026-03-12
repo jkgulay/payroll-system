@@ -326,17 +326,20 @@ const isMobile = computed(() => mdAndDown.value);
 // Access request badge counts
 const pendingAttendanceRequests = ref(0);
 const pendingDeductionRequests = ref(0);
+const pendingGovRatesRequests = ref(0);
 
 async function loadAccessRequestCounts() {
   const role = authStore.user?.role;
   if (!role || !['admin', 'hr'].includes(role)) return;
   try {
-    const [attRes, dedRes] = await Promise.all([
+    const [attRes, dedRes, govRes] = await Promise.all([
       moduleAccessService.getPendingCount('attendance'),
       moduleAccessService.getPendingCount('deductions'),
+      moduleAccessService.getPendingCount('government-rates'),
     ]);
     pendingAttendanceRequests.value = attRes.count || 0;
     pendingDeductionRequests.value = dedRes.count || 0;
+    pendingGovRatesRequests.value = govRes.count || 0;
   } catch {
     // ignore
   }
@@ -837,6 +840,13 @@ const menuSections = computed(() => {
       ],
     },
     {
+      title: "Government Rates",
+      icon: "mdi-bank",
+      value: "government-rates",
+      to: "/government-rates",
+      roles: ["payrollist"],
+    },
+    {
       title: "Biometric Import",
       icon: "mdi-file-upload-outline",
       value: "biometric-import",
@@ -883,6 +893,14 @@ const menuSections = computed(() => {
       to: { path: '/deductions', query: { tab: 'access-requests' } },
       roles: ["admin", "hr"],
       badge: pendingDeductionRequests.value,
+    },
+    {
+      title: "Gov. Rates Requests",
+      icon: "mdi-bank",
+      value: "gov-rates-access-requests",
+      to: { path: '/government-rates', query: { tab: 'access-requests' } },
+      roles: ["admin"],
+      badge: pendingGovRatesRequests.value,
     },
   ];
 
