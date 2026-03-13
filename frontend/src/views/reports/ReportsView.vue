@@ -56,13 +56,6 @@ const reports = [
     colorClass: "primary",
   },
   {
-    id: "tax-withholding",
-    title: "Tax Withholding",
-    description: "BIR Form 1601-C data",
-    icon: "mdi-file-document",
-    colorClass: "secondary",
-  },
-  {
     id: "attendance-summary",
     title: "Attendance Summary",
     description: "Employee attendance by period",
@@ -182,13 +175,6 @@ function generateReport(report) {
     background: rgba(237, 152, 95, 0.1);
     .v-icon {
       color: #ed985f;
-    }
-  }
-
-  &.secondary {
-    background: rgba(239, 68, 68, 0.1);
-    .v-icon {
-      color: #ef4444;
     }
   }
 
