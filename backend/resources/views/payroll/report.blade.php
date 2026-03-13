@@ -114,7 +114,7 @@
                 <th>SSS</th>
                 <th>PhilHealth</th>
                 <th>Pag-IBIG</th>
-                <th>Other Ded.</th>
+                <th>Cash Advance</th>
                 <th>Total Ded.</th>
                 <th>Net Pay</th>
                 @if($includeSignatures)
@@ -130,7 +130,7 @@
             $totalSSS = 0;
             $totalPhilHealth = 0;
             $totalPagIBIG = 0;
-            $totalOtherDed = 0;
+            $totalCashAdvance = 0;
             $totalDeductions = 0;
             $totalNetPay = 0;
             @endphp
@@ -143,7 +143,7 @@
             $totalSSS += $payslip->sss ?? 0;
             $totalPhilHealth += $payslip->philhealth ?? 0;
             $totalPagIBIG += $payslip->pagibig ?? 0;
-            $totalOtherDed += $payslip->other_deductions ?? 0;
+            $totalCashAdvance += $payslip->cash_advance ?? 0;
             $totalDeductions += $payslip->total_deductions;
             $totalNetPay += $payslip->net_pay;
             @endphp
@@ -158,7 +158,7 @@
                 <td class="text-right">₱{{ number_format($payslip->sss ?? 0, 2) }}</td>
                 <td class="text-right">₱{{ number_format($payslip->philhealth ?? 0, 2) }}</td>
                 <td class="text-right">₱{{ number_format($payslip->pagibig ?? 0, 2) }}</td>
-                <td class="text-right">₱{{ number_format($payslip->other_deductions ?? 0, 2) }}</td>
+                <td class="text-right">₱{{ number_format($payslip->cash_advance ?? 0, 2) }}</td>
                 <td class="text-right">₱{{ number_format($payslip->total_deductions, 2) }}</td>
                 <td class="text-right">₱{{ number_format($payslip->net_pay, 2) }}</td>
                 @if($includeSignatures)
@@ -175,7 +175,7 @@
                 <td class="text-right">₱{{ number_format($totalSSS, 2) }}</td>
                 <td class="text-right">₱{{ number_format($totalPhilHealth, 2) }}</td>
                 <td class="text-right">₱{{ number_format($totalPagIBIG, 2) }}</td>
-                <td class="text-right">₱{{ number_format($totalOtherDed, 2) }}</td>
+                <td class="text-right">₱{{ number_format($totalCashAdvance, 2) }}</td>
                 <td class="text-right">₱{{ number_format($totalDeductions, 2) }}</td>
                 <td class="text-right">₱{{ number_format($totalNetPay, 2) }}</td>
                 @if($includeSignatures)

@@ -713,14 +713,14 @@ class PayrollService
         // Employee savings
         $employeeSavings = 0; // Can be configured
 
-        // Cash advance
-        $cashAdvance = 0; // Can be configured
+        // Cash advance (displayed separately in payroll register)
+        $cashAdvance = 0;
 
         // OPTIMIZATION: Use preloaded deductions
         $activeDeductions = $employee->deductions;
 
-        // Types that go into "Other Deductions" column (damages, cash advances)
-        $otherDeductionTypes = ['damages', 'cash_advance'];
+        // Types that go into "Other Deductions" column (excluding cash advance)
+        $otherDeductionTypes = ['damages'];
 
         $employeeDeductions = 0;
         $otherDeductions = 0;
@@ -734,7 +734,9 @@ class PayrollService
 
             $deductionAmount = min($amountPerCutoff, $deduction->balance);
 
-            if (in_array($deduction->deduction_type, $otherDeductionTypes)) {
+            if ($deduction->deduction_type === 'cash_advance') {
+                $cashAdvance += $deductionAmount;
+            } elseif (in_array($deduction->deduction_type, $otherDeductionTypes)) {
                 $otherDeductions += $deductionAmount;
             } else {
                 $employeeDeductions += $deductionAmount;
