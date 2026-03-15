@@ -345,11 +345,21 @@
       <!-- My Submitted Resumes Section -->
       <v-row class="mt-4">
         <v-col cols="12">
-          <div class="section-header-compact">
-            <div class="section-icon-badge">
-              <v-icon size="16">mdi-file-document-multiple</v-icon>
+          <div class="section-header-compact resumes-header">
+            <div class="resumes-header-left">
+              <div class="section-icon-badge">
+                <v-icon size="16">mdi-file-document-multiple</v-icon>
+              </div>
+              <h3 class="section-title-compact">My Submitted Resumes</h3>
             </div>
-            <h3 class="section-title-compact">My Submitted Resumes</h3>
+            <v-btn
+              color="primary"
+              variant="flat"
+              prepend-icon="mdi-upload"
+              @click="showUploadResumeDialog = true"
+            >
+              Upload Resume
+            </v-btn>
           </div>
 
           <div class="content-card">
@@ -1564,6 +1574,16 @@ function getResumeStatusColor(status) {
   gap: 12px;
   margin-bottom: 16px;
   padding: 0 8px;
+}
+
+.resumes-header {
+  justify-content: space-between;
+}
+
+.resumes-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .section-icon-badge {
