@@ -35,10 +35,48 @@ class PayrollWordExport
             'pageSizeW' => \PhpOffice\PhpWord\Shared\Converter::cmToTwip(29.7),
             'pageSizeH' => \PhpOffice\PhpWord\Shared\Converter::cmToTwip(21),
             'marginTop' => 500,
-            'marginBottom' => 500,
+            'marginBottom' => 1800,
             'marginLeft' => 500,
             'marginRight' => 500,
         ]);
+
+        // Add repeating footer (shown on every page)
+        $ci = CompanyInfo::first();
+        $footer = $section->addFooter();
+
+        $footer->addText(
+            '"I hereby acknowledge that the computation and total of my salary stated above for the given period is correct."',
+            ['name' => 'Arial', 'size' => 8, 'italic' => true],
+            ['alignment' => 'center', 'spaceAfter' => 120]
+        );
+
+        $signatureTable = $footer->addTable([
+            'width' => 100 * 50,
+            'unit' => 'pct',
+        ]);
+
+        $sigHeaderStyle = ['name' => 'Arial', 'size' => 7];
+        $sigNameStyle = ['name' => 'Arial', 'size' => 7, 'bold' => true];
+
+        $signatureTable->addRow(200);
+        $signatureTable->addCell(3500)->addText('PREPARED BY:', $sigHeaderStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText('CHECKED AND VERIFIED BY:', $sigHeaderStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText('RECOMMENDED BY:', $sigHeaderStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText('APPROVED BY:', $sigHeaderStyle, ['alignment' => 'center']);
+
+        $signatureTable->addRow(200);
+        $signatureTable->addCell(3500)->addText($ci->sig_prepared_by ?? 'MERCIEL LAVASAN', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_checked_by ?? 'SAIRAH JENITA', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_recommended_by ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA', $sigNameStyle, ['alignment' => 'center']);
+        $cell = $signatureTable->addCell(3500);
+        $cell->addText($ci->sig_approved_by ?? 'ENGR. OSTRIC R. RIVERA JR.', $sigNameStyle, ['alignment' => 'center']);
+        $cell->addText($ci->sig_approved_by_position ?? 'Proprietor/Manager', ['name' => 'Arial', 'size' => 6], ['alignment' => 'center']);
+
+        $signatureTable->addRow(200);
+        $signatureTable->addCell(3500)->addText($ci->sig_prepared_by_2 ?? '', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_checked_by_2 ?? 'JAMAICA CRISTEL MAE SUGABO', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_recommended_by_2 ?? 'ENGR. OSTRIC C. RIVERA, III', $sigNameStyle, ['alignment' => 'center']);
+        $signatureTable->addCell(3500)->addText($ci->sig_approved_by_2 ?? 'ENGR. ELISA MAY PARCON', $sigNameStyle, ['alignment' => 'center']);
 
         // Add company header
         $section->addText(
@@ -78,7 +116,7 @@ class PayrollWordExport
         ];
         $phpWord->addTableStyle('PayrollTable', $tableStyle);
 
-        $table = $section->addTable('PayrollTable');
+        $rowsPerPage = max(1, (int) config('payroll.exports.register_rows_per_page', 14));
 
         // Header styles
         $headerStyle = [
@@ -91,48 +129,54 @@ class PayrollWordExport
             'bgColor' => 'FFFFFF',
         ];
 
-        // First header row with merged cells
-        $table->addRow(300);
-        $table->addCell(1800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('NAME', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('RATE', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("No. of\nDays", $headerStyle, ['alignment' => 'center']);
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('AMOUNT', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(2600, array_merge($headerCellStyle, ['gridSpan' => 4]))->addText('OVERTIME', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Adj. Prev.\nSalary", $headerStyle, ['alignment' => 'center']);
-        $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Allowance', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("GROSS\nAMOUNT", $headerStyle, ['alignment' => 'center']);
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Employee's\nSavings", $headerStyle, ['alignment' => 'center']);
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Loans', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('UT', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Deductions', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Phic\nPrem", $headerStyle, ['alignment' => 'center']);
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("HDMF\nPrem", $headerStyle, ['alignment' => 'center']);
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("SSS\nPrem", $headerStyle, ['alignment' => 'center']);
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("NET\nAMOUNT", $headerStyle, ['alignment' => 'center']);
-        $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('SIGNATURE', $headerStyle, ['alignment' => 'center']);
+        $createPayrollTable = function () use ($section, $headerCellStyle, $headerStyle) {
+            $table = $section->addTable('PayrollTable');
 
-        // Second header row (OVERTIME subheaders)
-        $table->addRow(250);
-        $table->addCell(1800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(600, $headerCellStyle)->addText('REG OT', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(800, $headerCellStyle)->addText('SUN/SPL. HOL.', $headerStyle, ['alignment' => 'center']);
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
-        $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addRow(300);
+            $table->addCell(1800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('NAME', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('RATE', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("No. of\nDays", $headerStyle, ['alignment' => 'center']);
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('AMOUNT', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(2600, array_merge($headerCellStyle, ['gridSpan' => 4]))->addText('OVERTIME', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Adj. Prev.\nSalary", $headerStyle, ['alignment' => 'center']);
+            $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Allowance', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("GROSS\nAMOUNT", $headerStyle, ['alignment' => 'center']);
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Employee's\nSavings", $headerStyle, ['alignment' => 'center']);
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Loans', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('UT', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('Deductions', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("Phic\nPrem", $headerStyle, ['alignment' => 'center']);
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("HDMF\nPrem", $headerStyle, ['alignment' => 'center']);
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("SSS\nPrem", $headerStyle, ['alignment' => 'center']);
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText("NET\nAMOUNT", $headerStyle, ['alignment' => 'center']);
+            $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'restart']))->addText('SIGNATURE', $headerStyle, ['alignment' => 'center']);
+
+            $table->addRow(250);
+            $table->addCell(1800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(600, $headerCellStyle)->addText('REG OT', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(600, $headerCellStyle)->addText('HRS', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(800, $headerCellStyle)->addText('SUN/SPL. HOL.', $headerStyle, ['alignment' => 'center']);
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(600, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(700, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(900, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+            $table->addCell(800, array_merge($headerCellStyle, ['vMerge' => 'continue']));
+
+            return $table;
+        };
+
+        $table = $createPayrollTable();
 
         // Data cell styles
         $cellStyle = [
@@ -158,6 +202,11 @@ class PayrollWordExport
         $totalNet = 0;
 
         foreach ($this->items as $index => $item) {
+            if ($index > 0 && $index % $rowsPerPage === 0) {
+                $section->addPageBreak();
+                $table = $createPayrollTable();
+            }
+
             // Calculate AMOUNT = Rate × No. of Days (includes regular + holiday days)
             $rate = $item->effective_rate ?? $item->rate ?? 0;
             $daysWorked = $item->days_worked ?? 0;
@@ -236,45 +285,6 @@ class PayrollWordExport
         $table->addCell(700)->addText(number_format($totalSss, 2), $totalStyle, ['alignment' => 'right']);
         $table->addCell(900)->addText(number_format($totalNet, 2), $totalStyle, ['alignment' => 'right']);
         $table->addCell(800)->addText('', $totalStyle);
-
-        // Add acknowledgment
-        $section->addTextBreak(1);
-        $section->addText(
-            '"I hereby acknowledge that the computation and total of my salary stated above for the given period is correct."',
-            ['name' => 'Arial', 'size' => 8, 'italic' => true],
-            ['alignment' => 'center', 'spaceAfter' => 200]
-        );
-
-        // Add signature section
-        $ci = CompanyInfo::first();
-
-        $signatureTable = $section->addTable([
-            'width' => 100 * 50,
-            'unit' => 'pct',
-        ]);
-
-        $sigHeaderStyle = ['name' => 'Arial', 'size' => 7];
-        $sigNameStyle = ['name' => 'Arial', 'size' => 7, 'bold' => true];
-
-        $signatureTable->addRow(200);
-        $signatureTable->addCell(3500)->addText('PREPARED BY:', $sigHeaderStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText('CHECKED AND VERIFIED BY:', $sigHeaderStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText('RECOMMENDED BY:', $sigHeaderStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText('APPROVED BY:', $sigHeaderStyle, ['alignment' => 'center']);
-
-        $signatureTable->addRow(200);
-        $signatureTable->addCell(3500)->addText($ci->sig_prepared_by ?? 'MERCIEL LAVASAN', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText($ci->sig_checked_by ?? 'SAIRAH JENITA', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText($ci->sig_recommended_by ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA', $sigNameStyle, ['alignment' => 'center']);
-        $cell = $signatureTable->addCell(3500);
-        $cell->addText($ci->sig_approved_by ?? 'ENGR. OSTRIC R. RIVERA JR.', $sigNameStyle, ['alignment' => 'center']);
-        $cell->addText($ci->sig_approved_by_position ?? 'Proprietor/Manager', ['name' => 'Arial', 'size' => 6], ['alignment' => 'center']);
-
-        $signatureTable->addRow(200);
-        $signatureTable->addCell(3500)->addText($ci->sig_prepared_by_2 ?? '', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText($ci->sig_checked_by_2 ?? 'JAMAICA CRISTEL MAE SUGABO', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText($ci->sig_recommended_by_2 ?? 'ENGR. OSTRIC C. RIVERA, III', $sigNameStyle, ['alignment' => 'center']);
-        $signatureTable->addCell(3500)->addText($ci->sig_approved_by_2 ?? 'ENGR. ELISA MAY PARCON', $sigNameStyle, ['alignment' => 'center']);
 
         return $phpWord;
     }

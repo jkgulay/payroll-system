@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Models\CompanyInfo;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -218,6 +219,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 // Calculate data range (starts at row 9, after headers)
                 $dataStartRow = 9;
                 $dataEndRow = $dataStartRow + $this->rowCount - 1;
+                $rowsPerPage = max(1, (int) config('payroll.exports.register_rows_per_page', 14));
 
                 // Apply borders to data rows
                 $dataStyle = [
@@ -284,33 +286,6 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 ];
                 $sheet->getStyle("A{$totalRow}:T{$totalRow}")->applyFromArray($totalStyle);
 
-                // Add acknowledgment
-                $ackRow = $totalRow + 2;
-                $sheet->setCellValue("A{$ackRow}", '"I hereby acknowledge that the computation and total of my salary stated above for the given period is correct."');
-                $sheet->mergeCells("A{$ackRow}:T{$ackRow}");
-                $sheet->getStyle("A{$ackRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("A{$ackRow}")->getFont()->setItalic(true)->setSize(8);
-
-                // Add signature section
-                $sigRow = $ackRow + 2;
-                $sheet->setCellValue("A{$sigRow}", 'PREPARED BY:');
-                $sheet->setCellValue("F{$sigRow}", 'CHECKED AND VERIFIED BY:');
-                $sheet->setCellValue("L{$sigRow}", 'RECOMMENDED BY:');
-                $sheet->setCellValue("Q{$sigRow}", 'APPROVED BY:');
-
-                $sigNameRow = $sigRow + 1;
-                $sheet->setCellValue("A{$sigNameRow}", 'MERCIEL LAVASAN');
-                $sheet->setCellValue("F{$sigNameRow}", 'SAIRAH JENITA');
-                $sheet->setCellValue("L{$sigNameRow}", 'ENGR. FRANCIS GIOVANNI C. RIVERA');
-                $sheet->setCellValue("Q{$sigNameRow}", 'ENGR. OSTRIC R. RIVERA JR.');
-                $sheet->getStyle("A{$sigNameRow}:T{$sigNameRow}")->getFont()->setBold(true)->setSize(8);
-
-                $sigNameRow2 = $sigNameRow + 1;
-                $sheet->setCellValue("F{$sigNameRow2}", 'JAMAICA CRISTEL MAE SUGABO');
-                $sheet->setCellValue("L{$sigNameRow2}", 'ENGR. OSTRIC C. RIVERA, III');
-                $sheet->setCellValue("Q{$sigNameRow2}", 'ENGR. ELISA MAY PARCON');
-                $sheet->getStyle("A{$sigNameRow2}:T{$sigNameRow2}")->getFont()->setBold(true)->setSize(8);
-
                 // Set column widths
                 $sheet->getColumnDimension('A')->setWidth(25);  // NAME
                 $sheet->getColumnDimension('B')->setWidth(10);  // RATE
@@ -338,6 +313,34 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->getPageSetup()->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
                 $sheet->getPageSetup()->setFitToWidth(1);
                 $sheet->getPageSetup()->setFitToHeight(0);
+                $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 8);
+
+                // Hard page breaks to keep a fixed number of employees per printed page
+                for ($breakRow = $dataStartRow + $rowsPerPage - 1; $breakRow < $dataEndRow; $breakRow += $rowsPerPage) {
+                    $sheet->setBreak("A{$breakRow}", Worksheet::BREAK_ROW);
+                }
+
+                // Add repeating footer on every printed page
+                $ci = CompanyInfo::first();
+                $preparedBy = $ci->sig_prepared_by ?? 'MERCIEL LAVASAN';
+                $checkedBy = $ci->sig_checked_by ?? 'SAIRAH JENITA';
+                $recommendedBy = $ci->sig_recommended_by ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA';
+                $approvedBy = $ci->sig_approved_by ?? 'ENGR. OSTRIC R. RIVERA JR.';
+                $checkedBy2 = $ci->sig_checked_by_2 ?? 'JAMAICA CRISTEL MAE SUGABO';
+                $recommendedBy2 = $ci->sig_recommended_by_2 ?? 'ENGR. OSTRIC C. RIVERA, III';
+                $approvedBy2 = $ci->sig_approved_by_2 ?? 'ENGR. ELISA MAY PARCON';
+
+                $headerFooter = $sheet->getHeaderFooter();
+                $footerText = '&C&I"I hereby acknowledge that the computation and total of my salary stated above for the given period is correct."'
+                    . "\n\n"
+                    . '&CPREPARED BY:    CHECKED AND VERIFIED BY:    RECOMMENDED BY:    APPROVED BY:'
+                    . "\n"
+                    . '&C&B' . $preparedBy . '    ' . $checkedBy . '    ' . $recommendedBy . '    ' . $approvedBy
+                    . "\n"
+                    . '&C' . $checkedBy2 . '    ' . $recommendedBy2 . '    ' . $approvedBy2;
+                $headerFooter->setOddFooter($footerText);
+                $headerFooter->setEvenFooter($footerText);
+                $sheet->getPageMargins()->setFooter(0.45);
             },
         ];
     }

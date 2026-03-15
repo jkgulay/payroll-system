@@ -7,7 +7,7 @@
     <style>
         @page {
             size: 13in 8.5in;
-            margin: 6mm 10mm 6mm 8mm;
+            margin: 6mm 10mm 42mm 8mm;
         }
 
         body {
@@ -16,6 +16,36 @@
             padding: 0;
             font-size: 11px;
             color: #000;
+        }
+
+        .page-signature-footer {
+            position: fixed;
+            left: 8mm;
+            right: 10mm;
+            bottom: 6mm;
+        }
+
+        .page-signature-footer .signature-section {
+            margin-top: 0;
+        }
+
+        .page-signature-footer .signature-acknowledgment {
+            font-size: 8px;
+            margin-bottom: 4px;
+        }
+
+        .page-signature-footer .signature-title {
+            font-size: 7px;
+            margin-bottom: 10px;
+        }
+
+        .page-signature-footer .signature-name {
+            font-size: 8px;
+            min-width: 84%;
+        }
+
+        .page-signature-footer .signature-position {
+            font-size: 7px;
         }
 
         /* ===== HEADER ===== */
@@ -74,6 +104,17 @@
             text-align: center;
             vertical-align: middle;
             overflow: hidden;
+        }
+
+        tr.page-break-row {
+            page-break-after: always;
+        }
+
+        tr.page-break-row td {
+            border: 0 !important;
+            padding: 0 !important;
+            height: 0 !important;
+            line-height: 0 !important;
         }
 
         table.payroll-table thead th {
@@ -170,6 +211,14 @@
 </head>
 
 <body>
+    @php
+    $rowsPerPage = max(1, (int) config('payroll.exports.register_rows_per_page', 14));
+    @endphp
+
+    <div class="page-signature-footer">
+        @include('payroll.partials.signature')
+    </div>
+
     <div class="header">
         <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
         <div class="company-address">{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
@@ -270,6 +319,11 @@
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
                 <td></td>
             </tr>
+            @if((($index + 1) % $rowsPerPage === 0) && !$loop->last)
+            <tr class="page-break-row">
+                <td colspan="21"></td>
+            </tr>
+            @endif
             @endforeach
         </tbody>
     </table>
@@ -336,7 +390,6 @@
                 </tr>
             </tbody>
         </table>
-        @include('payroll.partials.signature')
     </div>
     @endforeach
     @else
@@ -439,6 +492,11 @@
                 <td class="text-right">{{ number_format($item->net_pay, 2) }}</td>
                 <td></td>
             </tr>
+            @if((($index + 1) % $rowsPerPage === 0) && !$loop->last)
+            <tr class="page-break-row">
+                <td colspan="21"></td>
+            </tr>
+            @endif
             @endforeach
         </tbody>
     </table>
@@ -505,7 +563,6 @@
                 </tr>
             </tbody>
         </table>
-        @include('payroll.partials.signature')
     </div>
     @endif
 </body>
