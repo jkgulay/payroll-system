@@ -10,10 +10,6 @@
             <v-icon v-else size="40" color="white">mdi-account-tie</v-icon>
           </v-avatar>
           <div class="header-info">
-            <div class="welcome-badge hr-badge">
-              <v-icon size="16" class="welcome-icon">mdi-account-tie</v-icon>
-              <span>Human Resources Portal</span>
-            </div>
             <h1 class="dashboard-title">Welcome, {{ fullName }}</h1>
             <p class="dashboard-subtitle">
               {{ employee?.position }} - {{ employee?.project?.name }} •
@@ -216,121 +212,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Pending Applications Details -->
-          <div class="applications-section mb-6">
-            <div class="section-header-compact">
-              <div class="section-icon-badge">
-                <v-icon size="16">mdi-file-account</v-icon>
-              </div>
-              <h3 class="section-title-compact">Recent Applications</h3>
-            </div>
-
-            <div class="content-card">
-              <v-data-table
-                :headers="applicationHeaders"
-                :items="pendingApplications"
-                :items-per-page="10"
-                class="modern-table"
-              >
-                <template v-slot:item.name="{ item }">
-                  <div class="name-cell">
-                    <v-avatar size="32" color="#ED985F">
-                      <span class="text-white text-caption">{{
-                        getInitials(item.first_name, item.last_name)
-                      }}</span>
-                    </v-avatar>
-                    <span class="ml-2">
-                      {{ item.first_name }} {{ item.last_name }}
-                    </span>
-                  </div>
-                </template>
-                <template v-slot:item.position="{ item }">
-                  <span class="table-text">{{ item.position }}</span>
-                </template>
-                <template v-slot:item.project="{ item }">
-                  <span class="table-text">{{
-                    item.project?.name || "N/A"
-                  }}</span>
-                </template>
-                <template v-slot:item.created_at="{ item }">
-                  <span class="table-date">{{
-                    formatDate(item.created_at)
-                  }}</span>
-                </template>
-                <template v-slot:item.actions="{ item }">
-                  <v-btn
-                    size="small"
-                    variant="text"
-                    color="#ED985F"
-                    @click="viewApplication(item)"
-                  >
-                    Review
-                  </v-btn>
-                </template>
-              </v-data-table>
-            </div>
-          </div>
-
-          <!-- Pending Leave Requests Section -->
-          <div class="leave-requests-section mb-6">
-            <div class="section-header-compact">
-              <div class="section-icon-badge warning">
-                <v-icon size="16">mdi-calendar-alert</v-icon>
-              </div>
-              <h3 class="section-title-compact">Recent Leave Requests</h3>
-            </div>
-
-            <div class="content-card">
-              <v-data-table
-                :headers="leaveHeaders"
-                :items="pendingLeaveRequests"
-                :items-per-page="10"
-                class="modern-table"
-              >
-                <template v-slot:item.employee="{ item }">
-                  <div class="name-cell">
-                    <v-avatar size="32" color="#F57C00">
-                      <span class="text-white text-caption">{{
-                        getInitials(
-                          item.employee.first_name,
-                          item.employee.last_name,
-                        )
-                      }}</span>
-                    </v-avatar>
-                    <span class="ml-2">
-                      {{ item.employee.first_name }}
-                      {{ item.employee.last_name }}
-                    </span>
-                  </div>
-                </template>
-                <template v-slot:item.leave_type="{ item }">
-                  <v-chip size="small" variant="flat" color="#FFF3E0">
-                    {{ item.leave_type }}
-                  </v-chip>
-                </template>
-                <template v-slot:item.dates="{ item }">
-                  <span class="table-text">
-                    {{ formatDate(item.start_date) }} -
-                    {{ formatDate(item.end_date) }}
-                  </span>
-                </template>
-                <template v-slot:item.total_days="{ item }">
-                  <span class="table-hours">{{ item.total_days }} days</span>
-                </template>
-                <template v-slot:item.actions="{ item }">
-                  <v-btn
-                    size="small"
-                    variant="text"
-                    color="#F57C00"
-                    @click="viewLeaveRequest(item)"
-                  >
-                    Review
-                  </v-btn>
-                </template>
-              </v-data-table>
-            </div>
-          </div>
         </v-col>
 
         <!-- Right Column - 1/3 Width -->
@@ -407,45 +288,6 @@
                 >
                 <div class="empty-state-text">No current payslip available</div>
               </div>
-            </div>
-          </div>
-
-          <!-- Quick Actions - HR specific -->
-          <div class="quick-actions-section mb-6">
-            <div class="section-header-compact">
-              <div class="section-icon-badge">
-                <v-icon size="16">mdi-lightning-bolt</v-icon>
-              </div>
-              <h3 class="section-title-compact">Quick Actions</h3>
-            </div>
-            <div class="quick-action-buttons">
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/employees?add=true')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-account-plus</v-icon>
-                </div>
-                <span>Add Employee</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="showUploadResumeDialog = true"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-file-account</v-icon>
-                </div>
-                <span>Upload Resume</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/biometric-import')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-file-upload</v-icon>
-                </div>
-                <span>Import Biometrics</span>
-              </button>
             </div>
           </div>
 
@@ -927,8 +769,6 @@ const hrStats = ref({
   recentResignations: 0,
 });
 
-const pendingApplications = ref([]);
-const pendingLeaveRequests = ref([]);
 const recentResignations = ref([]);
 
 const resumeData = ref({
@@ -1050,22 +890,6 @@ const attendanceHeaders = [
   { title: "Hours", key: "regular_hours" },
 ];
 
-const applicationHeaders = [
-  { title: "Name", key: "name", sortable: true },
-  { title: "Position", key: "position", sortable: true },
-  { title: "Project", key: "project", sortable: true },
-  { title: "Submitted", key: "created_at", sortable: true },
-  { title: "Actions", key: "actions", sortable: false },
-];
-
-const leaveHeaders = [
-  { title: "Employee", key: "employee", sortable: true },
-  { title: "Leave Type", key: "leave_type", sortable: true },
-  { title: "Dates", key: "dates", sortable: false },
-  { title: "Duration", key: "total_days", sortable: true },
-  { title: "Actions", key: "actions", sortable: false },
-];
-
 const resumeHeaders = [
   { title: "Applicant Name", key: "full_name", sortable: true },
   { title: "Email", key: "email", sortable: true },
@@ -1099,8 +923,6 @@ async function fetchDashboardData() {
 
     // Fetch HR-specific data
     await fetchHRStats();
-    await fetchPendingApplications();
-    await fetchPendingLeaves();
     await fetchRecentResignations();
   } catch (error) {
     devLog.error("Error loading dashboard:", error);
@@ -1155,31 +977,6 @@ async function fetchHRStats() {
   } catch (error) {
     devLog.error("Error loading HR stats:", error);
     // Don't show error toast, just log it
-  }
-}
-
-async function fetchPendingApplications() {
-  try {
-    const response = await api.get("/employee-applications", {
-      params: { status: "pending", limit: 10 },
-    });
-    pendingApplications.value = response.data.data || response.data || [];
-  } catch (error) {
-    devLog.error("Error loading pending applications:", error);
-  }
-}
-
-async function fetchPendingLeaves() {
-  try {
-    const response = await api.get("/employee-applications", {
-      params: { type: "leave", status: "pending", limit: 10 },
-    });
-    const allApplications = response.data.data || response.data || [];
-    pendingLeaveRequests.value = allApplications.filter(
-      (app) => app.type === "leave",
-    );
-  } catch (error) {
-    devLog.error("Error loading pending leaves:", error);
   }
 }
 
@@ -1285,14 +1082,6 @@ function getResignationStatusColor(status) {
     completed: "info",
   };
   return colors[status] || "grey";
-}
-
-function viewApplication(application) {
-  router.push(`/resume-review/${application.id}`);
-}
-
-function viewLeaveRequest(leave) {
-  router.push(`/leave-approval/${leave.id}`);
 }
 
 function viewResignation(resignation) {

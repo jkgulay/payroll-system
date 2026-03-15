@@ -775,7 +775,7 @@
                         formatCurrency(calcResult.pagibig?.employee_share || 0)
                       }}</span
                     >
-                  </div>
+                  </div>`
                   <div class="calc-card-row">
                     <span>Employer (monthly)</span>
                     <span class="mono"

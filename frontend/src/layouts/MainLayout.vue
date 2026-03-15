@@ -203,29 +203,6 @@
     <!-- Main Content Area -->
     <v-main class="main-content">
       <v-container fluid class="pa-6 main-container">
-        <!-- Breadcrumbs for better navigation -->
-        <v-breadcrumbs
-          v-if="breadcrumbs.length > 1"
-          :items="breadcrumbs"
-          class="px-0 mb-4 breadcrumbs-construction"
-        >
-          <template v-slot:divider>
-            <v-icon size="small">mdi-chevron-right</v-icon>
-          </template>
-          <template v-slot:item="{ item }">
-            <v-breadcrumbs-item
-              :to="item.to"
-              :disabled="item.disabled"
-              class="text-body-2"
-            >
-              <v-icon v-if="item.icon" size="small" class="mr-1">{{
-                item.icon
-              }}</v-icon>
-              {{ item.title }}
-            </v-breadcrumbs-item>
-          </template>
-        </v-breadcrumbs>
-
         <router-view v-slot="{ Component }">
           <transition name="page-transition" mode="out-in">
             <component :is="Component" :key="route.fullPath" />
@@ -402,35 +379,6 @@ const userAvatar = computed(() => {
   return `${apiUrl}/storage/${avatar}`;
 });
 const pageTitle = computed(() => route.meta.title || "Dashboard");
-
-// Breadcrumbs generation
-const breadcrumbs = computed(() => {
-  const crumbs = [
-    {
-      title: "Home",
-      icon: "mdi-home",
-      to: "/",
-      disabled: false,
-    },
-  ];
-
-  // Parse route path to create breadcrumbs
-  const paths = route.path.split("/").filter((p) => p);
-  let currentPath = "";
-
-  paths.forEach((path, index) => {
-    currentPath += `/${path}`;
-    const isLast = index === paths.length - 1;
-
-    crumbs.push({
-      title: path.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-      to: currentPath,
-      disabled: isLast,
-    });
-  });
-
-  return crumbs;
-});
 
 // Filter menu items based on user role with construction-themed icons
 const menuItems = computed(() => {
@@ -1475,33 +1423,6 @@ async function downloadCurrentPayslip() {
   height: 44px !important;
   min-width: 44px !important;
   border-radius: 8px !important;
-}
-
-// Breadcrumbs - clean style
-.breadcrumbs-construction {
-  :deep(.v-breadcrumbs-item) {
-    color: #64748b;
-    font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 4px;
-
-    &:hover {
-      color: #ed985f;
-      background: rgba(237, 152, 95, 0.08);
-    }
-  }
-
-  :deep(.v-breadcrumbs-item--disabled) {
-    color: #001f3d;
-    font-weight: 600;
-    background: rgba(237, 152, 95, 0.1);
-    padding: 4px 8px;
-    border-radius: 4px;
-  }
-
-  :deep(.v-breadcrumbs-divider) {
-    color: #cbd5e1;
-  }
 }
 
 // Clean App Bar styling
