@@ -164,7 +164,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 // Add company header
                 $sheet->setCellValue('A1', $companyName);
                 $sheet->mergeCells('A1:T1');
-                $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+                $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(20);
                 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A2', $companyAddress);
@@ -173,7 +173,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
 
                 $sheet->setCellValue('A4', 'P A Y R O L L');
                 $sheet->mergeCells('A4:T4');
-                $sheet->getStyle('A4')->getFont()->setBold(true)->setSize(14);
+                $sheet->getStyle('A4')->getFont()->setBold(true)->setSize(18);
                 $sheet->getStyle('A4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A5', $periodStart . ' - ' . $periodEnd);
@@ -204,7 +204,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
 
                 // Style header rows
                 $headerStyle = [
-                    'font' => ['bold' => true, 'size' => 9],
+                    'font' => ['bold' => true, 'size' => 13],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
                         'vertical' => Alignment::VERTICAL_CENTER,
@@ -226,7 +226,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                     'borders' => [
                         'allBorders' => ['borderStyle' => Border::BORDER_THIN],
                     ],
-                    'font' => ['size' => 9],
+                    'font' => ['size' => 13],
                 ];
                 $sheet->getStyle("A{$dataStartRow}:T{$dataEndRow}")->applyFromArray($dataStyle);
 
@@ -235,7 +235,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->setCellValue("A{$nothingFollowsRow}", 'nothing follows');
                 $sheet->mergeCells("A{$nothingFollowsRow}:T{$nothingFollowsRow}");
                 $sheet->getStyle("A{$nothingFollowsRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("A{$nothingFollowsRow}")->getFont()->setItalic(true)->setSize(9);
+                $sheet->getStyle("A{$nothingFollowsRow}")->getFont()->setItalic(true)->setSize(13);
                 $sheet->getStyle("A{$nothingFollowsRow}:T{$nothingFollowsRow}")->applyFromArray([
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
@@ -281,7 +281,7 @@ class PayrollExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 $sheet->setCellValue("S{$totalRow}", $this->items->sum('net_pay'));
 
                 $totalStyle = [
-                    'font' => ['bold' => true, 'size' => 9],
+                    'font' => ['bold' => true, 'size' => 13],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ];
                 $sheet->getStyle("A{$totalRow}:T{$totalRow}")->applyFromArray($totalStyle);

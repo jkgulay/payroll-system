@@ -989,8 +989,12 @@ class PayrollController extends Controller
 
                 // Clone the Eloquent model and scale each aggregate field
                 $split = clone $item;
+                $dayFields = ['days_worked', 'regular_days', 'holiday_days'];
                 foreach ($scalableFields as $field) {
-                    $split->setAttribute($field, round(($item->getAttribute($field) ?? 0) * $ratio, 4));
+                    $raw = ($item->getAttribute($field) ?? 0) * $ratio;
+                    // Day fields must stay in 0.5 increments (full day or half day)
+                    $value = in_array($field, $dayFields) ? round($raw * 2) / 2 : round($raw, 4);
+                    $split->setAttribute($field, $value);
                 }
 
                 $deviceGroups[$device][] = $split;
