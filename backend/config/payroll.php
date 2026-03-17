@@ -130,7 +130,7 @@ return [
     */
 
     'exports' => [
-        'register_rows_per_page' => env('PAYROLL_REGISTER_ROWS_PER_PAGE', 7),
+        'register_rows_per_page' => env('PAYROLL_REGISTER_ROWS_PER_PAGE', 20),
     ],
 
 ];

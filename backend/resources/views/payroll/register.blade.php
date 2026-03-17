@@ -349,7 +349,7 @@
         </thead>
         <tbody>
             @php
-            $lastPageMaxRows = 7;
+            $lastPageMaxRows = 20;
             $totalGroupItems = count($items);
             $pageBreakIndices = [];
             $pi = 0;
@@ -579,7 +579,7 @@
         </thead>
         <tbody>
             @php
-            $lastPageMaxRows = 7;
+            $lastPageMaxRows = 15;
             $totalGroupItems = count($payroll->items);
             $pageBreakIndices = [];
             $pi = 0;
