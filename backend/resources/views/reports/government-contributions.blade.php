@@ -8,7 +8,8 @@
         body {
             font-family: Arial, sans-serif;
             font-size: 10px;
-            margin: 20px;
+            margin: 0;
+            padding: 0;
         }
 
         .header {
@@ -16,6 +17,10 @@
             margin-bottom: 25px;
             border-bottom: 2px solid #333;
             padding-bottom: 15px;
+        }
+
+        .content {
+            margin-top: 0;
         }
 
         .company-name {
@@ -136,13 +141,33 @@
         }
 
         @page {
-            margin: 15mm;
+            size: 8.5in 13in;
+            margin: 6mm 10mm 5mm 8mm;
+        }
+
+        @media print {
+            html {
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            table thead {
+                display: table-header-group;
+            }
+            table tr {
+                page-break-inside: avoid;
+            }
         }
     </style>
 </head>
 
 <body>
-    <!-- Header -->
+    @php $rowsPerPage = 35; @endphp
+
+    <!-- Header Page 1 -->
     <div class="header">
         @if($companyInfo)
         <h1 class="company-name">{{ $companyInfo->company_name ?? 'Company Name' }}</h1>
@@ -157,6 +182,8 @@
         <p class="report-period">Department: {{ $department }}</p>
         @endif
     </div>
+
+    <div class="content">
 
     <!-- Summary Information -->
     <div class="info-section">
@@ -180,108 +207,238 @@
         </div>
     </div>
 
-    <!-- Employee Contributions Table -->
+    @php $globalPageCount = 0; @endphp
+
+    {{-- ====== SSS ====== --}}
     @if(in_array('sss', $contributionTypes))
-    <div class="contributions-label">SSS Contributions</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 8%;">No.</th>
-                <th style="width: 15%;">Employee No.</th>
-                <th style="width: 27%;">Employee Name</th>
-                <th style="width: 20%;">Position</th>
-                <th style="width: 15%;">Employee Share</th>
-                <th style="width: 15%;">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($employees as $index => $employee)
-            <tr>
-                <td class="text-center">{{ $index + 1 }}</td>
-                <td class="text-center">{{ $employee['employee_number'] }}</td>
-                <td>{{ $employee['full_name'] }}</td>
-                <td>{{ $employee['position'] }}</td>
-                <td class="text-right amount">PHP {{ number_format($employee['sss'], 2) }}</td>
-                <td class="text-right amount">PHP {{ number_format($employee['sss_total'], 2) }}</td>
-            </tr>
-            @endforeach
-            <tr class="total-row">
-                <td colspan="4" class="text-right">TOTAL SSS CONTRIBUTIONS:</td>
-                <td class="text-right amount">PHP {{ number_format($totals['sss_employee'], 2) }}</td>
-                <td class="text-right amount">PHP {{ number_format($totals['sss_total'], 2) }}</td>
-            </tr>
-        </tbody>
-    </table>
+    @php $chunks = $employees->chunk($rowsPerPage); @endphp
+    @foreach($chunks as $chunkIndex => $chunk)
+        @if($globalPageCount > 0)
+        <div style="page-break-before: always;">
+            <div class="header">
+                @if($companyInfo)
+                <h1 class="company-name">{{ $companyInfo->company_name ?? 'Company Name' }}</h1>
+                <p class="company-address">{{ $companyInfo->address ?? '' }}</p>
+                @if($companyInfo->phone)
+                <p class="company-address">Tel: {{ $companyInfo->phone }}</p>
+                @endif
+                @endif
+                <h2 class="report-title">Government Contributions Report</h2>
+                <p class="report-period">Period: {{ $period }}</p>
+                @if($department)<p class="report-period">Department: {{ $department }}</p>@endif
+            </div>
+            <div class="info-section">
+                <div class="info-row">
+                    <span><strong>Total Employees:</strong> {{ $employeeCount }}</span>
+                    <span><strong>Generated on:</strong> {{ now()->format('F d, Y h:i A') }}</span>
+                </div>
+                <div class="info-row">
+                    <span>
+                        <strong>Contribution Types:</strong>
+                        @php
+                            $typeLabels = [];
+                            foreach($contributionTypes as $type) {
+                                if($type === 'sss') $typeLabels[] = 'SSS';
+                                elseif($type === 'philhealth') $typeLabels[] = 'PhilHealth';
+                                elseif($type === 'pagibig') $typeLabels[] = 'Pag-IBIG';
+                            }
+                            echo implode(', ', $typeLabels);
+                        @endphp
+                    </span>
+                </div>
+            </div>
+        </div>
+        @endif
+        @php $globalPageCount++; @endphp
+        <div class="contributions-label">SSS Contributions</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 8%;">No.</th>
+                    <th style="width: 15%;">Employee No.</th>
+                    <th style="width: 27%;">Employee Name</th>
+                    <th style="width: 20%;">Position</th>
+                    <th style="width: 15%;">Employee Share</th>
+                    <th style="width: 15%;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($chunk as $employee)
+                <tr>
+                    <td class="text-center">{{ $chunkIndex * $rowsPerPage + $loop->index + 1 }}</td>
+                    <td class="text-center">{{ $employee['employee_number'] }}</td>
+                    <td>{{ $employee['full_name'] }}</td>
+                    <td>{{ $employee['position'] }}</td>
+                    <td class="text-right amount">PHP {{ number_format($employee['sss'], 2) }}</td>
+                    <td class="text-right amount">PHP {{ number_format($employee['sss_total'], 2) }}</td>
+                </tr>
+                @endforeach
+                @if($loop->last)
+                <tr class="total-row">
+                    <td colspan="4" class="text-right">TOTAL SSS CONTRIBUTIONS:</td>
+                    <td class="text-right amount">PHP {{ number_format($totals['sss_employee'], 2) }}</td>
+                    <td class="text-right amount">PHP {{ number_format($totals['sss_total'], 2) }}</td>
+                </tr>
+                @endif
+            </tbody>
+        </table>
+    @endforeach
     @endif
 
+    {{-- ====== PHILHEALTH ====== --}}
     @if(in_array('philhealth', $contributionTypes))
-    <div class="contributions-label">PhilHealth Contributions</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 8%;">No.</th>
-                <th style="width: 15%;">Employee No.</th>
-                <th style="width: 27%;">Employee Name</th>
-                <th style="width: 20%;">Position</th>
-                <th style="width: 15%;">Employee Share</th>
-                <th style="width: 15%;">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($employees as $index => $employee)
-            <tr>
-                <td class="text-center">{{ $index + 1 }}</td>
-                <td class="text-center">{{ $employee['employee_number'] }}</td>
-                <td>{{ $employee['full_name'] }}</td>
-                <td>{{ $employee['position'] }}</td>
-                <td class="text-right amount">PHP {{ number_format($employee['philhealth'], 2) }}</td>
-                <td class="text-right amount">PHP {{ number_format($employee['philhealth_total'], 2) }}</td>
-            </tr>
-            @endforeach
-            <tr class="total-row">
-                <td colspan="4" class="text-right">TOTAL PHILHEALTH CONTRIBUTIONS:</td>
-                <td class="text-right amount">PHP {{ number_format($totals['philhealth_employee'], 2) }}</td>
-                <td class="text-right amount">PHP {{ number_format($totals['philhealth_total'], 2) }}</td>
-            </tr>
-        </tbody>
-    </table>
+    @php $chunks = $employees->chunk($rowsPerPage); @endphp
+    @foreach($chunks as $chunkIndex => $chunk)
+        @if($globalPageCount > 0)
+        <div style="page-break-before: always;">
+            <div class="header">
+                @if($companyInfo)
+                <h1 class="company-name">{{ $companyInfo->company_name ?? 'Company Name' }}</h1>
+                <p class="company-address">{{ $companyInfo->address ?? '' }}</p>
+                @if($companyInfo->phone)
+                <p class="company-address">Tel: {{ $companyInfo->phone }}</p>
+                @endif
+                @endif
+                <h2 class="report-title">Government Contributions Report</h2>
+                <p class="report-period">Period: {{ $period }}</p>
+                @if($department)<p class="report-period">Department: {{ $department }}</p>@endif
+            </div>
+            <div class="info-section">
+                <div class="info-row">
+                    <span><strong>Total Employees:</strong> {{ $employeeCount }}</span>
+                    <span><strong>Generated on:</strong> {{ now()->format('F d, Y h:i A') }}</span>
+                </div>
+                <div class="info-row">
+                    <span>
+                        <strong>Contribution Types:</strong>
+                        @php
+                            $typeLabels = [];
+                            foreach($contributionTypes as $type) {
+                                if($type === 'sss') $typeLabels[] = 'SSS';
+                                elseif($type === 'philhealth') $typeLabels[] = 'PhilHealth';
+                                elseif($type === 'pagibig') $typeLabels[] = 'Pag-IBIG';
+                            }
+                            echo implode(', ', $typeLabels);
+                        @endphp
+                    </span>
+                </div>
+            </div>
+        </div>
+        @endif
+        @php $globalPageCount++; @endphp
+        <div class="contributions-label">PhilHealth Contributions</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 8%;">No.</th>
+                    <th style="width: 15%;">Employee No.</th>
+                    <th style="width: 27%;">Employee Name</th>
+                    <th style="width: 20%;">Position</th>
+                    <th style="width: 15%;">Employee Share</th>
+                    <th style="width: 15%;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($chunk as $employee)
+                <tr>
+                    <td class="text-center">{{ $chunkIndex * $rowsPerPage + $loop->index + 1 }}</td>
+                    <td class="text-center">{{ $employee['employee_number'] }}</td>
+                    <td>{{ $employee['full_name'] }}</td>
+                    <td>{{ $employee['position'] }}</td>
+                    <td class="text-right amount">PHP {{ number_format($employee['philhealth'], 2) }}</td>
+                    <td class="text-right amount">PHP {{ number_format($employee['philhealth_total'], 2) }}</td>
+                </tr>
+                @endforeach
+                @if($loop->last)
+                <tr class="total-row">
+                    <td colspan="4" class="text-right">TOTAL PHILHEALTH CONTRIBUTIONS:</td>
+                    <td class="text-right amount">PHP {{ number_format($totals['philhealth_employee'], 2) }}</td>
+                    <td class="text-right amount">PHP {{ number_format($totals['philhealth_total'], 2) }}</td>
+                </tr>
+                @endif
+            </tbody>
+        </table>
+    @endforeach
     @endif
 
+    {{-- ====== PAG-IBIG ====== --}}
     @if(in_array('pagibig', $contributionTypes))
-    <div class="contributions-label">Pag-IBIG Contributions</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 8%;">No.</th>
-                <th style="width: 15%;">Employee No.</th>
-                <th style="width: 27%;">Employee Name</th>
-                <th style="width: 20%;">Position</th>
-                <th style="width: 15%;">Employee Share</th>
-                <th style="width: 15%;">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($employees as $index => $employee)
-            <tr>
-                <td class="text-center">{{ $index + 1 }}</td>
-                <td class="text-center">{{ $employee['employee_number'] }}</td>
-                <td>{{ $employee['full_name'] }}</td>
-                <td>{{ $employee['position'] }}</td>
-                <td class="text-right amount">PHP {{ number_format($employee['pagibig'], 2) }}</td>
-                <td class="text-right amount">PHP {{ number_format($employee['pagibig_total'], 2) }}</td>
-            </tr>
-            @endforeach
-            <tr class="total-row">
-                <td colspan="4" class="text-right">TOTAL PAG-IBIG CONTRIBUTIONS:</td>
-                <td class="text-right amount">PHP {{ number_format($totals['pagibig_employee'], 2) }}</td>
-                <td class="text-right amount">PHP {{ number_format($totals['pagibig_total'], 2) }}</td>
-            </tr>
-        </tbody>
-    </table>
+    @php $chunks = $employees->chunk($rowsPerPage); @endphp
+    @foreach($chunks as $chunkIndex => $chunk)
+        @if($globalPageCount > 0)
+        <div style="page-break-before: always;">
+            <div class="header">
+                @if($companyInfo)
+                <h1 class="company-name">{{ $companyInfo->company_name ?? 'Company Name' }}</h1>
+                <p class="company-address">{{ $companyInfo->address ?? '' }}</p>
+                @if($companyInfo->phone)
+                <p class="company-address">Tel: {{ $companyInfo->phone }}</p>
+                @endif
+                @endif
+                <h2 class="report-title">Government Contributions Report</h2>
+                <p class="report-period">Period: {{ $period }}</p>
+                @if($department)<p class="report-period">Department: {{ $department }}</p>@endif
+            </div>
+            <div class="info-section">
+                <div class="info-row">
+                    <span><strong>Total Employees:</strong> {{ $employeeCount }}</span>
+                    <span><strong>Generated on:</strong> {{ now()->format('F d, Y h:i A') }}</span>
+                </div>
+                <div class="info-row">
+                    <span>
+                        <strong>Contribution Types:</strong>
+                        @php
+                            $typeLabels = [];
+                            foreach($contributionTypes as $type) {
+                                if($type === 'sss') $typeLabels[] = 'SSS';
+                                elseif($type === 'philhealth') $typeLabels[] = 'PhilHealth';
+                                elseif($type === 'pagibig') $typeLabels[] = 'Pag-IBIG';
+                            }
+                            echo implode(', ', $typeLabels);
+                        @endphp
+                    </span>
+                </div>
+            </div>
+        </div>
+        @endif
+        @php $globalPageCount++; @endphp
+        <div class="contributions-label">Pag-IBIG Contributions</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 8%;">No.</th>
+                    <th style="width: 15%;">Employee No.</th>
+                    <th style="width: 27%;">Employee Name</th>
+                    <th style="width: 20%;">Position</th>
+                    <th style="width: 15%;">Employee Share</th>
+                    <th style="width: 15%;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($chunk as $employee)
+                <tr>
+                    <td class="text-center">{{ $chunkIndex * $rowsPerPage + $loop->index + 1 }}</td>
+                    <td class="text-center">{{ $employee['employee_number'] }}</td>
+                    <td>{{ $employee['full_name'] }}</td>
+                    <td>{{ $employee['position'] }}</td>
+                    <td class="text-right amount">PHP {{ number_format($employee['pagibig'], 2) }}</td>
+                    <td class="text-right amount">PHP {{ number_format($employee['pagibig_total'], 2) }}</td>
+                </tr>
+                @endforeach
+                @if($loop->last)
+                <tr class="total-row">
+                    <td colspan="4" class="text-right">TOTAL PAG-IBIG CONTRIBUTIONS:</td>
+                    <td class="text-right amount">PHP {{ number_format($totals['pagibig_employee'], 2) }}</td>
+                    <td class="text-right amount">PHP {{ number_format($totals['pagibig_total'], 2) }}</td>
+                </tr>
+                @endif
+            </tbody>
+        </table>
+    @endforeach
     @endif
 
     <!-- Summary Section -->
-    <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px;">
+    <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; page-break-inside: avoid;">
         <h3 style="margin: 0 0 10px 0; font-size: 12px; color: #333;">Contribution Summary</h3>
         <table style="margin: 0; border: none;">
             <tr style="border: none;">
@@ -321,16 +478,12 @@
     </div>
 
     <!-- Signature Section -->
-    <div class="signature-section">
+    <div class="signature-section" style="page-break-inside: avoid;">
         <div class="signature-box">
-            <div class="signature-line">
-                Prepared By
-            </div>
+            <div class="signature-line">Prepared By</div>
         </div>
         <div class="signature-box">
-            <div class="signature-line">
-                Approved By
-            </div>
+            <div class="signature-line">Approved By</div>
         </div>
     </div>
 
@@ -339,6 +492,8 @@
         <p>This is a system-generated report. For questions or concerns, please contact the HR Department.</p>
         <p>{{ $companyInfo->company_name ?? 'Company Name' }} &copy; {{ date('Y') }}</p>
     </div>
+
+    </div><!-- end .content -->
 </body>
 
 </html>
