@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
+            font-size: 11px;
             margin: 0;
             padding: 0;
         }
@@ -64,7 +64,7 @@
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
-            font-size: 9px;
+            font-size: 10px;
         }
 
         table th {
