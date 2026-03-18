@@ -163,22 +163,8 @@
         </v-dialog>
       </template>
 
-      <!-- Admin/HR Tabs -->
-      <v-tabs v-if="isAdminOrHr" v-model="activeTab" class="mb-4">
-        <v-tab value="deductions">Deductions</v-tab>
-        <v-tab value="access-requests">
-          Access Requests
-          <v-badge v-if="deductionRequestCount > 0" :content="deductionRequestCount" color="error" class="ml-2" inline></v-badge>
-        </v-tab>
-      </v-tabs>
-
-      <!-- Access Requests Manager Tab (admin/hr only) -->
-      <template v-if="isAdminOrHr && activeTab === 'access-requests'">
-        <ModificationRequestsManager module="deductions" @update-count="updateDeductionRequestCount" />
-      </template>
-
       <!-- Main Content (only when access granted) -->
-      <template v-if="hasAccess && (activeTab === 'deductions' || !isAdminOrHr)">
+      <template v-if="hasAccess">
       <!-- Filters -->
       <div class="filters-section">
         <v-row>
@@ -1078,7 +1064,6 @@ import { useRoute } from "vue-router";
 import { useToast } from "vue-toastification";
 import deductionService from "@/services/deductionService";
 import moduleAccessService from "@/services/moduleAccessService";
-import ModificationRequestsManager from "@/components/attendance/ModificationRequestsManager.vue";
 import api from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { formatDate, formatNumber } from "@/utils/formatters";
@@ -1091,14 +1076,6 @@ const authStore = useAuthStore();
 // User role
 const userRole = computed(() => authStore.user?.role);
 const isAdminOrHr = computed(() => ['admin', 'hr'].includes(userRole.value));
-
-// Tab management
-const activeTab = ref(route.query.tab || 'deductions');
-const deductionRequestCount = ref(0);
-
-const updateDeductionRequestCount = (count) => {
-  deductionRequestCount.value = count;
-};
 
 // Access control
 const accessStatus = ref('none');
@@ -1658,16 +1635,6 @@ onMounted(async () => {
       fetchEmployees();
       fetchDepartments();
       fetchPositions();
-    }
-  }
-
-  // Load pending request count for admin badge
-  if (isAdminOrHr.value) {
-    try {
-      const res = await moduleAccessService.getPendingCount('deductions');
-      deductionRequestCount.value = res.count || 0;
-    } catch {
-      // ignore
     }
   }
 

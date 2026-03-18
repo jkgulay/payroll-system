@@ -70,17 +70,8 @@
         </v-dialog>
       </template>
 
-      <!-- Admin/HR Tabs -->
-      <v-tabs v-if="isAdminOrHr" v-model="adminTab" class="mb-4">
-        <v-tab value="main">Allowances</v-tab>
-        <v-tab value="access-requests">Access Requests<v-badge v-if="moduleRequestCount > 0" :content="moduleRequestCount" color="error" class="ml-2" inline></v-badge></v-tab>
-      </v-tabs>
-      <template v-if="isAdminOrHr && adminTab === 'access-requests'">
-        <ModificationRequestsManager module="allowances" @update-count="(c) => moduleRequestCount = c" />
-      </template>
-
       <!-- Main Content -->
-      <template v-if="hasAccess && (adminTab === 'main' || !isAdminOrHr)">
+      <template v-if="hasAccess">
 
       <!-- Filters Section -->
       <div class="filters-section">
@@ -292,7 +283,6 @@ import allowanceService from "@/services/allowanceService";
 import AllowanceForm from "@/components/allowance/AllowanceForm.vue";
 import AllowanceDetails from "@/components/allowance/AllowanceDetails.vue";
 import AllowanceApproval from "@/components/allowance/AllowanceApproval.vue";
-import ModificationRequestsManager from "@/components/attendance/ModificationRequestsManager.vue";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
@@ -314,8 +304,6 @@ const requestReason = ref('');
 const submittingRequest = ref(false);
 const myRequests = ref([]);
 const requestsPanel = ref(null);
-const moduleRequestCount = ref(0);
-const adminTab = ref(route.query.tab || 'main');
 const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin');
 
 const getRequestStatusColor = (status) => ({ pending: 'warning', approved: 'success', rejected: 'error' }[status] || 'grey');
@@ -409,12 +397,6 @@ onMounted(async () => {
   if (hasAccess.value) {
     await fetchPositions();
     await fetchAllowances();
-  }
-  if (isAdminOrHr.value) {
-    try {
-      const res = await moduleAccessService.getPendingCount('allowances');
-      moduleRequestCount.value = res.count || 0;
-    } catch {}
   }
 });
 

@@ -70,17 +70,8 @@
         </v-dialog>
       </template>
 
-      <!-- Admin/HR Tabs -->
-      <v-tabs v-if="isAdminOrHr" v-model="adminTab" class="mb-4">
-        <v-tab value="main">Cash Bonds</v-tab>
-        <v-tab value="access-requests">Access Requests<v-badge v-if="moduleRequestCount > 0" :content="moduleRequestCount" color="error" class="ml-2" inline></v-badge></v-tab>
-      </v-tabs>
-      <template v-if="isAdminOrHr && adminTab === 'access-requests'">
-        <ModificationRequestsManager module="cash-bonds" @update-count="(c) => moduleRequestCount = c" />
-      </template>
-
       <!-- Main Content -->
-      <template v-if="hasAccess && (adminTab === 'main' || !isAdminOrHr)">
+      <template v-if="hasAccess">
 
       <!-- Summary Cards -->
       <div class="stats-grid">
@@ -780,7 +771,6 @@ import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
-import ModificationRequestsManager from "@/components/attendance/ModificationRequestsManager.vue";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
@@ -800,8 +790,6 @@ const accessRequestReason = ref('');
 const submittingAccessRequest = ref(false);
 const myAccessRequests = ref([]);
 const accessRequestsPanel = ref(null);
-const moduleRequestCount = ref(0);
-const adminTab = ref(route.query.tab || 'main');
 const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin');
 
 const getAccessRequestStatusColor = (status) => ({ pending: 'warning', approved: 'success', rejected: 'error' }[status] || 'grey');
@@ -1216,12 +1204,6 @@ onMounted(async () => {
     if (userRole.value !== "employee") {
       fetchEmployees();
     }
-  }
-  if (isAdminOrHr.value) {
-    try {
-      const res = await moduleAccessService.getPendingCount('cash-bonds');
-      moduleRequestCount.value = res.count || 0;
-    } catch {}
   }
 });
 </script>
