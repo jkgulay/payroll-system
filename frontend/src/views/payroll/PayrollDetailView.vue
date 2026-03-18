@@ -466,48 +466,6 @@
                 >
               </div>
 
-              <!-- Excel -->
-              <div
-                class="format-card"
-                :class="{ active: exportFilter.format === 'excel' }"
-                @click="exportFilter.format = 'excel'"
-              >
-                <div class="format-card-icon excel">
-                  <v-icon size="22">mdi-file-excel-box</v-icon>
-                </div>
-                <div class="format-card-info">
-                  <div class="format-card-name">Excel</div>
-                  <div class="format-card-desc">Editable spreadsheet</div>
-                </div>
-                <v-icon
-                  v-if="exportFilter.format === 'excel'"
-                  size="18"
-                  class="format-check"
-                  >mdi-check-circle</v-icon
-                >
-              </div>
-
-              <!-- Word -->
-              <div
-                class="format-card"
-                :class="{ active: exportFilter.format === 'word' }"
-                @click="exportFilter.format = 'word'"
-              >
-                <div class="format-card-icon word">
-                  <v-icon size="22">mdi-file-word-box</v-icon>
-                </div>
-                <div class="format-card-info">
-                  <div class="format-card-name">Word</div>
-                  <div class="format-card-desc">Formatted document</div>
-                </div>
-                <v-icon
-                  v-if="exportFilter.format === 'word'"
-                  size="18"
-                  class="format-check"
-                  >mdi-check-circle</v-icon
-                >
-              </div>
-
               <!-- Payslips -->
               <div
                 class="format-card"
@@ -523,27 +481,6 @@
                 </div>
                 <v-icon
                   v-if="exportFilter.format === 'payslips'"
-                  size="18"
-                  class="format-check"
-                  >mdi-check-circle</v-icon
-                >
-              </div>
-
-              <!-- By Device (Excel) -->
-              <div
-                class="format-card"
-                :class="{ active: exportFilter.format === 'by_device' }"
-                @click="exportFilter.format = 'by_device'"
-              >
-                <div class="format-card-icon device-excel">
-                  <v-icon size="22">mdi-devices</v-icon>
-                </div>
-                <div class="format-card-info">
-                  <div class="format-card-name">By Device</div>
-                  <div class="format-card-desc">Grouped &middot; Excel</div>
-                </div>
-                <v-icon
-                  v-if="exportFilter.format === 'by_device'"
                   size="18"
                   class="format-check"
                   >mdi-check-circle</v-icon
@@ -777,7 +714,7 @@ const showExportDialog = ref(false);
 const downloadingRegister = ref(false);
 const showExportFilters = ref(false);
 const exportFilter = ref({
-  format: "pdf", // pdf, excel, word
+  format: "pdf", // pdf, payslips, by_device_pdf
   departments: [], // Array of department names
   positions: [], // Array of position names
   employees: [], // Array of employee IDs
@@ -838,10 +775,7 @@ const activeFilterCount = computed(() => {
 const exportFormatLabel = computed(() => {
   const labels = {
     pdf: "PDF",
-    excel: "Excel",
-    word: "Word",
     payslips: "Payslips",
-    by_device: "By Device (XLS)",
     by_device_pdf: "By Device (PDF)",
   };
   return labels[exportFilter.value.format] || exportFilter.value.format;
@@ -1027,13 +961,8 @@ async function downloadRegister() {
       ? `/payrolls/${payroll.value.id}/download-payslips`
       : `/payrolls/${payroll.value.id}/download-register`;
 
-    // Use a longer timeout for large exports (by_device can be slow to generate)
-    const isLargeExport = [
-      "by_device",
-      "by_device_pdf",
-      "excel",
-      "word",
-    ].includes(exportFilter.value.format);
+    // Use a longer timeout for larger grouped PDF export
+    const isLargeExport = ["by_device_pdf"].includes(exportFilter.value.format);
 
     const response = await api.get(endpoint, {
       params: params,
@@ -1048,10 +977,7 @@ async function downloadRegister() {
     // Build filename with appropriate extension
     const extensions = {
       pdf: ".pdf",
-      excel: ".xlsx",
-      word: ".docx",
       payslips: ".pdf",
-      by_device: ".xlsx",
       by_device_pdf: ".pdf",
     };
 
@@ -1081,10 +1007,7 @@ async function downloadRegister() {
 
     const formatNames = {
       pdf: "PDF",
-      excel: "Excel",
-      word: "Word",
       payslips: "Compact Payslips PDF",
-      by_device: "By Device (Excel)",
       by_device_pdf: "By Device (PDF)",
     };
 
@@ -1808,24 +1731,9 @@ function formatUndertime(hours) {
   color: #d32f2f;
 }
 
-.format-card-icon.excel {
-  background: rgba(33, 115, 70, 0.1);
-  color: #217346;
-}
-
-.format-card-icon.word {
-  background: rgba(43, 87, 154, 0.1);
-  color: #2b579a;
-}
-
 .format-card-icon.payslips {
   background: rgba(255, 111, 0, 0.1);
   color: #ff6f00;
-}
-
-.format-card-icon.device-excel {
-  background: rgba(0, 137, 123, 0.1);
-  color: #00897b;
 }
 
 .format-card-icon.device-pdf {

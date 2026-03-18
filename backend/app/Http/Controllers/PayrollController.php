@@ -12,18 +12,13 @@ use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\CompanyInfo;
-use App\Exports\PayrollExport;
-use App\Exports\PayrollByDeviceExport;
-use App\Exports\PayrollWordExport;
 use App\Services\PayrollService;
-use PhpOffice\PhpWord\IOFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Maatwebsite\Excel\Facades\Excel;
 
 class PayrollController extends Controller
 {
@@ -661,7 +656,7 @@ class PayrollController extends Controller
             'positions.*' => 'string',
             'employee_ids' => 'nullable|array',
             'employee_ids.*' => 'integer|exists:employees,id',
-            'format' => 'nullable|in:pdf,excel,word,by_device,by_device_pdf',
+            'format' => 'nullable|in:pdf,by_device_pdf',
         ]);
 
         // Default to PDF if format not specified
@@ -740,13 +735,7 @@ class PayrollController extends Controller
         }
 
         // Handle different export formats
-        if ($format === 'excel') {
-            return $this->exportRegisterToExcel($payroll, $filenameBase);
-        } elseif ($format === 'word') {
-            return $this->exportRegisterToWord($payroll, $filenameBase);
-        } elseif ($format === 'by_device') {
-            return $this->exportRegisterByDevice($payroll, $filenameBase);
-        } elseif ($format === 'by_device_pdf') {
+        if ($format === 'by_device_pdf') {
             return $this->exportRegisterByDevicePdf($payroll, $filenameBase);
         } else {
             // Default PDF export
@@ -828,24 +817,6 @@ class PayrollController extends Controller
         }
     }
 
-    private function exportRegisterByDevice(Payroll $payroll, string $filenameBase)
-    {
-        $deviceGroups = $this->buildDeviceGroups($payroll);
-
-        $sheets = [];
-        foreach ($deviceGroups as $deviceName => $items) {
-            $clonedPayroll = clone $payroll;
-            $clonedPayroll->setRelation('items', $items->values());
-            // Excel sheet names are limited to 31 characters
-            $sheets[] = new PayrollExport($clonedPayroll, mb_substr($deviceName, 0, 31));
-        }
-
-        return Excel::download(
-            new PayrollByDeviceExport($sheets),
-            $filenameBase . '_by_device.xlsx'
-        );
-    }
-
     private function exportRegisterByDevicePdf(Payroll $payroll, string $filenameBase)
     {
         // Allow more memory for large multi-device PDFs (overrides the 1024M set upstream)
@@ -885,7 +856,7 @@ class PayrollController extends Controller
                 'trace'      => $e->getTraceAsString(),
             ]);
             return response()->json([
-                'message' => 'Failed to generate by-device PDF. The payroll is too large — please use the Excel (By Device) format instead.',
+                'message' => 'Failed to generate by-device PDF: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -1010,46 +981,6 @@ class PayrollController extends Controller
         });
 
         return collect($deviceGroups)->map(fn($items) => collect($items));
-    }
-
-    private function exportRegisterToExcel(Payroll $payroll, string $filenameBase)
-    {
-        return Excel::download(new PayrollExport($payroll), $filenameBase . '.xlsx');
-    }
-
-    private function exportRegisterToWord(Payroll $payroll, string $filenameBase)
-    {
-        try {
-            $export = new PayrollWordExport($payroll);
-            $phpWord = $export->generate();
-
-            $filename = $filenameBase . '.docx';
-            $tempFile = tempnam(sys_get_temp_dir(), 'payroll_');
-
-            $writer = IOFactory::createWriter($phpWord, 'Word2007');
-            $writer->save($tempFile);
-
-            return response()->download($tempFile, $filename, [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            ])->deleteFileAfterSend(true);
-        } catch (\Throwable $e) {
-            Log::error('Word Export Error: ' . $e->getMessage(), [
-                'payroll_id' => $payroll->id,
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return response()->json([
-                'message' => 'Failed to generate Word document: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function exportToExcel(Payroll $payroll)
-    {
-        $payroll->load(['items.employee.positionRate']);
-
-        $filename = "payroll_{$payroll->period_name}_" . now()->format('YmdHis') . ".xlsx";
-
-        return Excel::download(new PayrollExport($payroll), $filename);
     }
 
     private function generatePayrollItems(Payroll $payroll, array $filters = [])
