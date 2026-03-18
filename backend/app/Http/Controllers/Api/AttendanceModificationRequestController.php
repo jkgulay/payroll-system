@@ -8,9 +8,18 @@ use Illuminate\Http\Request;
 
 class AttendanceModificationRequestController extends Controller
 {
-    private function resolveModule(Request $request): string
+    private function resolveModule(Request $request): ?string
     {
-        return $request->input('module', $request->query('module', 'attendance'));
+        return $request->input('module', $request->query('module'));
+    }
+
+    private function resolveModules(Request $request): ?array
+    {
+        $modules = $request->input('modules', $request->query('modules'));
+        if ($modules) {
+            return is_array($modules) ? $modules : explode(',', $modules);
+        }
+        return null;
     }
 
     /**
@@ -20,8 +29,15 @@ class AttendanceModificationRequestController extends Controller
     {
         $user = $request->user();
         $module = $this->resolveModule($request);
-        $query = AttendanceModificationRequest::with(['requester', 'reviewer'])
-            ->forModule($module);
+        $modules = $this->resolveModules($request);
+
+        $query = AttendanceModificationRequest::with(['requester', 'reviewer']);
+
+        if ($modules) {
+            $query->whereIn('module', $modules);
+        } elseif ($module) {
+            $query->forModule($module);
+        }
 
         if (in_array($user->role, ['admin', 'hr'])) {
             if ($request->has('status')) {
@@ -251,7 +267,17 @@ class AttendanceModificationRequestController extends Controller
         }
 
         $module = $this->resolveModule($request);
-        $count = AttendanceModificationRequest::pending()->forModule($module)->count();
+        $modules = $this->resolveModules($request);
+
+        $query = AttendanceModificationRequest::pending();
+
+        if ($modules) {
+            $query->whereIn('module', $modules);
+        } elseif ($module) {
+            $query->forModule($module);
+        }
+
+        $count = $query->count();
 
         return response()->json(['count' => $count]);
     }

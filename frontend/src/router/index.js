@@ -399,6 +399,15 @@ const router = createRouter({
           meta: { title: "Audit Trail", roles: ["admin"] },
         },
         {
+          path: "other-requests",
+          name: "other-requests",
+          component: () =>
+            import(
+              /* webpackChunkName: "access-requests" */ "@/views/access-requests/OtherRequestsView.vue"
+            ),
+          meta: { title: "Other Access Requests", roles: ["admin", "hr"] },
+        },
+        {
           path: "security",
           name: "security",
           component: () =>
