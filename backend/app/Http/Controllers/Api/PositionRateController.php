@@ -34,7 +34,13 @@ class PositionRateController extends Controller
             $query->where('position_name', 'ILIKE', '%' . $request->search . '%');
         }
 
-        $positionRates = $query->withCount('employees')->orderBy('position_name')->get();
+        $positionRates = $query->orderBy('position_name')->get();
+
+        $positionRates->each(function ($positionRate) {
+            $count = $positionRate->getEmployeeCount();
+            $positionRate->setAttribute('employee_count', $count);
+            $positionRate->setAttribute('employees_count', $count);
+        });
 
         return response()->json($positionRates);
     }
@@ -77,7 +83,9 @@ class PositionRateController extends Controller
      */
     public function show(PositionRate $positionRate): JsonResponse
     {
-        $positionRate->employee_count = $positionRate->getEmployeeCount();
+        $count = $positionRate->getEmployeeCount();
+        $positionRate->employee_count = $count;
+        $positionRate->employees_count = $count;
         return response()->json($positionRate);
     }
 
