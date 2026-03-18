@@ -363,6 +363,7 @@ class ReportController extends Controller
                 'department' => $department,
                 'employeeCount' => $employees->count(),
             ]);
+            $pdf->setOption('dpi', 72);
 
             $filename = 'government-contributions-' . Carbon::createFromDate($year, $month, 1)->format('Y-m') . '.pdf';
             return $pdf->download($filename);

@@ -83,18 +83,6 @@
           </div>
         </button>
         <button
-          v-if="canApprove"
-          class="modern-tab"
-          :class="{ active: tab === 'mod-requests' }"
-          @click="tab = 'mod-requests'"
-        >
-          <v-icon size="20">mdi-file-document-edit-outline</v-icon>
-          <span>Modification Requests</span>
-          <div v-if="modRequestCount > 0" class="tab-badge">
-            {{ modRequestCount }}
-          </div>
-        </button>
-        <button
           class="modern-tab"
           :class="{ active: tab === 'summary' }"
           @click="tab = 'summary'"
@@ -153,15 +141,6 @@
           </div>
         </v-window-item>
 
-        <!-- Modification Requests -->
-        <v-window-item value="mod-requests" v-if="canApprove">
-          <div class="tab-content">
-            <ModificationRequestsManager
-              module="attendance"
-              @update-count="updateModRequestCount"
-            />
-          </div>
-        </v-window-item>
 
         <!-- Device Management -->
         <v-window-item value="device" v-if="canManualEntry">
@@ -236,7 +215,6 @@ import AttendanceList from "@/components/attendance/AttendanceList.vue";
 import PendingApprovals from "@/components/attendance/PendingApprovals.vue";
 import AttendanceSummary from "@/components/attendance/AttendanceSummary.vue";
 import MissingAttendance from "@/components/attendance/MissingAttendance.vue";
-import ModificationRequestsManager from "@/components/attendance/ModificationRequestsManager.vue";
 import DeviceManagement from "@/components/attendance/DeviceManagement.vue";
 import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
 import MarkAbsentDialog from "@/components/attendance/MarkAbsentDialog.vue";
@@ -269,7 +247,6 @@ const deleteDialog = ref(false);
 const selectedAttendance = ref(null);
 const attendanceToDelete = ref(null);
 const pendingCount = ref(0);
-const modRequestCount = ref(0);
 const prefilledDate = ref(null);
 
 // Dialog handlers
@@ -364,10 +341,6 @@ const updatePendingCount = (count) => {
   pendingCount.value = count;
 };
 
-const updateModRequestCount = (count) => {
-  modRequestCount.value = count;
-};
-
 const refreshData = () => {
   // Refresh all tabs to ensure consistency
   if (listView.value) {
@@ -399,13 +372,6 @@ onMounted(async () => {
       pendingCount.value = response.total || 0;
     } catch (error) {
       // Silently fail - pending count is non-critical
-    }
-
-    try {
-      const modResponse = await attendanceService.getModificationPendingCount();
-      modRequestCount.value = modResponse.count || 0;
-    } catch (error) {
-      // Silently fail
     }
   }
 });

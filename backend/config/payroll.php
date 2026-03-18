@@ -118,4 +118,19 @@ return [
     'working_days_per_month' => env('PAYROLL_WORKING_DAYS_PER_MONTH', 22),
     'working_days_per_semi_month' => env('PAYROLL_WORKING_DAYS_PER_SEMI_MONTH', 11),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Export Layout Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Controls how many employee rows are printed per page in payroll register
+    | exports (PDF, Word, Excel) so acknowledgment/signature footer blocks
+    | remain visible and do not overlap the table.
+    |
+    */
+
+    'exports' => [
+        'register_rows_per_page' => env('PAYROLL_REGISTER_ROWS_PER_PAGE', 20),
+    ],
+
 ];

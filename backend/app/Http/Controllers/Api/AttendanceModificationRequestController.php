@@ -8,9 +8,33 @@ use Illuminate\Http\Request;
 
 class AttendanceModificationRequestController extends Controller
 {
-    private function resolveModule(Request $request): string
+    private const DAILY_SCOPED_MODULES = [
+        'deductions',
+        'government-rates',
+        'allowances',
+        'thirteenth-month-pay',
+        'loans',
+        'cash-bonds',
+        'salary-adjustments',
+    ];
+
+    private function isDailyScopedModule(string $module): bool
     {
-        return $request->input('module', $request->query('module', 'attendance'));
+        return in_array($module, self::DAILY_SCOPED_MODULES, true);
+    }
+
+    private function resolveModule(Request $request): ?string
+    {
+        return $request->input('module', $request->query('module'));
+    }
+
+    private function resolveModules(Request $request): ?array
+    {
+        $modules = $request->input('modules', $request->query('modules'));
+        if ($modules) {
+            return is_array($modules) ? $modules : explode(',', $modules);
+        }
+        return null;
     }
 
     /**
@@ -20,8 +44,15 @@ class AttendanceModificationRequestController extends Controller
     {
         $user = $request->user();
         $module = $this->resolveModule($request);
-        $query = AttendanceModificationRequest::with(['requester', 'reviewer'])
-            ->forModule($module);
+        $modules = $this->resolveModules($request);
+
+        $query = AttendanceModificationRequest::with(['requester', 'reviewer']);
+
+        if ($modules) {
+            $query->whereIn('module', $modules);
+        } elseif ($module) {
+            $query->forModule($module);
+        }
 
         if (in_array($user->role, ['admin', 'hr'])) {
             if ($request->has('status')) {
@@ -52,6 +83,9 @@ class AttendanceModificationRequestController extends Controller
 
         $user = $request->user();
         $module = $validated['module'];
+        $today = now()->toDateString();
+        $todayStart = now()->startOfDay();
+        $todayEnd = now()->endOfDay();
 
         if (in_array($user->role, ['admin', 'hr'])) {
             return response()->json([
@@ -65,7 +99,9 @@ class AttendanceModificationRequestController extends Controller
             ->where('module', $module)
             ->whereIn('status', ['pending', 'approved']);
 
-        if (!empty($validated['date'])) {
+        if ($this->isDailyScopedModule($module)) {
+            $existingQuery->whereBetween('created_at', [$todayStart, $todayEnd]);
+        } elseif (!empty($validated['date'])) {
             $existingQuery->where('date', $validated['date']);
         } else {
             $existingQuery->whereNull('date');
@@ -77,8 +113,12 @@ class AttendanceModificationRequestController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $existing->status === 'pending'
-                    ? 'You already have a pending request.'
-                    : 'You already have an approved request.',
+                    ? ($this->isDailyScopedModule($module)
+                        ? 'You already have a pending request for today.'
+                        : 'You already have a pending request.')
+                    : ($this->isDailyScopedModule($module)
+                        ? 'You already have an approved request for today.'
+                        : 'You already have an approved request.'),
             ], 422);
         }
 
@@ -111,6 +151,9 @@ class AttendanceModificationRequestController extends Controller
 
         $user = $request->user();
         $module = $request->query('module', 'attendance');
+        $today = now()->toDateString();
+        $todayStart = now()->startOfDay();
+        $todayEnd = now()->endOfDay();
 
         if (in_array($user->role, ['admin', 'hr'])) {
             return response()->json([
@@ -123,7 +166,9 @@ class AttendanceModificationRequestController extends Controller
             ->where('module', $module)
             ->orderBy('created_at', 'desc');
 
-        if ($request->has('date') && $request->date) {
+        if ($this->isDailyScopedModule($module)) {
+            $query->whereBetween('created_at', [$todayStart, $todayEnd]);
+        } elseif ($request->has('date') && $request->date) {
             $query->where('date', $request->date);
         } else {
             $query->whereNull('date');
@@ -141,6 +186,16 @@ class AttendanceModificationRequestController extends Controller
                 'cash-bonds' => 'cash bonds',
                 'salary-adjustments' => 'salary adjustments',
             ];
+
+            if ($this->isDailyScopedModule($module)) {
+                $moduleLabel = $moduleLabels[$module] ?? 'this module';
+                return response()->json([
+                    'has_access' => false,
+                    'status' => 'none',
+                    'message' => "No request found for today. You must request access to manage {$moduleLabel}.",
+                ]);
+            }
+
             $moduleLabel = $moduleLabels[$module] ?? 'attendance for this date';
             return response()->json([
                 'has_access' => false,
@@ -251,7 +306,17 @@ class AttendanceModificationRequestController extends Controller
         }
 
         $module = $this->resolveModule($request);
-        $count = AttendanceModificationRequest::pending()->forModule($module)->count();
+        $modules = $this->resolveModules($request);
+
+        $query = AttendanceModificationRequest::pending();
+
+        if ($modules) {
+            $query->whereIn('module', $modules);
+        } elseif ($module) {
+            $query->forModule($module);
+        }
+
+        $count = $query->count();
 
         return response()->json(['count' => $count]);
     }

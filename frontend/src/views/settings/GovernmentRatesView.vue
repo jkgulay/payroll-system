@@ -158,22 +158,8 @@
       </v-dialog>
     </template>
 
-    <!-- Admin/HR Tabs -->
-    <v-tabs v-if="isAdminOrHr" v-model="adminTab" class="mb-4">
-      <v-tab value="government-rates">Government Rates</v-tab>
-      <v-tab value="access-requests">
-        Access Requests
-        <v-badge v-if="govRatesRequestCount > 0" :content="govRatesRequestCount" color="error" class="ml-2" inline></v-badge>
-      </v-tab>
-    </v-tabs>
-
-    <!-- Access Requests Manager Tab (admin/hr only) -->
-    <template v-if="isAdminOrHr && adminTab === 'access-requests'">
-      <ModificationRequestsManager module="government-rates" @update-count="updateGovRatesRequestCount" />
-    </template>
-
     <!-- Main Content (only when access granted) -->
-    <template v-if="hasAccess && (adminTab === 'government-rates' || !isAdminOrHr)">
+    <template v-if="hasAccess">
 
     <!-- Stats Cards -->
     <div class="stats-grid">
@@ -775,7 +761,7 @@
                         formatCurrency(calcResult.pagibig?.employee_share || 0)
                       }}</span
                     >
-                  </div>
+                  </div>`
                   <div class="calc-card-row">
                     <span>Employer (monthly)</span>
                     <span class="mono"
@@ -834,7 +820,6 @@ import { useRouter, useRoute } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import EmployeeContributionsTab from "@/components/settings/EmployeeContributionsTab.vue";
-import ModificationRequestsManager from "@/components/attendance/ModificationRequestsManager.vue";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { formatCurrency, formatDate } from "@/utils/formatters";
@@ -867,8 +852,6 @@ const requestReason = ref('');
 const submittingRequest = ref(false);
 const myRequests = ref([]);
 const requestsPanel = ref(null);
-const govRatesRequestCount = ref(0);
-const adminTab = ref(route.query.tab || 'government-rates');
 const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin');
 
 const getRequestStatusColor = (status) => {
@@ -913,10 +896,6 @@ const submitAccessRequest = async () => {
   } finally {
     submittingRequest.value = false;
   }
-};
-
-const updateGovRatesRequestCount = (count) => {
-  govRatesRequestCount.value = count;
 };
 
 // ─── State ────────────────────────────────────────────────────────────────
@@ -1010,16 +989,6 @@ onMounted(async () => {
 
   if (hasAccess.value) {
     loadRates();
-  }
-
-  // Load pending request count for admin badge
-  if (isAdminOrHr.value) {
-    try {
-      const res = await moduleAccessService.getPendingCount('government-rates');
-      govRatesRequestCount.value = res.count || 0;
-    } catch {
-      // ignore
-    }
   }
 });
 

@@ -203,29 +203,6 @@
     <!-- Main Content Area -->
     <v-main class="main-content">
       <v-container fluid class="pa-6 main-container">
-        <!-- Breadcrumbs for better navigation -->
-        <v-breadcrumbs
-          v-if="breadcrumbs.length > 1"
-          :items="breadcrumbs"
-          class="px-0 mb-4 breadcrumbs-construction"
-        >
-          <template v-slot:divider>
-            <v-icon size="small">mdi-chevron-right</v-icon>
-          </template>
-          <template v-slot:item="{ item }">
-            <v-breadcrumbs-item
-              :to="item.to"
-              :disabled="item.disabled"
-              class="text-body-2"
-            >
-              <v-icon v-if="item.icon" size="small" class="mr-1">{{
-                item.icon
-              }}</v-icon>
-              {{ item.title }}
-            </v-breadcrumbs-item>
-          </template>
-        </v-breadcrumbs>
-
         <router-view v-slot="{ Component }">
           <transition name="page-transition" mode="out-in">
             <component :is="Component" :key="route.fullPath" />
@@ -324,37 +301,25 @@ const loggingOut = ref(false);
 const isMobile = computed(() => mdAndDown.value);
 
 // Access request badge counts
-const pendingAttendanceRequests = ref(0);
-const pendingDeductionRequests = ref(0);
-const pendingGovRatesRequests = ref(0);
-const pendingAllowanceRequests = ref(0);
-const pendingThirteenthMonthRequests = ref(0);
-const pendingLoanRequests = ref(0);
-const pendingCashBondRequests = ref(0);
-const pendingSalaryAdjustmentRequests = ref(0);
+const pendingAllRequests = ref(0);
+
+const ALL_REQUEST_MODULES = [
+  'attendance',
+  'government-rates',
+  'deductions',
+  'allowances',
+  'thirteenth-month-pay',
+  'loans',
+  'cash-bonds',
+  'salary-adjustments'
+];
 
 async function loadAccessRequestCounts() {
   const role = authStore.user?.role;
   if (!role || !['admin', 'hr'].includes(role)) return;
   try {
-    const [attRes, dedRes, govRes, allRes, tmpRes, loanRes, cbRes, saRes] = await Promise.all([
-      moduleAccessService.getPendingCount('attendance'),
-      moduleAccessService.getPendingCount('deductions'),
-      moduleAccessService.getPendingCount('government-rates'),
-      moduleAccessService.getPendingCount('allowances'),
-      moduleAccessService.getPendingCount('thirteenth-month-pay'),
-      moduleAccessService.getPendingCount('loans'),
-      moduleAccessService.getPendingCount('cash-bonds'),
-      moduleAccessService.getPendingCount('salary-adjustments'),
-    ]);
-    pendingAttendanceRequests.value = attRes.count || 0;
-    pendingDeductionRequests.value = dedRes.count || 0;
-    pendingGovRatesRequests.value = govRes.count || 0;
-    pendingAllowanceRequests.value = allRes.count || 0;
-    pendingThirteenthMonthRequests.value = tmpRes.count || 0;
-    pendingLoanRequests.value = loanRes.count || 0;
-    pendingCashBondRequests.value = cbRes.count || 0;
-    pendingSalaryAdjustmentRequests.value = saRes.count || 0;
+    const allRes = await moduleAccessService.getPendingCountForModules(ALL_REQUEST_MODULES);
+    pendingAllRequests.value = allRes.count || 0;
   } catch {
     // ignore
   }
@@ -402,35 +367,6 @@ const userAvatar = computed(() => {
   return `${apiUrl}/storage/${avatar}`;
 });
 const pageTitle = computed(() => route.meta.title || "Dashboard");
-
-// Breadcrumbs generation
-const breadcrumbs = computed(() => {
-  const crumbs = [
-    {
-      title: "Home",
-      icon: "mdi-home",
-      to: "/",
-      disabled: false,
-    },
-  ];
-
-  // Parse route path to create breadcrumbs
-  const paths = route.path.split("/").filter((p) => p);
-  let currentPath = "";
-
-  paths.forEach((path, index) => {
-    currentPath += `/${path}`;
-    const isLast = index === paths.length - 1;
-
-    crumbs.push({
-      title: path.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-      to: currentPath,
-      disabled: isLast,
-    });
-  });
-
-  return crumbs;
-});
 
 // Filter menu items based on user role with construction-themed icons
 const menuItems = computed(() => {
@@ -894,68 +830,12 @@ const menuSections = computed(() => {
   // Access request items (admin/hr only)
   const accessRequestItems = [
     {
-      title: "Attendance Requests",
-      icon: "mdi-clock-alert-outline",
-      value: "attendance-access-requests",
-      to: { path: '/attendance', query: { tab: 'mod-requests' } },
+      title: "Access Requests",
+      icon: "mdi-clipboard-list-outline",
+      value: "access-requests",
+      to: "/requests",
       roles: ["admin", "hr"],
-      badge: pendingAttendanceRequests.value,
-    },
-    {
-      title: "Deduction Requests",
-      icon: "mdi-cash-lock",
-      value: "deduction-access-requests",
-      to: { path: '/deductions', query: { tab: 'access-requests' } },
-      roles: ["admin", "hr"],
-      badge: pendingDeductionRequests.value,
-    },
-    {
-      title: "Gov. Rates Requests",
-      icon: "mdi-bank",
-      value: "gov-rates-access-requests",
-      to: { path: '/government-rates', query: { tab: 'access-requests' } },
-      roles: ["admin"],
-      badge: pendingGovRatesRequests.value,
-    },
-    {
-      title: "Allowance Requests",
-      icon: "mdi-hand-coin-outline",
-      value: "allowance-access-requests",
-      to: { path: '/allowances', query: { tab: 'access-requests' } },
-      roles: ["admin", "hr"],
-      badge: pendingAllowanceRequests.value,
-    },
-    {
-      title: "13th Month Requests",
-      icon: "mdi-gift",
-      value: "thirteenth-month-access-requests",
-      to: { path: '/thirteenth-month-pay', query: { tab: 'access-requests' } },
-      roles: ["admin", "hr"],
-      badge: pendingThirteenthMonthRequests.value,
-    },
-    {
-      title: "Loan Requests",
-      icon: "mdi-hand-coin",
-      value: "loan-access-requests",
-      to: { path: '/loans', query: { tab: 'access-requests' } },
-      roles: ["admin", "hr"],
-      badge: pendingLoanRequests.value,
-    },
-    {
-      title: "Cash Bond Requests",
-      icon: "mdi-cash-lock",
-      value: "cash-bond-access-requests",
-      to: { path: '/cash-bonds', query: { tab: 'access-requests' } },
-      roles: ["admin", "hr"],
-      badge: pendingCashBondRequests.value,
-    },
-    {
-      title: "Salary Adj. Requests",
-      icon: "mdi-cash-plus",
-      value: "salary-adjustment-access-requests",
-      to: { path: '/salary-adjustments', query: { tab: 'access-requests' } },
-      roles: ["admin", "hr"],
-      badge: pendingSalaryAdjustmentRequests.value,
+      badge: pendingAllRequests.value,
     },
   ];
 
@@ -1475,33 +1355,6 @@ async function downloadCurrentPayslip() {
   height: 44px !important;
   min-width: 44px !important;
   border-radius: 8px !important;
-}
-
-// Breadcrumbs - clean style
-.breadcrumbs-construction {
-  :deep(.v-breadcrumbs-item) {
-    color: #64748b;
-    font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 4px;
-
-    &:hover {
-      color: #ed985f;
-      background: rgba(237, 152, 95, 0.08);
-    }
-  }
-
-  :deep(.v-breadcrumbs-item--disabled) {
-    color: #001f3d;
-    font-weight: 600;
-    background: rgba(237, 152, 95, 0.1);
-    padding: 4px 8px;
-    border-radius: 4px;
-  }
-
-  :deep(.v-breadcrumbs-divider) {
-    color: #cbd5e1;
-  }
 }
 
 // Clean App Bar styling

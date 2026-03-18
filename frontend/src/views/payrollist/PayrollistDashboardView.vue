@@ -10,10 +10,6 @@
             <v-icon v-else size="40" color="white">mdi-account</v-icon>
           </v-avatar>
           <div class="header-info">
-            <div class="welcome-badge">
-              <v-icon size="16" class="welcome-icon">mdi-calculator</v-icon>
-              <span>Payrollist Portal</span>
-            </div>
             <h1 class="dashboard-title">Welcome, {{ fullName }}</h1>
             <p class="dashboard-subtitle">
               {{ employee?.position }} - {{ employee?.project?.name }} •
@@ -275,102 +271,6 @@
                 >
                 <div class="empty-state-text">No current payslip available</div>
               </div>
-            </div>
-          </div>
-
-          <!-- Quick Links - Payrollist specific -->
-          <div class="quick-actions-section">
-            <div class="section-header-compact">
-              <div class="section-icon-badge">
-                <v-icon size="16">mdi-lightning-bolt</v-icon>
-              </div>
-              <h3 class="section-title-compact">Quick Actions</h3>
-            </div>
-            <div class="quick-action-buttons">
-              <button
-                class="quick-action-btn highlight"
-                @click="$router.push('/payroll')"
-              >
-                <div class="quick-action-icon highlight">
-                  <v-icon>mdi-calculator-variant</v-icon>
-                </div>
-                <span>Payroll Management</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/deductions')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-minus-circle</v-icon>
-                </div>
-                <span>Deductions</span>
-              </button>
-              <button class="quick-action-btn" @click="$router.push('/loans')">
-                <div class="quick-action-icon">
-                  <v-icon>mdi-cash-clock</v-icon>
-                </div>
-                <span>Loans</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/cash-bonds')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-safe</v-icon>
-                </div>
-                <span>Cash Bonds</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/allowances')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-food</v-icon>
-                </div>
-                <span>Allowances</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/holidays')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-calendar-star</v-icon>
-                </div>
-                <span>Holidays</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/profile')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-account-edit</v-icon>
-                </div>
-                <span>My Profile</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/my-leaves')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-calendar-clock</v-icon>
-                </div>
-                <span>My Leaves</span>
-              </button>
-              <button
-                class="quick-action-btn"
-                @click="$router.push('/my-resignation')"
-              >
-                <div class="quick-action-icon">
-                  <v-icon>mdi-account-arrow-right</v-icon>
-                </div>
-                <span>My Resignation</span>
-              </button>
-              <button class="quick-action-btn" @click="downloadCurrentPayslip">
-                <div class="quick-action-icon">
-                  <v-icon>mdi-download</v-icon>
-                </div>
-                <span>Download Payslip</span>
-              </button>
             </div>
           </div>
         </v-col>

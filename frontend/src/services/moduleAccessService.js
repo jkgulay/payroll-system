@@ -8,6 +8,11 @@ const moduleAccessService = {
     return response.data;
   },
 
+  async getRequestsForModules(modules, params = {}) {
+    const response = await api.get(BASE_URL, { params: { ...params, modules: modules.join(',') } });
+    return response.data;
+  },
+
   async submitRequest(module, data) {
     const response = await api.post(BASE_URL, { ...data, module });
     return response.data;
@@ -23,6 +28,11 @@ const moduleAccessService = {
   async getPendingCount(module = null) {
     const params = module ? { module } : {};
     const response = await api.get(`${BASE_URL}/pending-count`, { params });
+    return response.data;
+  },
+
+  async getPendingCountForModules(modules) {
+    const response = await api.get(`${BASE_URL}/pending-count`, { params: { modules: modules.join(',') } });
     return response.data;
   },
 

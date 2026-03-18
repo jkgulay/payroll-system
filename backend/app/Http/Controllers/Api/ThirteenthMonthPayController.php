@@ -306,7 +306,8 @@ class ThirteenthMonthPayController extends Controller
         ];
 
         $pdf = Pdf::loadView('pdf.thirteenth-month-pay', $data);
-        $pdf->setPaper('letter', 'portrait');
+        $pdf->setPaper([0, 0, 612, 936], 'portrait');
+        $pdf->setOption('dpi', 72);
 
         return $pdf->download('13th-month-pay-' . $thirteenthMonth->batch_number . '.pdf');
     }
@@ -403,7 +404,8 @@ class ThirteenthMonthPayController extends Controller
         ];
 
         $pdf = Pdf::loadView('pdf.thirteenth-month-pay-detailed', $data);
-        $pdf->setPaper('a4', 'landscape');
+        $pdf->setPaper([0, 0, 612, 936], 'portrait');
+        $pdf->setOption('dpi', 72);
 
         return $pdf->download('13th-month-pay-detailed-' . $thirteenthMonth->batch_number . '.pdf');
     }
