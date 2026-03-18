@@ -20,6 +20,7 @@ use PhpOffice\PhpWord\IOFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1533,6 +1534,13 @@ class PayrollController extends Controller
      */
     private function reverseSalaryAdjustmentsForPayroll(Payroll $payroll)
     {
+        if (!Schema::hasTable('salary_adjustments') || !Schema::hasColumn('salary_adjustments', 'applied_payroll_id')) {
+            Log::warning('Skipping salary adjustment reversal: applied_payroll_id column missing', [
+                'payroll_id' => $payroll->id,
+            ]);
+            return;
+        }
+
         SalaryAdjustment::where('applied_payroll_id', $payroll->id)
             ->where('status', 'applied')
             ->update([
