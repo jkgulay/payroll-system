@@ -6,7 +6,7 @@
     <title>Payslips - {{ $payroll->period_name }}</title>
     <style>
         @page {
-            margin: 8mm 8mm 12mm 8mm;
+            margin: 6mm 6mm 8mm 6mm;
             size: A4 portrait;
         }
 
@@ -18,8 +18,8 @@
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 8px;
-            line-height: 1.2;
+            font-size: 9.5px;
+            line-height: 1.4;
             color: #000;
         }
 
@@ -35,7 +35,7 @@
         .payslips-grid {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 6px 5px;
+            border-spacing: 7px 7px;
         }
 
         .payslip-cell {
@@ -51,47 +51,53 @@
         /* Header */
         .slip-header {
             text-align: center;
-            padding: 4px 5px;
+            padding: 7px 10px;
             border-bottom: 1px solid #000;
         }
 
         .company-name {
-            font-size: 10px;
+            font-size: 11.5px;
             font-weight: bold;
             letter-spacing: 0.5px;
         }
 
         .company-address {
-            font-size: 6.5px;
+            font-size: 8px;
+            margin-top: 1px;
         }
 
         .company-phone {
-            font-size: 6.5px;
+            font-size: 8px;
         }
 
-        /* Main content table */
+        /* Main content table - using table for alignment */
         .slip-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 7.5px;
+            font-size: 9.5px;
         }
 
         .slip-table td {
-            border: 1px solid #000;
-            padding: 1px 3px;
+            padding: 2.5px 10px;
+            vertical-align: top;
         }
 
         .slip-table .label-col {
-            width: 50%;
+            width: 42%;
+        }
+
+        .slip-table .colon-col {
+            width: 3%;
+            text-align: center;
         }
 
         .slip-table .value-col {
-            width: 25%;
+            width: 27%;
             text-align: right;
         }
 
         .slip-table .amount-col {
-            width: 25%;
+            width: 28%;
             text-align: right;
         }
 
@@ -106,30 +112,59 @@
 
         .section-label {
             font-weight: bold;
-            text-decoration: underline;
+            font-style: italic;
+            padding-top: 5px !important;
         }
 
-        /* Signature inside payslip */
+        /* Separator lines - only on first amount column */
+        .separator-line td {
+            padding: 0 !important;
+            height: 1px;
+        }
+
+        .separator-line .line-right {
+            border-top: 1px solid #000;
+        }
+
+        .separator-line-thick td {
+            padding: 0 !important;
+            height: 1px;
+        }
+
+        .separator-line-thick .line-right {
+            border-top: 2px solid #000;
+        }
+
+        .space-row td {
+            padding: 2px !important;
+        }
+
+        /* Signature section inside payslip */
         .slip-signature {
-            font-size: 6.5px;
-            padding: 2px 3px;
+            padding: 7px 10px;
+            border-top: 1px solid #000;
+            font-size: 8px;
+        }
+
+        .slip-signature table {
             width: 100%;
             border-collapse: collapse;
         }
 
         .slip-signature td {
-            padding: 1px 3px;
+            padding: 2px 0;
         }
 
         .sig-name {
             text-decoration: underline;
             font-weight: bold;
+            font-style: italic;
         }
 
         .received-line {
             border-bottom: 1px solid #000;
             display: inline-block;
-            width: 70px;
+            width: 100px;
         }
 
         /* Page footer signature section */
@@ -149,7 +184,7 @@
         .footer-sig-table td {
             padding: 2px 5px;
             vertical-align: top;
-            width: 33.33%;
+            width: 25%;
         }
 
         .footer-sig-label {
@@ -241,6 +276,7 @@
                     $cashBond = 0;
                     $sssLoan = 0;
                     $hdmfLoan = 0;
+                    $otherDeduction = 0;
 
                     if (!empty($item->deductions_breakdown) && is_array($item->deductions_breakdown)) {
                     foreach ($item->deductions_breakdown as $deduction) {
@@ -255,6 +291,8 @@
                     $sssLoan += $deductionAmount;
                     } elseif (str_contains($deductionName, 'hdmf loan') || str_contains($deductionName, 'pag-ibig loan') || str_contains($deductionName, 'pagibig loan')) {
                     $hdmfLoan += $deductionAmount;
+                    } else {
+                    $otherDeduction += $deductionAmount;
                     }
                     }
                     }
@@ -272,121 +310,164 @@
                         <table class="slip-table">
                             <tr>
                                 <td class="label-col">Name</td>
+                                <td class="colon-col">:</td>
                                 <td colspan="2" class="name-value">{{ $item->employee->full_name ?? ($employee->first_name . ' ' . $employee->last_name) }}</td>
                             </tr>
                             <tr>
                                 <td>Payroll Period</td>
+                                <td class="colon-col">:</td>
                                 <td colspan="2" style="text-align: right;">{{ $periodDisplay }}</td>
                             </tr>
                             <tr>
                                 <td>Daily Rate</td>
+                                <td class="colon-col">:</td>
                                 <td class="value-col">{{ number_format($rate, 2) }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>No. of Days</td>
+                                <td class="colon-col">:</td>
                                 <td class="value-col">{{ rtrim(rtrim(number_format($daysWorked, 2), '0'), '.') }}</td>
                                 <td class="amount-col">{{ number_format($basicAmount, 2) }}</td>
                             </tr>
                             <tr>
                                 <td>Reg. Overtime</td>
-                                <td class="value-col">{{ $regOtHours > 0 ? number_format($regOtHours, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $regOtHours > 0 ? number_format($regOtHours, 2) : '-' }}</td>
                                 <td class="amount-col">{{ $regOtPay > 0 ? number_format($regOtPay, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>Sun./Spl. Hol.</td>
-                                <td class="value-col">{{ $splHolHours > 0 ? number_format($splHolHours, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $splHolHours > 0 ? number_format($splHolHours, 2) : '-' }}</td>
                                 <td class="amount-col">{{ $splHolPay > 0 ? number_format($splHolPay, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>Water Allowance</td>
-                                <td class="value-col">{{ $allowances > 0 ? number_format($allowances, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $allowances > 0 ? number_format($allowances, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>TRIPS/Sal. Adj.</td>
-                                <td class="value-col">{{ $salaryAdj != 0 ? number_format(abs($salaryAdj), 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $salaryAdj != 0 ? number_format(abs($salaryAdj), 2) : '-' }}</td>
                                 <td class="amount-col">{{ ($allowances > 0 || $salaryAdj > 0) ? number_format($allowances + max(0, $salaryAdj), 2) : '' }}</td>
+                            </tr>
+                            <tr class="separator-line">
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td class="line-right"></td>
                             </tr>
                             <tr>
                                 <td class="bold">GROSS AMOUNT</td>
+                                <td class="colon-col"></td>
                                 <td class="value-col"></td>
                                 <td class="amount-col bold">{{ number_format($grossAmount, 2) }}</td>
                             </tr>
+                            <tr class="space-row">
+                                <td colspan="4"></td>
+                            </tr>
                             <tr>
-                                <td colspan="3" class="section-label">LESS DEDUCTIONS:</td>
+                                <td colspan="4" class="section-label">LESS DEDUCTION:</td>
                             </tr>
                             <tr>
                                 <td>CASH ADVANCE</td>
-                                <td class="value-col">{{ $cashAdvance > 0 ? number_format($cashAdvance, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $cashAdvance > 0 ? number_format($cashAdvance, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>PPE/safety boots</td>
-                                <td class="value-col">{{ $ppeBoots > 0 ? number_format($ppeBoots, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $ppeBoots > 0 ? number_format($ppeBoots, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>UNDERTIME</td>
-                                <td class="value-col">{{ $undertime > 0 ? number_format($undertime, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $undertime > 0 ? number_format($undertime, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>CASH BOND</td>
-                                <td class="value-col">{{ $cashBond > 0 ? number_format($cashBond, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $cashBond > 0 ? number_format($cashBond, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>SSS Prem.</td>
-                                <td class="value-col">{{ $sssPrem > 0 ? number_format($sssPrem, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $sssPrem > 0 ? number_format($sssPrem, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>PHIC Prem.</td>
-                                <td class="value-col">{{ $phicPrem > 0 ? number_format($phicPrem, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $phicPrem > 0 ? number_format($phicPrem, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>HDMF Prem.</td>
-                                <td class="value-col">{{ $hdmfPrem > 0 ? number_format($hdmfPrem, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $hdmfPrem > 0 ? number_format($hdmfPrem, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>SSS Loan</td>
-                                <td class="value-col">{{ $sssLoan > 0 ? number_format($sssLoan, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $sssLoan > 0 ? number_format($sssLoan, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>HDMF Loan</td>
-                                <td class="value-col">{{ $hdmfLoan > 0 ? number_format($hdmfLoan, 2) : '' }}</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $hdmfLoan > 0 ? number_format($hdmfLoan, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
+                            </tr>
+                            <tr class="separator-line">
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td class="line-right"></td>
                             </tr>
                             <tr>
                                 <td>Other Deduction</td>
-                                <td class="value-col"></td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">-</td>
                                 <td class="amount-col">{{ $totalDeductions > 0 ? number_format($totalDeductions, 2) : '' }}</td>
+                            </tr>
+                            <tr class="separator-line-thick">
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td class="line-right"></td>
                             </tr>
                             <tr>
                                 <td class="bold">NET AMOUNT</td>
+                                <td class="colon-col"></td>
                                 <td class="value-col"></td>
                                 <td class="amount-col bold">{{ number_format($netAmount, 2) }}</td>
                             </tr>
                         </table>
 
                         <!-- Payslip Signature -->
-                        <table class="slip-signature">
-                            <tr>
-                                <td>Prepared by: <span class="sig-name">{{ $preparedBy }}</span></td>
-                                <td style="text-align: right;">Checked by: <span class="sig-name">{{ $checkedBy }}</span></td>
-                            </tr>
-                            <tr>
-                                <td>Recommended by: <span class="sig-name">{{ $recommendedBy }}</span></td>
-                                <td style="text-align: right;">Approved by: <span class="sig-name">{{ $approvedBy }}</span></td>
-                            </tr>
-                            <tr>
-                                <td colspan="2">Received by: <span class="received-line"></span></td>
-                            </tr>
-                        </table>
+                        <div class="slip-signature">
+                            <table>
+                                <tr>
+                                    <td style="text-align: left;">Prepared by: <span class="sig-name">{{ $preparedBy }}</span></td>
+                                    <td style="text-align: right;">Checked by: <span class="sig-name">{{ $checkedBy }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;">Recommended by: <span class="sig-name">{{ $recommendedBy }}</span></td>
+                                    <td style="text-align: right;">Approved by: <span class="sig-name">{{ $approvedBy }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="text-align: left;">Received by: <span class="received-line"></span></td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
                     @endif
                     </td>
@@ -394,54 +475,6 @@
                     </tr>
                     @endfor
         </table>
-
-        <!-- Page Footer Signature Section (same as payroll register) -->
-        <div class="page-footer">
-            <table class="footer-sig-table">
-                <tr>
-                    <td style="text-align: left; width: 25%;">
-                        <div class="footer-sig-label">PREPARED BY:</div>
-                    </td>
-                    <td style="text-align: center; width: 25%;">
-                        <div class="footer-sig-label">CHECKED & VERIFIED:</div>
-                    </td>
-                    <td style="text-align: center; width: 25%;">
-                        <div class="footer-sig-label">RECOMMENDED BY:</div>
-                    </td>
-                    <td style="text-align: right; width: 25%;">
-                        <div class="footer-sig-label">APPROVED BY:</div>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align: left;">
-                        <div class="footer-sig-name">{{ $companyInfo->sig_prepared_by ?? 'MERCIEL LAVASAN' }}</div>
-                    </td>
-                    <td style="text-align: center;">
-                        <div class="footer-sig-name">{{ $companyInfo->sig_checked_by ?? 'SAIRAH JENITA' }}</div>
-                    </td>
-                    <td style="text-align: center;">
-                        <div class="footer-sig-name">{{ $companyInfo->sig_recommended_by ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA' }}</div>
-                    </td>
-                    <td style="text-align: right;">
-                        <div class="footer-sig-name">{{ $companyInfo->sig_approved_by ?? 'ENGR. OSTRIC R. RIVERA JR.' }}</div>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align: left; padding-top: 8px;">
-                        <div class="footer-sig-name">{{ $companyInfo->sig_prepared_by_2 ?? '' }}</div>
-                    </td>
-                    <td style="text-align: center; padding-top: 8px;">
-                        <div class="footer-sig-name">{{ $companyInfo->sig_checked_by_2 ?? 'JAMAICA CRISTEL MAE SUGABO' }}</div>
-                    </td>
-                    <td style="text-align: center; padding-top: 8px;">
-                        <div class="footer-sig-name">{{ $companyInfo->sig_recommended_by_2 ?? 'ENGR. OSTRIC C. RIVERA, III' }}</div>
-                    </td>
-                    <td style="text-align: right; padding-top: 8px;">
-                        <div class="footer-sig-name">{{ $companyInfo->sig_approved_by_2 ?? 'ENGR. ELISA MAY PARCON' }}</div>
-                    </td>
-                </tr>
-            </table>
-        </div>
     </div>
     @endforeach
 </body>
