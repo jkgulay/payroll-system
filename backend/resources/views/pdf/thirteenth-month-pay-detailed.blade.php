@@ -6,8 +6,8 @@
     <title>13th Month Pay Detailed - {{ $thirteenthMonth->year }}</title>
     <style>
         @page {
-            size: A4 landscape;
-            margin: 10mm 10mm 50mm 10mm;
+            size: 8.5in 13in;
+            margin: 6mm 10mm 45mm 8mm;
         }
 
         body {
@@ -110,7 +110,7 @@
         /* Fixed footer signature section on every page */
         .page-footer {
             position: fixed;
-            bottom: -40mm;
+            bottom: -43mm;
             left: 0mm;
             right: 0mm;
             height: 40mm;
