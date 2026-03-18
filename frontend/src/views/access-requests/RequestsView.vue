@@ -1,14 +1,14 @@
 <template>
-  <div class="other-requests-page">
+  <div class="requests-page">
     <div class="modern-card">
       <div class="page-header">
         <div class="page-icon-badge">
           <v-icon icon="mdi-clipboard-list-outline" size="24" color="white"></v-icon>
         </div>
         <div class="page-header-content">
-          <h1 class="page-title">Other Access Requests</h1>
+          <h1 class="page-title">Access Requests</h1>
           <p class="page-subtitle">
-            Review and manage access requests from payrollists
+            Review and manage all access requests from payrollists
           </p>
         </div>
         <div class="d-flex gap-2">
@@ -28,6 +28,26 @@
           <v-badge
             v-if="pendingCounts.total > 0"
             :content="pendingCounts.total"
+            color="error"
+            class="ml-2"
+            inline
+          ></v-badge>
+        </v-tab>
+        <v-tab value="attendance">
+          Attendance
+          <v-badge
+            v-if="pendingCounts.attendance > 0"
+            :content="pendingCounts.attendance"
+            color="error"
+            class="ml-2"
+            inline
+          ></v-badge>
+        </v-tab>
+        <v-tab value="government-rates">
+          Gov. Rates
+          <v-badge
+            v-if="pendingCounts['government-rates'] > 0"
+            :content="pendingCounts['government-rates']"
             color="error"
             class="ml-2"
             inline
@@ -242,7 +262,9 @@ import { useToast } from "vue-toastification";
 const route = useRoute();
 const toast = useToast();
 
-const OTHER_MODULES = [
+const ALL_MODULES = [
+  'attendance',
+  'government-rates',
   'deductions',
   'allowances',
   'thirteenth-month-pay',
@@ -252,6 +274,8 @@ const OTHER_MODULES = [
 ];
 
 const moduleLabels = {
+  'attendance': 'Attendance',
+  'government-rates': 'Government Rates',
   'deductions': 'Deductions',
   'allowances': 'Allowances',
   'thirteenth-month-pay': '13th Month Pay',
@@ -261,6 +285,8 @@ const moduleLabels = {
 };
 
 const moduleColors = {
+  'attendance': 'green',
+  'government-rates': 'brown',
   'deductions': 'orange',
   'allowances': 'blue',
   'thirteenth-month-pay': 'purple',
@@ -280,6 +306,8 @@ const rejectNotes = ref("");
 
 const pendingCounts = ref({
   total: 0,
+  attendance: 0,
+  'government-rates': 0,
   deductions: 0,
   allowances: 0,
   'thirteenth-month-pay': 0,
@@ -372,11 +400,13 @@ function getStatusColor(status) {
 const loadRequests = async () => {
   loading.value = true;
   try {
-    const response = await moduleAccessService.getRequestsForModules(OTHER_MODULES, {});
+    const response = await moduleAccessService.getRequestsForModules(ALL_MODULES, {});
     requests.value = response.data || [];
 
     const counts = {
       total: 0,
+      attendance: 0,
+      'government-rates': 0,
       deductions: 0,
       allowances: 0,
       'thirteenth-month-pay': 0,
@@ -444,13 +474,13 @@ const rejectRequest = async () => {
 };
 
 watch(() => route.query.tab, (newTab) => {
-  if (newTab && OTHER_MODULES.includes(newTab)) {
+  if (newTab && ALL_MODULES.includes(newTab)) {
     activeTab.value = newTab;
   }
 });
 
 onMounted(() => {
-  if (route.query.tab && OTHER_MODULES.includes(route.query.tab)) {
+  if (route.query.tab && ALL_MODULES.includes(route.query.tab)) {
     activeTab.value = route.query.tab;
   }
   loadRequests();
@@ -458,7 +488,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.other-requests-page {
+.requests-page {
   padding: 16px;
 }
 

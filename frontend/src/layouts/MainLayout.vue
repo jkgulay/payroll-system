@@ -301,11 +301,11 @@ const loggingOut = ref(false);
 const isMobile = computed(() => mdAndDown.value);
 
 // Access request badge counts
-const pendingAttendanceRequests = ref(0);
-const pendingGovRatesRequests = ref(0);
-const pendingOtherRequests = ref(0);
+const pendingAllRequests = ref(0);
 
-const OTHER_REQUEST_MODULES = [
+const ALL_REQUEST_MODULES = [
+  'attendance',
+  'government-rates',
   'deductions',
   'allowances',
   'thirteenth-month-pay',
@@ -318,14 +318,8 @@ async function loadAccessRequestCounts() {
   const role = authStore.user?.role;
   if (!role || !['admin', 'hr'].includes(role)) return;
   try {
-    const [attRes, govRes, otherRes] = await Promise.all([
-      moduleAccessService.getPendingCount('attendance'),
-      moduleAccessService.getPendingCount('government-rates'),
-      moduleAccessService.getPendingCountForModules(OTHER_REQUEST_MODULES),
-    ]);
-    pendingAttendanceRequests.value = attRes.count || 0;
-    pendingGovRatesRequests.value = govRes.count || 0;
-    pendingOtherRequests.value = otherRes.count || 0;
+    const allRes = await moduleAccessService.getPendingCountForModules(ALL_REQUEST_MODULES);
+    pendingAllRequests.value = allRes.count || 0;
   } catch {
     // ignore
   }
@@ -836,28 +830,12 @@ const menuSections = computed(() => {
   // Access request items (admin/hr only)
   const accessRequestItems = [
     {
-      title: "Attendance Requests",
-      icon: "mdi-clock-alert-outline",
-      value: "attendance-access-requests",
-      to: { path: '/attendance', query: { tab: 'mod-requests' } },
-      roles: ["admin", "hr"],
-      badge: pendingAttendanceRequests.value,
-    },
-    {
-      title: "Gov. Rates Requests",
-      icon: "mdi-bank",
-      value: "gov-rates-access-requests",
-      to: { path: '/government-rates', query: { tab: 'access-requests' } },
-      roles: ["admin"],
-      badge: pendingGovRatesRequests.value,
-    },
-    {
-      title: "Other Requests",
+      title: "Access Requests",
       icon: "mdi-clipboard-list-outline",
-      value: "other-access-requests",
-      to: "/other-requests",
+      value: "access-requests",
+      to: "/requests",
       roles: ["admin", "hr"],
-      badge: pendingOtherRequests.value,
+      badge: pendingAllRequests.value,
     },
   ];
 
