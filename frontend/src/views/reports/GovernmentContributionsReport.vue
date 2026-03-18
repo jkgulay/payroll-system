@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="pa-6 report-container">
+  <v-container fluid class="pa-4 report-container">
     <v-row>
       <v-col cols="12">
         <!-- Page Header -->
@@ -14,8 +14,8 @@
             <v-icon>mdi-arrow-left</v-icon>
           </v-btn>
           <div class="d-flex align-center">
-            <v-avatar color="orange-lighten-4" size="56" class="mr-4">
-              <v-icon size="32" color="orange-darken-2">mdi-file-chart</v-icon>
+            <v-avatar color="primary" size="52" class="mr-4">
+              <v-icon size="28" color="white">mdi-file-chart</v-icon>
             </v-avatar>
             <div>
               <h1 class="text-h4 font-weight-bold mb-1">
@@ -30,7 +30,7 @@
 
         <!-- Filters Card -->
         <v-card class="mb-6 filters-card" elevation="1" rounded="lg">
-          <v-card-text class="pa-6">
+          <v-card-text class="pa-4">
             <v-row align="center" class="mb-2">
               <v-col cols="12">
                 <div class="d-flex align-center mb-4">
@@ -155,7 +155,7 @@
 
         <!-- Enhanced Summary Cards with Animation -->
         <v-slide-y-transition group>
-          <v-row v-if="reportData" class="mb-6" key="summary-cards">
+            <v-row v-if="reportData" class="mb-6" key="summary-cards">
             <!-- Warning Alert for Zero Contributions -->
             <v-col
               cols="12"
@@ -199,27 +199,26 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card
-                class="summary-card sss-card h-100"
-                elevation="2"
-                rounded="lg"
-                hover
-              >
-                <v-card-text class="pa-6">
+                <v-card
+                  class="summary-card sss-card h-100"
+                  elevation="1"
+                  rounded="lg"
+                >
+                  <v-card-text class="pa-4">
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
-                      <v-avatar color="blue-lighten-5" size="48" class="mr-3">
-                        <v-icon color="blue-darken-2" size="28"
+                      <v-avatar color="primary" size="40" class="mr-3">
+                        <v-icon color="white" size="22"
                           >mdi-shield-account</v-icon
                         >
                       </v-avatar>
                       <span class="text-h6 font-weight-medium">SSS</span>
                     </div>
-                    <v-chip size="small" color="blue" variant="tonal"
+                    <v-chip size="small" color="primary" variant="tonal"
                       >Social Security</v-chip
                     >
                   </div>
-                  <div class="text-h3 font-weight-bold mb-3 text-primary">
+                  <div class="text-h4 font-weight-bold mb-3 text-primary">
                     ₱{{ formatNumber(reportData.sss_total) }}
                   </div>
                   <v-divider class="mb-3"></v-divider>
@@ -249,17 +248,16 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card
-                class="summary-card philhealth-card h-100"
-                elevation="2"
-                rounded="lg"
-                hover
-              >
-                <v-card-text class="pa-6">
+                <v-card
+                  class="summary-card philhealth-card h-100"
+                  elevation="1"
+                  rounded="lg"
+                >
+                  <v-card-text class="pa-4">
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
-                      <v-avatar color="green-lighten-5" size="48" class="mr-3">
-                        <v-icon color="green-darken-2" size="28"
+                      <v-avatar color="success" size="40" class="mr-3">
+                        <v-icon color="white" size="22"
                           >mdi-hospital-box</v-icon
                         >
                       </v-avatar>
@@ -269,7 +267,7 @@
                       >Healthcare</v-chip
                     >
                   </div>
-                  <div class="text-h3 font-weight-bold mb-3 text-success">
+                  <div class="text-h4 font-weight-bold mb-3 text-success">
                     ₱{{ formatNumber(reportData.philhealth_total) }}
                   </div>
                   <v-divider class="mb-3"></v-divider>
@@ -303,27 +301,26 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card
-                class="summary-card pagibig-card h-100"
-                elevation="2"
-                rounded="lg"
-                hover
-              >
-                <v-card-text class="pa-6">
+                <v-card
+                  class="summary-card pagibig-card h-100"
+                  elevation="1"
+                  rounded="lg"
+                >
+                  <v-card-text class="pa-4">
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
-                      <v-avatar color="orange-lighten-5" size="48" class="mr-3">
-                        <v-icon color="orange-darken-2" size="28"
+                      <v-avatar color="warning" size="40" class="mr-3">
+                        <v-icon color="white" size="22"
                           >mdi-home-city</v-icon
                         >
                       </v-avatar>
                       <span class="text-h6 font-weight-medium">Pag-IBIG</span>
                     </div>
-                    <v-chip size="small" color="orange" variant="tonal"
+                    <v-chip size="small" color="warning" variant="tonal"
                       >Housing</v-chip
                     >
                   </div>
-                  <div class="text-h3 font-weight-bold mb-3 text-orange">
+                  <div class="text-h4 font-weight-bold mb-3 text-warning">
                     ₱{{ formatNumber(reportData.pagibig_total) }}
                   </div>
                   <v-divider class="mb-3"></v-divider>
@@ -353,27 +350,26 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card
-                class="summary-card total-card h-100"
-                elevation="2"
-                rounded="lg"
-                hover
-              >
-                <v-card-text class="pa-6">
+                <v-card
+                  class="summary-card total-card h-100"
+                  elevation="1"
+                  rounded="lg"
+                >
+                  <v-card-text class="pa-4">
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
-                      <v-avatar color="purple-lighten-5" size="48" class="mr-3">
-                        <v-icon color="purple-darken-2" size="28"
+                      <v-avatar color="secondary" size="40" class="mr-3">
+                        <v-icon color="white" size="22"
                           >mdi-cash-multiple</v-icon
                         >
                       </v-avatar>
                       <span class="text-h6 font-weight-medium">Total</span>
                     </div>
-                    <v-chip size="small" color="purple" variant="tonal"
+                    <v-chip size="small" color="secondary" variant="tonal"
                       >Overall</v-chip
                     >
                   </div>
-                  <div class="text-h3 font-weight-bold mb-3 text-purple">
+                  <div class="text-h4 font-weight-bold mb-3 text-secondary">
                     ₱{{ formatNumber(reportData.grand_total) }}
                   </div>
                   <v-divider class="mb-3"></v-divider>
@@ -384,7 +380,7 @@
                           >mdi-account-multiple</v-icon
                         >Total Employees
                       </span>
-                      <span class="font-weight-bold text-h6">{{
+                      <span class="font-weight-bold text-body-1">{{
                         reportData.employee_count
                       }}</span>
                     </div>
@@ -606,7 +602,7 @@
               </template>
 
               <template v-slot:item.sss_total="{ item }">
-                <v-chip size="small" color="blue" variant="flat">
+                <v-chip size="small" color="primary" variant="flat">
                   ₱{{ formatNumber(item.sss_total) }}
                 </v-chip>
               </template>
@@ -642,7 +638,7 @@
               </template>
 
               <template v-slot:item.pagibig_total="{ item }">
-                <v-chip size="small" color="orange" variant="flat">
+                <v-chip size="small" color="warning" variant="flat">
                   ₱{{ formatNumber(item.pagibig_total) }}
                 </v-chip>
               </template>
@@ -650,7 +646,7 @@
               <template v-slot:item.grand_total="{ item }">
                 <v-chip
                   size="small"
-                  color="purple"
+                  color="secondary"
                   variant="flat"
                   class="font-weight-bold"
                 >
@@ -679,7 +675,7 @@
                         <span class="text-h6 font-weight-medium mr-3"
                           >Total Remittance:</span
                         >
-                        <span class="text-h4 font-weight-bold text-purple">
+                        <span class="text-h4 font-weight-bold text-primary">
                           ₱{{ formatNumber(calculateFilteredTotal()) }}
                         </span>
                       </div>
@@ -803,7 +799,7 @@
           >
             <template v-slot:label>
               <div class="d-flex align-center">
-                <v-icon color="blue" class="mr-2">mdi-shield-account</v-icon>
+                <v-icon color="primary" class="mr-2">mdi-shield-account</v-icon>
                 <span class="font-weight-medium">SSS Contributions</span>
               </div>
             </template>
@@ -833,7 +829,7 @@
           >
             <template v-slot:label>
               <div class="d-flex align-center">
-                <v-icon color="orange" class="mr-2">mdi-home-city</v-icon>
+                <v-icon color="warning" class="mr-2">mdi-home-city</v-icon>
                 <span class="font-weight-medium">Pag-IBIG Contributions</span>
               </div>
             </template>
@@ -1441,7 +1437,7 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .report-container {
-  background: #f5f5f5;
+  background: rgb(var(--v-theme-surface));
   min-height: 100vh;
 }
 
@@ -1452,79 +1448,30 @@ onMounted(() => {
   background: transparent;
 
   .back-btn {
-    transition: transform 0.2s;
+    transition: opacity 0.2s ease;
     &:hover {
-      transform: translateX(-4px);
+      opacity: 0.8;
     }
   }
 }
 
 .filters-card {
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .generate-btn {
   font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  }
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .summary-card {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: white;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: currentColor;
-    opacity: 0.7;
-  }
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  }
-
-  .text-h3 {
-    color: rgba(0, 0, 0, 0.87) !important;
-    font-size: 2.5rem !important;
-    line-height: 1.2 !important;
-  }
-
-  .text-primary {
-    color: #2196f3 !important;
-  }
-
-  .text-success {
-    color: #4caf50 !important;
-  }
-
-  .text-orange {
-    color: #ff9800 !important;
-  }
-
-  .text-purple {
-    color: #9c27b0 !important;
-  }
+  border: 1px solid rgba(0, 0, 0, 0.06);
 
   .contribution-breakdown {
-    background: rgba(0, 0, 0, 0.02);
-    padding: 12px;
-    border-radius: 8px;
+    background: rgba(var(--v-theme-on-surface), 0.02);
+    padding: 10px;
+    border-radius: 6px;
 
     span {
       color: rgba(0, 0, 0, 0.87);
@@ -1532,97 +1479,56 @@ onMounted(() => {
   }
 }
 
-.sss-card::before {
-  background: linear-gradient(180deg, #2196f3 0%, #1976d2 100%);
-}
-
-.philhealth-card::before {
-  background: linear-gradient(180deg, #4caf50 0%, #388e3c 100%);
-}
-
-.pagibig-card::before {
-  background: linear-gradient(180deg, #ff9800 0%, #f57c00 100%);
-}
-
-.total-card::before {
-  background: linear-gradient(180deg, #9c27b0 0%, #7b1fa2 100%);
-}
-
-.alert-animated {
-  animation: slideIn 0.5s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .chart-container {
   position: relative;
-  height: 350px;
-  padding: 16px;
+  height: 320px;
+  padding: 8px;
 }
 
 .stat-box {
-  padding: 16px;
+  padding: 12px;
   text-align: center;
-  border-radius: 12px;
-  background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 8px;
+  background: rgb(var(--v-theme-surface));
   border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  }
 }
 
 .enhanced-table {
   :deep(.v-data-table-header) {
-    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    background: rgba(var(--v-theme-on-surface), 0.03);
 
     th {
-      font-weight: 700 !important;
+      font-weight: 600 !important;
       font-size: 0.875rem !important;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      text-transform: none;
+      letter-spacing: normal;
       color: rgba(0, 0, 0, 0.87) !important;
-      border-bottom: 2px solid rgba(0, 0, 0, 0.12) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
     }
   }
 
   :deep(tbody tr) {
-    transition: all 0.2s ease;
-
     &:hover {
-      background: rgba(33, 150, 243, 0.05);
-      transform: scale(1.01);
+      background: rgba(var(--v-theme-primary), 0.04);
     }
   }
 
   :deep(.v-data-table__td) {
-    padding: 16px 12px !important;
+    padding: 12px 10px !important;
   }
 }
 
 .summary-footer {
-  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
-  border-top: 2px solid rgba(0, 0, 0, 0.08);
+  background: rgba(var(--v-theme-on-surface), 0.02);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 
   .total-remittance-box {
-    padding: 16px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    color: white;
+    padding: 10px 14px;
+    background: rgba(var(--v-theme-primary), 0.08);
+    border-radius: 8px;
+    color: inherit;
     display: inline-flex;
     align-items: center;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   }
 }
 
@@ -1663,7 +1569,7 @@ onMounted(() => {
   }
 
   .chart-container {
-    height: 250px;
+    height: 240px;
   }
 }
 </style>

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class PositionRate extends Model
 {
@@ -38,7 +40,7 @@ class PositionRate extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    public function employees()
+    public function employees(): HasMany
     {
         return $this->hasMany(Employee::class, 'position_id');
     }
@@ -57,6 +59,21 @@ class PositionRate extends Model
     // Helper methods
     public function getEmployeeCount(): int
     {
-        return \App\Models\Employee::where('position_id', $this->id)->count();
+        return $this->employeeCountQuery()->count();
+    }
+
+    public function employeeCountQuery()
+    {
+        return Employee::where(function ($query) {
+            $query->where('position_id', $this->id);
+
+            if (Schema::hasColumn('employees', 'position')) {
+                $query->orWhere(function ($legacyQuery) {
+                    $legacyQuery
+                        ->whereNull('position_id')
+                        ->whereRaw('LOWER(position) = ?', [strtolower($this->position_name)]);
+                });
+            }
+        });
     }
 }

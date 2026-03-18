@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class EmployeeController extends Controller
 {
@@ -88,12 +89,36 @@ class EmployeeController extends Controller
         if ($request->has('position') && $request->position) {
             // Check if it's a position ID (numeric) or position name (string)
             if (is_numeric($request->position)) {
-                $query->where('position_id', $request->position);
+                $positionRate = \App\Models\PositionRate::find($request->position);
+
+                $query->where(function ($positionQuery) use ($request, $positionRate) {
+                    $positionQuery->where('position_id', $request->position);
+
+                    if (Schema::hasColumn('employees', 'position') && $positionRate) {
+                        $positionQuery->orWhere(function ($legacyQuery) use ($positionRate) {
+                            $legacyQuery
+                                ->whereNull('position_id')
+                                ->whereRaw('LOWER(position) = ?', [strtolower($positionRate->position_name)]);
+                        });
+                    }
+                });
             } else {
                 // Convert position name to position_id
                 $positionRate = \App\Models\PositionRate::where('position_name', $request->position)->first();
                 if ($positionRate) {
-                    $query->where('position_id', $positionRate->id);
+                    $query->where(function ($positionQuery) use ($positionRate, $request) {
+                        $positionQuery->where('position_id', $positionRate->id);
+
+                        if (Schema::hasColumn('employees', 'position')) {
+                            $positionQuery->orWhere(function ($legacyQuery) use ($request) {
+                                $legacyQuery
+                                    ->whereNull('position_id')
+                                    ->whereRaw('LOWER(position) = ?', [strtolower($request->position)]);
+                            });
+                        }
+                    });
+                } elseif (Schema::hasColumn('employees', 'position')) {
+                    $query->whereRaw('LOWER(position) = ?', [strtolower($request->position)]);
                 }
             }
         }
