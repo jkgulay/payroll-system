@@ -149,6 +149,17 @@
             <v-icon size="18">mdi-check</v-icon>
             <span>{{ loading ? "Loading..." : "Apply Filters" }}</span>
           </button>
+          <button
+            class="apply-filters-btn"
+            @click="clearFilters"
+            :disabled="!hasActiveFilters || loading"
+          >
+            <v-icon size="18">mdi-filter-remove</v-icon>
+            <span>Clear</span>
+          </button>
+          <v-chip v-if="hasActiveFilters" size="small" color="info" variant="tonal">
+            {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+          </v-chip>
         </div>
       </div>
     </div>
@@ -254,6 +265,15 @@
             <div class="text-body-2 text-medium-emphasis">
               Try adjusting your filters
             </div>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -487,6 +507,40 @@ const filteredLogs = computed(() => {
       log.action?.toLowerCase().includes(search),
   );
 });
+
+const hasActiveFilters = computed(() => {
+  return (
+    !!filters.value.module ||
+    !!filters.value.action ||
+    !!filters.value.date_from ||
+    !!filters.value.date_to ||
+    !!filters.value.user_id ||
+    !!filters.value.search
+  );
+});
+
+const activeFilterCount = computed(() => {
+  return [
+    filters.value.module,
+    filters.value.action,
+    filters.value.date_from,
+    filters.value.date_to,
+    filters.value.user_id,
+    filters.value.search,
+  ].filter(Boolean).length;
+});
+
+function clearFilters() {
+  filters.value = {
+    module: null,
+    action: null,
+    date_from: null,
+    date_to: null,
+    user_id: null,
+    search: "",
+  };
+  fetchAuditLogs();
+}
 
 // Methods
 async function fetchAuditLogs() {

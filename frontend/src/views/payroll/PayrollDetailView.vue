@@ -961,8 +961,9 @@ async function downloadRegister() {
       ? `/payrolls/${payroll.value.id}/download-payslips`
       : `/payrolls/${payroll.value.id}/download-register`;
 
-    // Use a longer timeout for larger grouped PDF export
-    const isLargeExport = ["by_device_pdf"].includes(exportFilter.value.format);
+    // Use a longer timeout for larger grouped PDF exports (including bulk payslips)
+    const isLargeExport =
+      isPayslips || ["by_device_pdf"].includes(exportFilter.value.format);
 
     const response = await api.get(endpoint, {
       params: params,

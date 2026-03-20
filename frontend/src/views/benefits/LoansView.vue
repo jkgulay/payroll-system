@@ -186,9 +186,18 @@
             variant="tonal"
             icon="mdi-filter-remove"
             @click="clearFilters"
+            :disabled="!hasActiveFilters"
             title="Clear Filters"
             size="small"
           ></v-btn>
+          <v-chip
+            v-if="hasActiveFilters"
+            size="small"
+            color="info"
+            variant="tonal"
+          >
+            {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+          </v-chip>
         </div>
       </div>
 
@@ -356,6 +365,15 @@
                   : "Add a loan to get started"
               }}
             </p>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -364,7 +382,7 @@
 
     <!-- Add/Edit Dialog - Modern UI -->
     <v-dialog v-model="dialog" max-width="800px" persistent scrollable>
-      <v-card class="modern-dialog">
+      <v-card class="modern-dialog loans-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">
@@ -400,8 +418,20 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content loans-dialog-content"
+          style="max-height: 70vh"
+          @keydown.capture="handleLoanFormKeydown"
+        >
           <v-form ref="form" v-model="formValid">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <v-row>
               <!-- Section: Loan Information -->
               <v-col cols="12">
@@ -631,13 +661,14 @@
           </v-form>
         </v-card-text>
         <v-divider></v-divider>
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions loans-dialog-actions">
           <v-spacer></v-spacer>
-          <button class="dialog-btn dialog-btn-cancel" @click="closeDialog">
+          <v-btn variant="outlined" color="grey" @click="closeDialog">
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             :disabled="!formValid || saving"
             @click="saveLoan"
           >
@@ -657,7 +688,7 @@
                   ? "Submit Request"
                   : "Add Loan"
             }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1040,14 +1071,11 @@
           </v-alert>
         </v-card-text>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions loans-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-close"
-            @click="detailsDialog = false"
-          >
+          <v-btn variant="outlined" color="grey" @click="detailsDialog = false">
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1064,6 +1092,7 @@ import { useAuthStore } from "@/stores/auth";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import moduleAccessService from "@/services/moduleAccessService";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const toast = useToast();
 const route = useRoute();
@@ -1216,6 +1245,30 @@ const totalBalance = computed(() => {
     const balance = parseFloat(loan.balance) || 0;
     return sum + balance;
   }, 0);
+});
+
+const hasActiveFilters = computed(() => {
+  return (
+    !!filters.value.employee_id ||
+    !!filters.value.loan_type ||
+    !!filters.value.status
+  );
+});
+
+const activeFilterCount = computed(() => {
+  return [filters.value.employee_id, filters.value.loan_type, filters.value.status]
+    .filter(Boolean).length;
+});
+
+const { handleKeydown: handleLoanFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!saving.value && formValid.value) {
+      saveLoan();
+    }
+  },
 });
 
 // Options
@@ -1800,48 +1853,21 @@ onMounted(async () => {
   letter-spacing: -0.3px;
 }
 
+.loans-dialog-content {
+  padding-bottom: 10px;
+}
+
+.loans-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+}
+
 .dialog-actions {
   padding: 16px 24px;
   background: rgba(0, 31, 61, 0.02);
-}
-
-.dialog-btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.dialog-btn-cancel {
-  background: transparent;
-  color: #64748b;
-
-  &:hover:not(:disabled) {
-    background: rgba(0, 31, 61, 0.04);
-  }
-}
-
-.dialog-btn-primary {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-  margin-left: 12px;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
-  }
 }
 
 .loan-summary-alert {

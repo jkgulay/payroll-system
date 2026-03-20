@@ -559,11 +559,13 @@ class PayrollController extends Controller
 
         // Validate filter parameters
         $validated = $request->validate([
-            'filter_type' => 'nullable|in:all,department,position,both',
+            'filter_type' => 'nullable|in:all,department,position,both,employee',
             'departments' => 'nullable|array',
             'departments.*' => 'string',
             'positions' => 'nullable|array',
             'positions.*' => 'string',
+            'employee_ids' => 'nullable|array',
+            'employee_ids.*' => 'integer|exists:employees,id',
         ]);
 
         // Load payroll items with employee relationship
@@ -571,7 +573,9 @@ class PayrollController extends Controller
 
         // Apply filters if provided
         if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
-            if ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
+            if ($validated['filter_type'] === 'employee' && !empty($validated['employee_ids'])) {
+                $itemsQuery->whereIn('employee_id', $validated['employee_ids']);
+            } elseif ($validated['filter_type'] === 'both' && !empty($validated['departments']) && !empty($validated['positions'])) {
                 // Filter by both department (project) AND position
                 $itemsQuery->whereHas('employee', function ($q) use ($validated) {
                     $q->where(function ($q2) use ($validated) {

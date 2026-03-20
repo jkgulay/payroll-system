@@ -90,6 +90,18 @@
             class="filter-field"
             @update:model-value="fetchMyLoans"
           ></v-select>
+          <v-btn
+            variant="tonal"
+            color="grey"
+            prepend-icon="mdi-filter-remove"
+            @click="clearFilters"
+            :disabled="!hasActiveFilters"
+          >
+            Clear
+          </v-btn>
+          <v-chip v-if="hasActiveFilters" size="small" color="info" variant="tonal">
+            {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+          </v-chip>
         </div>
       </div>
 
@@ -175,6 +187,15 @@
           <div class="text-center py-8">
             <v-icon size="64" color="grey-lighten-1">mdi-hand-coin</v-icon>
             <p class="mt-4 text-grey">No loans found</p>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -194,7 +215,7 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text class="dialog-content" style="max-height: 70vh" @keydown.capture="handleMyLoanRequestKeydown">
           <v-form ref="requestFormRef" v-model="formValid">
             <v-row>
               <v-col cols="12">
@@ -479,6 +500,7 @@ import loanService from "@/services/loanService";
 import { useAuthStore } from "@/stores/auth";
 import { formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const toast = useToast();
 const authStore = useAuthStore();
@@ -551,6 +573,26 @@ const totalBalanceRemaining = computed(() =>
     .filter((loan) => ["approved", "active"].includes(loan.status))
     .reduce((sum, loan) => sum + parseFloat(loan.balance || 0), 0),
 );
+
+const hasActiveFilters = computed(() => {
+  return !!filters.value.loan_type || !!filters.value.status;
+});
+
+const activeFilterCount = computed(() => {
+  return [filters.value.loan_type, filters.value.status].filter(Boolean)
+    .length;
+});
+
+const { handleKeydown: handleMyLoanRequestKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!submitting.value) requestDialog.value = false;
+  },
+  onSubmitLast: () => {
+    if (!submitting.value && formValid.value) {
+      submitRequest();
+    }
+  },
+});
 
 const getLoanProgress = (loan) => {
   const total = parseFloat(loan.total_amount) || 0;
@@ -676,6 +718,14 @@ const cancelLoan = async () => {
   } finally {
     cancelling.value = false;
   }
+};
+
+const clearFilters = () => {
+  filters.value = {
+    loan_type: null,
+    status: null,
+  };
+  fetchMyLoans();
 };
 
 // Helpers

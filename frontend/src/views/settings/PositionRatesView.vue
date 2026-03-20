@@ -147,7 +147,7 @@
 
     <!-- Add/Edit Position Rate Dialog -->
     <v-dialog v-model="showDialog" max-width="800px" persistent scrollable>
-      <v-card class="modern-dialog">
+      <v-card class="modern-dialog position-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
@@ -169,8 +169,19 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content position-dialog-content"
+          style="max-height: 70vh"
+        >
           <v-form ref="form" v-model="formValid">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <!-- Section: Basic Information -->
             <v-col cols="12" class="px-0">
               <div class="section-header">
@@ -338,17 +349,19 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions position-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="closeDialog"
             :disabled="saving"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             @click="savePosition"
             :disabled="!formValid || saving"
           >
@@ -371,7 +384,7 @@
                   ? "Update"
                   : "Create"
             }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -469,14 +482,15 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions position-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="showEmployeesDialog = false"
           >
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -971,48 +985,21 @@ function formatCategory(category) {
   letter-spacing: -0.3px;
 }
 
+.position-dialog-content {
+  padding-bottom: 10px;
+}
+
+.position-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+}
+
 .dialog-actions {
   padding: 16px 24px;
   background: rgba(0, 31, 61, 0.02);
-}
-
-.dialog-btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.dialog-btn-cancel {
-  background: transparent;
-  color: #64748b;
-
-  &:hover:not(:disabled) {
-    background: rgba(0, 31, 61, 0.04);
-  }
-}
-
-.dialog-btn-primary {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-  margin-left: 12px;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
-  }
 }
 
 .form-field-wrapper {

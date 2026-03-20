@@ -161,8 +161,14 @@
               variant="tonal"
               icon="mdi-filter-remove"
               @click="clearFilters"
+              :disabled="!hasActiveFilters"
               title="Clear Filters"
             ></v-btn>
+          </v-col>
+          <v-col cols="auto" class="d-flex align-center" v-if="hasActiveFilters">
+            <v-chip size="small" color="info" variant="tonal">
+              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+            </v-chip>
           </v-col>
         </v-row>
       </div>
@@ -303,13 +309,32 @@
             </v-list>
           </v-menu>
         </template>
+
+        <template v-slot:no-data>
+          <div class="text-center py-8">
+            <v-icon size="64" color="grey">mdi-cash-lock</v-icon>
+            <p class="text-h6 mt-4">No cash bonds found</p>
+            <p class="text-body-2 text-medium-emphasis">
+              No cash bond records match your current filters.
+            </p>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
+          </div>
+        </template>
       </v-data-table>
       </template>
     </div>
 
     <!-- Add/Edit Cash Bond Dialog -->
     <v-dialog v-model="dialog" max-width="900px" persistent scrollable>
-      <v-card class="modern-dialog">
+      <v-card class="modern-dialog cashbond-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
@@ -331,8 +356,20 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content cashbond-dialog-content"
+          style="max-height: 70vh"
+          @keydown.capture="handleCashBondFormKeydown"
+        >
           <v-form ref="bondFormRef" v-model="formValid">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <v-row>
               <v-col cols="12" class="pb-0">
                 <div class="section-header">
@@ -514,17 +551,19 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions cashbond-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="closeDialog"
             :disabled="saving"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             @click="saveCashBond"
             :disabled="!formValid || saving"
           >
@@ -547,7 +586,7 @@
                   ? "Update Cash Bond"
                   : "Create Cash Bond"
             }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -775,6 +814,7 @@ import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import moduleAccessService from "@/services/moduleAccessService";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -865,6 +905,26 @@ const statusOptions = [
   { title: "Completed", value: "completed" },
   { title: "Cancelled", value: "cancelled" },
 ];
+
+const hasActiveFilters = computed(() => {
+  return !!filters.value.employee_id || !!filters.value.status;
+});
+
+const activeFilterCount = computed(() => {
+  return [filters.value.employee_id, filters.value.status].filter(Boolean)
+    .length;
+});
+
+const { handleKeydown: handleCashBondFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!saving.value && formValid.value) {
+      saveCashBond();
+    }
+  },
+});
 
 // Form
 const form = ref({
@@ -1559,56 +1619,22 @@ onMounted(async () => {
   margin: 0;
 }
 
+.cashbond-dialog-content {
+  padding-bottom: 10px;
+}
+
+.cashbond-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+}
+
 .dialog-actions {
   padding: 14px 20px;
   background: rgba(0, 31, 61, 0.02);
   gap: 10px;
 }
 
-.dialog-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  white-space: nowrap;
-  min-width: 120px;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &.dialog-btn-cancel {
-    background: white;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
-
-    &:hover:not(:disabled) {
-      background: #f8f9fa;
-      border-color: #cbd5e1;
-    }
-  }
-
-  &.dialog-btn-primary {
-    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-    color: white;
-    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(237, 152, 95, 0.35);
-      transform: translateY(-1px);
-    }
-
-    .v-icon {
-      color: white;
-    }
-  }
-}
 </style>

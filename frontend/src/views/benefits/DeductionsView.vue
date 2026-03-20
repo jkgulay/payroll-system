@@ -238,8 +238,14 @@
               variant="tonal"
               icon="mdi-filter-remove"
               @click="clearFilters"
+              :disabled="!hasActiveFilters"
               title="Clear Filters"
             ></v-btn>
+          </v-col>
+          <v-col cols="auto" class="d-flex align-center" v-if="hasActiveFilters">
+            <v-chip size="small" color="info" variant="tonal">
+              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+            </v-chip>
           </v-col>
         </v-row>
       </div>
@@ -360,6 +366,15 @@
                     : "No deductions available"
               }}
             </p>
+              <v-btn
+                class="mt-3"
+                variant="outlined"
+                color="primary"
+                @click="clearFilters"
+                :disabled="!hasActiveFilters"
+              >
+                Clear filters
+              </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -368,8 +383,8 @@
 
     <!-- Add/Edit Dialog - Modern UI -->
     <v-dialog v-model="dialog" max-width="800px" persistent scrollable>
-      <v-card class="modern-dialog">
-        <v-card-title class="dialog-header">
+      <v-card class="modern-dialog deductions-dialog">
+        <v-card-title class="dialog-header deductions-dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
               editMode ? "mdi-pencil" : "mdi-cash-minus"
@@ -400,9 +415,30 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content deductions-dialog-content"
+          style="max-height: 70vh"
+          @keydown.capture="handleDeductionFormKeydown"
+        >
           <v-form ref="form" v-model="formValid">
-            <v-row>
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
+
+            <v-stepper
+              v-model="deductionStep"
+              :items="deductionStepItems"
+              flat
+              density="compact"
+              class="mb-4"
+            ></v-stepper>
+
+            <v-row v-if="deductionStep === 1">
               <v-col cols="12">
                 <div class="section-header">
                   <div class="section-icon">
@@ -716,7 +752,9 @@
                   </template>
                 </v-text-field>
               </v-col>
+            </v-row>
 
+            <v-row v-if="deductionStep === 2">
               <v-col cols="12" class="mt-4">
                 <div class="section-header">
                   <div class="section-icon">
@@ -839,19 +877,40 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions deductions-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            v-if="deductionStep > 1"
+            variant="text"
+            color="primary"
+            @click="deductionStep = deductionStep - 1"
+            :disabled="saving"
+          >
+            Back
+          </v-btn>
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="closeDialog"
             :disabled="saving"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            v-if="deductionStep === 1"
+            color="primary"
+            variant="flat"
+            @click="deductionStep = 2"
+            :disabled="!canProceedDeductionStepOne || saving"
+          >
+            Next
+          </v-btn>
+          <v-btn
+            v-else
+            color="#ED985F"
+            variant="flat"
             @click="saveDeduction"
-            :disabled="!formValid || saving"
+            :disabled="!canSaveDeduction || saving"
           >
             <v-progress-circular
               v-if="saving"
@@ -872,7 +931,7 @@
                   ? "Update Deduction"
                   : "Create Deduction"
             }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1044,14 +1103,15 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions deductions-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="detailsDialog = false"
           >
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1068,6 +1128,7 @@ import api from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const toast = useToast();
 const route = useRoute();
@@ -1150,6 +1211,8 @@ const form = ref(null);
 const selectedDeduction = ref(null);
 const selectionMode = ref("individual");
 const affectedEmployeesCount = ref(0);
+const deductionStep = ref(1);
+const deductionStepItems = ["Employee & Type", "Amount & Schedule"];
 
 // Filters
 const filters = ref({
@@ -1180,9 +1243,81 @@ const defaultFormData = {
 
 const formData = ref({ ...defaultFormData });
 
+const canProceedDeductionStepOne = computed(() => {
+  const hasType =
+    !!formData.value.deduction_type &&
+    (formData.value.deduction_type !== "custom" ||
+      !!formData.value.custom_deduction_type);
+
+  if (!hasType) return false;
+
+  if (editMode.value) return true;
+
+  if (selectionMode.value === "individual") {
+    return !!formData.value.employee_id;
+  }
+
+  if (selectionMode.value === "multiple") {
+    return (
+      Array.isArray(formData.value.employee_ids) &&
+      formData.value.employee_ids.length > 0
+    );
+  }
+
+  if (selectionMode.value === "department") {
+    return !!formData.value.department;
+  }
+
+  if (selectionMode.value === "position") {
+    return !!formData.value.position;
+  }
+
+  return false;
+});
+
+const canSaveDeduction = computed(() => {
+  return (
+    canProceedDeductionStepOne.value &&
+    Number(formData.value.total_amount) > 0 &&
+    Number(formData.value.installments) > 0 &&
+    !!formData.value.start_date
+  );
+});
+
+const { handleKeydown: handleDeductionFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!saving.value && canSaveDeduction.value) {
+      saveDeduction();
+    }
+  },
+});
+
 // Computed - Filter deductions by category tab
 const filteredDeductions = computed(() => {
   return deductions.value;
+});
+
+const hasActiveFilters = computed(() => {
+  return (
+    !!filters.value.search ||
+    !!filters.value.department ||
+    !!filters.value.position ||
+    !!filters.value.deduction_type ||
+    !!filters.value.status
+  );
+});
+
+const activeFilterCount = computed(() => {
+  return [
+    filters.value.search,
+    filters.value.department,
+    filters.value.position,
+    filters.value.deduction_type,
+    filters.value.status,
+  ].filter(Boolean).length;
 });
 
 // Custom filter for employee autocomplete
@@ -1411,6 +1546,7 @@ const loadEmployeesByFilter = async () => {
 // Open dialogs
 const openAddDialog = () => {
   editMode.value = false;
+  deductionStep.value = 1;
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
@@ -1419,6 +1555,7 @@ const openAddDialog = () => {
 
 const openEditDialog = (deduction) => {
   editMode.value = true;
+  deductionStep.value = 1;
   selectedDeduction.value = deduction;
   const baseTypeValues = baseDeductionTypes.map((type) => type.value);
   const isKnownType = baseTypeValues.includes(deduction.deduction_type);
@@ -1441,6 +1578,7 @@ const openEditDialog = (deduction) => {
 const closeDialog = () => {
   dialog.value = false;
   editMode.value = false;
+  deductionStep.value = 1;
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
@@ -1751,6 +1889,22 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.deductions-dialog-header {
+  padding: 16px 20px;
+}
+
+.deductions-dialog-content {
+  padding: 16px 20px 10px;
+}
+
+.deductions-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+}
+
 .dialog-header {
   display: flex;
   align-items: center;
@@ -1838,53 +1992,6 @@ onBeforeUnmount(() => {
   padding: 16px 24px;
   background: rgba(0, 31, 61, 0.02);
   gap: 12px;
-}
-
-.dialog-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  white-space: nowrap;
-  min-width: 120px;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &.dialog-btn-cancel {
-    background: white;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
-
-    &:hover:not(:disabled) {
-      background: #f8f9fa;
-      border-color: #cbd5e1;
-    }
-  }
-
-  &.dialog-btn-primary {
-    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-    color: white;
-    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(237, 152, 95, 0.35);
-      transform: translateY(-1px);
-    }
-
-    .v-icon {
-      color: white;
-    }
-  }
 }
 
 .form-field-wrapper {

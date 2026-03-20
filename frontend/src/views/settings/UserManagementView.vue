@@ -119,6 +119,25 @@
           clearable
           class="filter-select"
         ></v-select>
+
+        <v-btn
+          variant="tonal"
+          color="grey"
+          prepend-icon="mdi-filter-remove"
+          @click="clearTableFilters"
+          :disabled="!hasActiveFilters"
+        >
+          Clear
+        </v-btn>
+
+        <v-chip
+          v-if="hasActiveFilters"
+          size="small"
+          color="info"
+          variant="tonal"
+        >
+          {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+        </v-chip>
       </div>
 
       <v-data-table
@@ -265,12 +284,30 @@
             </v-tooltip>
           </div>
         </template>
+
+        <template v-slot:no-data>
+          <div class="text-center py-8">
+            <v-icon size="54" color="grey">mdi-account-search-outline</v-icon>
+            <p class="text-h6 mt-3 mb-1">No users found</p>
+            <p class="text-body-2 text-medium-emphasis mb-4">
+              Try changing your search, role, or status filter.
+            </p>
+            <v-btn
+              variant="outlined"
+              color="primary"
+              @click="clearTableFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
+          </div>
+        </template>
       </v-data-table>
     </div>
 
     <!-- Add/Edit User Dialog -->
     <v-dialog v-model="showUserDialog" max-width="700px" persistent>
-      <v-card class="modern-dialog">
+      <v-card class="modern-dialog user-dialog-card">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">
@@ -293,8 +330,16 @@
 
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content">
+        <v-card-text class="dialog-content user-dialog-content">
           <v-form ref="formRef">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <v-row>
               <v-col cols="12">
                 <label class="form-label">
@@ -447,17 +492,19 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions user-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="closeUserDialog"
             :disabled="saving"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             @click="saveUser"
             :disabled="saving"
           >
@@ -470,7 +517,7 @@
             ></v-progress-circular>
             <v-icon v-else size="20" class="mr-2">mdi-content-save</v-icon>
             {{ isEditMode ? "Update User" : "Create User" }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -552,14 +599,15 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions user-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="showViewDialog = false"
           >
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -592,17 +640,19 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions user-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="showDeleteDialog = false"
             :disabled="deleting"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-error"
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
             @click="deleteUser"
             :disabled="deleting"
           >
@@ -615,7 +665,7 @@
             ></v-progress-circular>
             <v-icon v-else size="20" class="mr-2">mdi-delete</v-icon>
             Delete User
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -683,19 +733,20 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
-          <button class="dialog-btn dialog-btn-cancel" @click="copyCredentials">
+        <v-card-actions class="dialog-actions user-dialog-actions">
+          <v-btn variant="outlined" color="grey" @click="copyCredentials">
             <v-icon size="20" class="mr-2">mdi-content-copy</v-icon>
             Copy Credentials
-          </button>
+          </v-btn>
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             @click="showPasswordDialog = false"
           >
             <v-icon size="20" class="mr-2">mdi-check</v-icon>
             Done
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -798,6 +849,24 @@ const filteredUsers = computed(() => {
 
   return filtered;
 });
+
+const hasActiveFilters = computed(() => {
+  return (
+    !!search.value || roleFilter.value !== null || statusFilter.value !== null
+  );
+});
+
+const activeFilterCount = computed(() => {
+  return [search.value, roleFilter.value, statusFilter.value].filter(
+    (value) => value !== null && value !== "",
+  ).length;
+});
+
+function clearTableFilters() {
+  search.value = "";
+  roleFilter.value = null;
+  statusFilter.value = null;
+}
 
 function getRoleColor(role) {
   const colors = {
@@ -1425,6 +1494,11 @@ onMounted(() => {
   padding: 24px !important;
 }
 
+.user-dialog-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .form-label {
   display: flex;
   align-items: center;
@@ -1440,46 +1514,12 @@ onMounted(() => {
   background: #f8f9fa;
 }
 
-.dialog-btn {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dialog-btn-cancel {
-  background: #e0e0e0;
-  color: #666;
-}
-
-.dialog-btn-cancel:hover {
-  background: #d0d0d0;
-}
-
-.dialog-btn-primary {
-  background: linear-gradient(135deg, #ed985f 0%, #f5b98c 100%);
-  color: white;
-}
-
-.dialog-btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-}
-
-.dialog-btn-error {
-  background: linear-gradient(135deg, #f44336 0%, #e57373 100%);
-  color: white;
-}
-
-.dialog-btn-error:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+.user-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
 }
 
 /* User Detail Grid */

@@ -75,6 +75,18 @@
           hide-details
           clearable
         ></v-text-field>
+        <v-btn
+          variant="tonal"
+          color="grey"
+          prepend-icon="mdi-filter-remove"
+          @click="clearTableFilters"
+          :disabled="!hasActiveFilters"
+        >
+          Clear
+        </v-btn>
+        <v-chip v-if="hasActiveFilters" size="small" color="info" variant="tonal">
+          {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+        </v-chip>
       </div>
 
       <!-- Data Table -->
@@ -155,6 +167,15 @@
               mdi-file-document-outline
             </v-icon>
             <p>No resume submissions found</p>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearTableFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -386,6 +407,20 @@ const filteredResumes = computed(() => {
   }
   return resumes.value.filter((resume) => resume.status === activeTab.value);
 });
+
+const hasActiveFilters = computed(() => {
+  return activeTab.value !== "all" || !!searchQuery.value;
+});
+
+const activeFilterCount = computed(() => {
+  return [activeTab.value !== "all", !!searchQuery.value].filter(Boolean)
+    .length;
+});
+
+function clearTableFilters() {
+  activeTab.value = "all";
+  searchQuery.value = "";
+}
 
 onMounted(() => {
   fetchResumes();

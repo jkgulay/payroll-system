@@ -129,6 +129,16 @@
               Clear Filters
             </v-btn>
           </v-col>
+          <v-col
+            cols="12"
+            md="auto"
+            class="d-flex align-center"
+            v-if="hasActiveFilters"
+          >
+            <v-chip size="small" color="info" variant="tonal">
+              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+            </v-chip>
+          </v-col>
         </v-row>
       </div>
 
@@ -232,6 +242,15 @@
             <p class="text-body-2 text-medium-emphasis">
               No salary adjustments match your current filters
             </p>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -240,7 +259,7 @@
 
     <!-- Add/Edit Dialog -->
     <v-dialog v-model="dialog" max-width="650" persistent scrollable>
-      <v-card class="modern-dialog">
+      <v-card class="modern-dialog adjustment-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
@@ -262,8 +281,20 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content adjustment-dialog-content"
+          style="max-height: 70vh"
+          @keydown.capture="handleAdjustmentFormKeydown"
+        >
           <v-form ref="formRef" v-model="formValid">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <v-row>
               <v-col cols="12">
                 <div class="section-header">
@@ -386,13 +417,14 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions adjustment-dialog-actions">
           <v-spacer></v-spacer>
-          <button class="dialog-btn dialog-btn-cancel" @click="closeDialog">
+          <v-btn variant="outlined" color="grey" @click="closeDialog">
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             :disabled="!formValid || saving"
             @click="saveAdjustment"
           >
@@ -407,7 +439,7 @@
               isEditing ? "mdi-check" : "mdi-plus"
             }}</v-icon>
             {{ isEditing ? "Update" : "Create" }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -433,16 +465,18 @@
           </p>
         </v-card-text>
         <v-divider></v-divider>
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions adjustment-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="deleteDialog = false"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-danger"
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
             :disabled="deleting"
             @click="deleteAdjustment"
           >
@@ -455,7 +489,7 @@
             ></v-progress-circular>
             <v-icon v-else size="18" color="white">mdi-delete</v-icon>
             Delete
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -559,14 +593,11 @@
           </div>
         </v-card-text>
         <v-divider></v-divider>
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions adjustment-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
-            @click="viewDialog = false"
-          >
+          <v-btn variant="outlined" color="grey" @click="viewDialog = false">
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -581,6 +612,7 @@ import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import moduleAccessService from "@/services/moduleAccessService";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const toast = useToast();
 const route = useRoute();
@@ -692,6 +724,22 @@ const hasActiveFilters = computed(() => {
   return (
     statusFilter.value !== "all" || typeFilter.value !== "all" || !!search.value
   );
+});
+
+const activeFilterCount = computed(() => {
+  return [search.value, statusFilter.value !== "all", typeFilter.value !== "all"]
+    .filter(Boolean).length;
+});
+
+const { handleKeydown: handleAdjustmentFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!saving.value && formValid.value) {
+      saveAdjustment();
+    }
+  },
 });
 
 const filteredAdjustments = computed(() => {
@@ -918,17 +966,15 @@ onMounted(async () => {
   color: #001f3d;
 }
 
-// Delete dialog button
-.dialog-btn-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.adjustment-dialog-content {
+  padding-bottom: 10px;
+}
 
-  &:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
-    transform: translateY(-1px);
-  }
+.adjustment-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
 }
 </style>

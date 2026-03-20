@@ -296,30 +296,29 @@
           </v-alert>
         </v-card-text>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions leave-dialog-actions">
           <v-spacer></v-spacer>
-          <button
+          <v-btn
             v-if="selectedLeave.status === 'pending'"
-            class="dialog-btn dialog-btn-success"
+            color="success"
+            variant="flat"
             @click="openApproveDialog(selectedLeave)"
           >
             <v-icon size="18">mdi-check</v-icon>
             Approve
-          </button>
-          <button
+          </v-btn>
+          <v-btn
             v-if="selectedLeave.status === 'pending'"
-            class="dialog-btn dialog-btn-danger"
+            color="error"
+            variant="flat"
             @click="openRejectDialog(selectedLeave)"
           >
             <v-icon size="18">mdi-close</v-icon>
             Reject
-          </button>
-          <button
-            class="dialog-btn dialog-btn-cancel"
-            @click="showViewDialog = false"
-          >
+          </v-btn>
+          <v-btn variant="outlined" color="grey" @click="showViewDialog = false">
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -392,17 +391,15 @@
           ></v-textarea>
         </v-card-text>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions leave-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
-            @click="closeApproveDialog"
-          >
+          <v-btn variant="outlined" color="grey" @click="closeApproveDialog">
             <v-icon size="18">mdi-close</v-icon>
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-success"
+          </v-btn>
+          <v-btn
+            color="success"
+            variant="flat"
             :disabled="approving"
             @click="confirmApprove"
           >
@@ -415,7 +412,7 @@
             ></v-progress-circular>
             <v-icon v-else size="18">mdi-check</v-icon>
             Approve
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -473,17 +470,15 @@
           ></v-textarea>
         </v-card-text>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions leave-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
-            @click="closeRejectDialog"
-          >
+          <v-btn variant="outlined" color="grey" @click="closeRejectDialog">
             <v-icon size="18">mdi-close</v-icon>
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-danger"
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
             :disabled="rejecting || !rejectData.rejection_reason"
             @click="confirmReject"
           >
@@ -496,7 +491,7 @@
             ></v-progress-circular>
             <v-icon v-else size="18">mdi-close-circle</v-icon>
             Reject
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -979,6 +974,13 @@ onMounted(() => {
   }
 }
 
+.leave-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff !important;
+}
+
 // Detail Row (View Dialog)
 .detail-row {
   display: grid;
@@ -1029,71 +1031,6 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
-}
-
-// Dialog Buttons
-.dialog-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-
-  .v-icon {
-    flex-shrink: 0;
-    color: inherit !important;
-  }
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  &.dialog-btn-cancel {
-    background: rgba(0, 31, 61, 0.06);
-    color: rgba(0, 31, 61, 0.8);
-
-    &:hover:not(:disabled) {
-      background: rgba(0, 31, 61, 0.1);
-    }
-  }
-
-  &.dialog-btn-success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-
-    .v-icon {
-      color: #ffffff !important;
-    }
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-    }
-  }
-
-  &.dialog-btn-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-
-    .v-icon {
-      color: #ffffff !important;
-    }
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-    }
-  }
 }
 
 // Confirmation Message
