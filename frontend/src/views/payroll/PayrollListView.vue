@@ -199,10 +199,10 @@
     </div>
 
     <!-- Create/Edit Dialog - Modern UI -->
-    <v-dialog v-model="dialog" max-width="800px" persistent scrollable>
-      <v-card class="modern-dialog">
+    <v-dialog v-model="dialog" max-width="860px" persistent scrollable>
+      <v-card class="modern-dialog payroll-form-dialog">
         <!-- Enhanced Header -->
-        <v-card-title class="dialog-header">
+        <v-card-title class="dialog-header payroll-dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
               editMode ? "mdi-pencil" : "mdi-cash-multiple"
@@ -223,8 +223,26 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
-          <v-form ref="form" v-model="valid">
+        <v-card-text
+          class="dialog-content payroll-dialog-content"
+          style="max-height: 76vh"
+        >
+          <v-form ref="form" v-model="valid" class="payroll-form">
+            <v-alert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-3"
+            >
+              <template v-slot:prepend>
+                <v-icon icon="mdi-lightbulb-on-outline"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fill in the payroll dates first, then choose optional filters and
+                deductions.
+              </div>
+            </v-alert>
+
             <!-- Section 1: Basic Information -->
             <v-col cols="12" class="px-0">
               <div class="section-header">
@@ -236,7 +254,7 @@
             </v-col>
 
             <!-- Period Name -->
-            <div class="form-field-wrapper mt-3">
+            <div class="form-field-wrapper mt-2">
               <label class="form-label">
                 <v-icon size="small" color="#ed985f">mdi-label</v-icon>
                 Period Name <span class="text-error">*</span>
@@ -245,17 +263,19 @@
                 v-model="formData.period_name"
                 placeholder="Enter period name"
                 :rules="[(v) => !!v || 'Period name is required']"
+                hint="Example: March 1–15, 2026"
+                persistent-hint
                 required
                 variant="outlined"
-                density="comfortable"
+                density="compact"
                 prepend-inner-icon="mdi-label"
                 color="#ed985f"
               ></v-text-field>
             </div>
 
-            <v-row>
+            <v-row class="payroll-dates-row">
               <!-- Period Start -->
-              <v-col cols="6">
+              <v-col cols="12" sm="6">
                 <div class="form-field-wrapper">
                   <label class="form-label">
                     <v-icon size="small" color="#ed985f"
@@ -267,10 +287,10 @@
                     v-model="formData.period_start"
                     type="date"
                     placeholder="Select start date"
-                    :rules="[(v) => !!v || 'Start date is required']"
+                    :rules="startDateRules"
                     required
                     variant="outlined"
-                    density="comfortable"
+                    density="compact"
                     prepend-inner-icon="mdi-calendar-start"
                     color="#ed985f"
                   ></v-text-field>
@@ -278,7 +298,7 @@
               </v-col>
 
               <!-- Period End -->
-              <v-col cols="6">
+              <v-col cols="12" sm="6">
                 <div class="form-field-wrapper">
                   <label class="form-label">
                     <v-icon size="small" color="#ed985f"
@@ -290,10 +310,10 @@
                     v-model="formData.period_end"
                     type="date"
                     placeholder="Select end date"
-                    :rules="[(v) => !!v || 'End date is required']"
+                    :rules="endDateRules"
                     required
                     variant="outlined"
-                    density="comfortable"
+                    density="compact"
                     prepend-inner-icon="mdi-calendar-end"
                     color="#ed985f"
                   ></v-text-field>
@@ -311,17 +331,17 @@
                 v-model="formData.payment_date"
                 type="date"
                 placeholder="Select payment date"
-                :rules="[(v) => !!v || 'Payment date is required']"
+                :rules="paymentDateRules"
                 required
                 variant="outlined"
-                density="comfortable"
+                density="compact"
                 prepend-inner-icon="mdi-calendar-check"
                 color="#ed985f"
               ></v-text-field>
             </div>
 
             <!-- Section 2: Employee Selection -->
-            <v-col cols="12" class="px-0 mt-5">
+            <v-col cols="12" class="px-0 mt-4">
               <div class="section-header">
                 <div class="section-icon">
                   <v-icon size="18">mdi-account-group</v-icon>
@@ -330,7 +350,7 @@
               </div>
             </v-col>
 
-            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
               <template v-slot:prepend>
                 <v-icon icon="mdi-information"></v-icon>
               </template>
@@ -349,11 +369,12 @@
               hint="Exclude employees who have no attendance records in this payroll period"
               persistent-hint
               color="#ed985f"
-              class="mb-4"
+              density="compact"
+              class="mb-3 payroll-checkbox"
             ></v-checkbox>
 
             <!-- Section 3: Government Contributions -->
-            <v-col cols="12" class="px-0 mt-5">
+            <v-col cols="12" class="px-0 mt-4">
               <div class="section-header">
                 <div class="section-icon">
                   <v-icon size="18">mdi-bank</v-icon>
@@ -362,7 +383,7 @@
               </div>
             </v-col>
 
-            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
               <template v-slot:prepend>
                 <v-icon icon="mdi-information"></v-icon>
               </template>
@@ -373,8 +394,8 @@
               </div>
             </v-alert>
 
-            <v-row>
-              <v-col cols="4">
+            <v-row class="mt-n2">
+              <v-col cols="12" md="4">
                 <v-checkbox
                   v-model="formData.deduct_sss"
                   label="SSS"
@@ -382,9 +403,11 @@
                   hint="Social Security System"
                   persistent-hint
                   color="#ed985f"
+                  density="compact"
+                  class="payroll-checkbox"
                 ></v-checkbox>
               </v-col>
-              <v-col cols="4">
+              <v-col cols="12" md="4">
                 <v-checkbox
                   v-model="formData.deduct_philhealth"
                   label="PhilHealth"
@@ -392,9 +415,11 @@
                   hint="Philippine Health Insurance"
                   persistent-hint
                   color="#ed985f"
+                  density="compact"
+                  class="payroll-checkbox"
                 ></v-checkbox>
               </v-col>
-              <v-col cols="4">
+              <v-col cols="12" md="4">
                 <v-checkbox
                   v-model="formData.deduct_pagibig"
                   label="Pag-IBIG"
@@ -402,14 +427,29 @@
                   hint="Home Development Mutual Fund"
                   persistent-hint
                   color="#ed985f"
+                  density="compact"
+                  class="payroll-checkbox"
                 ></v-checkbox>
               </v-col>
             </v-row>
 
+            <div class="d-flex justify-space-between align-center mb-3">
+              <div class="text-caption text-medium-emphasis">
+                Enabled deductions for this payroll
+              </div>
+              <v-chip size="small" color="#ed985f" variant="tonal">
+                {{ selectedContributionCount }} selected
+              </v-chip>
+            </div>
+
             <v-textarea
               v-model="formData.notes"
               label="Notes (Optional)"
-              rows="3"
+              rows="2"
+              counter="300"
+              maxlength="300"
+              variant="outlined"
+              density="compact"
               prepend-icon="mdi-note-text"
             ></v-textarea>
           </v-form>
@@ -417,19 +457,21 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions payroll-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="closeDialog"
             :disabled="saving"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             @click="savePayroll"
-            :disabled="saving"
+            :disabled="isSaveDisabled"
           >
             <v-progress-circular
               v-if="saving"
@@ -447,10 +489,10 @@
                   ? "Updating..."
                   : "Creating..."
                 : editMode
-                  ? "Update"
-                  : "Create"
+                  ? "Update Payroll"
+                  : "Create Payroll"
             }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -876,6 +918,36 @@ const formData = ref({
   deduct_pagibig: true,
 });
 
+const startDateRules = [(value) => !!value || "Start date is required"];
+
+const endDateRules = [
+  (value) => !!value || "End date is required",
+  (value) => {
+    if (!value || !formData.value.period_start) return true;
+    return value >= formData.value.period_start || "End date must be on/after start date";
+  },
+];
+
+const paymentDateRules = [
+  (value) => !!value || "Payment date is required",
+  (value) => {
+    if (!value || !formData.value.period_end) return true;
+    return value >= formData.value.period_end || "Payment date must be on/after period end";
+  },
+];
+
+const selectedContributionCount = computed(() => {
+  return [
+    formData.value.deduct_sss,
+    formData.value.deduct_philhealth,
+    formData.value.deduct_pagibig,
+  ].filter(Boolean).length;
+});
+
+const isSaveDisabled = computed(() => {
+  return saving.value;
+});
+
 const headers = [
   { title: "Payroll #", key: "payroll_number", sortable: true },
   { title: "Period", key: "period", sortable: false },
@@ -936,6 +1008,7 @@ function editPayroll(item) {
     period_end: item.period_end,
     payment_date: item.payment_date,
     notes: item.notes || "",
+    has_attendance: Boolean(item.has_attendance),
     deduct_sss: item.deduct_sss !== false,
     deduct_philhealth: item.deduct_philhealth !== false,
     deduct_pagibig: item.deduct_pagibig !== false,
@@ -1125,6 +1198,56 @@ async function saveSignatureSettings() {
 .payroll-page {
   max-width: 1600px;
   margin: 0 auto;
+}
+
+.payroll-form-dialog {
+  border-radius: 14px !important;
+}
+
+.payroll-dialog-header {
+  padding: 14px 18px !important;
+}
+
+.payroll-dialog-content {
+  padding: 14px 18px 8px !important;
+}
+
+.payroll-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.payroll-dates-row {
+  margin-top: -4px;
+}
+
+.payroll-checkbox {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.payroll-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  padding: 10px 18px !important;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+  z-index: 2;
+}
+
+.form-field-wrapper {
+  margin-bottom: 2px;
+}
+
+.form-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #001f3d;
 }
 
 // Delete Dialog - Modern Design
@@ -1466,7 +1589,7 @@ async function saveSignatureSettings() {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 12px 14px;
   background: linear-gradient(
     135deg,
     rgba(0, 31, 61, 0.02) 0%,
@@ -1478,9 +1601,9 @@ async function saveSignatureSettings() {
 }
 
 .section-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   display: flex;
   align-items: center;
@@ -1494,7 +1617,7 @@ async function saveSignatureSettings() {
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #001f3d;
   margin: 0;
