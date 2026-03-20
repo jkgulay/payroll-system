@@ -88,6 +88,28 @@
               hide-details
             ></v-text-field>
           </v-col>
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="statusFilter"
+              :items="statusFilterOptions"
+              item-title="title"
+              item-value="value"
+              label="Filter by status"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+            ></v-select>
+          </v-col>
+          <v-col cols="auto">
+            <v-btn
+              variant="tonal"
+              color="grey"
+              prepend-icon="mdi-filter-remove"
+              @click="clearTableFilters"
+            >
+              Clear
+            </v-btn>
+          </v-col>
           <v-col cols="auto">
             <v-btn
               color="#ED985F"
@@ -104,8 +126,7 @@
       <div class="table-section">
         <v-data-table
           :headers="headers"
-          :items="payrolls"
-          :search="search"
+          :items="filteredPayrolls"
           :loading="loading"
           :items-per-page="15"
           class="elevation-1"
@@ -193,6 +214,19 @@
                 </v-list-item>
               </v-list>
             </v-menu>
+          </template>
+
+          <template v-slot:no-data>
+            <div class="text-center py-8">
+              <v-icon size="54" color="grey">mdi-file-search-outline</v-icon>
+              <p class="text-h6 mt-3 mb-1">No payroll records found</p>
+              <p class="text-body-2 text-medium-emphasis mb-4">
+                Try adjusting search or status filter.
+              </p>
+              <v-btn variant="outlined" color="primary" @click="clearTableFilters">
+                Clear filters
+              </v-btn>
+            </div>
           </template>
         </v-data-table>
       </div>
@@ -881,6 +915,7 @@ const loading = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
 const search = ref("");
+const statusFilter = ref("all");
 const dialog = ref(false);
 const deleteDialog = ref(false);
 const validationWarningDialog = ref(false);
@@ -967,6 +1002,38 @@ const stats = computed(() => {
   };
 });
 
+const statusFilterOptions = [
+  { title: "All Statuses", value: "all" },
+  { title: "Draft", value: "draft" },
+  { title: "Finalized", value: "finalized" },
+  { title: "Paid", value: "paid" },
+];
+
+const filteredPayrolls = computed(() => {
+  const term = search.value.trim().toLowerCase();
+
+  return payrolls.value.filter((item) => {
+    const statusMatch =
+      statusFilter.value === "all" || item.status === statusFilter.value;
+
+    if (!statusMatch) return false;
+    if (!term) return true;
+
+    const values = [
+      item.payroll_number,
+      item.period_name,
+      item.status,
+      item.payment_date,
+      String(item.items_count ?? ""),
+      String(item.total_net ?? ""),
+    ];
+
+    return values.some((value) =>
+      value?.toString().toLowerCase().includes(term),
+    );
+  });
+});
+
 onMounted(() => {
   fetchPayrolls();
 });
@@ -1019,6 +1086,11 @@ function editPayroll(item) {
 function closeDialog() {
   dialog.value = false;
   selectedPayroll.value = null;
+}
+
+function clearTableFilters() {
+  search.value = "";
+  statusFilter.value = "all";
 }
 
 async function savePayroll(forceCreate = false) {
