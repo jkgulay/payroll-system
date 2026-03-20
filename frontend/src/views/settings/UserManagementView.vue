@@ -119,6 +119,25 @@
           clearable
           class="filter-select"
         ></v-select>
+
+        <v-btn
+          variant="tonal"
+          color="grey"
+          prepend-icon="mdi-filter-remove"
+          @click="clearTableFilters"
+          :disabled="!hasActiveFilters"
+        >
+          Clear
+        </v-btn>
+
+        <v-chip
+          v-if="hasActiveFilters"
+          size="small"
+          color="info"
+          variant="tonal"
+        >
+          {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+        </v-chip>
       </div>
 
       <v-data-table
@@ -263,6 +282,24 @@
                 </v-btn>
               </template>
             </v-tooltip>
+          </div>
+        </template>
+
+        <template v-slot:no-data>
+          <div class="text-center py-8">
+            <v-icon size="54" color="grey">mdi-account-search-outline</v-icon>
+            <p class="text-h6 mt-3 mb-1">No users found</p>
+            <p class="text-body-2 text-medium-emphasis mb-4">
+              Try changing your search, role, or status filter.
+            </p>
+            <v-btn
+              variant="outlined"
+              color="primary"
+              @click="clearTableFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -812,6 +849,24 @@ const filteredUsers = computed(() => {
 
   return filtered;
 });
+
+const hasActiveFilters = computed(() => {
+  return (
+    !!search.value || roleFilter.value !== null || statusFilter.value !== null
+  );
+});
+
+const activeFilterCount = computed(() => {
+  return [search.value, roleFilter.value, statusFilter.value].filter(
+    (value) => value !== null && value !== "",
+  ).length;
+});
+
+function clearTableFilters() {
+  search.value = "";
+  roleFilter.value = null;
+  statusFilter.value = null;
+}
 
 function getRoleColor(role) {
   const colors = {

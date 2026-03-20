@@ -161,8 +161,14 @@
               variant="tonal"
               icon="mdi-filter-remove"
               @click="clearFilters"
+              :disabled="!hasActiveFilters"
               title="Clear Filters"
             ></v-btn>
+          </v-col>
+          <v-col cols="auto" class="d-flex align-center" v-if="hasActiveFilters">
+            <v-chip size="small" color="info" variant="tonal">
+              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+            </v-chip>
           </v-col>
         </v-row>
       </div>
@@ -302,6 +308,25 @@
               </v-list-item>
             </v-list>
           </v-menu>
+        </template>
+
+        <template v-slot:no-data>
+          <div class="text-center py-8">
+            <v-icon size="64" color="grey">mdi-cash-lock</v-icon>
+            <p class="text-h6 mt-4">No cash bonds found</p>
+            <p class="text-body-2 text-medium-emphasis">
+              No cash bond records match your current filters.
+            </p>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
+          </div>
         </template>
       </v-data-table>
       </template>
@@ -878,6 +903,15 @@ const statusOptions = [
   { title: "Completed", value: "completed" },
   { title: "Cancelled", value: "cancelled" },
 ];
+
+const hasActiveFilters = computed(() => {
+  return !!filters.value.employee_id || !!filters.value.status;
+});
+
+const activeFilterCount = computed(() => {
+  return [filters.value.employee_id, filters.value.status].filter(Boolean)
+    .length;
+});
 
 // Form
 const form = ref({

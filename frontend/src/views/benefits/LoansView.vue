@@ -186,9 +186,18 @@
             variant="tonal"
             icon="mdi-filter-remove"
             @click="clearFilters"
+            :disabled="!hasActiveFilters"
             title="Clear Filters"
             size="small"
           ></v-btn>
+          <v-chip
+            v-if="hasActiveFilters"
+            size="small"
+            color="info"
+            variant="tonal"
+          >
+            {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+          </v-chip>
         </div>
       </div>
 
@@ -356,6 +365,15 @@
                   : "Add a loan to get started"
               }}
             </p>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -1225,6 +1243,19 @@ const totalBalance = computed(() => {
     const balance = parseFloat(loan.balance) || 0;
     return sum + balance;
   }, 0);
+});
+
+const hasActiveFilters = computed(() => {
+  return (
+    !!filters.value.employee_id ||
+    !!filters.value.loan_type ||
+    !!filters.value.status
+  );
+});
+
+const activeFilterCount = computed(() => {
+  return [filters.value.employee_id, filters.value.loan_type, filters.value.status]
+    .filter(Boolean).length;
 });
 
 // Options

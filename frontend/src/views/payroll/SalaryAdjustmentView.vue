@@ -129,6 +129,16 @@
               Clear Filters
             </v-btn>
           </v-col>
+          <v-col
+            cols="12"
+            md="auto"
+            class="d-flex align-center"
+            v-if="hasActiveFilters"
+          >
+            <v-chip size="small" color="info" variant="tonal">
+              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+            </v-chip>
+          </v-col>
         </v-row>
       </div>
 
@@ -232,6 +242,15 @@
             <p class="text-body-2 text-medium-emphasis">
               No salary adjustments match your current filters
             </p>
+            <v-btn
+              class="mt-3"
+              variant="outlined"
+              color="primary"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              Clear filters
+            </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -703,6 +722,11 @@ const hasActiveFilters = computed(() => {
   return (
     statusFilter.value !== "all" || typeFilter.value !== "all" || !!search.value
   );
+});
+
+const activeFilterCount = computed(() => {
+  return [search.value, statusFilter.value !== "all", typeFilter.value !== "all"]
+    .filter(Boolean).length;
 });
 
 const filteredAdjustments = computed(() => {
