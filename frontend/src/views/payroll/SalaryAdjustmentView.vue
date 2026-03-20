@@ -284,6 +284,7 @@
         <v-card-text
           class="dialog-content adjustment-dialog-content"
           style="max-height: 70vh"
+          @keydown.capture="handleAdjustmentFormKeydown"
         >
           <v-form ref="formRef" v-model="formValid">
             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
@@ -611,6 +612,7 @@ import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import moduleAccessService from "@/services/moduleAccessService";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const toast = useToast();
 const route = useRoute();
@@ -727,6 +729,17 @@ const hasActiveFilters = computed(() => {
 const activeFilterCount = computed(() => {
   return [search.value, statusFilter.value !== "all", typeFilter.value !== "all"]
     .filter(Boolean).length;
+});
+
+const { handleKeydown: handleAdjustmentFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!saving.value && formValid.value) {
+      saveAdjustment();
+    }
+  },
 });
 
 const filteredAdjustments = computed(() => {

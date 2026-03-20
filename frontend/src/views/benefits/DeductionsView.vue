@@ -238,8 +238,14 @@
               variant="tonal"
               icon="mdi-filter-remove"
               @click="clearFilters"
+              :disabled="!hasActiveFilters"
               title="Clear Filters"
             ></v-btn>
+          </v-col>
+          <v-col cols="auto" class="d-flex align-center" v-if="hasActiveFilters">
+            <v-chip size="small" color="info" variant="tonal">
+              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+            </v-chip>
           </v-col>
         </v-row>
       </div>
@@ -360,6 +366,15 @@
                     : "No deductions available"
               }}
             </p>
+              <v-btn
+                class="mt-3"
+                variant="outlined"
+                color="primary"
+                @click="clearFilters"
+                :disabled="!hasActiveFilters"
+              >
+                Clear filters
+              </v-btn>
           </div>
         </template>
       </v-data-table>
@@ -403,6 +418,7 @@
         <v-card-text
           class="dialog-content deductions-dialog-content"
           style="max-height: 70vh"
+          @keydown.capture="handleDeductionFormKeydown"
         >
           <v-form ref="form" v-model="formValid">
             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
@@ -1112,6 +1128,7 @@ import api from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const toast = useToast();
 const route = useRoute();
@@ -1267,9 +1284,40 @@ const canSaveDeduction = computed(() => {
   );
 });
 
+const { handleKeydown: handleDeductionFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!saving.value && canSaveDeduction.value) {
+      saveDeduction();
+    }
+  },
+});
+
 // Computed - Filter deductions by category tab
 const filteredDeductions = computed(() => {
   return deductions.value;
+});
+
+const hasActiveFilters = computed(() => {
+  return (
+    !!filters.value.search ||
+    !!filters.value.department ||
+    !!filters.value.position ||
+    !!filters.value.deduction_type ||
+    !!filters.value.status
+  );
+});
+
+const activeFilterCount = computed(() => {
+  return [
+    filters.value.search,
+    filters.value.department,
+    filters.value.position,
+    filters.value.deduction_type,
+    filters.value.status,
+  ].filter(Boolean).length;
 });
 
 // Custom filter for employee autocomplete

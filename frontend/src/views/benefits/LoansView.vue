@@ -421,6 +421,7 @@
         <v-card-text
           class="dialog-content loans-dialog-content"
           style="max-height: 70vh"
+          @keydown.capture="handleLoanFormKeydown"
         >
           <v-form ref="form" v-model="formValid">
             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
@@ -1091,6 +1092,7 @@ import { useAuthStore } from "@/stores/auth";
 import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import moduleAccessService from "@/services/moduleAccessService";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const toast = useToast();
 const route = useRoute();
@@ -1256,6 +1258,17 @@ const hasActiveFilters = computed(() => {
 const activeFilterCount = computed(() => {
   return [filters.value.employee_id, filters.value.loan_type, filters.value.status]
     .filter(Boolean).length;
+});
+
+const { handleKeydown: handleLoanFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!saving.value && formValid.value) {
+      saveLoan();
+    }
+  },
 });
 
 // Options

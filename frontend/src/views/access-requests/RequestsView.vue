@@ -131,6 +131,19 @@
             style="max-width: 180px"
             class="mr-2"
           ></v-select>
+          <v-btn
+            variant="tonal"
+            color="grey"
+            prepend-icon="mdi-filter-remove"
+            class="mr-2"
+            @click="clearTableFilters"
+            :disabled="!hasActiveFilters"
+          >
+            Clear
+          </v-btn>
+          <v-chip v-if="hasActiveFilters" size="small" color="info" variant="tonal">
+            {{ activeFilterCount }} active filter
+          </v-chip>
         </v-toolbar>
 
         <v-data-table
@@ -203,6 +216,15 @@
               <p class="text-body-2 text-medium-emphasis">
                 There are no {{ statusFilter === 'all' ? '' : statusFilter }} requests at this time.
               </p>
+              <v-btn
+                class="mt-3"
+                variant="outlined"
+                color="primary"
+                @click="clearTableFilters"
+                :disabled="!hasActiveFilters"
+              >
+                Clear filters
+              </v-btn>
             </div>
           </template>
         </v-data-table>
@@ -362,6 +384,13 @@ const filteredRequests = computed(() => {
 
   return filtered;
 });
+
+const hasActiveFilters = computed(() => statusFilter.value !== 'all');
+const activeFilterCount = computed(() => (statusFilter.value !== 'all' ? 1 : 0));
+
+const clearTableFilters = () => {
+  statusFilter.value = 'all';
+};
 
 function getModuleLabel(module) {
   return moduleLabels[module] || module;

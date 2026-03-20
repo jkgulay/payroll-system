@@ -106,9 +106,15 @@
               color="grey"
               prepend-icon="mdi-filter-remove"
               @click="clearTableFilters"
+              :disabled="!hasActiveFilters"
             >
               Clear
             </v-btn>
+          </v-col>
+          <v-col cols="auto" v-if="hasActiveFilters">
+            <v-chip size="small" color="info" variant="tonal">
+              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? "s" : "" }}
+            </v-chip>
           </v-col>
           <v-col cols="auto">
             <v-btn
@@ -223,7 +229,12 @@
               <p class="text-body-2 text-medium-emphasis mb-4">
                 Try adjusting search or status filter.
               </p>
-              <v-btn variant="outlined" color="primary" @click="clearTableFilters">
+              <v-btn
+                variant="outlined"
+                color="primary"
+                @click="clearTableFilters"
+                :disabled="!hasActiveFilters"
+              >
                 Clear filters
               </v-btn>
             </div>
@@ -260,6 +271,7 @@
         <v-card-text
           class="dialog-content payroll-dialog-content"
           style="max-height: 76vh"
+          @keydown.capture="handlePayrollFormKeydown"
         >
           <v-form ref="form" v-model="valid" class="payroll-form">
             <v-alert
@@ -907,6 +919,7 @@ import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const router = useRouter();
 const toast = useToast();
@@ -1032,6 +1045,26 @@ const filteredPayrolls = computed(() => {
       value?.toString().toLowerCase().includes(term),
     );
   });
+});
+
+const hasActiveFilters = computed(() => {
+  return !!search.value.trim() || statusFilter.value !== "all";
+});
+
+const activeFilterCount = computed(() => {
+  return [search.value.trim(), statusFilter.value !== "all"].filter(Boolean)
+    .length;
+});
+
+const { handleKeydown: handlePayrollFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!isSaveDisabled.value) {
+      savePayroll();
+    }
+  },
 });
 
 onMounted(() => {

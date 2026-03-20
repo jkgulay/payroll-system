@@ -23,7 +23,7 @@
         </div>
       </div>
 
-      <v-card-text class="pt-6">
+      <v-card-text class="pt-6" @keydown.capture="handleManualEntryKeydown">
         <v-form ref="form" v-model="valid">
           <v-alert type="info" variant="tonal" density="compact" class="mb-4">
             <template v-slot:prepend>
@@ -269,6 +269,7 @@ import { useAttendanceStore } from "@/stores/attendance";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -307,6 +308,17 @@ const formData = reactive({
 const rules = {
   required: (v) => !!v || "This field is required",
 };
+
+const { handleKeydown: handleManualEntryKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) close();
+  },
+  onSubmitLast: () => {
+    if (manualStep.value === 3 && canProceedManualStepOne() && !saving.value) {
+      save();
+    }
+  },
+});
 
 const canProceedManualStepOne = () => {
   return !!formData.employee_id && !!formData.attendance_date;

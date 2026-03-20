@@ -359,6 +359,7 @@
         <v-card-text
           class="dialog-content cashbond-dialog-content"
           style="max-height: 70vh"
+          @keydown.capture="handleCashBondFormKeydown"
         >
           <v-form ref="bondFormRef" v-model="formValid">
             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
@@ -813,6 +814,7 @@ import { formatDate, formatNumber } from "@/utils/formatters";
 import { devLog } from "@/utils/devLog";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import moduleAccessService from "@/services/moduleAccessService";
+import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -911,6 +913,17 @@ const hasActiveFilters = computed(() => {
 const activeFilterCount = computed(() => {
   return [filters.value.employee_id, filters.value.status].filter(Boolean)
     .length;
+});
+
+const { handleKeydown: handleCashBondFormKeydown } = useKeyboardFirstFlow({
+  onEscape: () => {
+    if (!saving.value) closeDialog();
+  },
+  onSubmitLast: () => {
+    if (!saving.value && formValid.value) {
+      saveCashBond();
+    }
+  },
 });
 
 // Form
