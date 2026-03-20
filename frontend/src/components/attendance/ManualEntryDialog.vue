@@ -4,6 +4,7 @@
     @update:model-value="$emit('update:modelValue', $event)"
     max-width="600"
     persistent
+    scrollable
   >
     <v-card class="modern-dialog">
       <div class="dialog-header">
@@ -24,7 +25,22 @@
 
       <v-card-text class="pt-6">
         <v-form ref="form" v-model="valid">
-          <v-row>
+          <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+            <template v-slot:prepend>
+              <v-icon icon="mdi-information"></v-icon>
+            </template>
+            <div class="text-caption">Fields marked with <strong>*</strong> are required.</div>
+          </v-alert>
+
+          <v-stepper
+            v-model="manualStep"
+            :items="manualStepItems"
+            flat
+            density="compact"
+            class="mb-4"
+          ></v-stepper>
+
+          <v-row v-if="manualStep === 1">
             <v-col cols="12">
               <v-autocomplete
                 v-model="formData.employee_id"
@@ -61,6 +77,9 @@
                 :max="today"
               ></v-text-field>
             </v-col>
+          </v-row>
+
+          <v-row v-if="manualStep === 2">
 
             <v-col cols="12">
               <v-alert
@@ -165,6 +184,9 @@
                 hint="Optional"
               ></v-text-field>
             </v-col>
+          </v-row>
+
+          <v-row v-if="manualStep === 3">
 
             <v-col cols="12">
               <v-textarea
@@ -185,29 +207,58 @@
                 hide-details
               ></v-checkbox>
             </v-col>
+
+            <v-col cols="12">
+              <v-alert type="info" variant="tonal" density="compact">
+                Review attendance details, then click {{ attendance ? "Update" : "Create" }} to submit.
+              </v-alert>
+            </v-col>
           </v-row>
         </v-form>
       </v-card-text>
 
       <div class="dialog-divider"></div>
-      <div class="dialog-actions">
-        <button class="dialog-btn dialog-btn-cancel" @click="close">
-          Cancel
-        </button>
-        <button
-          class="dialog-btn dialog-btn-primary"
-          @click="save"
-          :disabled="!valid || saving"
+      <v-card-actions class="manual-dialog-actions">
+        <v-spacer></v-spacer>
+        <v-btn
+          v-if="manualStep > 1"
+          variant="text"
+          color="primary"
+          @click="manualStep = manualStep - 1"
+          :disabled="saving"
         >
-          <v-icon v-if="saving" size="16" class="rotating">mdi-loading</v-icon>
-          <v-icon v-else size="16">{{
-            attendance ? "mdi-check" : "mdi-plus"
-          }}</v-icon>
-          <span>{{
-            saving ? "Saving..." : attendance ? "Update" : "Create"
-          }}</span>
-        </button>
-      </div>
+          Back
+        </v-btn>
+        <v-btn variant="outlined" color="grey" @click="close" :disabled="saving">
+          Cancel
+        </v-btn>
+        <v-btn
+          v-if="manualStep < 3"
+          color="primary"
+          variant="flat"
+          @click="manualStep = manualStep + 1"
+          :disabled="manualStep === 1 && !canProceedManualStepOne()"
+        >
+          Next
+        </v-btn>
+        <v-btn
+          v-else
+          color="#ED985F"
+          variant="flat"
+          @click="save"
+          :disabled="!canProceedManualStepOne() || saving"
+        >
+          <v-progress-circular
+            v-if="saving"
+            indeterminate
+            size="16"
+            width="2"
+            class="mr-2"
+          ></v-progress-circular>
+          <v-icon v-else size="16" class="mr-1">{{ attendance ? "mdi-check" : "mdi-plus" }}</v-icon>
+          {{ saving ? "Saving..." : attendance ? "Update" : "Create" }}
+        </v-btn>
+      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
@@ -235,6 +286,8 @@ const valid = ref(false);
 const saving = ref(false);
 const loadingEmployees = ref(false);
 const employees = ref([]);
+const manualStep = ref(1);
+const manualStepItems = ["Employee", "Shift Times", "Notes & Submit"];
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -253,6 +306,10 @@ const formData = reactive({
 
 const rules = {
   required: (v) => !!v || "This field is required",
+};
+
+const canProceedManualStepOne = () => {
+  return !!formData.employee_id && !!formData.attendance_date;
 };
 
 const loadEmployees = async () => {
@@ -353,6 +410,7 @@ const save = async () => {
 };
 
 const close = () => {
+  manualStep.value = 1;
   emit("update:modelValue", false);
 };
 
@@ -360,6 +418,7 @@ watch(
   () => props.modelValue,
   (newVal) => {
     if (newVal) {
+      manualStep.value = 1;
       if (props.attendance) {
         // Edit mode - populate form
         Object.assign(formData, {
@@ -461,59 +520,12 @@ onMounted(() => {
   gap: 12px;
 }
 
-.dialog-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-
-  &.dialog-btn-cancel {
-    background: rgba(0, 31, 61, 0.06);
-    color: rgba(0, 31, 61, 0.8);
-    border: 1px solid rgba(0, 31, 61, 0.1);
-
-    &:hover {
-      background: rgba(0, 31, 61, 0.1);
-    }
-  }
-
-  &.dialog-btn-primary {
-    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-
-    .v-icon {
-      color: #ffffff !important;
-    }
-
-    &:not(:disabled):hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.rotating {
-  animation: rotate 1s linear infinite;
+.manual-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+  padding: 14px 20px;
 }
 </style>

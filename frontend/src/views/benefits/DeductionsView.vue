@@ -413,7 +413,16 @@
                 Fields marked with <strong>*</strong> are required.
               </div>
             </v-alert>
-            <v-row>
+
+            <v-stepper
+              v-model="deductionStep"
+              :items="deductionStepItems"
+              flat
+              density="compact"
+              class="mb-4"
+            ></v-stepper>
+
+            <v-row v-if="deductionStep === 1">
               <v-col cols="12">
                 <div class="section-header">
                   <div class="section-icon">
@@ -727,7 +736,9 @@
                   </template>
                 </v-text-field>
               </v-col>
+            </v-row>
 
+            <v-row v-if="deductionStep === 2">
               <v-col cols="12" class="mt-4">
                 <div class="section-header">
                   <div class="section-icon">
@@ -853,6 +864,15 @@
         <v-card-actions class="dialog-actions deductions-dialog-actions">
           <v-spacer></v-spacer>
           <v-btn
+            v-if="deductionStep > 1"
+            variant="text"
+            color="primary"
+            @click="deductionStep = deductionStep - 1"
+            :disabled="saving"
+          >
+            Back
+          </v-btn>
+          <v-btn
             variant="outlined"
             color="grey"
             @click="closeDialog"
@@ -861,10 +881,20 @@
             Cancel
           </v-btn>
           <v-btn
+            v-if="deductionStep === 1"
+            color="primary"
+            variant="flat"
+            @click="deductionStep = 2"
+            :disabled="!canProceedDeductionStepOne || saving"
+          >
+            Next
+          </v-btn>
+          <v-btn
+            v-else
             color="#ED985F"
             variant="flat"
             @click="saveDeduction"
-            :disabled="!formValid || saving"
+            :disabled="!canSaveDeduction || saving"
           >
             <v-progress-circular
               v-if="saving"
@@ -1164,6 +1194,8 @@ const form = ref(null);
 const selectedDeduction = ref(null);
 const selectionMode = ref("individual");
 const affectedEmployeesCount = ref(0);
+const deductionStep = ref(1);
+const deductionStepItems = ["Employee & Type", "Amount & Schedule"];
 
 // Filters
 const filters = ref({
@@ -1193,6 +1225,47 @@ const defaultFormData = {
 };
 
 const formData = ref({ ...defaultFormData });
+
+const canProceedDeductionStepOne = computed(() => {
+  const hasType =
+    !!formData.value.deduction_type &&
+    (formData.value.deduction_type !== "custom" ||
+      !!formData.value.custom_deduction_type);
+
+  if (!hasType) return false;
+
+  if (editMode.value) return true;
+
+  if (selectionMode.value === "individual") {
+    return !!formData.value.employee_id;
+  }
+
+  if (selectionMode.value === "multiple") {
+    return (
+      Array.isArray(formData.value.employee_ids) &&
+      formData.value.employee_ids.length > 0
+    );
+  }
+
+  if (selectionMode.value === "department") {
+    return !!formData.value.department;
+  }
+
+  if (selectionMode.value === "position") {
+    return !!formData.value.position;
+  }
+
+  return false;
+});
+
+const canSaveDeduction = computed(() => {
+  return (
+    canProceedDeductionStepOne.value &&
+    Number(formData.value.total_amount) > 0 &&
+    Number(formData.value.installments) > 0 &&
+    !!formData.value.start_date
+  );
+});
 
 // Computed - Filter deductions by category tab
 const filteredDeductions = computed(() => {
@@ -1425,6 +1498,7 @@ const loadEmployeesByFilter = async () => {
 // Open dialogs
 const openAddDialog = () => {
   editMode.value = false;
+  deductionStep.value = 1;
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
@@ -1433,6 +1507,7 @@ const openAddDialog = () => {
 
 const openEditDialog = (deduction) => {
   editMode.value = true;
+  deductionStep.value = 1;
   selectedDeduction.value = deduction;
   const baseTypeValues = baseDeductionTypes.map((type) => type.value);
   const isKnownType = baseTypeValues.includes(deduction.deduction_type);
@@ -1455,6 +1530,7 @@ const openEditDialog = (deduction) => {
 const closeDialog = () => {
   dialog.value = false;
   editMode.value = false;
+  deductionStep.value = 1;
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
