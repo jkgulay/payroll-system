@@ -25,6 +25,17 @@
           ></v-select>
         </v-col>
         <v-col cols="12" md="3">
+          <v-select
+            v-model="filters.approval_status"
+            label="Approval"
+            :items="approvalOptions"
+            density="compact"
+            variant="outlined"
+            clearable
+            hide-details
+          ></v-select>
+        </v-col>
+        <v-col cols="12" md="2">
           <v-text-field
             v-model="filters.search"
             label="Search Employee"
@@ -35,6 +46,15 @@
             hide-details
             placeholder="Name or staff code..."
           ></v-text-field>
+        </v-col>
+        <v-col cols="12" md="1" class="d-flex align-center justify-end">
+          <v-btn
+            variant="tonal"
+            color="grey"
+            icon="mdi-filter-remove"
+            @click="clearFilters"
+            title="Clear filters"
+          ></v-btn>
         </v-col>
       </v-row>
     </v-card-text>
@@ -207,6 +227,19 @@
           </v-list>
         </v-menu>
       </template>
+
+      <template v-slot:no-data>
+        <div class="text-center py-8">
+          <v-icon size="52" color="grey">mdi-clipboard-text-search-outline</v-icon>
+          <p class="text-h6 mt-3 mb-1">No attendance records found</p>
+          <p class="text-body-2 text-medium-emphasis mb-4">
+            Adjust the filters or clear them to view available records.
+          </p>
+          <v-btn variant="outlined" color="primary" @click="clearFilters">
+            Clear filters
+          </v-btn>
+        </div>
+      </template>
     </v-data-table>
   </div>
 </template>
@@ -237,6 +270,7 @@ const canApproveRole = computed(() =>
 const filters = reactive({
   date: new Date().toISOString().split("T")[0],
   status: null,
+  approval_status: null,
   search: "",
 });
 
@@ -263,6 +297,12 @@ const statusOptions = [
   { title: "On Leave", value: "on_leave" },
 ];
 
+const approvalOptions = [
+  { title: "Pending", value: "pending" },
+  { title: "Approved", value: "approved" },
+  { title: "Rejected", value: "rejected" },
+];
+
 const loadAttendance = async () => {
   loading.value = true;
   try {
@@ -282,14 +322,29 @@ const loadAttendance = async () => {
 
 // Filtered attendance based on search
 const filteredAttendance = computed(() => {
-  if (!filters.search) return attendance.value;
+  const hasSearch = !!filters.search;
   const q = filters.search.toLowerCase();
+
   return attendance.value.filter((a) => {
+    const approvalMatches =
+      !filters.approval_status || a.approval_status === filters.approval_status;
+
+    if (!approvalMatches) return false;
+    if (!hasSearch) return true;
+
     const name = (a.employee?.full_name || "").toLowerCase();
     const code = (a.employee?.employee_number || "").toLowerCase();
     return name.includes(q) || code.includes(q);
   });
 });
+
+const clearFilters = () => {
+  filters.date = new Date().toISOString().split("T")[0];
+  filters.status = null;
+  filters.approval_status = null;
+  filters.search = "";
+  loadAttendance();
+};
 
 // Auto-load when date or status changes
 watch(

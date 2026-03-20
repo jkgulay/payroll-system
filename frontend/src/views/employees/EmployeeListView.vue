@@ -114,8 +114,14 @@
               variant="tonal"
               icon="mdi-filter-remove"
               @click="clearFilters"
+              :disabled="!hasActiveFilters"
               title="Clear Filters"
             ></v-btn>
+          </v-col>
+          <v-col cols="auto" class="d-flex align-center" v-if="hasActiveFilters">
+            <v-chip size="small" color="info" variant="tonal">
+              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+            </v-chip>
           </v-col>
         </v-row>
       </div>
@@ -323,6 +329,24 @@
                 </v-list-item>
               </v-list>
             </v-menu>
+          </template>
+
+          <template v-slot:no-data>
+            <div class="text-center py-8">
+              <v-icon size="56" color="grey">mdi-account-search-outline</v-icon>
+              <p class="text-h6 mt-3 mb-1">No employees found</p>
+              <p class="text-body-2 text-medium-emphasis mb-4">
+                Try adjusting your filters or clearing them to see all employees.
+              </p>
+              <v-btn
+                variant="outlined"
+                color="primary"
+                @click="clearFilters"
+                :disabled="!hasActiveFilters"
+              >
+                Clear filters
+              </v-btn>
+            </div>
           </template>
         </v-data-table>
       </div>
@@ -1414,7 +1438,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useEmployeeStore } from "@/stores/employee";
 import { useToast } from "vue-toastification";
@@ -1506,6 +1530,28 @@ const employeeForm = ref(null);
 const contractTypeOptions = CONTRACT_TYPES;
 const activityStatusOptions = ACTIVITY_STATUSES;
 const workScheduleOptions = WORK_SCHEDULES;
+
+const hasActiveFilters = computed(() => {
+  return (
+    !!search.value ||
+    !!filters.value.project_id ||
+    !!filters.value.contract_type ||
+    !!filters.value.activity_status ||
+    !!filters.value.work_schedule ||
+    !!filters.value.position
+  );
+});
+
+const activeFilterCount = computed(() => {
+  return [
+    search.value,
+    filters.value.project_id,
+    filters.value.contract_type,
+    filters.value.activity_status,
+    filters.value.work_schedule,
+    filters.value.position,
+  ].filter(Boolean).length;
+});
 
 const headers = [
   { title: "Staff Code", key: "employee_number", sortable: true },
