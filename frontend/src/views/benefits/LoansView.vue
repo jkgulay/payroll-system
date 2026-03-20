@@ -364,7 +364,7 @@
 
     <!-- Add/Edit Dialog - Modern UI -->
     <v-dialog v-model="dialog" max-width="800px" persistent scrollable>
-      <v-card class="modern-dialog">
+      <v-card class="modern-dialog loans-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">
@@ -400,8 +400,19 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content loans-dialog-content"
+          style="max-height: 70vh"
+        >
           <v-form ref="form" v-model="formValid">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <v-row>
               <!-- Section: Loan Information -->
               <v-col cols="12">
@@ -631,13 +642,14 @@
           </v-form>
         </v-card-text>
         <v-divider></v-divider>
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions loans-dialog-actions">
           <v-spacer></v-spacer>
-          <button class="dialog-btn dialog-btn-cancel" @click="closeDialog">
+          <v-btn variant="outlined" color="grey" @click="closeDialog">
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             :disabled="!formValid || saving"
             @click="saveLoan"
           >
@@ -657,7 +669,7 @@
                   ? "Submit Request"
                   : "Add Loan"
             }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1040,14 +1052,11 @@
           </v-alert>
         </v-card-text>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions loans-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-close"
-            @click="detailsDialog = false"
-          >
+          <v-btn variant="outlined" color="grey" @click="detailsDialog = false">
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1798,6 +1807,18 @@ onMounted(async () => {
   color: #001f3d;
   margin: 0;
   letter-spacing: -0.3px;
+}
+
+.loans-dialog-content {
+  padding-bottom: 10px;
+}
+
+.loans-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
 }
 
 .dialog-actions {

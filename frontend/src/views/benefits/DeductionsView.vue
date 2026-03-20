@@ -368,8 +368,8 @@
 
     <!-- Add/Edit Dialog - Modern UI -->
     <v-dialog v-model="dialog" max-width="800px" persistent scrollable>
-      <v-card class="modern-dialog">
-        <v-card-title class="dialog-header">
+      <v-card class="modern-dialog deductions-dialog">
+        <v-card-title class="dialog-header deductions-dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
               editMode ? "mdi-pencil" : "mdi-cash-minus"
@@ -400,8 +400,19 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content deductions-dialog-content"
+          style="max-height: 70vh"
+        >
           <v-form ref="form" v-model="formValid">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <v-row>
               <v-col cols="12">
                 <div class="section-header">
@@ -839,17 +850,19 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions deductions-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="closeDialog"
             :disabled="saving"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             @click="saveDeduction"
             :disabled="!formValid || saving"
           >
@@ -872,7 +885,7 @@
                   ? "Update Deduction"
                   : "Create Deduction"
             }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1044,14 +1057,15 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions deductions-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="detailsDialog = false"
           >
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1751,6 +1765,22 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.deductions-dialog-header {
+  padding: 16px 20px;
+}
+
+.deductions-dialog-content {
+  padding: 16px 20px 10px;
+}
+
+.deductions-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+}
+
 .dialog-header {
   display: flex;
   align-items: center;
@@ -1838,53 +1868,6 @@ onBeforeUnmount(() => {
   padding: 16px 24px;
   background: rgba(0, 31, 61, 0.02);
   gap: 12px;
-}
-
-.dialog-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  white-space: nowrap;
-  min-width: 120px;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &.dialog-btn-cancel {
-    background: white;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
-
-    &:hover:not(:disabled) {
-      background: #f8f9fa;
-      border-color: #cbd5e1;
-    }
-  }
-
-  &.dialog-btn-primary {
-    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-    color: white;
-    box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(237, 152, 95, 0.35);
-      transform: translateY(-1px);
-    }
-
-    .v-icon {
-      color: white;
-    }
-  }
 }
 
 .form-field-wrapper {

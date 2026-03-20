@@ -309,7 +309,7 @@
 
     <!-- Add/Edit Cash Bond Dialog -->
     <v-dialog v-model="dialog" max-width="900px" persistent scrollable>
-      <v-card class="modern-dialog">
+      <v-card class="modern-dialog cashbond-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
@@ -331,8 +331,19 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content cashbond-dialog-content"
+          style="max-height: 70vh"
+        >
           <v-form ref="bondFormRef" v-model="formValid">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <v-row>
               <v-col cols="12" class="pb-0">
                 <div class="section-header">
@@ -514,17 +525,19 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions cashbond-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="closeDialog"
             :disabled="saving"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             @click="saveCashBond"
             :disabled="!formValid || saving"
           >
@@ -547,7 +560,7 @@
                   ? "Update Cash Bond"
                   : "Create Cash Bond"
             }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1557,6 +1570,18 @@ onMounted(async () => {
   font-weight: 600;
   color: #001f3d;
   margin: 0;
+}
+
+.cashbond-dialog-content {
+  padding-bottom: 10px;
+}
+
+.cashbond-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
 }
 
 .dialog-actions {
