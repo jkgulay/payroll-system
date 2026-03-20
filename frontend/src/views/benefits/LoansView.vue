@@ -1826,45 +1826,6 @@ onMounted(async () => {
   background: rgba(0, 31, 61, 0.02);
 }
 
-.dialog-btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.dialog-btn-cancel {
-  background: transparent;
-  color: #64748b;
-
-  &:hover:not(:disabled) {
-    background: rgba(0, 31, 61, 0.04);
-  }
-}
-
-.dialog-btn-primary {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-  margin-left: 12px;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
-  }
-}
-
 .loan-summary-alert {
   border-radius: 12px !important;
   padding: 16px !important;

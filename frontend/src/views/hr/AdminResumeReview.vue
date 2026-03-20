@@ -429,66 +429,68 @@
           </div>
         </v-card-text>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions review-dialog-actions">
           <v-spacer></v-spacer>
-          <button
+          <v-btn
             v-if="
               selectedResume.status === 'pending' &&
               !selectedResume.is_application
             "
-            class="dialog-btn dialog-btn-success"
+            color="success"
+            variant="flat"
             @click="openApproveDialog(selectedResume)"
           >
             <v-icon size="18">mdi-check</v-icon>
             Approve
-          </button>
-          <button
+          </v-btn>
+          <v-btn
             v-if="
               selectedResume.status === 'pending' &&
               !selectedResume.is_application
             "
-            class="dialog-btn dialog-btn-danger"
+            color="error"
+            variant="flat"
             @click="openRejectDialog(selectedResume)"
           >
             <v-icon size="18">mdi-close</v-icon>
             Reject
-          </button>
-          <button
+          </v-btn>
+          <v-btn
             v-if="
               selectedResume.status === 'pending' &&
               selectedResume.is_application
             "
-            class="dialog-btn dialog-btn-success"
+            color="success"
+            variant="flat"
             @click="openApproveApplicationDialog(selectedResume)"
           >
             <v-icon size="18">mdi-check-circle</v-icon>
             Approve Application
-          </button>
-          <button
+          </v-btn>
+          <v-btn
             v-if="
               selectedResume.status === 'pending' &&
               selectedResume.is_application
             "
-            class="dialog-btn dialog-btn-danger"
+            color="error"
+            variant="flat"
             @click="openRejectApplicationDialog(selectedResume)"
           >
             <v-icon size="18">mdi-close-circle</v-icon>
             Reject Application
-          </button>
-          <button
+          </v-btn>
+          <v-btn
             v-if="!selectedResume.is_application"
-            class="dialog-btn dialog-btn-success"
+            color="#ED985F"
+            variant="flat"
             @click="downloadResume(selectedResume)"
           >
             <v-icon size="18">mdi-download</v-icon>
             Download
-          </button>
-          <button
-            class="dialog-btn dialog-btn-cancel"
-            @click="viewDialog = false"
-          >
+          </v-btn>
+          <v-btn variant="outlined" color="grey" @click="viewDialog = false">
             Close
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1265,51 +1267,11 @@ function formatFileSize(bytes) {
   gap: 12px;
 }
 
-.modern-dialog .dialog-btn {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  text-transform: none;
-  letter-spacing: 0.3px;
-}
-
-.modern-dialog .dialog-btn-cancel {
-  background: #f5f5f5;
-  color: rgba(0, 0, 0, 0.7);
-}
-
-.modern-dialog .dialog-btn-cancel:hover {
-  background: #eeeeee;
-  transform: translateY(-1px);
-}
-
-.modern-dialog .dialog-btn-success {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-}
-
-.modern-dialog .dialog-btn-success:hover {
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
-  transform: translateY(-1px);
-}
-
-.modern-dialog .dialog-btn-danger {
-  background: linear-gradient(135deg, #ef5350 0%, #f44336 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(239, 83, 80, 0.3);
-}
-
-.modern-dialog .dialog-btn-danger:hover {
-  box-shadow: 0 4px 12px rgba(239, 83, 80, 0.4);
-  transform: translateY(-1px);
+.review-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff !important;
 }
 
 .modern-dialog .alert-title {

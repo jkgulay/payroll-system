@@ -196,7 +196,7 @@
 
     <!-- Add/Edit Holiday Dialog -->
     <v-dialog v-model="showDialog" max-width="800px" persistent scrollable>
-      <v-card class="modern-dialog">
+      <v-card class="modern-dialog holiday-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
@@ -217,8 +217,19 @@
           </div>
         </v-card-title>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh">
+        <v-card-text
+          class="dialog-content holiday-dialog-content"
+          style="max-height: 70vh"
+        >
           <v-form ref="formRef" v-model="formValid">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Fields marked with <strong>*</strong> are required.
+              </div>
+            </v-alert>
             <!-- Section: Holiday Information -->
             <v-col cols="12" class="px-0">
               <div class="section-header">
@@ -343,17 +354,19 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions holiday-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="closeModal"
             :disabled="saving"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-primary"
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
             @click="submitForm"
             :disabled="!formValid || saving"
           >
@@ -368,7 +381,7 @@
               showEditModal ? "mdi-check" : "mdi-plus"
             }}</v-icon>
             {{ saving ? "Saving..." : showEditModal ? "Update" : "Create" }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -411,17 +424,19 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions">
+        <v-card-actions class="dialog-actions holiday-dialog-actions">
           <v-spacer></v-spacer>
-          <button
-            class="dialog-btn dialog-btn-cancel"
+          <v-btn
+            variant="outlined"
+            color="grey"
             @click="showDeleteModal = false"
             :disabled="deleting"
           >
             Cancel
-          </button>
-          <button
-            class="dialog-btn dialog-btn-danger"
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
             @click="deleteHoliday"
             :disabled="deleting"
           >
@@ -434,7 +449,7 @@
             ></v-progress-circular>
             <v-icon v-else size="18" class="mr-1">mdi-delete</v-icon>
             {{ deleting ? "Deleting..." : "Delete Holiday" }}
-          </button>
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -956,60 +971,21 @@ onMounted(() => {
   letter-spacing: -0.3px;
 }
 
+.holiday-dialog-content {
+  padding-bottom: 10px;
+}
+
+.holiday-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-top: 1px solid rgba(0, 31, 61, 0.08);
+}
+
 .dialog-actions {
   padding: 16px 24px;
   background: rgba(0, 31, 61, 0.02);
-}
-
-.dialog-btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dialog-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.dialog-btn-cancel {
-  background: transparent;
-  color: #64748b;
-}
-
-.dialog-btn-cancel:hover:not(:disabled) {
-  background: rgba(0, 31, 61, 0.04);
-}
-
-.dialog-btn-primary {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
-  margin-left: 12px;
-}
-
-.dialog-btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
-}
-
-.dialog-btn-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-  margin-left: 12px;
-}
-
-.dialog-btn-danger:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 .form-field-wrapper {
