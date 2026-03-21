@@ -518,6 +518,14 @@ class PayrollController extends Controller
         // Get company info from database
         $companyInfo = CompanyInfo::first();
 
+        // Long bond is default; A4 uses 97% scale to keep output close to long bond layout.
+        $paperSize = strtolower((string) request()->query('paper_size', 'long_bond'));
+        $isA4 = $paperSize === 'a4';
+        $pageSizeCss = $isA4 ? 'A4 portrait' : '8.5in 13in';
+        $pageScale = $isA4 ? 0.97 : 1;
+        $pageMarginCss = $isA4 ? '6mm 8mm 6mm 8mm' : '6mm 10mm 6mm 8mm';
+        $pageWidthPercent = $isA4 ? round(100 / $pageScale, 4) : 100;
+
         // Ensure installed-fonts.json exists in font cache directory
         $fontCache = storage_path('fonts');
         $installedFonts = $fontCache . '/installed-fonts.json';
@@ -534,7 +542,11 @@ class PayrollController extends Controller
                 'item' => $item,
                 'employee' => $item->employee,
                 'companyInfo' => $companyInfo,
-            ]);
+                'pageSizeCss' => $pageSizeCss,
+                'pageScale' => $pageScale,
+                'pageMarginCss' => $pageMarginCss,
+                'pageWidthPercent' => $pageWidthPercent,
+            ])->setPaper($isA4 ? 'A4' : [0, 0, 612, 936], 'portrait');
 
             return $pdf->download("payslip_{$item->employee->employee_number}_{$payroll->period_name}.pdf");
         } catch (\Throwable $e) {
@@ -566,7 +578,15 @@ class PayrollController extends Controller
             'positions.*' => 'string',
             'employee_ids' => 'nullable|array',
             'employee_ids.*' => 'integer|exists:employees,id',
+            'paper_size' => 'nullable|in:long_bond,a4',
         ]);
+
+        $paperSize = $validated['paper_size'] ?? 'long_bond';
+        $isA4 = $paperSize === 'a4';
+        $pageSizeCss = $isA4 ? 'A4 portrait' : '8.5in 13in';
+        $pageScale = $isA4 ? 0.97 : 1;
+        $pageMarginCss = $isA4 ? '6mm 8mm 6mm 8mm' : '6mm 10mm 6mm 8mm';
+        $pageWidthPercent = $isA4 ? round(100 / $pageScale, 4) : 100;
 
         // Load payroll items with employee relationship
         $itemsQuery = $payroll->items()->with(['employee.positionRate', 'employee.project']);
@@ -627,11 +647,15 @@ class PayrollController extends Controller
             $pdf = Pdf::loadView('payroll.payslips-compact', [
                 'payroll' => $payroll,
                 'companyInfo' => $companyInfo,
+                'pageSizeCss' => $pageSizeCss,
+                'pageScale' => $pageScale,
+                'pageMarginCss' => $pageMarginCss,
+                'pageWidthPercent' => $pageWidthPercent,
             ])->setOptions([
                 'isHtml5ParserEnabled'    => false,
                 'isRemoteEnabled'         => false,
                 'isFontSubsettingEnabled' => false,
-            ])->setPaper('A4', 'portrait');
+            ])->setPaper($isA4 ? 'A4' : [0, 0, 612, 936], 'portrait');
 
             return $pdf->download($filenameBase . '.pdf');
         } catch (\Throwable $e) {
