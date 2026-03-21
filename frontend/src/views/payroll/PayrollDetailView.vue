@@ -221,21 +221,31 @@
                   }}
                 </div>
                 <div
-                  v-if="item.special_ot_hours > 0"
-                  class="text-caption text-orange"
-                >
-                  Sun/Hol: {{ item.special_ot_hours }}h — ₱{{
-                    formatCurrency(item.special_ot_pay)
-                  }}
-                </div>
-                <div
-                  v-if="
-                    !(item.regular_ot_hours > 0) && !(item.special_ot_hours > 0)
-                  "
+                  v-if="!(item.regular_ot_hours > 0)"
                   class="text-caption text-medium-emphasis"
                 >
                   -
                 </div>
+              </div>
+            </template>
+
+            <!-- Sunday / Special Holiday -->
+            <template v-slot:item.sun_spl_hol="{ item }">
+              <div>
+                <div
+                  v-if="
+                    (item.sunday_hours || 0) + (item.special_ot_hours || 0) > 0
+                  "
+                  class="text-caption text-orange"
+                >
+                  {{ (item.sunday_hours || 0) + (item.special_ot_hours || 0) }}h
+                  — ₱{{
+                    formatCurrency(
+                      (item.sunday_pay || 0) + (item.special_ot_pay || 0),
+                    )
+                  }}
+                </div>
+                <div v-else class="text-caption text-medium-emphasis">-</div>
               </div>
             </template>
 
@@ -828,6 +838,7 @@ const headers = [
   { title: "Rate & Days", key: "rate_days", sortable: false },
   { title: "Basic Pay", key: "amount", sortable: true, align: "end" },
   { title: "Overtime", key: "overtime", sortable: false },
+  { title: "Sun/Spl. Hol.", key: "sun_spl_hol", sortable: false },
   { title: "UT", key: "undertime", sortable: false },
   { title: "Gross Pay", key: "gross_pay", sortable: true, align: "end" },
   { title: "Deductions", key: "deductions", sortable: false },
