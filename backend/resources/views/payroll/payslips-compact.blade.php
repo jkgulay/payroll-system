@@ -6,8 +6,8 @@
     <title>Payslips - {{ $payroll->period_name }}</title>
     <style>
         @page {
-            margin: 6mm 6mm 8mm 6mm;
-            size: A4 portrait;
+            margin: {{ $pageMarginCss ?? '6mm 10mm 6mm 8mm' }};
+            size: {{ $pageSizeCss ?? '8.5in 13in' }};
         }
 
         * {
@@ -21,6 +21,9 @@
             font-size: 9.5px;
             line-height: 1.4;
             color: #000;
+            transform: scale({{ $pageScale ?? 1 }});
+            transform-origin: top left;
+            width: {{ $pageWidthPercent ?? 100 }}%;
         }
 
         .page-wrapper {

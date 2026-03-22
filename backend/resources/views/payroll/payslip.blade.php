@@ -5,11 +5,19 @@
     <meta charset="utf-8">
     <title>Payslip</title>
     <style>
+        @page {
+            size: {{ $pageSizeCss ?? '8.5in 13in' }};
+            margin: {{ $pageMarginCss ?? '6mm 10mm 6mm 8mm' }};
+        }
+
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             font-size: 11px;
+            transform: scale({{ $pageScale ?? 1 }});
+            transform-origin: top left;
+            width: {{ $pageWidthPercent ?? 100 }}%;
         }
 
         .header {
