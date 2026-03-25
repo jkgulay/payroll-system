@@ -47,11 +47,14 @@ class PayrollController extends Controller
             'period_start' => 'required|date',
             'period_end' => 'required|date|after_or_equal:period_start',
             'has_attendance' => 'nullable|boolean',
+            'excluded_positions' => 'nullable|array',
+            'excluded_positions.*' => 'string',
         ]);
 
         $periodStart = $validated['period_start'];
         $periodEnd = $validated['period_end'];
         $hasAttendanceFilter = $validated['has_attendance'] ?? false;
+        $excludedPositions = $validated['excluded_positions'] ?? [];
 
         // Step 1: Find employees that WILL be included in payroll
         $employeeQuery = Employee::query();
@@ -69,6 +72,15 @@ class PayrollController extends Controller
                     ->orWhereHas('attendances', function ($subQ) use ($periodStart, $periodEnd) {
                         $subQ->whereBetween('attendance_date', [$periodStart, $periodEnd])
                             ->where('status', '!=', 'absent');
+                    });
+            });
+        }
+
+        if (!empty($excludedPositions)) {
+            $employeeQuery->where(function ($q) use ($excludedPositions) {
+                $q->whereDoesntHave('positionRate')
+                    ->orWhereHas('positionRate', function ($positionQuery) use ($excludedPositions) {
+                        $positionQuery->whereNotIn('position_name', $excludedPositions);
                     });
             });
         }
@@ -190,6 +202,8 @@ class PayrollController extends Controller
             'deduct_pagibig' => 'nullable|boolean',
             // Only employees with attendance
             'has_attendance' => 'nullable|boolean',
+            'excluded_positions' => 'nullable|array',
+            'excluded_positions.*' => 'string',
             // Allow force create to bypass validation
             'force_create' => 'nullable|boolean',
         ]);
@@ -200,6 +214,7 @@ class PayrollController extends Controller
                 'period_start' => $validated['period_start'],
                 'period_end' => $validated['period_end'],
                 'has_attendance' => $validated['has_attendance'] ?? false,
+                'excluded_positions' => $validated['excluded_positions'] ?? [],
             ]);
 
             $validationResponse = $this->validatePayrollCreation($validationRequest);
@@ -235,6 +250,7 @@ class PayrollController extends Controller
             // Generate payroll items for all active employees
             $filters = [
                 'has_attendance' => $validated['has_attendance'] ?? false,
+                'excluded_positions' => $validated['excluded_positions'] ?? [],
             ];
             $this->generatePayrollItems($payroll, $filters);
 
@@ -1048,6 +1064,15 @@ class PayrollController extends Controller
             $query->whereHas('attendances', function ($q) use ($payroll) {
                 $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                     ->where('status', '!=', 'absent');
+            });
+        }
+
+        if (!empty($filters['excluded_positions']) && is_array($filters['excluded_positions'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->whereDoesntHave('positionRate')
+                    ->orWhereHas('positionRate', function ($positionQuery) use ($filters) {
+                        $positionQuery->whereNotIn('position_name', $filters['excluded_positions']);
+                    });
             });
         }
 

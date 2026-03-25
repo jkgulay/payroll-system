@@ -419,6 +419,23 @@
               class="mb-3 payroll-checkbox"
             ></v-checkbox>
 
+            <v-autocomplete
+              v-model="formData.excluded_positions"
+              :items="positionOptions"
+              label="Exclude Positions (Optional)"
+              placeholder="Select positions to exclude from this payroll"
+              prepend-inner-icon="mdi-account-remove"
+              multiple
+              chips
+              closable-chips
+              clearable
+              variant="outlined"
+              density="compact"
+              hint="Employees with selected positions will not be included in payroll generation"
+              persistent-hint
+              class="mb-3"
+            ></v-autocomplete>
+
             <!-- Section 3: Government Contributions -->
             <v-col cols="12" class="px-0 mt-4">
               <div class="section-header">
@@ -920,9 +937,11 @@ import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
+import { usePositionRates } from "@/composables/usePositionRates";
 
 const router = useRouter();
 const toast = useToast();
+const { positionOptions, loadPositionRates } = usePositionRates();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -961,6 +980,7 @@ const formData = ref({
   payment_date: "",
   notes: "",
   has_attendance: false,
+  excluded_positions: [],
   deduct_sss: true,
   deduct_philhealth: true,
   deduct_pagibig: true,
@@ -1069,6 +1089,7 @@ const { handleKeydown: handlePayrollFormKeydown } = useKeyboardFirstFlow({
 
 onMounted(() => {
   fetchPayrolls();
+  loadPositionRates();
 });
 
 async function fetchPayrolls() {
@@ -1092,6 +1113,7 @@ function openCreateDialog() {
     payment_date: "",
     notes: "",
     has_attendance: false,
+    excluded_positions: [],
     deduct_sss: true,
     deduct_philhealth: true,
     deduct_pagibig: true,
@@ -1109,6 +1131,7 @@ function editPayroll(item) {
     payment_date: item.payment_date,
     notes: item.notes || "",
     has_attendance: Boolean(item.has_attendance),
+    excluded_positions: [],
     deduct_sss: item.deduct_sss !== false,
     deduct_philhealth: item.deduct_philhealth !== false,
     deduct_pagibig: item.deduct_pagibig !== false,
@@ -1147,6 +1170,10 @@ async function savePayroll(forceCreate = false) {
     payload.has_attendance = formData.value.has_attendance;
   }
 
+  if (Array.isArray(formData.value.excluded_positions) && formData.value.excluded_positions.length > 0) {
+    payload.excluded_positions = formData.value.excluded_positions;
+  }
+
   // Add force_create flag if bypassing validation
   if (forceCreate) {
     payload.force_create = true;
@@ -1160,6 +1187,7 @@ async function savePayroll(forceCreate = false) {
         period_start: formData.value.period_start,
         period_end: formData.value.period_end,
         has_attendance: formData.value.has_attendance || false,
+        excluded_positions: formData.value.excluded_positions || [],
       });
     } catch (error) {
       saving.value = false;
