@@ -321,6 +321,7 @@
                   clearable
                   prepend-inner-icon="mdi-account-search"
                   no-data-text="No employees found"
+                  :custom-filter="customEmployeeFilter"
                 >
                   <template v-slot:item="{ item, props }">
                     <v-list-item v-bind="props">
@@ -337,6 +338,10 @@
                         }}</span>
                       </template>
                       <template v-slot:subtitle>
+                        <span class="text-caption">{{
+                          item.raw.employee_number || "N/A"
+                        }}</span>
+                        <span class="mx-1">|</span>
                         <span class="text-caption">{{
                           item.raw.department || "N/A"
                         }}</span>
@@ -752,6 +757,23 @@ const filteredAdjustments = computed(() => {
   }
   return result;
 });
+
+const customEmployeeFilter = (itemTitle, queryText, item) => {
+  if (!queryText) return true;
+
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.full_name?.toLowerCase() || "";
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || "";
+  const department = item.raw.department?.toLowerCase() || "";
+  const position = item.raw.position?.toLowerCase() || "";
+
+  return (
+    fullName.includes(search) ||
+    employeeNumber.includes(search) ||
+    department.includes(search) ||
+    position.includes(search)
+  );
+};
 
 // Methods
 const capitalizeFirst = (str) => {

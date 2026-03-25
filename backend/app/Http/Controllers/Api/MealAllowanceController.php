@@ -70,7 +70,7 @@ class MealAllowanceController extends Controller
         ]);
 
         $query = Employee::with(['positionRate', 'project'])
-            ->where('activity_status', 'active');
+            ->whereIn('activity_status', ['active', 'on_leave']);
 
         if (isset($validated['position_id'])) {
             $query->where('position_id', $validated['position_id']);
@@ -529,7 +529,7 @@ class MealAllowanceController extends Controller
         ]);
 
         $query = Employee::with('positionRate')
-            ->where('activity_status', 'active')
+            ->whereIn('activity_status', ['active', 'on_leave'])
             ->where(function ($q) use ($validated) {
                 $search = $validated['search'];
                 $q->where('first_name', 'like', "%{$search}%")
@@ -570,7 +570,7 @@ class MealAllowanceController extends Controller
         ]);
 
         $query = Employee::with('positionRate')
-            ->where('activity_status', 'active');
+            ->whereIn('activity_status', ['active', 'on_leave']);
 
         if (isset($validated['position_id'])) {
             $query->where('position_id', $validated['position_id']);

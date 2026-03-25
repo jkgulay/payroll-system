@@ -456,6 +456,7 @@
                   density="comfortable"
                   prepend-inner-icon="mdi-account-search"
                   :rules="[rules.required]"
+                  :custom-filter="customEmployeeFilter"
                   :disabled="editMode"
                 >
                   <template v-slot:item="{ props, item }">
@@ -1298,6 +1299,21 @@ const rules = {
   positive: (value) => value > 0 || "Must be greater than 0",
   percentage: (value) =>
     (value >= 0 && value <= 100) || "Must be between 0 and 100",
+};
+
+const customEmployeeFilter = (itemTitle, queryText, item) => {
+  if (!queryText) return true;
+
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.full_name?.toLowerCase() || "";
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || "";
+  const position = item.raw.position?.toLowerCase() || "";
+
+  return (
+    fullName.includes(search) ||
+    employeeNumber.includes(search) ||
+    position.includes(search)
+  );
 };
 
 // Fetch loans

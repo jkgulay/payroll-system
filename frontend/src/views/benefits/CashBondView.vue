@@ -397,6 +397,7 @@
                   prepend-inner-icon="mdi-account-search"
                   hint="Search by name, employee number, or position"
                   persistent-hint
+                  :custom-filter="customEmployeeFilter"
                 >
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
@@ -978,6 +979,21 @@ const headers = computed(() => {
 
   return baseHeaders;
 });
+
+const customEmployeeFilter = (itemTitle, queryText, item) => {
+  if (!queryText) return true;
+
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.full_name?.toLowerCase() || "";
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || "";
+  const position = item.raw.position?.toLowerCase() || "";
+
+  return (
+    fullName.includes(search) ||
+    employeeNumber.includes(search) ||
+    position.includes(search)
+  );
+};
 
 // Methods
 const fetchCashBonds = async () => {

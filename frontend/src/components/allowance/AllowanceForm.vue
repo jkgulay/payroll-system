@@ -164,31 +164,35 @@
               </v-col>
 
               <v-col cols="12" md="6" v-if="selectionMode === 'individual'">
-                <v-select
+                <v-autocomplete
                   v-model="form.employee_id"
                   :items="availableEmployees"
                   item-title="name"
                   item-value="id"
                   label="Select Employee"
+                  placeholder="Search by name, employee number, or position"
                   variant="outlined"
                   density="comfortable"
                   clearable
-                ></v-select>
+                  :custom-filter="customEmployeeFilter"
+                ></v-autocomplete>
               </v-col>
 
               <v-col cols="12" md="6" v-if="selectionMode === 'multiple'">
-                <v-select
+                <v-autocomplete
                   v-model="form.employee_ids"
                   :items="availableEmployees"
                   item-title="name"
                   item-value="id"
                   label="Select Employees"
+                  placeholder="Search by name, employee number, or position"
                   variant="outlined"
                   density="comfortable"
                   multiple
                   chips
                   clearable
-                ></v-select>
+                  :custom-filter="customEmployeeFilter"
+                ></v-autocomplete>
               </v-col>
 
               <v-col cols="12" md="6" v-if="selectionMode === 'department'">
@@ -256,6 +260,7 @@
                       variant="outlined"
                       hide-details
                       placeholder="Select employee"
+                      :custom-filter="customEmployeeFilter"
                       @update:model-value="onEmployeeSelect(index, $event)"
                     ></v-select>
                   </div>
@@ -481,6 +486,15 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => props.modelValue,
+  (isOpen) => {
+    if (isOpen) {
+      loadEmployees();
+    }
+  },
+);
+
 // Load employees on mount
 loadEmployees();
 loadDepartments();
@@ -505,14 +519,22 @@ async function loadEmployees() {
   try {
     const response = await api.get("/employees", {
       params: {
-        per_page: 1000, // Get all employees
-        status: "active",
+        per_page: 10000,
+        activity_status: "active,on_leave",
       },
     });
+    const data = Array.isArray(response.data)
+      ? response.data
+      : response.data?.data || [];
+
     // Map employees to add name field for v-select
-    availableEmployees.value = (response.data.data || []).map((emp) => ({
+    availableEmployees.value = data.map((emp) => ({
       ...emp,
-      name: `${emp.first_name || ""} ${emp.last_name || ""}`.trim(),
+      name:
+        emp.full_name ||
+        `${emp.first_name || ""} ${emp.last_name || ""}`.trim(),
+      position:
+        emp.position || emp.positionRate?.position_name || emp.position_name,
     }));
   } catch (error) {
     devLog.error("Failed to load employees:", error);
@@ -520,6 +542,21 @@ async function loadEmployees() {
   } finally {
     loadingEmployees.value = false;
   }
+}
+
+function customEmployeeFilter(itemTitle, queryText, item) {
+  if (!queryText) return true;
+
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.name?.toLowerCase() || "";
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || "";
+  const position = item.raw.position?.toLowerCase() || "";
+
+  return (
+    fullName.includes(search) ||
+    employeeNumber.includes(search) ||
+    position.includes(search)
+  );
 }
 
 function removeItem(index) {
@@ -647,7 +684,6 @@ function resetForm() {
     employee_ids: [],
     items: [],
   };
-  availableEmployees.value = [];
 }
 
 function getAllowanceTypeLabel(type, customType) {
