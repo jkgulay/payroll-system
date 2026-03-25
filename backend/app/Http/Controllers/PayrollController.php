@@ -46,12 +46,39 @@ class PayrollController extends Controller
         $validated = $request->validate([
             'period_start' => 'required|date',
             'period_end' => 'required|date|after_or_equal:period_start',
+            'payroll_scope' => 'nullable|in:all,individual',
+            'individual_target' => 'nullable|in:position,employee',
+            'included_position' => 'nullable|string',
+            'included_employee_id' => 'nullable|integer|exists:employees,id',
             'has_attendance' => 'nullable|boolean',
+            'excluded_positions' => 'nullable|array',
+            'excluded_positions.*' => 'string',
         ]);
 
         $periodStart = $validated['period_start'];
         $periodEnd = $validated['period_end'];
+        $payrollScope = $validated['payroll_scope'] ?? 'all';
+        $individualTarget = $validated['individual_target'] ?? null;
+        $includedPosition = $validated['included_position'] ?? null;
+        $includedEmployeeId = $validated['included_employee_id'] ?? null;
         $hasAttendanceFilter = $validated['has_attendance'] ?? false;
+        $excludedPositions = $validated['excluded_positions'] ?? [];
+
+        if ($payrollScope === 'individual') {
+            if ($individualTarget === 'position' && empty($includedPosition)) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Please select a position for individual payroll.',
+                ], 422);
+            }
+
+            if ($individualTarget === 'employee' && empty($includedEmployeeId)) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Please select an employee for individual payroll.',
+                ], 422);
+            }
+        }
 
         // Step 1: Find employees that WILL be included in payroll
         $employeeQuery = Employee::query();
@@ -69,6 +96,27 @@ class PayrollController extends Controller
                     ->orWhereHas('attendances', function ($subQ) use ($periodStart, $periodEnd) {
                         $subQ->whereBetween('attendance_date', [$periodStart, $periodEnd])
                             ->where('status', '!=', 'absent');
+                    });
+            });
+        }
+
+        if ($payrollScope === 'individual') {
+            if ($individualTarget === 'position' && !empty($includedPosition)) {
+                $employeeQuery->whereHas('positionRate', function ($q) use ($includedPosition) {
+                    $q->where('position_name', $includedPosition);
+                });
+            }
+
+            if ($individualTarget === 'employee' && !empty($includedEmployeeId)) {
+                $employeeQuery->where('id', $includedEmployeeId);
+            }
+        }
+
+        if (!empty($excludedPositions)) {
+            $employeeQuery->where(function ($q) use ($excludedPositions) {
+                $q->whereDoesntHave('positionRate')
+                    ->orWhereHas('positionRate', function ($positionQuery) use ($excludedPositions) {
+                        $positionQuery->whereNotIn('position_name', $excludedPositions);
                     });
             });
         }
@@ -184,12 +232,18 @@ class PayrollController extends Controller
             'period_end' => 'required|date|after_or_equal:period_start',
             'payment_date' => 'required|date',
             'notes' => 'nullable|string',
+            'payroll_scope' => 'nullable|in:all,individual',
+            'individual_target' => 'nullable|in:position,employee',
+            'included_position' => 'nullable|string',
+            'included_employee_id' => 'nullable|integer|exists:employees,id',
             // Government deduction flags
             'deduct_sss' => 'nullable|boolean',
             'deduct_philhealth' => 'nullable|boolean',
             'deduct_pagibig' => 'nullable|boolean',
             // Only employees with attendance
             'has_attendance' => 'nullable|boolean',
+            'excluded_positions' => 'nullable|array',
+            'excluded_positions.*' => 'string',
             // Allow force create to bypass validation
             'force_create' => 'nullable|boolean',
         ]);
@@ -199,7 +253,12 @@ class PayrollController extends Controller
             $validationRequest = new Request([
                 'period_start' => $validated['period_start'],
                 'period_end' => $validated['period_end'],
+                'payroll_scope' => $validated['payroll_scope'] ?? 'all',
+                'individual_target' => $validated['individual_target'] ?? null,
+                'included_position' => $validated['included_position'] ?? null,
+                'included_employee_id' => $validated['included_employee_id'] ?? null,
                 'has_attendance' => $validated['has_attendance'] ?? false,
+                'excluded_positions' => $validated['excluded_positions'] ?? [],
             ]);
 
             $validationResponse = $this->validatePayrollCreation($validationRequest);
@@ -234,7 +293,12 @@ class PayrollController extends Controller
 
             // Generate payroll items for all active employees
             $filters = [
+                'payroll_scope' => $validated['payroll_scope'] ?? 'all',
+                'individual_target' => $validated['individual_target'] ?? null,
+                'included_position' => $validated['included_position'] ?? null,
+                'included_employee_id' => $validated['included_employee_id'] ?? null,
                 'has_attendance' => $validated['has_attendance'] ?? false,
+                'excluded_positions' => $validated['excluded_positions'] ?? [],
             ];
             $this->generatePayrollItems($payroll, $filters);
 
@@ -1048,6 +1112,27 @@ class PayrollController extends Controller
             $query->whereHas('attendances', function ($q) use ($payroll) {
                 $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
                     ->where('status', '!=', 'absent');
+            });
+        }
+
+        if (($filters['payroll_scope'] ?? 'all') === 'individual') {
+            if (($filters['individual_target'] ?? null) === 'position' && !empty($filters['included_position'])) {
+                $query->whereHas('positionRate', function ($positionQuery) use ($filters) {
+                    $positionQuery->where('position_name', $filters['included_position']);
+                });
+            }
+
+            if (($filters['individual_target'] ?? null) === 'employee' && !empty($filters['included_employee_id'])) {
+                $query->where('id', $filters['included_employee_id']);
+            }
+        }
+
+        if (!empty($filters['excluded_positions']) && is_array($filters['excluded_positions'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->whereDoesntHave('positionRate')
+                    ->orWhereHas('positionRate', function ($positionQuery) use ($filters) {
+                        $positionQuery->whereNotIn('position_name', $filters['excluded_positions']);
+                    });
             });
         }
 

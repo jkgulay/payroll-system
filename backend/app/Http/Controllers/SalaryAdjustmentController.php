@@ -48,7 +48,7 @@ class SalaryAdjustmentController extends Controller
      */
     public function getEmployees()
     {
-        $employees = Employee::where('activity_status', 'active')
+        $employees = Employee::whereIn('activity_status', ['active', 'on_leave'])
             ->with(['project', 'positionRate'])
             ->orderBy('last_name')
             ->orderBy('first_name')

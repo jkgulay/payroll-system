@@ -401,11 +401,85 @@
                 <v-icon icon="mdi-information"></v-icon>
               </template>
               <div class="text-caption">
-                <strong>Note:</strong> Payroll will include all active
-                employees. You can filter by project or staff type when
-                exporting/downloading the payroll.
+                <strong>Note:</strong> Choose whether to generate payroll for
+                all employees or only a selected position/employee.
               </div>
             </v-alert>
+
+            <v-btn-toggle
+              v-model="formData.payroll_scope"
+              color="primary"
+              variant="outlined"
+              divided
+              mandatory
+              class="mb-3"
+            >
+              <v-btn value="all" size="small">
+                <v-icon start>mdi-account-group</v-icon>
+                All Employees
+              </v-btn>
+              <v-btn value="individual" size="small">
+                <v-icon start>mdi-account-check</v-icon>
+                Individual Payroll
+              </v-btn>
+            </v-btn-toggle>
+
+            <v-row v-if="formData.payroll_scope === 'individual'" class="mt-0">
+              <v-col cols="12" md="5">
+                <v-select
+                  v-model="formData.individual_target"
+                  :items="individualTargetOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Individual Payroll By"
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-filter"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="7" v-if="formData.individual_target === 'position'">
+                <v-autocomplete
+                  v-model="formData.included_position"
+                  :items="positionOptions"
+                  label="Select Position *"
+                  placeholder="Choose position"
+                  prepend-inner-icon="mdi-briefcase"
+                  clearable
+                  variant="outlined"
+                  density="compact"
+                  :rules="[(v) => !!v || 'Position is required']"
+                ></v-autocomplete>
+              </v-col>
+
+              <v-col cols="12" md="7" v-else>
+                <v-autocomplete
+                  v-model="formData.included_employee_id"
+                  :items="employeeOptions"
+                  item-title="full_name"
+                  item-value="id"
+                  label="Select Employee *"
+                  placeholder="Search by name, employee number, or position"
+                  prepend-inner-icon="mdi-account-search"
+                  clearable
+                  variant="outlined"
+                  density="compact"
+                  :custom-filter="customEmployeeFilter"
+                  :rules="[(v) => !!v || 'Employee is required']"
+                >
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props">
+                      <template v-slot:title>
+                        {{ item.raw.full_name }}
+                      </template>
+                      <template v-slot:subtitle>
+                        {{ item.raw.employee_number }} - {{ item.raw.position || "N/A" }}
+                      </template>
+                    </v-list-item>
+                  </template>
+                </v-autocomplete>
+              </v-col>
+            </v-row>
 
             <!-- Optional: Only With Attendance -->
             <v-checkbox
@@ -418,6 +492,24 @@
               density="compact"
               class="mb-3 payroll-checkbox"
             ></v-checkbox>
+
+            <v-autocomplete
+              v-if="formData.payroll_scope === 'all'"
+              v-model="formData.excluded_positions"
+              :items="positionOptions"
+              label="Exclude Positions (Optional)"
+              placeholder="Select positions to exclude from this payroll"
+              prepend-inner-icon="mdi-account-remove"
+              multiple
+              chips
+              closable-chips
+              clearable
+              variant="outlined"
+              density="compact"
+              hint="Employees with selected positions will not be included in payroll generation"
+              persistent-hint
+              class="mb-3"
+            ></v-autocomplete>
 
             <!-- Section 3: Government Contributions -->
             <v-col cols="12" class="px-0 mt-4">
@@ -920,9 +1012,11 @@ import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
+import { usePositionRates } from "@/composables/usePositionRates";
 
 const router = useRouter();
 const toast = useToast();
+const { positionOptions, loadPositionRates } = usePositionRates();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -960,11 +1054,23 @@ const formData = ref({
   period_end: "",
   payment_date: "",
   notes: "",
+  payroll_scope: "all",
+  individual_target: "position",
+  included_position: null,
+  included_employee_id: null,
   has_attendance: false,
+  excluded_positions: [],
   deduct_sss: true,
   deduct_philhealth: true,
   deduct_pagibig: true,
 });
+
+const employeeOptions = ref([]);
+
+const individualTargetOptions = [
+  { title: "Position", value: "position" },
+  { title: "Employee", value: "employee" },
+];
 
 const startDateRules = [(value) => !!value || "Start date is required"];
 
@@ -1069,7 +1175,54 @@ const { handleKeydown: handlePayrollFormKeydown } = useKeyboardFirstFlow({
 
 onMounted(() => {
   fetchPayrolls();
+  loadPositionRates();
+  loadEmployeeOptions();
 });
+
+async function loadEmployeeOptions() {
+  try {
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 10000,
+        activity_status: "active,on_leave",
+      },
+    });
+
+    const data = Array.isArray(response.data)
+      ? response.data
+      : response.data?.data || [];
+
+    employeeOptions.value = data.map((employee) => ({
+      id: employee.id,
+      full_name:
+        employee.full_name ||
+        `${employee.first_name || ""} ${employee.last_name || ""}`.trim(),
+      employee_number: employee.employee_number,
+      position:
+        employee.positionRate?.position_name ||
+        employee.position ||
+        employee.position_name ||
+        "",
+    }));
+  } catch (error) {
+    employeeOptions.value = [];
+  }
+}
+
+const customEmployeeFilter = (itemTitle, queryText, item) => {
+  if (!queryText) return true;
+
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.full_name?.toLowerCase() || "";
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || "";
+  const position = item.raw.position?.toLowerCase() || "";
+
+  return (
+    fullName.includes(search) ||
+    employeeNumber.includes(search) ||
+    position.includes(search)
+  );
+};
 
 async function fetchPayrolls() {
   loading.value = true;
@@ -1091,7 +1244,12 @@ function openCreateDialog() {
     period_end: "",
     payment_date: "",
     notes: "",
+    payroll_scope: "all",
+    individual_target: "position",
+    included_position: null,
+    included_employee_id: null,
     has_attendance: false,
+    excluded_positions: [],
     deduct_sss: true,
     deduct_philhealth: true,
     deduct_pagibig: true,
@@ -1108,7 +1266,12 @@ function editPayroll(item) {
     period_end: item.period_end,
     payment_date: item.payment_date,
     notes: item.notes || "",
+    payroll_scope: "all",
+    individual_target: "position",
+    included_position: null,
+    included_employee_id: null,
     has_attendance: Boolean(item.has_attendance),
+    excluded_positions: [],
     deduct_sss: item.deduct_sss !== false,
     deduct_philhealth: item.deduct_philhealth !== false,
     deduct_pagibig: item.deduct_pagibig !== false,
@@ -1130,6 +1293,24 @@ async function savePayroll(forceCreate = false) {
   const { valid } = await form.value.validate();
   if (!valid) return;
 
+  if (formData.value.payroll_scope === "individual") {
+    if (
+      formData.value.individual_target === "position" &&
+      !formData.value.included_position
+    ) {
+      toast.error("Please select a position for individual payroll");
+      return;
+    }
+
+    if (
+      formData.value.individual_target === "employee" &&
+      !formData.value.included_employee_id
+    ) {
+      toast.error("Please select an employee for individual payroll");
+      return;
+    }
+  }
+
   // Prepare payload - simplified for all employees only
   const payload = {
     period_name: formData.value.period_name,
@@ -1137,14 +1318,30 @@ async function savePayroll(forceCreate = false) {
     period_end: formData.value.period_end,
     payment_date: formData.value.payment_date,
     notes: formData.value.notes,
+    payroll_scope: formData.value.payroll_scope,
+    individual_target: formData.value.individual_target,
     deduct_sss: formData.value.deduct_sss,
     deduct_philhealth: formData.value.deduct_philhealth,
     deduct_pagibig: formData.value.deduct_pagibig,
   };
 
+  if (formData.value.payroll_scope === "individual") {
+    if (formData.value.individual_target === "position") {
+      payload.included_position = formData.value.included_position;
+    }
+
+    if (formData.value.individual_target === "employee") {
+      payload.included_employee_id = formData.value.included_employee_id;
+    }
+  }
+
   // Add attendance filter if enabled
   if (formData.value.has_attendance) {
     payload.has_attendance = formData.value.has_attendance;
+  }
+
+  if (Array.isArray(formData.value.excluded_positions) && formData.value.excluded_positions.length > 0) {
+    payload.excluded_positions = formData.value.excluded_positions;
   }
 
   // Add force_create flag if bypassing validation
@@ -1159,7 +1356,23 @@ async function savePayroll(forceCreate = false) {
       await api.post("/payrolls/validate", {
         period_start: formData.value.period_start,
         period_end: formData.value.period_end,
+        payroll_scope: formData.value.payroll_scope,
+        individual_target: formData.value.individual_target,
+        included_position:
+          formData.value.payroll_scope === "individual" &&
+          formData.value.individual_target === "position"
+            ? formData.value.included_position
+            : null,
+        included_employee_id:
+          formData.value.payroll_scope === "individual" &&
+          formData.value.individual_target === "employee"
+            ? formData.value.included_employee_id
+            : null,
         has_attendance: formData.value.has_attendance || false,
+        excluded_positions:
+          formData.value.payroll_scope === "all"
+            ? formData.value.excluded_positions || []
+            : [],
       });
     } catch (error) {
       saving.value = false;

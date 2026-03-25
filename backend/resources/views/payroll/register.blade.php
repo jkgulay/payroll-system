@@ -7,7 +7,7 @@
     <style>
         @page {
             size: 13in 8.5in;
-            margin: 6mm 10mm 5mm 8mm;
+            margin: 1mm;
         }
 
         body {
@@ -20,10 +20,10 @@
 
         .page-signature-footer {
             position: fixed;
-            left: 8mm;
-            right: 10mm;
+            left: 1mm;
+            right: 1mm;
             bottom: 0mm;
-            width: calc(100% - 18mm);
+            width: calc(100% - 2mm);
             min-height: 72mm;
             padding-top: 6mm;
             padding-bottom: 1mm;
@@ -363,14 +363,58 @@
                 $pageBreakIndices[] = $pi + $rowsPerPage;
                 $pi += $rowsPerPage;
             }
+            $currentPageStart = 0;
             @endphp
             @foreach($items as $index => $item)
             @php
             $undertimeDeduction = $item->undertime_deduction ?? 0;
             $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+            $sunSplHolHours = ($item->special_ot_hours ?? 0) + ($item->sunday_hours ?? 0);
+            $sunSplHolPay = ($item->special_ot_pay ?? 0) + ($item->sunday_pay ?? 0);
             @endphp
             {{-- Add header before each new page of data --}}
             @if(in_array($index, $pageBreakIndices))
+            @php
+            $pageItems = $items->slice($currentPageStart, $index - $currentPageStart);
+            $pageUndertimeDeduction = $pageItems->sum(function($entry) {
+            return $entry->undertime_deduction ?? 0;
+            });
+            $pageAmount = $pageItems->sum(function($entry) {
+            return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
+            });
+            $pageSunSplHolHours = $pageItems->sum(function($entry) {
+            return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+            });
+            $pageSunSplHolPay = $pageItems->sum(function($entry) {
+            return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
+            });
+            @endphp
+            <tr>
+                <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
+            </tr>
+            <tr class="total-row">
+                <td class="text-left"><strong>T O T A L</strong></td>
+                <td></td>
+                <td></td>
+                <td class="text-right">{{ number_format($pageAmount, 2) }}</td>
+                <td>{{ number_format($pageItems->sum('regular_ot_hours'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('regular_ot_pay'), 2) }}</td>
+                <td>{{ number_format($pageSunSplHolHours, 2) }}</td>
+                <td class="text-right">{{ number_format($pageSunSplHolPay, 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('salary_adjustment'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('other_allowances'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('gross_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('employee_savings'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('loans'), 2) }}</td>
+                <td class="text-right">{{ $pageUndertimeDeduction > 0 ? number_format($pageUndertimeDeduction, 2) : '' }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('cash_advance'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('sss'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('philhealth'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('pagibig'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('net_pay'), 2) }}</td>
+                <td></td>
+            </tr>
             </tbody>
             </table>
             </div>
@@ -444,6 +488,9 @@
                     </tr>
                 </thead>
                 <tbody>
+            @php
+            $currentPageStart = $index;
+            @endphp
             @endif
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
@@ -452,8 +499,8 @@
                 <td class="text-right">{{ number_format($amount, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? number_format($item->regular_ot_hours, 2) : '' }}</td>
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
-                <td>{{ $item->special_ot_hours > 0 ? number_format($item->special_ot_hours, 2) : '' }}</td>
-                <td class="text-right">{{ $item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '' }}</td>
+                <td>{{ $sunSplHolHours > 0 ? number_format($sunSplHolHours, 2) : '' }}</td>
+                <td class="text-right">{{ $sunSplHolPay > 0 ? number_format($sunSplHolPay, 2) : '' }}</td>
                 <td class="text-right">{{ $item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->gross_pay, 2) }}</td>
@@ -470,11 +517,18 @@
             </tr>
             @endforeach
             @php
-            $totalUndertimeDeduction = $items->sum(function($item) {
-            return $item->undertime_deduction ?? 0;
+            $finalPageItems = $items->slice($currentPageStart);
+            $totalUndertimeDeduction = $finalPageItems->sum(function($entry) {
+            return $entry->undertime_deduction ?? 0;
             });
-            $totalAmount = $items->sum(function($item) {
-            return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+            $totalAmount = $finalPageItems->sum(function($entry) {
+            return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
+            });
+            $totalSunSplHolHours = $finalPageItems->sum(function($entry) {
+            return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+            });
+            $totalSunSplHolPay = $finalPageItems->sum(function($entry) {
+            return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
             });
             @endphp
             <tr>
@@ -485,22 +539,22 @@
                 <td></td>
                 <td></td>
                 <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
-                <td>{{ number_format($items->sum('regular_ot_hours'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('regular_ot_pay'), 2) }}</td>
-                <td>{{ number_format($items->sum('special_ot_hours'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('special_ot_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('salary_adjustment'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('other_allowances'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('gross_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('employee_savings'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('loans'), 2) }}</td>
+                <td>{{ number_format($finalPageItems->sum('regular_ot_hours'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('regular_ot_pay'), 2) }}</td>
+                <td>{{ number_format($totalSunSplHolHours, 2) }}</td>
+                <td class="text-right">{{ number_format($totalSunSplHolPay, 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('salary_adjustment'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('other_allowances'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('gross_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('employee_savings'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
-                <td class="text-right">{{ number_format($items->sum('employee_deductions'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('cash_advance'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('sss'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('philhealth'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($items->sum('net_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('cash_advance'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('sss'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('philhealth'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('pagibig'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('net_pay'), 2) }}</td>
                 <td></td>
             </tr>
         </tbody>
@@ -593,14 +647,58 @@
                 $pageBreakIndices[] = $pi + $rowsPerPage;
                 $pi += $rowsPerPage;
             }
+            $currentPageStart = 0;
             @endphp
             @foreach($payroll->items as $index => $item)
             @php
             $undertimeDeduction = $item->undertime_deduction ?? 0;
             $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+            $sunSplHolHours = ($item->special_ot_hours ?? 0) + ($item->sunday_hours ?? 0);
+            $sunSplHolPay = ($item->special_ot_pay ?? 0) + ($item->sunday_pay ?? 0);
             @endphp
             {{-- Add header before each new page of data --}}
             @if(in_array($index, $pageBreakIndices))
+            @php
+            $pageItems = $payroll->items->slice($currentPageStart, $index - $currentPageStart);
+            $pageUndertimeDeduction = $pageItems->sum(function($entry) {
+            return $entry->undertime_deduction ?? 0;
+            });
+            $pageAmount = $pageItems->sum(function($entry) {
+            return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
+            });
+            $pageSunSplHolHours = $pageItems->sum(function($entry) {
+            return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+            });
+            $pageSunSplHolPay = $pageItems->sum(function($entry) {
+            return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
+            });
+            @endphp
+            <tr>
+                <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
+            </tr>
+            <tr class="total-row">
+                <td class="text-left"><strong>T O T A L</strong></td>
+                <td></td>
+                <td></td>
+                <td class="text-right">{{ number_format($pageAmount, 2) }}</td>
+                <td>{{ number_format($pageItems->sum('regular_ot_hours'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('regular_ot_pay'), 2) }}</td>
+                <td>{{ number_format($pageSunSplHolHours, 2) }}</td>
+                <td class="text-right">{{ number_format($pageSunSplHolPay, 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('salary_adjustment'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('other_allowances'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('gross_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('employee_savings'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('loans'), 2) }}</td>
+                <td class="text-right">{{ $pageUndertimeDeduction > 0 ? number_format($pageUndertimeDeduction, 2) : '' }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('cash_advance'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('sss'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('philhealth'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('pagibig'), 2) }}</td>
+                <td class="text-right">{{ number_format($pageItems->sum('net_pay'), 2) }}</td>
+                <td></td>
+            </tr>
             </tbody>
             </table>
 
@@ -684,6 +782,9 @@
                     </tr>
                 </thead>
                 <tbody>
+            @php
+            $currentPageStart = $index;
+            @endphp
             @endif
             <tr>
                 <td class="text-left">{{ $index + 1 }}. {{ $item->employee->full_name }}</td>
@@ -692,8 +793,8 @@
                 <td class="text-right">{{ number_format($amount, 2) }}</td>
                 <td>{{ $item->regular_ot_hours > 0 ? number_format($item->regular_ot_hours, 2) : '' }}</td>
                 <td class="text-right">{{ $item->regular_ot_pay > 0 ? number_format($item->regular_ot_pay, 2) : '' }}</td>
-                <td>{{ $item->special_ot_hours > 0 ? number_format($item->special_ot_hours, 2) : '' }}</td>
-                <td class="text-right">{{ $item->special_ot_pay > 0 ? number_format($item->special_ot_pay, 2) : '' }}</td>
+                <td>{{ $sunSplHolHours > 0 ? number_format($sunSplHolHours, 2) : '' }}</td>
+                <td class="text-right">{{ $sunSplHolPay > 0 ? number_format($sunSplHolPay, 2) : '' }}</td>
                 <td class="text-right">{{ $item->salary_adjustment != 0 ? number_format($item->salary_adjustment, 2) : '' }}</td>
                 <td class="text-right">{{ $item->other_allowances > 0 ? number_format($item->other_allowances, 2) : '' }}</td>
                 <td class="text-right">{{ number_format($item->gross_pay, 2) }}</td>
@@ -710,11 +811,18 @@
             </tr>
             @endforeach
             @php
-            $totalUndertimeDeduction = $payroll->items->sum(function($item) {
-            return $item->undertime_deduction ?? 0;
+            $finalPageItems = $payroll->items->slice($currentPageStart);
+            $totalUndertimeDeduction = $finalPageItems->sum(function($entry) {
+            return $entry->undertime_deduction ?? 0;
             });
-            $totalAmount = $payroll->items->sum(function($item) {
-            return ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+            $totalAmount = $finalPageItems->sum(function($entry) {
+            return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
+            });
+            $totalSunSplHolHours = $finalPageItems->sum(function($entry) {
+            return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+            });
+            $totalSunSplHolPay = $finalPageItems->sum(function($entry) {
+            return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
             });
             @endphp
             <tr>
@@ -725,22 +833,22 @@
                 <td></td>
                 <td></td>
                 <td class="text-right">{{ number_format($totalAmount, 2) }}</td>
-                <td>{{ number_format($payroll->items->sum('regular_ot_hours'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('regular_ot_pay'), 2) }}</td>
-                <td>{{ number_format($payroll->items->sum('special_ot_hours'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('special_ot_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('salary_adjustment'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('other_allowances'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('gross_pay'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('employee_savings'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('loans'), 2) }}</td>
+                <td>{{ number_format($finalPageItems->sum('regular_ot_hours'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('regular_ot_pay'), 2) }}</td>
+                <td>{{ number_format($totalSunSplHolHours, 2) }}</td>
+                <td class="text-right">{{ number_format($totalSunSplHolPay, 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('salary_adjustment'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('other_allowances'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('gross_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('employee_savings'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('employee_deductions'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('cash_advance'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('sss'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('philhealth'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('pagibig'), 2) }}</td>
-                <td class="text-right">{{ number_format($payroll->items->sum('net_pay'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('cash_advance'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('sss'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('philhealth'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('pagibig'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum('net_pay'), 2) }}</td>
                 <td></td>
             </tr>
         </tbody>
