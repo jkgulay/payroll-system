@@ -518,6 +518,20 @@
                 >
               </div>
             </div>
+
+            <v-select
+              v-if="exportFilter.format === 'payslips'"
+              v-model="exportFilter.paper_size"
+              :items="paperSizeOptions"
+              item-title="title"
+              item-value="value"
+              label="Paper Size"
+              prepend-inner-icon="mdi-file-document"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+              class="mt-3"
+            ></v-select>
           </div>
 
           <!-- Filter Section (Collapsible) -->
@@ -725,10 +739,15 @@ const downloadingRegister = ref(false);
 const showExportFilters = ref(false);
 const exportFilter = ref({
   format: "pdf", // pdf, payslips, by_device_pdf
+  paper_size: "long_bond", // long_bond, a4 (for payslips)
   departments: [], // Array of department names
   positions: [], // Array of position names
   employees: [], // Array of employee IDs
 });
+const paperSizeOptions = [
+  { title: "8.5 x 13 (Long Bond)", value: "long_bond" },
+  { title: "A4", value: "a4" },
+];
 const availableDepartments = ref([]);
 
 // Compute available positions from payroll items
@@ -938,6 +957,8 @@ async function downloadRegister() {
     // Only add format for register export (payslips is always PDF)
     if (!isPayslips) {
       params.format = exportFilter.value.format;
+    } else {
+      params.paper_size = exportFilter.value.paper_size;
     }
 
     // Determine filter type based on selections
@@ -997,6 +1018,10 @@ async function downloadRegister() {
     let filename = isPayslips
       ? `payslips_${payroll.value.payroll_number}`
       : `payroll_register_${payroll.value.payroll_number}`;
+
+    if (isPayslips && exportFilter.value.paper_size === "a4") {
+      filename += "_a4";
+    }
 
     // Add department info to filename if filtered
     if (
