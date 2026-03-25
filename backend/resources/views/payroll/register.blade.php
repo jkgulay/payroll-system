@@ -7,7 +7,7 @@
     <style>
         @page {
             size: 13in 8.5in;
-            margin: 6mm 10mm 5mm 8mm;
+            margin: 1mm;
         }
 
         body {
@@ -20,10 +20,10 @@
 
         .page-signature-footer {
             position: fixed;
-            left: 8mm;
-            right: 10mm;
+            left: 1mm;
+            right: 1mm;
             bottom: 0mm;
-            width: calc(100% - 18mm);
+            width: calc(100% - 2mm);
             min-height: 72mm;
             padding-top: 6mm;
             padding-bottom: 1mm;
