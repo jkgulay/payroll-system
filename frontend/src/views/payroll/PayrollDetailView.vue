@@ -1395,38 +1395,6 @@ function formatUndertime(hours) {
   width: 100%;
 }
 
-.export-section-label.clickable {
-  cursor: pointer;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: #f8f9fb;
-  border: 1px solid rgba(0, 31, 61, 0.06);
-  margin-bottom: 0;
-  transition: all 0.2s ease;
-}
-
-.export-section-label.clickable:hover {
-  background: #f1f3f6;
-  border-color: rgba(0, 31, 61, 0.1);
-}
-
-.filter-optional-hint {
-  font-size: 11px;
-  font-weight: 500;
-  color: #94a3b8;
-  text-transform: none;
-  letter-spacing: 0;
-  margin-right: 6px;
-}
-
-.filter-panel {
-  padding: 16px 14px 4px 14px;
-  background: #fafbfc;
-  border: 1px solid rgba(0, 31, 61, 0.06);
-  border-top: none;
-  border-radius: 0 0 10px 10px;
-}
-
 /* Format Grid */
 .format-grid {
   display: grid;
