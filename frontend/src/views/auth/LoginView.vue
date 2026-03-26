@@ -304,6 +304,18 @@ const rules = {
     (value && value.length >= min) || `Must be at least ${min} characters`,
 };
 
+function preloadDashboardChunk(role) {
+  const chunkLoaders = {
+    admin: () => import("@/views/DashboardView.vue"),
+    hr: () => import("@/views/hr/HrDashboardView.vue"),
+    payrollist: () => import("@/views/payrollist/PayrollistDashboardView.vue"),
+    employee: () => import("@/views/employee/EmployeeDashboardView.vue"),
+  };
+
+  const load = chunkLoaders[role] || chunkLoaders.admin;
+  return load().catch(() => {});
+}
+
 async function handleLogin() {
   errorMessage.value = "";
 
@@ -312,6 +324,9 @@ async function handleLogin() {
   if (!valid) return;
 
   try {
+    // Start dashboard chunk preload while login request is in flight
+    preloadDashboardChunk(form.role);
+
     const response = await authStore.login({
       email: form.email,
       password: form.password,

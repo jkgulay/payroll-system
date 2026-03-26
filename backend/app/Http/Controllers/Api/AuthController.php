@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -87,11 +88,15 @@ class AuthController extends Controller
         $user->last_login_at = now();
         $user->save();
 
-        // Load employee relationship to get full name
-        $user->load('employee');
-
-        // Get full name from employee if available
-        $fullName = $user->employee ? $user->employee->full_name : $user->name;
+        // Avoid eager-loading full employee relation during login for faster response.
+        // Fetch only the display name when an employee link exists.
+        $fullName = $user->name;
+        if ($user->employee_id) {
+            $employeeName = Employee::where('id', $user->employee_id)->value('full_name');
+            if ($employeeName) {
+                $fullName = $employeeName;
+            }
+        }
 
         // Create token
         $token = $user->createToken('auth-token')->plainTextToken;
