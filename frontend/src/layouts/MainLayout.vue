@@ -332,16 +332,13 @@ onMounted(async () => {
     rail.value = false;
   }
 
-  // Fetch fresh user data with employee relationship on mount
+  // Keep startup non-blocking: refresh data in background
   if (authStore.isAuthenticated) {
-    await authStore.fetchUser();
+    authStore.fetchUser().catch(() => {});
   }
 
-  // Fetch company info for app-wide access
-  await companyInfoStore.fetchCompanyInfo();
-
-  // Load access request counts for admin/hr sidebar badges
-  await loadAccessRequestCounts();
+  companyInfoStore.fetchCompanyInfo().catch(() => {});
+  loadAccessRequestCounts().catch(() => {});
 });
 
 const userName = computed(

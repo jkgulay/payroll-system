@@ -444,7 +444,7 @@ const totalPendingActions = computed(() => {
 let unsubscribeAttendance = null;
 
 onMounted(async () => {
-  await fetchDashboardData();
+  fetchDashboardData();
 
   // Listen for attendance updates
   unsubscribeAttendance = onAttendanceUpdate((detail) => {
