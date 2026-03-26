@@ -17,6 +17,7 @@ const inFlightGetRequests = new Map();
 const responseCache = new Map();
 
 const CACHE_TTL_BY_PREFIX = [
+  { prefix: "/payrolls", ttl: 15000 },
   { prefix: "/projects", ttl: 120000 },
   { prefix: "/position-rates", ttl: 120000 },
   { prefix: "/employees/departments", ttl: 300000 },

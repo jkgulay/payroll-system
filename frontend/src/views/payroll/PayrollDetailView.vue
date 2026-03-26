@@ -610,8 +610,11 @@ const availablePositions = computed(() => {
 
   const positions = new Set();
   payroll.value.items.forEach((item) => {
-    if (item.employee?.position?.position_name) {
-      positions.add(item.employee.position.position_name);
+    const positionName =
+      item.employee?.positionRate?.position_name ||
+      item.employee?.position?.position_name;
+    if (positionName) {
+      positions.add(positionName);
     }
   });
 
@@ -643,7 +646,10 @@ const filteredItems = computed(() => {
   }
 
   return payroll.value.items.filter((item) => {
-    return item.employee?.position?.position_name === positionFilter.value;
+    const positionName =
+      item.employee?.positionRate?.position_name ||
+      item.employee?.position?.position_name;
+    return positionName === positionFilter.value;
   });
 });
 
@@ -694,7 +700,9 @@ onMounted(() => {
 async function fetchPayroll() {
   loading.value = true;
   try {
-    const response = await api.get(`/payrolls/${route.params.id}`);
+    const response = await api.get(`/payrolls/${route.params.id}`, {
+      cacheTTL: 15000,
+    });
     payroll.value = response.data;
   } catch (error) {
     toast.error("Failed to load payroll details");
