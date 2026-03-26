@@ -325,6 +325,59 @@ async function loadAccessRequestCounts() {
   }
 }
 
+function runOnIdle(callback) {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(callback, { timeout: 2000 });
+    return;
+  }
+
+  setTimeout(callback, 350);
+}
+
+function prefetchLikelyRouteChunks() {
+  if (!authStore.isAuthenticated) return;
+
+  const prefetchByRole = {
+    admin: [
+      () => import("@/views/DashboardView.vue"),
+      () => import("@/views/employees/EmployeeListView.vue"),
+      () => import("@/views/payroll/PayrollListView.vue"),
+      () => import("@/views/attendance/AttendanceView.vue"),
+      () => import("@/views/projects/ProjectManagementView.vue"),
+      () => import("@/views/settings/UserManagementView.vue"),
+    ],
+    hr: [
+      () => import("@/views/hr/HrDashboardView.vue"),
+      () => import("@/views/employees/EmployeeListView.vue"),
+      () => import("@/views/hr/LeaveApprovalView.vue"),
+      () => import("@/views/employees/ResignationManagementView.vue"),
+      () => import("@/views/hr/HRResumeSubmissions.vue"),
+      () => import("@/views/employee/ProfileView.vue"),
+    ],
+    payrollist: [
+      () => import("@/views/payrollist/PayrollistDashboardView.vue"),
+      () => import("@/views/payroll/PayrollListView.vue"),
+      () => import("@/views/attendance/AttendanceView.vue"),
+      () => import("@/views/projects/ProjectManagementView.vue"),
+      () => import("@/views/settings/HolidayManagementView.vue"),
+      () => import("@/views/employee/ProfileView.vue"),
+    ],
+    employee: [
+      () => import("@/views/employee/EmployeeDashboardView.vue"),
+      () => import("@/views/employee/LeaveRequestView.vue"),
+      () => import("@/views/employee/MyLoansView.vue"),
+      () => import("@/views/employee/ResignationView.vue"),
+      () => import("@/views/employee/ProfileView.vue"),
+    ],
+  };
+
+  const role = authStore.userRole;
+  const loaders = prefetchByRole[role] || [];
+  loaders.forEach((load) => {
+    load().catch(() => {});
+  });
+}
+
 // Handle initial drawer state for mobile
 onMounted(async () => {
   if (isMobile.value) {
@@ -339,6 +392,7 @@ onMounted(async () => {
 
   companyInfoStore.fetchCompanyInfo().catch(() => {});
   loadAccessRequestCounts().catch(() => {});
+  runOnIdle(prefetchLikelyRouteChunks);
 });
 
 const userName = computed(
