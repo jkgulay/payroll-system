@@ -1575,10 +1575,12 @@ onMounted(async () => {
     router.replace({ query: {} });
   }
 
-  await fetchEmployees();
-  await fetchDepartments();
-  await fetchProjects();
-  await loadPositionRates();
+  await Promise.all([
+    fetchEmployees(),
+    fetchDepartments(),
+    fetchProjects(),
+    loadPositionRates(),
+  ]);
 });
 
 // Watch for route query changes to auto-open Add Employee dialog

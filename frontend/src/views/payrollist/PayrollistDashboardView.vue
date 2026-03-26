@@ -378,7 +378,7 @@ const attendanceHeaders = [
 ];
 
 onMounted(async () => {
-  await fetchDashboardData();
+  fetchDashboardData();
 });
 
 async function fetchDashboardData() {

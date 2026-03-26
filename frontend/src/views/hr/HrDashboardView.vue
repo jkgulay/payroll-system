@@ -910,10 +910,12 @@ const resumeHeaders = [
 ];
 
 onMounted(async () => {
-  await fetchDashboardData();
-  await fetchMyResumes();
-  await fetchDepartments();
-  await loadPositionRates();
+  await Promise.all([
+    fetchDashboardData(),
+    fetchMyResumes(),
+    fetchDepartments(),
+    loadPositionRates(),
+  ]);
 });
 
 async function fetchDashboardData() {
@@ -942,44 +944,41 @@ async function fetchDashboardData() {
 
 async function fetchHRStats() {
   try {
-    // Get total employees count from meta or fetch all
-    const employeesResponse = await api.get("/employees", {
-      params: { per_page: 9999 }, // Get all employees
-    });
-    hrStats.value.totalEmployees =
-      employeesResponse.data.meta?.total ||
-      employeesResponse.data.data?.length ||
-      employeesResponse.data.length ||
-      0;
-
-    // Get pending applications count
-    const applicationsResponse = await api.get("/employee-applications", {
-      params: { status: "pending" },
-    });
-    hrStats.value.pendingApplications =
-      applicationsResponse.data.data?.length ||
-      applicationsResponse.data.length ||
-      0;
-
-    // Get pending leaves count
-    const leavesResponse = await api.get("/employee-applications", {
-      params: { type: "leave", status: "pending" },
-    });
-    hrStats.value.pendingLeaves =
-      leavesResponse.data.data?.filter((app) => app.type === "leave").length ||
-      0;
-
     // Get recent resignations (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const startDate = thirtyDaysAgo.toISOString().split("T")[0];
 
-    const resignationsResponse = await api.get("/resignations", {
-      params: {
-        start_date: startDate,
-        per_page: 100, // Get all within date range
-      },
-    });
+    const [employeesResponse, applicationsResponse, leavesResponse, resignationsResponse] = await Promise.all([
+      api.get("/employees", { params: { per_page: 1 } }),
+      api.get("/employee-applications", { params: { status: "pending" } }),
+      api.get("/employee-applications", {
+        params: { type: "leave", status: "pending" },
+      }),
+      api.get("/resignations", {
+        params: {
+          start_date: startDate,
+          per_page: 100,
+        },
+      }),
+    ]);
+
+    hrStats.value.totalEmployees =
+      employeesResponse.data.meta?.total ||
+      employeesResponse.data.total ||
+      employeesResponse.data.data?.length ||
+      0;
+
+    hrStats.value.pendingApplications =
+      applicationsResponse.data.data?.length ||
+      applicationsResponse.data.length ||
+      0;
+
+    hrStats.value.pendingLeaves =
+      leavesResponse.data.data?.length ||
+      leavesResponse.data.length ||
+      0;
+
     hrStats.value.recentResignations =
       resignationsResponse.data.data?.length ||
       resignationsResponse.data.length ||
