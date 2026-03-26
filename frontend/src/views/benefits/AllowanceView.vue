@@ -395,8 +395,7 @@ onMounted(async () => {
   await checkModuleAccess();
   loadMyRequests();
   if (hasAccess.value) {
-    await fetchPositions();
-    await fetchAllowances();
+    await Promise.all([fetchPositions(), fetchAllowances()]);
   }
 });
 

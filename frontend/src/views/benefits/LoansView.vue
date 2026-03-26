@@ -1151,6 +1151,7 @@ const userRole = computed(() => authStore.user?.role);
 const loans = ref([]);
 const employees = ref([]);
 const loading = ref(false);
+const loadingEmployees = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
 const dialog = ref(false);
@@ -1345,22 +1346,42 @@ const fetchLoans = async () => {
 
 // Fetch employees
 const fetchEmployees = async () => {
+  if (loadingEmployees.value) return;
+
+  loadingEmployees.value = true;
   try {
     // Fetch active and on_leave employees for the loan dropdown
     const response = await api.get("/employees", {
       params: {
-        per_page: 10000,
+        per_page: 2000,
         activity_status: "active,on_leave",
       },
     });
     employees.value = response.data.data || response.data;
   } catch (error) {
     devLog.error("Failed to load employees:", error);
+  } finally {
+    loadingEmployees.value = false;
   }
+};
+
+const ensureEmployeesLoaded = async () => {
+  if (userRole.value === "employee") return;
+  if (employees.value.length > 0 || loadingEmployees.value) return;
+  await fetchEmployees();
+};
+
+const runWhenIdle = (callback) => {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(() => callback());
+    return;
+  }
+  setTimeout(() => callback(), 250);
 };
 
 // Open dialogs
 const openAddDialog = () => {
+  ensureEmployeesLoaded();
   editMode.value = false;
   isEmployeeRequest.value = false;
   formData.value = { ...defaultFormData };
@@ -1378,6 +1399,7 @@ const openRequestDialog = () => {
 };
 
 const openEditDialog = (loan) => {
+  ensureEmployeesLoaded();
   editMode.value = true;
   isEmployeeRequest.value = false;
   selectedLoan.value = loan;
@@ -1588,7 +1610,9 @@ onMounted(async () => {
   if (hasAccess.value) {
     fetchLoans();
     if (userRole.value !== "employee") {
-      fetchEmployees();
+      runWhenIdle(() => {
+        ensureEmployeesLoaded();
+      });
     }
   }
 });

@@ -1200,6 +1200,7 @@ const positions = ref([]);
 const loading = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
+const loadingEmployees = ref(false);
 const loadingDepartments = ref(false);
 const loadingPositions = ref(false);
 const dialog = ref(false);
@@ -1442,7 +1443,7 @@ const fetchDeductions = async () => {
   try {
     const params = {
       paginate: false,
-      per_page: 10000,
+      per_page: 3000,
     };
     if (filters.value.search) params.search = filters.value.search;
     if (filters.value.department) params.department = filters.value.department;
@@ -1472,10 +1473,13 @@ const debouncedSearch = () => {
 
 // Fetch employees
 const fetchEmployees = async () => {
+  if (loadingEmployees.value) return;
+
+  loadingEmployees.value = true;
   try {
     const response = await api.get("/employees", {
       params: {
-        per_page: 10000,
+        per_page: 2000,
         activity_status: "active,on_leave",
       },
     });
@@ -1491,7 +1495,23 @@ const fetchEmployees = async () => {
   } catch (error) {
     devLog.error("Failed to load employees:", error);
     toast.error("Failed to load employees");
+  } finally {
+    loadingEmployees.value = false;
   }
+};
+
+const ensureEmployeesLoaded = async () => {
+  if (userRole.value === "employee") return;
+  if (employees.value.length > 0 || loadingEmployees.value) return;
+  await fetchEmployees();
+};
+
+const runWhenIdle = (callback) => {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(() => callback());
+    return;
+  }
+  setTimeout(() => callback(), 250);
 };
 
 // Fetch departments
@@ -1545,6 +1565,7 @@ const loadEmployeesByFilter = async () => {
 
 // Open dialogs
 const openAddDialog = () => {
+  ensureEmployeesLoaded();
   editMode.value = false;
   deductionStep.value = 1;
   selectionMode.value = "individual";
@@ -1554,6 +1575,7 @@ const openAddDialog = () => {
 };
 
 const openEditDialog = (deduction) => {
+  ensureEmployeesLoaded();
   editMode.value = true;
   deductionStep.value = 1;
   selectedDeduction.value = deduction;
@@ -1770,7 +1792,9 @@ onMounted(async () => {
   if (hasAccess.value) {
     fetchDeductions();
     if (userRole.value !== "employee") {
-      fetchEmployees();
+      runWhenIdle(() => {
+        ensureEmployeesLoaded();
+      });
       fetchDepartments();
       fetchPositions();
     }
