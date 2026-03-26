@@ -4,8 +4,8 @@ const attendanceService = {
   /**
    * Get attendance records with filters
    */
-  async getAttendance(params = {}) {
-    const response = await api.get("/attendance", { params });
+  async getAttendance(params = {}, config = {}) {
+    const response = await api.get("/attendance", { ...config, params });
     return response.data;
   },
 

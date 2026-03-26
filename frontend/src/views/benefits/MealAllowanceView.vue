@@ -306,8 +306,7 @@ const canDelete = computed(() =>
 const isAdmin = computed(() => authStore.user?.role === "admin");
 
 onMounted(async () => {
-  await fetchPositions();
-  await fetchMealAllowances();
+  await Promise.all([fetchPositions(), fetchMealAllowances()]);
 });
 
 async function fetchMealAllowances() {

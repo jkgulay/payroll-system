@@ -866,8 +866,7 @@ onMounted(async () => {
   await checkModuleAccess();
   loadMyRequests();
   if (hasAccess.value) {
-    fetchThirteenthMonth();
-    fetchDepartments();
+    await Promise.all([fetchThirteenthMonth(), fetchDepartments()]);
   }
 });
 </script>

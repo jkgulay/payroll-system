@@ -4,8 +4,8 @@ export const auditLogService = {
   /**
    * Get all audit logs with filtering and pagination
    */
-  async getAll(params = {}) {
-    const response = await api.get('/audit-logs', { params });
+  async getAll(params = {}, config = {}) {
+    const response = await api.get('/audit-logs', { ...config, params });
     return response.data;
   },
 

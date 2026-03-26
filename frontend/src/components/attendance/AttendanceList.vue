@@ -258,6 +258,8 @@ const emit = defineEmits(["edit", "delete", "approve", "reject"]);
 
 const loading = ref(false);
 const attendance = ref([]);
+const ATTENDANCE_CACHE_PREFIX = "attendance:list:v1";
+const isFetchingAttendance = ref(false);
 
 const user = JSON.parse(localStorage.getItem("user") || "{}");
 const canEditRole = computed(() =>
@@ -304,18 +306,41 @@ const approvalOptions = [
 ];
 
 const loadAttendance = async () => {
-  loading.value = true;
+  const cacheKey = `${ATTENDANCE_CACHE_PREFIX}:${filters.date || ""}:${filters.status || "all"}:${filters.approval_status || "all"}`;
+
+  const cachedData = sessionStorage.getItem(cacheKey);
+  if (cachedData) {
+    try {
+      attendance.value = JSON.parse(cachedData);
+    } catch {
+      sessionStorage.removeItem(cacheKey);
+    }
+  }
+
+  if (isFetchingAttendance.value) return;
+
+  const showLoader = attendance.value.length === 0;
+  if (showLoader) {
+    loading.value = true;
+  }
+
+  isFetchingAttendance.value = true;
   try {
     const response = await attendanceService.getAttendance({
       date_from: filters.date,
       date_to: filters.date,
       status: filters.status,
       per_page: 10000, // Fetch all records
+    }, {
+      cacheTTL: 15000,
+      skipToast: true,
     });
     attendance.value = response.data || [];
+    sessionStorage.setItem(cacheKey, JSON.stringify(attendance.value));
   } catch (error) {
     toast.error("Failed to load attendance records");
   } finally {
+    isFetchingAttendance.value = false;
     loading.value = false;
   }
 };

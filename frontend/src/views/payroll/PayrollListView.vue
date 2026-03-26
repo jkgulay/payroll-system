@@ -456,6 +456,7 @@
                 <v-autocomplete
                   v-model="formData.included_employee_id"
                   :items="employeeOptions"
+                  :loading="employeeOptionsLoading"
                   item-title="full_name"
                   item-value="id"
                   label="Select Employee *"
@@ -1006,7 +1007,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import api from "@/services/api";
@@ -1066,6 +1067,8 @@ const formData = ref({
 });
 
 const employeeOptions = ref([]);
+const employeeOptionsLoaded = ref(false);
+const employeeOptionsLoading = ref(false);
 
 const individualTargetOptions = [
   { title: "Position", value: "position" },
@@ -1176,16 +1179,19 @@ const { handleKeydown: handlePayrollFormKeydown } = useKeyboardFirstFlow({
 onMounted(() => {
   fetchPayrolls();
   loadPositionRates();
-  loadEmployeeOptions();
 });
 
 async function loadEmployeeOptions() {
+  if (employeeOptionsLoaded.value || employeeOptionsLoading.value) return;
+
+  employeeOptionsLoading.value = true;
   try {
     const response = await api.get("/employees", {
       params: {
-        per_page: 10000,
+        per_page: 2000,
         activity_status: "active,on_leave",
       },
+      cacheTTL: 120000,
     });
 
     const data = Array.isArray(response.data)
@@ -1204,10 +1210,34 @@ async function loadEmployeeOptions() {
         employee.position_name ||
         "",
     }));
+    employeeOptionsLoaded.value = true;
   } catch (error) {
     employeeOptions.value = [];
+  } finally {
+    employeeOptionsLoading.value = false;
   }
 }
+
+function shouldLoadEmployeeOptions() {
+  return (
+    dialog.value &&
+    formData.value.payroll_scope === "individual" &&
+    formData.value.individual_target === "employee"
+  );
+}
+
+watch(
+  [
+    () => dialog.value,
+    () => formData.value.payroll_scope,
+    () => formData.value.individual_target,
+  ],
+  () => {
+    if (shouldLoadEmployeeOptions()) {
+      loadEmployeeOptions();
+    }
+  },
+);
 
 const customEmployeeFilter = (itemTitle, queryText, item) => {
   if (!queryText) return true;
@@ -1227,7 +1257,7 @@ const customEmployeeFilter = (itemTitle, queryText, item) => {
 async function fetchPayrolls() {
   loading.value = true;
   try {
-    const response = await api.get("/payrolls");
+    const response = await api.get("/payrolls", { cacheTTL: 15000 });
     payrolls.value = response.data.data || response.data;
   } catch (error) {
     toast.error("Failed to load payrolls");
@@ -1426,6 +1456,9 @@ async function savePayroll(forceCreate = false) {
 }
 
 function viewPayroll(item) {
+  api.get(`/payrolls/${item.id}`, { cacheTTL: 15000, skipToast: true }).catch(
+    () => {},
+  );
   router.push(`/payroll/${item.id}`);
 }
 

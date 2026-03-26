@@ -17,6 +17,7 @@ use App\Models\ThirteenthMonthPay;
 use App\Models\EmployeeLoan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -29,6 +30,10 @@ class DashboardController extends Controller
 
     public function index(Request $request)
     {
+        $user = $request->user();
+        $cacheKey = 'dashboard:stats:' . ($user?->role ?? 'guest');
+
+        $cachedData = Cache::remember($cacheKey, now()->addSeconds(20), function () {
         // Count all active employees (is_active = true)
         $totalEmployees = Employee::where('is_active', true)->count();
 
@@ -145,7 +150,10 @@ class DashboardController extends Controller
             'recent_payrolls' => $recentPayrolls,
         ];
 
-        return response()->json($data);
+        return $data;
+        });
+
+        return response()->json($cachedData);
     }
 
     public function employeeDashboard(Request $request)
@@ -763,6 +771,9 @@ class DashboardController extends Controller
      */
     public function upcomingEvents(Request $request)
     {
+        $cacheKey = 'dashboard:upcoming-events';
+
+        $events = Cache::remember($cacheKey, now()->addSeconds(30), function () {
         $events = [];
         $now = Carbon::now();
         $nextWeek = Carbon::now()->addWeek();
@@ -791,6 +802,8 @@ class DashboardController extends Controller
         // Upcoming employee anniversaries (work anniversaries)
         $upcomingAnniversaries = Employee::where('is_active', true)
             ->whereNotNull('date_hired')
+            ->select(['id', 'first_name', 'middle_name', 'last_name', 'suffix', 'date_hired'])
+            ->whereRaw('EXTRACT(MONTH FROM date_hired) IN (?, ?)', [$now->month, $nextMonth->month])
             ->get()
             ->filter(function ($employee) use ($now, $nextMonth) {
                 $dateHired = Carbon::parse($employee->date_hired);
@@ -862,12 +875,14 @@ class DashboardController extends Controller
         }
 
         // Merge all events
-        $events = collect($upcomingLeaves)
+        return collect($upcomingLeaves)
             ->concat($upcomingAnniversaries)
             ->concat($payrollCutoffs)
             ->sortBy('date')
             ->values()
-            ->take(10);
+            ->take(10)
+            ->toArray();
+        });
 
         return response()->json($events);
     }

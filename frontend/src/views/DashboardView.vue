@@ -405,6 +405,8 @@ const stats = ref({
   monthlyAttendanceRate: 0,
   lastBiometricImportDate: null,
 });
+const DASHBOARD_STATS_CACHE_KEY = "dashboard:stats:v1";
+const isFetchingDashboard = ref(false);
 
 const refreshing = ref(false);
 
@@ -444,7 +446,16 @@ const totalPendingActions = computed(() => {
 let unsubscribeAttendance = null;
 
 onMounted(async () => {
-  await fetchDashboardData();
+  const cachedStats = sessionStorage.getItem(DASHBOARD_STATS_CACHE_KEY);
+  if (cachedStats) {
+    try {
+      stats.value = { ...stats.value, ...JSON.parse(cachedStats) };
+    } catch {
+      sessionStorage.removeItem(DASHBOARD_STATS_CACHE_KEY);
+    }
+  }
+
+  fetchDashboardData();
 
   // Listen for attendance updates
   unsubscribeAttendance = onAttendanceUpdate((detail) => {
@@ -461,11 +472,20 @@ onUnmounted(() => {
 });
 
 async function fetchDashboardData() {
+  if (isFetchingDashboard.value) return;
+
+  isFetchingDashboard.value = true;
   try {
-    const response = await api.get("/dashboard");
+    const response = await api.get("/dashboard", { cacheTTL: 20000 });
     stats.value = response.data.stats;
+    sessionStorage.setItem(
+      DASHBOARD_STATS_CACHE_KEY,
+      JSON.stringify(response.data.stats),
+    );
   } catch (error) {
     devLog.error("Error fetching dashboard data:", error);
+  } finally {
+    isFetchingDashboard.value = false;
   }
 }
 

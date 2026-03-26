@@ -810,22 +810,31 @@ const clearFilters = () => {
   typeFilter.value = "all";
 };
 
-const fetchAdjustments = async () => {
-  loading.value = true;
+const fetchAdjustments = async ({ silent = false, skipCache = false } = {}) => {
+  if (!silent) loading.value = true;
   try {
-    const response = await api.get("/salary-adjustments");
+    const response = await api.get("/salary-adjustments", {
+      skipCache,
+      cacheTTL: 15000,
+    });
     adjustments.value = response.data.data || response.data;
   } catch (error) {
     toast.error("Failed to load salary adjustments");
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 };
 
-const fetchEmployees = async () => {
+const fetchEmployees = async ({ force = false, skipCache = false } = {}) => {
+  if (!force && employees.value.length > 0) return;
+  if (loadingEmployees.value) return;
+
   loadingEmployees.value = true;
   try {
-    const response = await api.get("/salary-adjustments/employees");
+    const response = await api.get("/salary-adjustments/employees", {
+      skipCache,
+      cacheTTL: 120000,
+    });
     employees.value = response.data;
   } catch (error) {
     toast.error("Failed to load employees");
@@ -834,18 +843,34 @@ const fetchEmployees = async () => {
   }
 };
 
+const ensureEmployeesLoaded = async () => {
+  if (employees.value.length > 0 || loadingEmployees.value) return;
+  await fetchEmployees();
+};
+
+const runWhenIdle = (callback) => {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(() => callback());
+    return;
+  }
+
+  setTimeout(() => callback(), 250);
+};
+
 const refreshData = () => {
-  fetchAdjustments();
-  fetchEmployees();
+  fetchAdjustments({ skipCache: true });
+  fetchEmployees({ force: true, skipCache: true });
 };
 
 const openAddDialog = () => {
+  ensureEmployeesLoaded();
   isEditing.value = false;
   resetForm();
   dialog.value = true;
 };
 
 const openEditDialog = (item) => {
+  ensureEmployeesLoaded();
   isEditing.value = true;
   form.id = item.id;
   form.employee_id = item.employee_id;
@@ -927,7 +952,9 @@ onMounted(async () => {
   loadMyAccessRequests();
   if (hasAccess.value) {
     fetchAdjustments();
-    fetchEmployees();
+    runWhenIdle(() => {
+      ensureEmployeesLoaded();
+    });
   }
 });
 </script>

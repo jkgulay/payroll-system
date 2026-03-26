@@ -870,6 +870,7 @@ const submitAccessRequest = async () => {
 const cashBonds = ref([]);
 const employees = ref([]);
 const loading = ref(false);
+const loadingEmployees = ref(false);
 const dialog = ref(false);
 const refundDialog = ref(false);
 const detailsDialog = ref(false);
@@ -1015,17 +1016,36 @@ const fetchCashBonds = async () => {
 };
 
 const fetchEmployees = async () => {
+  if (loadingEmployees.value) return;
+
+  loadingEmployees.value = true;
   try {
     const response = await api.get("/employees", {
       params: {
-        per_page: 10000,
+        per_page: 2000,
         activity_status: "active,on_leave",
       },
     });
     employees.value = response.data.data;
   } catch (error) {
     devLog.error("Failed to fetch employees:", error);
+  } finally {
+    loadingEmployees.value = false;
   }
+};
+
+const ensureEmployeesLoaded = async () => {
+  if (userRole.value === "employee") return;
+  if (employees.value.length > 0 || loadingEmployees.value) return;
+  await fetchEmployees();
+};
+
+const runWhenIdle = (callback) => {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(() => callback());
+    return;
+  }
+  setTimeout(() => callback(), 250);
 };
 
 const calculateSummary = () => {
@@ -1063,6 +1083,7 @@ const calculateInstallments = () => {
 };
 
 const openAddDialog = () => {
+  ensureEmployeesLoaded();
   editMode.value = false;
   resetForm();
   dialog.value = true;
@@ -1073,6 +1094,7 @@ const openAddDialog = () => {
 };
 
 const openEditDialog = (bond) => {
+  ensureEmployeesLoaded();
   editMode.value = true;
   Object.assign(form.value, {
     id: bond.id,
@@ -1278,7 +1300,9 @@ onMounted(async () => {
   if (hasAccess.value) {
     fetchCashBonds();
     if (userRole.value !== "employee") {
-      fetchEmployees();
+      runWhenIdle(() => {
+        ensureEmployeesLoaded();
+      });
     }
   }
 });

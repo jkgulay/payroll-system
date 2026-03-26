@@ -15,6 +15,7 @@ use App\Validators\EmployeeValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -22,7 +23,31 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Employee::with(['project', 'positionRate']);
+        $query = Employee::query()
+            ->select([
+                'id',
+                'employee_number',
+                'biometric_id',
+                'first_name',
+                'middle_name',
+                'last_name',
+                'suffix',
+                'gender',
+                'project_id',
+                'position_id',
+                'contract_type',
+                'activity_status',
+                'date_hired',
+                'custom_pay_rate',
+                'basic_salary',
+                'department',
+                'work_schedule',
+                'created_at',
+            ])
+            ->with([
+                'project:id,name',
+                'positionRate:id,position_name,daily_rate',
+            ]);
 
         // Search - case-insensitive search across multiple fields
         if ($request->has('search') && !empty($request->search)) {
@@ -541,11 +566,13 @@ class EmployeeController extends Controller
     public function getDepartments()
     {
         try {
-            $departments = Employee::whereNotNull('department')
-                ->where('department', '!=', '')
-                ->distinct()
-                ->orderBy('department')
-                ->pluck('department');
+            $departments = Cache::remember('employees:departments', now()->addMinutes(5), function () {
+                return Employee::whereNotNull('department')
+                    ->where('department', '!=', '')
+                    ->distinct()
+                    ->orderBy('department')
+                    ->pluck('department');
+            });
 
             return response()->json($departments);
         } catch (\Exception $e) {

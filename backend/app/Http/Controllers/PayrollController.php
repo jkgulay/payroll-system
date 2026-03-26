@@ -30,7 +30,10 @@ class PayrollController extends Controller
     }
     public function index()
     {
-        $payrolls = Payroll::with(['creator', 'finalizer'])
+        $payrolls = Payroll::with([
+            'creator:id,username,name',
+            'finalizer:id,username,name',
+        ])
             ->withCount('items')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -345,7 +348,61 @@ class PayrollController extends Controller
 
     public function show($id)
     {
-        $payroll = Payroll::with(['items.employee.position', 'items.employee.positionRate', 'items.employee.project', 'creator', 'finalizer'])
+        $payroll = Payroll::with([
+            'creator:id,username,name',
+            'finalizer:id,username,name',
+            'items' => function ($query) {
+                $query->select([
+                    'id',
+                    'payroll_id',
+                    'employee_id',
+                    'rate',
+                    'days_worked',
+                    'regular_days',
+                    'holiday_days',
+                    'holiday_pay',
+                    'basic_pay',
+                    'regular_ot_hours',
+                    'regular_ot_pay',
+                    'special_ot_hours',
+                    'special_ot_pay',
+                    'sunday_hours',
+                    'sunday_pay',
+                    'salary_adjustment',
+                    'allowances_breakdown',
+                    'gross_pay',
+                    'undertime_hours',
+                    'undertime_deduction',
+                    'sss',
+                    'philhealth',
+                    'pagibig',
+                    'withholding_tax',
+                    'employee_savings',
+                    'cash_advance',
+                    'loans',
+                    'employee_deductions',
+                    'other_deductions',
+                    'total_deductions',
+                    'net_pay',
+                ])->orderBy('id');
+            },
+            'items.employee' => function ($query) {
+                $query->select([
+                    'id',
+                    'employee_number',
+                    'first_name',
+                    'middle_name',
+                    'last_name',
+                    'position_id',
+                    'basic_salary',
+                    'custom_pay_rate',
+                    'has_sss',
+                    'has_philhealth',
+                    'has_pagibig',
+                ]);
+            },
+            'items.employee.positionRate:id,position_name,daily_rate',
+        ])
             ->findOrFail($id);
 
         return response()->json($payroll);
@@ -364,7 +421,11 @@ class PayrollController extends Controller
         $validated = $request->validate([
             'period_name' => 'sometimes|string|max:255',
             'period_start' => 'sometimes|date',
-            'period_end' => 'sometimes|date|after_or_equal:' . ($request->has('period_start') ? 'period_start' : $payroll->period_start->format('Y-m-d')),
+            'period_end' => 'sometimes|date|after_or_equal:' . (
+                $request->has('period_start')
+                    ? 'period_start'
+                    : Carbon::parse($payroll->period_start)->toDateString()
+            ),
             'payment_date' => 'sometimes|date',
             'notes' => 'nullable|string',
             'deduct_sss' => 'sometimes|boolean',
