@@ -38,6 +38,20 @@ export const useAuthStore = defineStore("auth", () => {
     () => user.value?.must_change_password || false,
   );
 
+  async function refreshProfileInBackground() {
+    if (!token.value) return;
+
+    try {
+      const profileResponse = await api.get("/profile", { skipToast: true });
+      if (profileResponse.data.success && profileResponse.data.data) {
+        user.value = { ...user.value, ...profileResponse.data.data };
+        localStorage.setItem("user", JSON.stringify(user.value));
+      }
+    } catch (profileError) {
+      devLog.warn("Could not refresh profile after login:", profileError);
+    }
+  }
+
   // Actions
   async function login(credentials) {
     loading.value = true;
@@ -57,16 +71,6 @@ export const useAuthStore = defineStore("auth", () => {
       // Set default Authorization header first
       api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
 
-      // Fetch fresh profile data to get full employee info
-      try {
-        const profileResponse = await api.get("/profile");
-        if (profileResponse.data.success && profileResponse.data.data) {
-          user.value = { ...user.value, ...profileResponse.data.data };
-        }
-      } catch (profileError) {
-        devLog.warn("Could not fetch profile after login:", profileError);
-      }
-
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(user.value));
 
@@ -82,6 +86,9 @@ export const useAuthStore = defineStore("auth", () => {
         localStorage.removeItem("token");
         localStorage.removeItem("rememberMe");
       }
+
+      // Refresh profile asynchronously without blocking login UX
+      refreshProfileInBackground();
 
       return response.data;
     } catch (error) {
