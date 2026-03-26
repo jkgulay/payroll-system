@@ -20,6 +20,8 @@ const CACHE_TTL_BY_PREFIX = [
   { prefix: "/dashboard", ttl: 20000 },
   { prefix: "/audit-logs", ttl: 10000 },
   { prefix: "/payrolls", ttl: 15000 },
+  { prefix: "/employees", ttl: 15000 },
+  { prefix: "/attendance", ttl: 15000 },
   { prefix: "/projects", ttl: 120000 },
   { prefix: "/position-rates", ttl: 120000 },
   { prefix: "/employees/departments", ttl: 300000 },
