@@ -234,6 +234,7 @@ const events = ref([
 
 // Holidays from API
 const holidays = ref([]);
+const holidaysByYear = ref({});
 
 const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -476,13 +477,20 @@ function getColorValue(colorName) {
 async function fetchHolidays() {
   try {
     const year = currentDate.value.getFullYear();
-    const response = await api.get(`/holidays/year/${year}`);
-    holidays.value = response.data.data.holidays.map((holiday) => ({
+    if (holidaysByYear.value[year]) {
+      holidays.value = holidaysByYear.value[year];
+      return;
+    }
+
+    const response = await api.get(`/holidays/year/${year}`, { cacheTTL: 300000 });
+    const mappedHolidays = response.data.data.holidays.map((holiday) => ({
       date: new Date(holiday.date),
       name: holiday.name,
       type: holiday.type,
       id: holiday.id,
     }));
+    holidaysByYear.value[year] = mappedHolidays;
+    holidays.value = mappedHolidays;
   } catch (error) {
     devLog.error("Error fetching holidays:", error);
   }
@@ -491,7 +499,27 @@ async function fetchHolidays() {
 // Fetch upcoming events from dashboard API
 async function fetchUpcomingEvents() {
   try {
-    const response = await api.get("/dashboard/upcoming-events");
+    const CACHE_KEY = "dashboard:calendar:upcoming-events:v1";
+    const cached = sessionStorage.getItem(CACHE_KEY);
+
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        const customEvents = events.value.filter(
+          (e) => !e.id.toString().startsWith("event-"),
+        );
+        events.value = [
+          ...customEvents,
+          ...parsed.map((event) => ({ ...event, date: new Date(event.date) })),
+        ];
+      } catch {
+        sessionStorage.removeItem(CACHE_KEY);
+      }
+    }
+
+    const response = await api.get("/dashboard/upcoming-events", {
+      cacheTTL: 30000,
+    });
     const upcomingEvents = response.data.map((event) => ({
       id: `event-${event.type}-${new Date(event.date).getTime()}`,
       date: new Date(event.date),
@@ -506,6 +534,7 @@ async function fetchUpcomingEvents() {
       (e) => !e.id.toString().startsWith("event-"),
     );
     events.value = [...customEvents, ...upcomingEvents];
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(upcomingEvents));
   } catch (error) {
     devLog.error("Error fetching upcoming events:", error);
   }

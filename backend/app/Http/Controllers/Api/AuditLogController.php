@@ -12,7 +12,23 @@ class AuditLogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = AuditLog::with('user.employee')->latest();
+        $perPage = (int) ($request->input('limit') ?: $request->input('per_page', 50));
+        $perPage = max(1, min($perPage, 100));
+
+        $query = AuditLog::query()
+            ->select([
+                'id',
+                'user_id',
+                'module',
+                'action',
+                'description',
+                'created_at',
+            ])
+            ->with([
+                'user:id,employee_id,username,name',
+                'user.employee:id,first_name,middle_name,last_name,suffix',
+            ])
+            ->latest();
 
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
@@ -34,7 +50,7 @@ class AuditLogController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        return response()->json($query->paginate(50));
+        return response()->json($query->paginate($perPage));
     }
 
     public function byModule($module)

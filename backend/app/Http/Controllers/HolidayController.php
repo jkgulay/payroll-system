@@ -6,6 +6,7 @@ use App\Models\Holiday;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class HolidayController extends Controller
@@ -304,10 +305,13 @@ class HolidayController extends Controller
     public function getYearHolidays(Request $request, $year)
     {
         try {
-            $holidays = Holiday::active()
-                ->forYear($year)
-                ->orderBy('date')
-                ->get();
+            $cacheKey = 'holidays:year:' . $year;
+            $holidays = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($year) {
+                return Holiday::active()
+                    ->forYear($year)
+                    ->orderBy('date')
+                    ->get();
+            });
 
             return response()->json([
                 'success' => true,

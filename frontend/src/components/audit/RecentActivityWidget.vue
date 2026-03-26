@@ -90,6 +90,7 @@ const props = defineProps({
 // Data
 const activities = ref([]);
 const loading = ref(false);
+const CACHE_KEY = "dashboard:recent-activity:v1";
 
 // Methods
 async function fetchRecentActivities() {
@@ -97,13 +98,15 @@ async function fetchRecentActivities() {
   try {
     const params = {
       limit: props.limit,
+      per_page: props.limit,
     };
     if (props.module) {
       params.module = props.module;
     }
 
-    const response = await auditLogService.getAll(params);
+    const response = await auditLogService.getAll(params, { cacheTTL: 10000 });
     activities.value = response.data?.slice(0, props.limit) || [];
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(activities.value));
   } catch (error) {
     devLog.error("Error fetching recent activities:", error);
   } finally {
@@ -150,6 +153,15 @@ function getModuleIcon(module) {
 
 // Lifecycle
 onMounted(() => {
+  const cached = sessionStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try {
+      activities.value = JSON.parse(cached);
+    } catch {
+      sessionStorage.removeItem(CACHE_KEY);
+    }
+  }
+
   fetchRecentActivities();
 });
 </script>
