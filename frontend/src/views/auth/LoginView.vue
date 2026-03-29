@@ -419,7 +419,7 @@ async function handleTwoFactorVerified({ userId, code }) {
         if (role === "employee") {
           redirectPath = "/employee-dashboard";
         } else if (role === "hr") {
-          redirectPath = "/Human Resources-dashboard";
+          redirectPath = "/hr-dashboard";
         } else {
           redirectPath = "/admin-dashboard";
         }
@@ -462,7 +462,7 @@ async function handlePasswordChanged() {
       if (role === "employee") {
         router.push("/employee-dashboard");
       } else if (role === "hr") {
-        router.push("/Human Resources-dashboard");
+        router.push("/hr-dashboard");
       } else {
         router.push("/admin-dashboard");
       }
