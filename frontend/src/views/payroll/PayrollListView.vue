@@ -289,6 +289,35 @@
               </div>
             </v-alert>
 
+            <div class="wizard-steps mb-4">
+              <button
+                type="button"
+                class="wizard-step"
+                :class="{ active: currentStep === 1, done: currentStep > 1 }"
+              >
+                <span class="wizard-step-index">1</span>
+                <span class="wizard-step-label">Basic Info</span>
+              </button>
+              <button
+                type="button"
+                class="wizard-step"
+                :class="{ active: currentStep === 2, done: currentStep > 2 }"
+              >
+                <span class="wizard-step-index">2</span>
+                <span class="wizard-step-label">Employees & Overtime</span>
+              </button>
+              <button
+                type="button"
+                class="wizard-step"
+                :class="{ active: currentStep === 3 }"
+              >
+                <span class="wizard-step-index">3</span>
+                <span class="wizard-step-label">Deductions & Notes</span>
+              </button>
+            </div>
+
+            <div v-show="currentStep === 1">
+
             <!-- Section 1: Basic Information -->
             <v-col cols="12" class="px-0">
               <div class="section-header">
@@ -385,6 +414,9 @@
                 color="#ed985f"
               ></v-text-field>
             </div>
+            </div>
+
+            <div v-show="currentStep === 2">
 
             <!-- Section 2: Employee Selection -->
             <v-col cols="12" class="px-0 mt-4">
@@ -512,6 +544,186 @@
               class="mb-3"
             ></v-autocomplete>
 
+            <v-col cols="12" class="px-0 mt-2">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-clock-check-outline</v-icon>
+                </div>
+                <h3 class="section-title">Overtime Selection & Day View</h3>
+              </div>
+            </v-col>
+
+            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Load employees for this payroll period, then select who should
+                have overtime included. You can also edit their daily time in,
+                time out, and OT times before payroll creation.
+              </div>
+            </v-alert>
+
+            <div class="d-flex flex-wrap ga-2 mb-3">
+              <v-btn
+                color="#ED985F"
+                variant="tonal"
+                prepend-icon="mdi-refresh"
+                :loading="overtimeCandidatesLoading"
+                @click="loadOvertimeCandidates"
+              >
+                Load Overtime Candidates
+              </v-btn>
+              <v-chip
+                v-if="overtimeCandidatesLoaded"
+                size="small"
+                color="info"
+                variant="tonal"
+              >
+                {{ overtimeCandidates.length }} employee(s) found
+              </v-chip>
+            </div>
+
+            <v-autocomplete
+              v-model="formData.overtime_employee_ids"
+              :items="overtimeCandidates"
+              item-title="display_name"
+              item-value="id"
+              label="Include Overtime For (Optional)"
+              placeholder="If empty, overtime is included for all employees"
+              prepend-inner-icon="mdi-account-clock"
+              multiple
+              chips
+              closable-chips
+              clearable
+              variant="outlined"
+              density="compact"
+              :disabled="!overtimeCandidatesLoaded"
+              class="mb-3"
+            >
+              <template v-slot:item="{ props, item }">
+                <v-list-item v-bind="props">
+                  <template v-slot:title>
+                    {{ item.raw.full_name }}
+                  </template>
+                  <template v-slot:subtitle>
+                    {{ item.raw.employee_number }} - {{ item.raw.position || "N/A" }}
+                    <span v-if="item.raw.has_overtime_request"> · OT request found</span>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
+
+            <v-row class="mt-0">
+              <v-col cols="12" md="7">
+                <v-select
+                  v-model="overtimePreviewEmployeeId"
+                  :items="selectedOvertimeEmployees"
+                  item-title="display_name"
+                  item-value="id"
+                  label="View Daily Time For Selected Employee"
+                  prepend-inner-icon="mdi-calendar-clock"
+                  :disabled="selectedOvertimeEmployees.length === 0"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="5" class="d-flex align-center">
+                <v-btn
+                  variant="outlined"
+                  color="#ED985F"
+                  prepend-icon="mdi-table-eye"
+                  :disabled="!overtimePreviewEmployeeId"
+                  :loading="employeeAttendanceLoading"
+                  @click="loadSelectedEmployeeAttendance"
+                >
+                  Load Day View
+                </v-btn>
+              </v-col>
+            </v-row>
+
+            <div
+              v-if="selectedEmployeeAttendance.length > 0"
+              class="attendance-day-view mt-2 mb-4"
+            >
+              <v-table density="compact">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>OT In</th>
+                    <th>OT Out</th>
+                    <th>OT Hours</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in selectedEmployeeAttendance" :key="row.id">
+                    <td>{{ formatDate(row.attendance_date) }}</td>
+                    <td>
+                      <v-chip size="x-small" variant="tonal" color="info">
+                        {{ row.status }}
+                      </v-chip>
+                    </td>
+                    <td>
+                      <v-text-field
+                        v-model="row.time_in_input"
+                        type="time"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                      ></v-text-field>
+                    </td>
+                    <td>
+                      <v-text-field
+                        v-model="row.time_out_input"
+                        type="time"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                      ></v-text-field>
+                    </td>
+                    <td>
+                      <v-text-field
+                        v-model="row.ot_time_in_input"
+                        type="time"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                      ></v-text-field>
+                    </td>
+                    <td>
+                      <v-text-field
+                        v-model="row.ot_time_out_input"
+                        type="time"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                      ></v-text-field>
+                    </td>
+                    <td>{{ row.overtime_hours || 0 }}</td>
+                    <td>
+                      <v-btn
+                        size="small"
+                        color="#ED985F"
+                        variant="tonal"
+                        :loading="attendanceRowSaving[row.id]"
+                        @click="saveAttendanceRow(row)"
+                      >
+                        Save
+                      </v-btn>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </div>
+            </div>
+
+            <div v-show="currentStep === 3">
+
             <!-- Section 3: Government Contributions -->
             <v-col cols="12" class="px-0 mt-4">
               <div class="section-header">
@@ -591,13 +803,13 @@
               density="compact"
               prepend-icon="mdi-note-text"
             ></v-textarea>
+            </div>
           </v-form>
         </v-card-text>
 
         <v-divider></v-divider>
 
         <v-card-actions class="dialog-actions payroll-dialog-actions">
-          <v-spacer></v-spacer>
           <v-btn
             variant="outlined"
             color="grey"
@@ -607,6 +819,28 @@
             Cancel
           </v-btn>
           <v-btn
+            v-if="currentStep > 1"
+            variant="outlined"
+            color="#001f3d"
+            @click="goPrevStep"
+            :disabled="saving"
+          >
+            <v-icon size="16" class="mr-1">mdi-arrow-left</v-icon>
+            Back
+          </v-btn>
+          <v-spacer></v-spacer>
+          <v-btn
+            v-if="currentStep < 3"
+            color="#ED985F"
+            variant="flat"
+            @click="goNextStep"
+            :disabled="saving"
+          >
+            Next
+            <v-icon size="16" class="ml-1">mdi-arrow-right</v-icon>
+          </v-btn>
+          <v-btn
+            v-else
             color="#ED985F"
             variant="flat"
             @click="savePayroll"
@@ -1031,6 +1265,7 @@ const incompleteRecords = ref([]);
 const editMode = ref(false);
 const valid = ref(false);
 const form = ref(null);
+const currentStep = ref(1);
 
 const payrolls = ref([]);
 const selectedPayroll = ref(null);
@@ -1061,6 +1296,7 @@ const formData = ref({
   included_employee_id: null,
   has_attendance: false,
   excluded_positions: [],
+  overtime_employee_ids: [],
   deduct_sss: true,
   deduct_philhealth: true,
   deduct_pagibig: true,
@@ -1069,6 +1305,13 @@ const formData = ref({
 const employeeOptions = ref([]);
 const employeeOptionsLoaded = ref(false);
 const employeeOptionsLoading = ref(false);
+const overtimeCandidates = ref([]);
+const overtimeCandidatesLoaded = ref(false);
+const overtimeCandidatesLoading = ref(false);
+const overtimePreviewEmployeeId = ref(null);
+const selectedEmployeeAttendance = ref([]);
+const employeeAttendanceLoading = ref(false);
+const attendanceRowSaving = ref({});
 
 const individualTargetOptions = [
   { title: "Position", value: "position" },
@@ -1165,11 +1408,21 @@ const activeFilterCount = computed(() => {
     .length;
 });
 
+const selectedOvertimeEmployees = computed(() => {
+  if (!Array.isArray(formData.value.overtime_employee_ids)) return [];
+  const selected = new Set(formData.value.overtime_employee_ids);
+  return overtimeCandidates.value.filter((candidate) => selected.has(candidate.id));
+});
+
 const { handleKeydown: handlePayrollFormKeydown } = useKeyboardFirstFlow({
   onEscape: () => {
     if (!saving.value) closeDialog();
   },
   onSubmitLast: () => {
+    if (currentStep.value < 3) {
+      goNextStep();
+      return;
+    }
     if (!isSaveDisabled.value) {
       savePayroll();
     }
@@ -1268,6 +1521,7 @@ async function fetchPayrolls() {
 
 function openCreateDialog() {
   editMode.value = false;
+  currentStep.value = 1;
   formData.value = {
     period_name: "",
     period_start: "",
@@ -1280,15 +1534,21 @@ function openCreateDialog() {
     included_employee_id: null,
     has_attendance: false,
     excluded_positions: [],
+    overtime_employee_ids: [],
     deduct_sss: true,
     deduct_philhealth: true,
     deduct_pagibig: true,
   };
+  overtimeCandidates.value = [];
+  overtimeCandidatesLoaded.value = false;
+  overtimePreviewEmployeeId.value = null;
+  selectedEmployeeAttendance.value = [];
   dialog.value = true;
 }
 
 function editPayroll(item) {
   editMode.value = true;
+  currentStep.value = 1;
   selectedPayroll.value = item;
   formData.value = {
     period_name: item.period_name,
@@ -1302,16 +1562,235 @@ function editPayroll(item) {
     included_employee_id: null,
     has_attendance: Boolean(item.has_attendance),
     excluded_positions: [],
+    overtime_employee_ids: item.overtime_employee_ids || [],
     deduct_sss: item.deduct_sss !== false,
     deduct_philhealth: item.deduct_philhealth !== false,
     deduct_pagibig: item.deduct_pagibig !== false,
   };
+  overtimeCandidates.value = [];
+  overtimeCandidatesLoaded.value = false;
+  overtimePreviewEmployeeId.value = null;
+  selectedEmployeeAttendance.value = [];
   dialog.value = true;
 }
 
 function closeDialog() {
   dialog.value = false;
+  currentStep.value = 1;
   selectedPayroll.value = null;
+  overtimeCandidates.value = [];
+  overtimeCandidatesLoaded.value = false;
+  overtimePreviewEmployeeId.value = null;
+  selectedEmployeeAttendance.value = [];
+}
+
+function validateStepOne() {
+  if (!formData.value.period_name) {
+    toast.error("Period name is required");
+    return false;
+  }
+  if (!formData.value.period_start || !formData.value.period_end) {
+    toast.error("Payroll period start and end dates are required");
+    return false;
+  }
+  if (formData.value.period_end < formData.value.period_start) {
+    toast.error("Period end must be on or after period start");
+    return false;
+  }
+  if (!formData.value.payment_date) {
+    toast.error("Payment date is required");
+    return false;
+  }
+  if (formData.value.payment_date < formData.value.period_end) {
+    toast.error("Payment date must be on or after period end");
+    return false;
+  }
+  return true;
+}
+
+function validateStepTwo() {
+  if (formData.value.payroll_scope === "individual") {
+    if (
+      formData.value.individual_target === "position" &&
+      !formData.value.included_position
+    ) {
+      toast.error("Please select a position for individual payroll");
+      return false;
+    }
+
+    if (
+      formData.value.individual_target === "employee" &&
+      !formData.value.included_employee_id
+    ) {
+      toast.error("Please select an employee for individual payroll");
+      return false;
+    }
+  }
+  return true;
+}
+
+function goNextStep() {
+  if (currentStep.value === 1 && !validateStepOne()) return;
+  if (currentStep.value === 2 && !validateStepTwo()) return;
+  if (currentStep.value < 3) {
+    currentStep.value += 1;
+  }
+}
+
+function goPrevStep() {
+  if (currentStep.value > 1) {
+    currentStep.value -= 1;
+  }
+}
+
+function payrollScopePayload() {
+  return {
+    payroll_scope: formData.value.payroll_scope,
+    individual_target: formData.value.individual_target,
+    included_position:
+      formData.value.payroll_scope === "individual" &&
+      formData.value.individual_target === "position"
+        ? formData.value.included_position
+        : null,
+    included_employee_id:
+      formData.value.payroll_scope === "individual" &&
+      formData.value.individual_target === "employee"
+        ? formData.value.included_employee_id
+        : null,
+    has_attendance: formData.value.has_attendance || false,
+    excluded_positions:
+      formData.value.payroll_scope === "all"
+        ? formData.value.excluded_positions || []
+        : [],
+  };
+}
+
+async function loadOvertimeCandidates() {
+  if (!formData.value.period_start || !formData.value.period_end) {
+    toast.error("Please set payroll period start and end dates first");
+    return;
+  }
+
+  overtimeCandidatesLoading.value = true;
+  try {
+    const response = await api.post("/payrolls/overtime/candidates", {
+      period_start: formData.value.period_start,
+      period_end: formData.value.period_end,
+      ...payrollScopePayload(),
+    });
+
+    const rows = response.data?.employees || [];
+    overtimeCandidates.value = rows.map((row) => ({
+      ...row,
+      display_name: `${row.full_name} (${row.employee_number})`,
+    }));
+
+    const validIds = new Set(overtimeCandidates.value.map((row) => row.id));
+    formData.value.overtime_employee_ids = (formData.value.overtime_employee_ids || []).filter((id) =>
+      validIds.has(id),
+    );
+
+    overtimeCandidatesLoaded.value = true;
+    selectedEmployeeAttendance.value = [];
+    overtimePreviewEmployeeId.value = null;
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to load overtime candidates",
+    );
+  } finally {
+    overtimeCandidatesLoading.value = false;
+  }
+}
+
+function toTimeInput(value) {
+  if (!value) return "";
+  return value.length >= 5 ? value.slice(0, 5) : value;
+}
+
+function toApiTime(value) {
+  if (!value) return null;
+  return value.length === 5 ? `${value}:00` : value;
+}
+
+async function loadSelectedEmployeeAttendance() {
+  if (!overtimePreviewEmployeeId.value) return;
+  if (!formData.value.period_start || !formData.value.period_end) {
+    toast.error("Please set payroll period dates first");
+    return;
+  }
+
+  employeeAttendanceLoading.value = true;
+  try {
+    const response = await api.get(
+      `/payrolls/overtime/employee/${overtimePreviewEmployeeId.value}/attendance`,
+      {
+        params: {
+          period_start: formData.value.period_start,
+          period_end: formData.value.period_end,
+        },
+      },
+    );
+
+    selectedEmployeeAttendance.value = (response.data?.attendance || []).map(
+      (row) => ({
+        ...row,
+        time_in_input: toTimeInput(row.time_in),
+        time_out_input: toTimeInput(row.time_out),
+        ot_time_in_input: toTimeInput(row.ot_time_in),
+        ot_time_out_input: toTimeInput(row.ot_time_out),
+      }),
+    );
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to load employee day view",
+    );
+  } finally {
+    employeeAttendanceLoading.value = false;
+  }
+}
+
+async function saveAttendanceRow(row) {
+  attendanceRowSaving.value = {
+    ...attendanceRowSaving.value,
+    [row.id]: true,
+  };
+
+  try {
+    const response = await api.put(`/attendance/${row.id}`, {
+      time_in: toApiTime(row.time_in_input),
+      time_out: toApiTime(row.time_out_input),
+      ot_time_in: toApiTime(row.ot_time_in_input),
+      ot_time_out: toApiTime(row.ot_time_out_input),
+      notes: "Updated during payroll overtime setup",
+    });
+
+    const updated = response.data?.attendance;
+    if (updated) {
+      row.status = updated.status;
+      row.approval_status = updated.approval_status;
+      row.regular_hours = updated.regular_hours;
+      row.overtime_hours = updated.overtime_hours;
+      row.undertime_hours = updated.undertime_hours;
+      row.late_hours = updated.late_hours;
+      row.time_in = updated.time_in;
+      row.time_out = updated.time_out;
+      row.ot_time_in = updated.ot_time_in;
+      row.ot_time_out = updated.ot_time_out;
+      row.time_in_input = toTimeInput(updated.time_in);
+      row.time_out_input = toTimeInput(updated.time_out);
+      row.ot_time_in_input = toTimeInput(updated.ot_time_in);
+      row.ot_time_out_input = toTimeInput(updated.ot_time_out);
+    }
+
+    toast.success("Attendance day updated");
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Failed to save attendance");
+  } finally {
+    attendanceRowSaving.value = {
+      ...attendanceRowSaving.value,
+      [row.id]: false,
+    };
+  }
 }
 
 function clearTableFilters() {
@@ -1372,6 +1851,10 @@ async function savePayroll(forceCreate = false) {
 
   if (Array.isArray(formData.value.excluded_positions) && formData.value.excluded_positions.length > 0) {
     payload.excluded_positions = formData.value.excluded_positions;
+  }
+
+  if (Array.isArray(formData.value.overtime_employee_ids) && formData.value.overtime_employee_ids.length > 0) {
+    payload.overtime_employee_ids = formData.value.overtime_employee_ids;
   }
 
   // Add force_create flag if bypassing validation
@@ -1567,6 +2050,72 @@ async function saveSignatureSettings() {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.wizard-step {
+  border: 1px solid rgba(0, 31, 61, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  color: #001f3d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.wizard-step-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 31, 61, 0.1);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wizard-step-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wizard-step.active {
+  border-color: #ed985f;
+  background: rgba(237, 152, 95, 0.1);
+}
+
+.wizard-step.active .wizard-step-index {
+  background: #ed985f;
+  color: #fff;
+}
+
+.wizard-step.done {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.wizard-step.done .wizard-step-index {
+  background: #10b981;
+  color: #fff;
+}
+
+.attendance-day-view {
+  border: 1px solid rgba(0, 31, 61, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.attendance-day-view :deep(td),
+.attendance-day-view :deep(th) {
+  white-space: nowrap;
 }
 
 .payroll-dates-row {

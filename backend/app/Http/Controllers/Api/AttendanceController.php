@@ -180,7 +180,7 @@ class AttendanceController extends Controller
                 $attendance,
                 $updateData,
                 $request->user()->id,
-                in_array($request->user()->role, ['admin', 'hr'])
+                in_array($request->user()->role, ['admin', 'hr', 'payrollist'])
             );
 
             // Log the update

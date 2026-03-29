@@ -27,6 +27,7 @@ class Payroll extends Model
         'deduct_sss',
         'deduct_philhealth',
         'deduct_pagibig',
+        'overtime_employee_ids',
         'created_by',
         'finalized_by',
         'finalized_at',
@@ -46,6 +47,7 @@ class Payroll extends Model
         'deduct_sss' => 'boolean',
         'deduct_philhealth' => 'boolean',
         'deduct_pagibig' => 'boolean',
+        'overtime_employee_ids' => 'array',
     ];
 
     public function items(): HasMany
