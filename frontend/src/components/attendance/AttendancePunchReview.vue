@@ -66,8 +66,8 @@
     </v-card-text>
 
     <v-data-table
-      :headers="headers"
-      :items="reviewRows"
+      :headers="dayHeaders"
+      :items="dayViewRows"
       :loading="loading"
       :items-per-page="15"
       :items-per-page-options="[
@@ -77,52 +77,25 @@
       ]"
       class="elevation-0"
     >
-      <template v-slot:item.employee="{ item }">
-        <div>
-          <div class="font-weight-medium">{{ item.employee?.full_name || "-" }}</div>
-          <div class="text-caption text-medium-emphasis">
-            {{ item.employee?.employee_number || "" }}
-          </div>
-        </div>
+      <template v-slot:item.staff_code="{ item }">
+        <span class="font-weight-medium">{{ item.staff_code }}</span>
       </template>
 
-      <template v-slot:item.attendance_date="{ item }">
-        {{ formatDate(item.attendance_date) }}
+      <template v-slot:item.date="{ item }">
+        {{ formatDate(item.date) }}
       </template>
 
-      <template v-slot:item.punch_timeline="{ item }">
-        <div class="timeline-chips">
-          <v-chip size="x-small" color="success" variant="tonal">IN {{ displayTime(item.time_in) }}</v-chip>
-          <v-chip size="x-small" color="warning" variant="tonal">BO {{ displayTime(item.break_start) }}</v-chip>
-          <v-chip size="x-small" color="info" variant="tonal">BI {{ displayTime(item.break_end) }}</v-chip>
-          <v-chip size="x-small" color="error" variant="tonal">OUT {{ displayTime(item.actual_time_out || item.time_out) }}</v-chip>
-          <v-chip size="x-small" color="purple" variant="tonal">OT IN {{ displayTime(item.ot_time_in) }}</v-chip>
-          <v-chip size="x-small" color="deep-purple" variant="tonal">OT OUT {{ displayTime(item.ot_time_out) }}</v-chip>
-        </div>
-      </template>
-
-      <template v-slot:item.anomalies="{ item }">
-        <div v-if="item.anomalies.length" class="d-flex flex-wrap ga-1">
-          <v-chip
-            v-for="(flag, idx) in item.anomalies"
-            :key="`${item.id}-flag-${idx}`"
-            size="x-small"
-            color="error"
-            variant="tonal"
-          >
-            {{ flag }}
-          </v-chip>
-        </div>
-        <v-chip v-else size="x-small" color="success" variant="tonal">
-          Clean
+      <template v-for="timeKey in timeKeys" v-slot:[`item.${timeKey}`]="{ item }" :key="timeKey">
+        <v-chip
+          v-if="item[timeKey]"
+          size="x-small"
+          color="success"
+          variant="flat"
+          class="time-chip"
+        >
+          {{ item[timeKey] }}
         </v-chip>
-      </template>
-
-      <template v-slot:item.hours="{ item }">
-        <span>{{ Number(item.regular_hours || 0).toFixed(2) }}h</span>
-        <span v-if="Number(item.overtime_hours || 0) > 0" class="text-warning font-weight-medium">
-          + {{ Number(item.overtime_hours).toFixed(2) }}h OT
-        </span>
+        <span v-else class="text-medium-emphasis">-</span>
       </template>
 
       <template v-slot:item.actions="{ item }">
@@ -131,7 +104,7 @@
           variant="text"
           color="primary"
           prepend-icon="mdi-pencil"
-          @click="$emit('edit', item)"
+          @click="$emit('edit', item.source)"
         >
           Edit
         </v-btn>
@@ -175,53 +148,81 @@ const filters = reactive({
   employee_id: null,
 });
 
-const headers = [
-  { title: "Employee", key: "employee", sortable: false },
-  { title: "Date", key: "attendance_date" },
-  { title: "Punch Timeline", key: "punch_timeline", sortable: false },
-  { title: "Flags", key: "anomalies", sortable: false },
-  { title: "Hours", key: "hours", sortable: false },
+const timeKeys = Array.from({ length: 10 }, (_, idx) => `time${idx + 1}`);
+
+const dayHeaders = [
+  { title: "Staff Code", key: "staff_code" },
+  { title: "Name", key: "name" },
+  { title: "Date", key: "date" },
+  { title: "Week", key: "week" },
+  { title: "Device Name", key: "device_name" },
+  ...timeKeys.map((timeKey, idx) => ({ title: `Time${idx + 1}`, key: timeKey, sortable: false })),
   { title: "Actions", key: "actions", sortable: false },
 ];
 
-const displayTime = (value) => value || "--:--";
+const punchFieldMap = [
+  { field: "time_in", type: "Time In" },
+  { field: "break_start", type: "Break Out" },
+  { field: "break_end", type: "Break In" },
+  { field: "time_out", type: "Time Out" },
+  { field: "ot_time_in", type: "OT In" },
+  { field: "ot_time_out", type: "OT Out" },
+  { field: "ot_time_in_2", type: "OT2 In" },
+  { field: "ot_time_out_2", type: "OT2 Out" },
+];
 
-const analyzeAnomalies = (record) => {
-  const flags = [];
-
-  const timeOut = record.actual_time_out || record.time_out;
-  if (!record.time_in && timeOut) {
-    flags.push("Missing IN with OUT");
+const getWeekDay = (dateValue) => {
+  if (!dateValue) {
+    return "-";
   }
 
-  if (record.time_in && !timeOut) {
-    flags.push("Missing OUT");
-  }
-
-  if (record.break_start && !record.break_end) {
-    flags.push("Break start without break end");
-  }
-
-  if (!record.break_start && record.break_end) {
-    flags.push("Break end without break start");
-  }
-
-  if (record.ot_time_in && !record.ot_time_out) {
-    flags.push("OT IN without OT OUT");
-  }
-
-  if (!record.ot_time_in && record.ot_time_out) {
-    flags.push("OT OUT without OT IN");
-  }
-
-  return flags;
+  const safeDate = `${String(dateValue).slice(0, 10)}T00:00:00`;
+  return new Date(safeDate).toLocaleDateString("en-US", {
+    weekday: "long",
+  });
 };
 
-const reviewRows = computed(() => {
-  return attendance.value.map((record) => ({
-    ...record,
-    anomalies: analyzeAnomalies(record),
-  }));
+const normalizeTime = (timeValue) => {
+  if (!timeValue) {
+    return null;
+  }
+
+  return String(timeValue).slice(0, 5);
+};
+
+const getRecordPunches = (record) => {
+  const punches = punchFieldMap
+    .map(({ field, type }) => ({
+      time: normalizeTime(record[field]),
+      type,
+    }))
+    .filter((entry) => entry.time);
+
+  punches.sort((a, b) => a.time.localeCompare(b.time));
+  return punches;
+};
+
+const dayViewRows = computed(() => {
+  return attendance.value.map((record) => {
+    const row = {
+      source: record,
+      staff_code: record.employee?.employee_number || "-",
+      name: record.employee?.full_name || "-",
+      date: record.attendance_date,
+      week: getWeekDay(record.attendance_date),
+      device_name: record.device_name || "-",
+    };
+
+    const punchTimes = getRecordPunches(record)
+      .map((entry) => entry.time)
+      .slice(0, 10);
+
+    timeKeys.forEach((timeKey, idx) => {
+      row[timeKey] = punchTimes[idx] || null;
+    });
+
+    return row;
+  });
 });
 
 const loadEmployees = async () => {
@@ -294,9 +295,8 @@ defineExpose({ loadAttendance });
 </script>
 
 <style scoped>
-.timeline-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+.time-chip {
+  min-width: 50px;
+  justify-content: center;
 }
 </style>
