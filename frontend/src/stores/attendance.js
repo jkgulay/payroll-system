@@ -50,9 +50,10 @@ export const useAttendanceStore = defineStore("attendance", () => {
     loading.value = true;
     try {
       const response = await api.post("/attendance", data);
-      attendances.value.unshift(response.data);
-      emitAttendanceUpdate("created", response.data);
-      return response.data;
+      const attendancePayload = response.data?.attendance || response.data;
+      attendances.value.unshift(attendancePayload);
+      emitAttendanceUpdate("created", attendancePayload);
+      return attendancePayload;
     } catch (error) {
       throw error;
     } finally {
@@ -64,12 +65,13 @@ export const useAttendanceStore = defineStore("attendance", () => {
     loading.value = true;
     try {
       const response = await api.put(`/attendance/${id}`, data);
+      const attendancePayload = response.data?.attendance || response.data;
       const index = attendances.value.findIndex((a) => a.id === id);
       if (index !== -1) {
-        attendances.value[index] = response.data;
+        attendances.value[index] = attendancePayload;
       }
-      emitAttendanceUpdate("updated", response.data);
-      return response.data;
+      emitAttendanceUpdate("updated", attendancePayload);
+      return attendancePayload;
     } catch (error) {
       throw error;
     } finally {
