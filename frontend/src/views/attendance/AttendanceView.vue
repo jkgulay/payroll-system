@@ -23,29 +23,6 @@
             <v-icon size="20">mdi-plus</v-icon>
             <span>Manual Entry</span>
           </button>
-          <button
-            class="action-btn action-btn-secondary"
-            @click="openDTRDialog"
-          >
-            <v-icon size="20">mdi-file-document</v-icon>
-            <span>Generate DTR</span>
-          </button>
-          <button
-            v-if="canManualEntry"
-            class="action-btn action-btn-secondary"
-            @click="goToImport"
-          >
-            <v-icon size="20">mdi-upload</v-icon>
-            <span>Import</span>
-          </button>
-          <button
-            v-if="canManualEntry"
-            class="action-btn action-btn-secondary"
-            @click="openMarkAbsentDialog"
-          >
-            <v-icon size="20">mdi-account-alert</v-icon>
-            <span>Mark Absent</span>
-          </button>
         </div>
       </div>
     </div>
@@ -174,12 +151,6 @@
       @saved="handleSaved"
     />
 
-    <!-- Mark Absent Dialog -->
-    <MarkAbsentDialog v-model="markAbsentDialog" @marked="handleMarkedAbsent" />
-
-    <!-- DTR Generation Dialog -->
-    <GenerateDTRDialog v-model="dtrDialog" />
-
     <!-- Reject Dialog -->
     <RejectDialog
       v-model="rejectDialog"
@@ -233,8 +204,6 @@ import AttendancePunchReview from "@/components/attendance/AttendancePunchReview
 import MissingAttendance from "@/components/attendance/MissingAttendance.vue";
 import DeviceManagement from "@/components/attendance/DeviceManagement.vue";
 import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
-import MarkAbsentDialog from "@/components/attendance/MarkAbsentDialog.vue";
-import GenerateDTRDialog from "@/components/attendance/GenerateDTRDialog.vue";
 import RejectDialog from "@/components/attendance/RejectDialog.vue";
 
 const toast = useToast();
@@ -255,8 +224,6 @@ const canApprove = computed(() =>
 
 // Dialogs
 const manualEntryDialog = ref(false);
-const markAbsentDialog = ref(false);
-const dtrDialog = ref(false);
 const rejectDialog = ref(false);
 const deleteDialog = ref(false);
 
@@ -273,10 +240,6 @@ const openManualEntryDialog = () => {
   manualEntryDialog.value = true;
 };
 
-const goToImport = () => {
-  router.push("/biometric-import");
-};
-
 const openEditDialog = (data) => {
   // Handle both old format (just attendance object) and new format (object with attendance and date)
   if (data && data.attendance) {
@@ -291,14 +254,6 @@ const openEditDialog = (data) => {
   manualEntryDialog.value = true;
 };
 
-const openMarkAbsentDialog = () => {
-  markAbsentDialog.value = true;
-};
-
-const openDTRDialog = () => {
-  dtrDialog.value = true;
-};
-
 const openRejectDialog = (attendance) => {
   selectedAttendance.value = attendance;
   rejectDialog.value = true;
@@ -309,12 +264,6 @@ const handleSaved = () => {
   toast.success("Attendance saved successfully");
   manualEntryDialog.value = false;
   selectedAttendance.value = null;
-  refreshData();
-};
-
-const handleMarkedAbsent = (result) => {
-  toast.success(`Marked ${result.marked} employees as absent`);
-  markAbsentDialog.value = false;
   refreshData();
 };
 
