@@ -92,6 +92,15 @@
         </button>
 
         <button
+          class="modern-tab"
+          :class="{ active: tab === 'review' }"
+          @click="tab = 'review'"
+        >
+          <v-icon size="20">mdi-timeline-clock-outline</v-icon>
+          <span>Punch Review</span>
+        </button>
+
+        <button
           v-if="canManualEntry"
           class="modern-tab"
           :class="{ active: tab === 'device' }"
@@ -131,6 +140,12 @@
         <v-window-item value="summary">
           <div class="tab-content">
             <AttendanceSummary />
+          </div>
+        </v-window-item>
+
+        <v-window-item value="review">
+          <div class="tab-content">
+            <AttendancePunchReview ref="reviewView" @edit="openEditDialog" />
           </div>
         </v-window-item>
 
@@ -214,6 +229,7 @@ import attendanceService from "@/services/attendanceService";
 import AttendanceList from "@/components/attendance/AttendanceList.vue";
 import PendingApprovals from "@/components/attendance/PendingApprovals.vue";
 import AttendanceSummary from "@/components/attendance/AttendanceSummary.vue";
+import AttendancePunchReview from "@/components/attendance/AttendancePunchReview.vue";
 import MissingAttendance from "@/components/attendance/MissingAttendance.vue";
 import DeviceManagement from "@/components/attendance/DeviceManagement.vue";
 import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
@@ -227,6 +243,7 @@ const route = useRoute();
 const router = useRouter();
 const tab = ref("list");
 const listView = ref(null);
+const reviewView = ref(null);
 
 // User permissions
 const canManualEntry = computed(() =>
@@ -345,6 +362,9 @@ const refreshData = () => {
   // Refresh all tabs to ensure consistency
   if (listView.value) {
     listView.value.loadAttendance();
+  }
+  if (reviewView.value?.loadAttendance) {
+    reviewView.value.loadAttendance();
   }
   // Trigger refresh for calendar and other components
   window.dispatchEvent(new CustomEvent("attendance-data-changed"));
