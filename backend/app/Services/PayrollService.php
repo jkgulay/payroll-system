@@ -448,7 +448,10 @@ class PayrollService
                 } elseif ($attendance->status === 'half_day') {
                     if ($isSunday) {
                         // Half day on Sunday - add 4 hours (half of standard 8)
-                        $hoursWorked = ($attendance->regular_hours ?? $standardHours) / 2;
+                        $hoursWorked = min(
+                            ($attendance->regular_hours ?? ($standardHours / 2)),
+                            ($standardHours / 2)
+                        );
                         $sundayRegularHours += $hoursWorked;
                     } else {
                         $regularDays += 0.5; // Half day counts as 0.5
