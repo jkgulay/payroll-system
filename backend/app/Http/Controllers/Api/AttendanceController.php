@@ -141,15 +141,7 @@ class AttendanceController extends Controller
 
     public function update(Request $request, Attendance $attendance)
     {
-        // Prevent editing approved records without proper permission
-        if (
-            $attendance->approval_status === 'approved' &&
-            !in_array($request->user()->role, ['admin', 'hr', 'payrollist'])
-        ) {
-            return response()->json([
-                'message' => 'Cannot edit approved attendance records',
-            ], 403);
-        }
+        $lockedAttendance = null;
 
         $validated = $request->validate([
             'time_in' => 'nullable|date_format:H:i:s',
@@ -159,11 +151,42 @@ class AttendanceController extends Controller
             'ot_time_in' => 'nullable|date_format:H:i:s',
             'ot_time_out' => 'nullable|date_format:H:i:s|after:ot_time_in',
             'notes' => 'nullable|string|max:500',
+            'updated_at' => 'nullable|date',
         ]);
 
-        $oldValues = $attendance->toArray();
-
         try {
+            DB::beginTransaction();
+
+            $lockedAttendance = Attendance::whereKey($attendance->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Prevent editing approved records without proper permission
+            if (
+                $lockedAttendance->approval_status === 'approved' &&
+                !in_array($request->user()->role, ['admin', 'hr', 'payrollist'])
+            ) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Cannot edit approved attendance records',
+                ], 403);
+            }
+
+            if (!empty($validated['updated_at']) && $lockedAttendance->updated_at) {
+                $requestUpdatedAt = Carbon::parse($validated['updated_at'])->toDateTimeString();
+                $currentUpdatedAt = $lockedAttendance->updated_at->toDateTimeString();
+
+                if ($requestUpdatedAt !== $currentUpdatedAt) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Attendance was updated by another user. Please reload and try again.',
+                        'attendance' => $lockedAttendance->fresh()->load('employee'),
+                    ], 409);
+                }
+            }
+
+            $oldValues = $lockedAttendance->toArray();
+
             // Build update data - include all validated fields (even null) to allow clearing
             $updateData = [
                 'edit_reason' => $validated['notes'] ?? null,
@@ -177,11 +200,13 @@ class AttendanceController extends Controller
             }
 
             $this->attendanceService->updateAttendance(
-                $attendance,
+                $lockedAttendance,
                 $updateData,
                 $request->user()->id,
-                in_array($request->user()->role, ['admin', 'hr'])
+                in_array($request->user()->role, ['admin', 'hr', 'payrollist'])
             );
+
+            DB::commit();
 
             // Log the update
             AuditLog::create([
@@ -190,19 +215,22 @@ class AttendanceController extends Controller
                 'action' => 'update_attendance',
                 'description' => 'Attendance record updated',
                 'old_values' => $oldValues,
-                'new_values' => $attendance->fresh()->toArray(),
+                'new_values' => $lockedAttendance->fresh()->toArray(),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
 
             return response()->json([
                 'message' => 'Attendance updated successfully',
-                'attendance' => $attendance->fresh()->load('employee'),
+                'attendance' => $lockedAttendance->fresh()->load('employee'),
             ]);
         } catch (\Exception $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             Log::error('[Attendance Update Error] ' . $e->getMessage(), [
                 'exception' => $e,
-                'attendance_id' => $attendance->id ?? null,
+                'attendance_id' => $lockedAttendance?->id,
                 'request_data' => $request->all(),
                 'validated' => $validated ?? null,
                 'user_id' => $request->user()->id ?? null,

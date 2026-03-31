@@ -263,6 +263,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Payroll - specific routes MUST come before apiResource (Protected by role middleware)
     Route::post('/payrolls/validate', [App\Http\Controllers\PayrollController::class, 'validatePayrollCreation'])->middleware('role:admin,payrollist');
+    Route::post('/payrolls/overtime/candidates', [App\Http\Controllers\PayrollController::class, 'overtimeCandidates'])->middleware('role:admin,payrollist');
+    Route::get('/payrolls/overtime/employee/{employee}/attendance', [App\Http\Controllers\PayrollController::class, 'overtimeEmployeeAttendance'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister'])->middleware('role:admin,payrollist');
