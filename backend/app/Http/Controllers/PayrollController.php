@@ -1067,6 +1067,8 @@ class PayrollController extends Controller
             $groupedItems = null;
             $filterInfo = null;
             $filterType = $validated['filter_type'] ?? 'all';
+            $isIndividualPayroll = false;
+            $individualEmployeeName = null;
 
             if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
                 if ($validated['filter_type'] === 'employee' && !empty($validated['employee_ids'])) {
@@ -1075,6 +1077,8 @@ class PayrollController extends Controller
                         $employee = Employee::find($validated['employee_ids'][0]);
                         if ($employee) {
                             $filterInfo = 'Employee: ' . $employee->first_name . ' ' . $employee->last_name;
+                            $isIndividualPayroll = true;
+                            $individualEmployeeName = trim($employee->first_name . ' ' . $employee->last_name);
                         }
                     } else {
                         $filterInfo = 'Multiple Employees (' . count($validated['employee_ids']) . ')';
@@ -1102,6 +1106,15 @@ class PayrollController extends Controller
                 }
             }
 
+            if (!$isIndividualPayroll && $payroll->items->count() === 1) {
+                $isIndividualPayroll = true;
+                $employee = $payroll->items->first()?->employee;
+                if ($employee) {
+                    $individualEmployeeName = $employee->full_name
+                        ?? trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
+                }
+            }
+
             // Get company info from database
             $companyInfo = CompanyInfo::first();
 
@@ -1115,7 +1128,7 @@ class PayrollController extends Controller
                 }
             }
 
-            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
+            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo', 'isIndividualPayroll', 'individualEmployeeName'))
                 ->setOptions([
                     'isHtml5ParserEnabled'    => false,
                     'isRemoteEnabled'         => false,

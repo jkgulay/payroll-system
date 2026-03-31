@@ -198,7 +198,7 @@
 
         /* ===== SIGNATURE SECTION (inline, under table) ===== */
         .signature-section {
-            margin-top: 4px;
+            margin-top: 0;
             display: block;
             width: 100%;
             box-sizing: border-box;
@@ -208,8 +208,8 @@
             font-size: 12px;
             font-style: italic;
             text-align: center;
-            margin-bottom: 4px;
-            margin-top: 4px;
+            margin-bottom: 2px;
+            margin-top: 10px;
             line-height: 1.3;
         }
 
@@ -224,7 +224,7 @@
 
         table.signature-table td {
             border: none;
-            text-align: center;
+            text-align: left;
             padding: 0px 2px;
             vertical-align: top;
             width: 25%;
@@ -238,6 +238,7 @@
             text-transform: uppercase;
             letter-spacing: 0.3px;
             margin-bottom: 14px;
+            text-align: left;
             word-wrap: break-word;
             line-height: 1.2;
         }
@@ -249,6 +250,7 @@
             padding-top: 1px;
             min-height: 18px;
             margin-bottom: 8px;
+            text-align: left;
             word-wrap: break-word;
             word-break: break-word;
             overflow-wrap: break-word;
@@ -259,8 +261,22 @@
             font-size: 12px;
             font-style: italic;
             margin-top: -1px;
+            text-align: left;
             word-wrap: break-word;
             line-height: 1.2;
+        }
+
+        .table-signature-block {
+            margin-top: 2px;
+            page-break-inside: avoid;
+        }
+
+        .table-signature-block.individual-signature-spacing {
+            margin-top: 2px;
+        }
+
+        .table-signature-block.individual-signature-spacing table.signature-table {
+            margin-top: 20mm;
         }
     </style>
 </head>
@@ -269,15 +285,17 @@
     @php
     $rowsPerPage = 10;
     $deviceMetaMap = $deviceMetaMap ?? [];
+    $isIndividualPayroll = $isIndividualPayroll ?? ($payroll->items->count() === 1);
+    $individualEmployeeName = $individualEmployeeName ?? ($isIndividualPayroll ? ($payroll->items->first()?->employee?->full_name ?? null) : null);
+    $headerCompanyName = trim((string) data_get($companyInfo, 'company_name', ''));
+    $headerCompanyAddress = trim((string) data_get($companyInfo, 'address', ''));
+    $resolvedCompanyName = $headerCompanyName !== '' ? $headerCompanyName : 'GIOVANNI CONSTRUCTION';
+    $resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress : 'Imadejas Subdivision, Capitol Bonbon';
     @endphp
 
-    <div class="page-signature-footer">
-        @include('payroll.partials.signature')
-    </div>
-
     <div class="header">
-        <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
-        <div class="company-address">{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
+        <div class="company-name">{{ $resolvedCompanyName }}</div>
+        <div class="company-address">{{ $resolvedCompanyAddress }}</div>
         <div class="title">P A Y R O L L</div>
         <div class="period">
             {{ \Carbon\Carbon::parse($payroll->period_start)->format('F d') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('d, Y') }}
@@ -295,8 +313,8 @@
     @if(!$loop->first)
     <div style="page-break-before: always; margin-top: 6px;">
         <div class="header" style="margin-bottom: 4px;">
-            <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
-            <div class="company-address">{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
+            <div class="company-name">{{ $resolvedCompanyName }}</div>
+            <div class="company-address">{{ $resolvedCompanyAddress }}</div>
             <div class="title">P A Y R O L L</div>
             <div class="period">
                 {{ \Carbon\Carbon::parse($payroll->period_start)->format('F d') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('d, Y') }}
@@ -447,12 +465,15 @@
                 </tr>
         </tbody>
     </table>
+    <div class="table-signature-block {{ $isIndividualPayroll ? 'individual-signature-spacing' : '' }}">
+        @include('payroll.partials.signature')
+    </div>
     </div>
 
     <div style="page-break-before: always; margin-top: 6px;">
         <div class="header" style="margin-bottom: 4px;">
-            <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
-            <div class="company-address">{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
+            <div class="company-name">{{ $resolvedCompanyName }}</div>
+            <div class="company-address">{{ $resolvedCompanyAddress }}</div>
             <div class="title">P A Y R O L L</div>
             <div class="period">
                 {{ \Carbon\Carbon::parse($payroll->period_start)->format('F d') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('d, Y') }}
@@ -594,6 +615,9 @@
             </tr>
         </tbody>
     </table>
+    <div class="table-signature-block {{ $isIndividualPayroll ? 'individual-signature-spacing' : '' }}">
+        @include('payroll.partials.signature')
+    </div>
     @endforeach
     @else
     {{-- Single table for all employees --}}
@@ -608,6 +632,9 @@
     </div>
     @else
     <div class="project-info">
+        @if($isIndividualPayroll)
+        <div><strong>EMPLOYEE:</strong> {{ $individualEmployeeName ?? ($payroll->items->first()?->employee?->full_name ?? 'N/A') }}</div>
+        @endif
         <div><strong>PROJECT:</strong> {{ $payroll->items->first()?->employee->department ?? 'N/A' }}</div>
         <div><strong>DESIGNATION:</strong> {{ $payroll->items->first()?->employee?->project?->description ?? 'N/A' }}</div>
     </div>
@@ -736,11 +763,14 @@
                 </tr>
         </tbody>
     </table>
+    <div class="table-signature-block {{ $isIndividualPayroll ? 'individual-signature-spacing' : '' }}">
+        @include('payroll.partials.signature')
+    </div>
 
     <div style="page-break-before: always; margin-top: 6px;">
         <div class="header" style="margin-bottom: 4px;">
-            <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
-            <div class="company-address">{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
+            <div class="company-name">{{ $resolvedCompanyName }}</div>
+            <div class="company-address">{{ $resolvedCompanyAddress }}</div>
             <div class="title">P A Y R O L L</div>
             <div class="period">
                 {{ \Carbon\Carbon::parse($payroll->period_start)->format('F d') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('d, Y') }}
@@ -888,6 +918,9 @@
             </tr>
         </tbody>
     </table>
+    <div class="table-signature-block {{ $isIndividualPayroll ? 'individual-signature-spacing' : '' }}">
+        @include('payroll.partials.signature')
+    </div>
     @endif
 </body>
 
