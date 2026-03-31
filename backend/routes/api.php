@@ -168,6 +168,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/employees/import-file', [App\Http\Controllers\Api\EmployeeImportController::class, 'importFromFile']); // NEW: Fast file upload method
     Route::post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']); // OLD: JSON data method (kept for backwards compatibility)
     Route::get('/employees/import/template', [App\Http\Controllers\Api\EmployeeImportController::class, 'downloadTemplate']);
+    Route::get('/employees/schedules', [App\Http\Controllers\Api\EmployeeController::class, 'scheduleList']);
+    Route::put('/employees/{employee}/schedule', [App\Http\Controllers\Api\EmployeeController::class, 'updateSchedule']);
+    Route::post('/employees/bulk-schedule', [App\Http\Controllers\Api\EmployeeController::class, 'bulkSchedule']);
 
     // Employees - specific routes must come before resource routes
     Route::get('/employees/departments', [App\Http\Controllers\Api\EmployeeController::class, 'getDepartments']);
@@ -187,6 +190,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Projects & Locations
     Route::apiResource('projects', App\Http\Controllers\Api\ProjectController::class);
+    Route::put('projects/{project}/schedule', [App\Http\Controllers\Api\ProjectController::class, 'updateSchedule']);
     Route::post('projects/bulk-schedule', [App\Http\Controllers\Api\ProjectController::class, 'bulkSchedule']);
     Route::get('projects/{project}/employees', [App\Http\Controllers\Api\ProjectController::class, 'employees']);
     Route::post('projects/{project}/mark-complete', [App\Http\Controllers\Api\ProjectController::class, 'markComplete']);
@@ -215,6 +219,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/attendance/summary/export', [App\Http\Controllers\Api\AttendanceController::class, 'exportSummary']);
     Route::get('/attendance/employee/{employee}/summary', [App\Http\Controllers\Api\AttendanceController::class, 'employeeSummary']);
     Route::post('/attendance/mark-absent', [App\Http\Controllers\Api\AttendanceController::class, 'markAbsent']);
+    Route::post('/attendance/recalculate-range', [App\Http\Controllers\Api\AttendanceController::class, 'recalculateDateRange']);
     Route::post('/attendance/{attendance}/approve', [App\Http\Controllers\Api\AttendanceController::class, 'approve']);
     Route::post('/attendance/{attendance}/reject', [App\Http\Controllers\Api\AttendanceController::class, 'reject']);
 

@@ -14,6 +14,7 @@ class AttendanceModificationRequest extends Model
         'requested_by',
         'date',
         'reason',
+        'payload',
         'status',
         'reviewed_by',
         'reviewed_at',
@@ -22,6 +23,7 @@ class AttendanceModificationRequest extends Model
 
     protected $casts = [
         'date' => 'date',
+        'payload' => 'array',
         'reviewed_at' => 'datetime',
     ];
 

@@ -7,6 +7,7 @@ use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\EmployeeGovernmentInfo;
+use App\Models\Attendance;
 use App\Models\User;
 use App\Models\AuditLog;
 use App\Helpers\DateHelper;
@@ -558,6 +559,209 @@ class EmployeeController extends Controller
             'old_rate' => $oldRate,
             'new_rate' => $newRate,
         ]);
+    }
+
+    /**
+     * List employees with effective attendance schedule for Attendance Settings UI.
+     */
+    public function scheduleList(Request $request)
+    {
+        $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
+        $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
+
+        $query = Employee::query()
+            ->select([
+                'id',
+                'employee_number',
+                'first_name',
+                'last_name',
+                'project_id',
+                'position_id',
+                'activity_status',
+                'attendance_time_in',
+                'attendance_time_out',
+                'attendance_grace_period_minutes',
+            ])
+            ->with([
+                'project:id,name,time_in,time_out,grace_period_minutes',
+                'positionRate:id,position_name',
+            ])
+            ->orderBy('last_name')
+            ->orderBy('first_name');
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('employee_number', 'ilike', "%{$search}%")
+                    ->orWhere('first_name', 'ilike', "%{$search}%")
+                    ->orWhere('last_name', 'ilike', "%{$search}%")
+                    ->orWhereRaw("LOWER(CONCAT(first_name, ' ', last_name)) LIKE ?", ['%' . strtolower($search) . '%']);
+            });
+        }
+
+        if ($request->filled('activity_status')) {
+            $query->where('activity_status', $request->input('activity_status'));
+        }
+
+        $employees = $query->get()->map(function (Employee $employee) use ($defaultTimeIn, $defaultTimeOut, $defaultGrace) {
+            $project = $employee->project;
+
+            $hasEmployeeOverride = $employee->attendance_time_in !== null
+                || $employee->attendance_time_out !== null
+                || $employee->attendance_grace_period_minutes !== null;
+
+            $effectiveTimeIn = $hasEmployeeOverride
+                ? ($employee->attendance_time_in ?: $defaultTimeIn)
+                : ($project?->time_in ?: $defaultTimeIn);
+
+            $effectiveTimeOut = $hasEmployeeOverride
+                ? ($employee->attendance_time_out ?: $defaultTimeOut)
+                : ($project?->time_out ?: $defaultTimeOut);
+
+            $effectiveGrace = $hasEmployeeOverride
+                ? (($employee->attendance_grace_period_minutes !== null)
+                    ? (int) $employee->attendance_grace_period_minutes
+                    : $defaultGrace)
+                : (($project?->grace_period_minutes !== null)
+                    ? (int) $project->grace_period_minutes
+                    : $defaultGrace);
+
+            return [
+                'id' => $employee->id,
+                'employee_number' => $employee->employee_number,
+                'full_name' => trim($employee->first_name . ' ' . $employee->last_name),
+                'position' => $employee->positionRate?->position_name ?? 'N/A',
+                'activity_status' => $employee->activity_status,
+                'project' => $project ? [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                ] : null,
+                'attendance_time_in' => $employee->attendance_time_in,
+                'attendance_time_out' => $employee->attendance_time_out,
+                'attendance_grace_period_minutes' => $employee->attendance_grace_period_minutes,
+                'schedule_source' => $hasEmployeeOverride ? 'employee' : 'project',
+                'effective_schedule' => [
+                    'time_in' => $effectiveTimeIn,
+                    'time_out' => $effectiveTimeOut,
+                    'grace_period_minutes' => $effectiveGrace,
+                ],
+            ];
+        });
+
+        return response()->json($employees);
+    }
+
+    /**
+     * Set or clear attendance schedule override for a single employee.
+     */
+    public function updateSchedule(Request $request, Employee $employee)
+    {
+        if ($request->user()?->role !== 'admin') {
+            return response()->json([
+                'message' => 'Only admin can apply attendance schedule changes directly.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'attendance_time_in' => 'nullable|date_format:H:i',
+            'attendance_time_out' => 'nullable|date_format:H:i',
+            'attendance_grace_period_minutes' => 'nullable|integer|min:0|max:180',
+            'clear_override' => 'nullable|boolean',
+        ]);
+
+        if (($validated['clear_override'] ?? false) === true) {
+            $payload = [
+                'attendance_time_in' => null,
+                'attendance_time_out' => null,
+                'attendance_grace_period_minutes' => null,
+            ];
+        } else {
+            $payload = [
+                'attendance_time_in' => $validated['attendance_time_in'] ?? null,
+                'attendance_time_out' => $validated['attendance_time_out'] ?? null,
+                'attendance_grace_period_minutes' => $validated['attendance_grace_period_minutes'] ?? null,
+            ];
+        }
+
+        $employee->update($payload);
+
+        $this->recalculateEmployeeAttendances([$employee->id]);
+
+        return response()->json([
+            'message' => 'Employee attendance schedule updated successfully',
+            'employee_id' => $employee->id,
+            'schedule' => [
+                'attendance_time_in' => $employee->attendance_time_in,
+                'attendance_time_out' => $employee->attendance_time_out,
+                'attendance_grace_period_minutes' => $employee->attendance_grace_period_minutes,
+            ],
+        ]);
+    }
+
+    /**
+     * Set or clear attendance schedule override for multiple employees.
+     */
+    public function bulkSchedule(Request $request)
+    {
+        if ($request->user()?->role !== 'admin') {
+            return response()->json([
+                'message' => 'Only admin can apply attendance schedule changes directly.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'employee_ids' => 'required|array|min:1',
+            'employee_ids.*' => 'integer|exists:employees,id',
+            'attendance_time_in' => 'nullable|date_format:H:i',
+            'attendance_time_out' => 'nullable|date_format:H:i',
+            'attendance_grace_period_minutes' => 'nullable|integer|min:0|max:180',
+            'clear_override' => 'nullable|boolean',
+        ]);
+
+        $employeeIds = $validated['employee_ids'];
+
+        if (($validated['clear_override'] ?? false) === true) {
+            $payload = [
+                'attendance_time_in' => null,
+                'attendance_time_out' => null,
+                'attendance_grace_period_minutes' => null,
+            ];
+        } else {
+            $payload = [
+                'attendance_time_in' => $validated['attendance_time_in'] ?? null,
+                'attendance_time_out' => $validated['attendance_time_out'] ?? null,
+                'attendance_grace_period_minutes' => $validated['attendance_grace_period_minutes'] ?? null,
+            ];
+        }
+
+        Employee::whereIn('id', $employeeIds)->update($payload);
+        $this->recalculateEmployeeAttendances($employeeIds);
+
+        return response()->json([
+            'message' => 'Employee attendance schedules updated successfully',
+            'updated_count' => count($employeeIds),
+        ]);
+    }
+
+    /**
+     * Recalculate attendance hours/status for employees after schedule changes.
+     */
+    private function recalculateEmployeeAttendances(array $employeeIds): void
+    {
+        if (empty($employeeIds)) {
+            return;
+        }
+
+        Attendance::with(['employee.project'])
+            ->whereIn('employee_id', $employeeIds)
+            ->whereNotNull('time_in')
+            ->whereNotNull('time_out')
+            ->chunkById(200, function ($attendances) {
+                foreach ($attendances as $attendance) {
+                    $attendance->calculateHours();
+                }
+            });
     }
 
     /**

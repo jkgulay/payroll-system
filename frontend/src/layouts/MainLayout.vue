@@ -106,7 +106,11 @@
                   rounded="lg"
                 >
                   <template v-slot:append v-if="item.badge > 0 && !rail">
-                    <v-badge :content="item.badge" color="error" inline></v-badge>
+                    <v-badge
+                      :content="item.badge"
+                      color="error"
+                      inline
+                    ></v-badge>
                   </template>
                 </v-list-item>
               </template>
@@ -304,21 +308,23 @@ const isMobile = computed(() => mdAndDown.value);
 const pendingAllRequests = ref(0);
 
 const ALL_REQUEST_MODULES = [
-  'attendance',
-  'government-rates',
-  'deductions',
-  'allowances',
-  'thirteenth-month-pay',
-  'loans',
-  'cash-bonds',
-  'salary-adjustments'
+  "attendance",
+  "attendance-settings",
+  "government-rates",
+  "deductions",
+  "allowances",
+  "thirteenth-month-pay",
+  "loans",
+  "cash-bonds",
+  "salary-adjustments",
 ];
 
 async function loadAccessRequestCounts() {
   const role = authStore.user?.role;
-  if (!role || !['admin', 'hr'].includes(role)) return;
+  if (!role || !["admin", "hr"].includes(role)) return;
   try {
-    const allRes = await moduleAccessService.getPendingCountForModules(ALL_REQUEST_MODULES);
+    const allRes =
+      await moduleAccessService.getPendingCountForModules(ALL_REQUEST_MODULES);
     pendingAllRequests.value = allRes.count || 0;
   } catch {
     // ignore
@@ -847,6 +853,13 @@ const menuSections = computed(() => {
       value: "government-rates",
       to: "/government-rates",
       roles: ["payrollist"],
+    },
+    {
+      title: "Attendance Settings",
+      icon: "mdi-clock-edit-outline",
+      value: "attendance-settings",
+      to: "/attendance-settings",
+      roles: ["admin", "payrollist"],
     },
     {
       title: "Biometric Import",

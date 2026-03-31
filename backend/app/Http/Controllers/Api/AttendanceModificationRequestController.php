@@ -4,10 +4,27 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceModificationRequest;
+use App\Models\Attendance;
+use App\Models\Employee;
+use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceModificationRequestController extends Controller
 {
+    private const ALLOWED_MODULES = [
+        'attendance',
+        'attendance-settings',
+        'deductions',
+        'government-rates',
+        'allowances',
+        'thirteenth-month-pay',
+        'loans',
+        'cash-bonds',
+        'salary-adjustments',
+    ];
+
     private const DAILY_SCOPED_MODULES = [
         'deductions',
         'government-rates',
@@ -76,9 +93,10 @@ class AttendanceModificationRequestController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'module' => 'required|string|in:attendance,deductions,government-rates,allowances,thirteenth-month-pay,loans,cash-bonds,salary-adjustments',
+            'module' => 'required|string|in:' . implode(',', self::ALLOWED_MODULES),
             'date' => 'nullable|date',
             'reason' => 'required|string|max:500',
+            'payload' => 'nullable|array',
         ]);
 
         $user = $request->user();
@@ -94,32 +112,34 @@ class AttendanceModificationRequestController extends Controller
             ], 422);
         }
 
-        // Build the uniqueness check
-        $existingQuery = AttendanceModificationRequest::where('requested_by', $user->id)
-            ->where('module', $module)
-            ->whereIn('status', ['pending', 'approved']);
+        if ($module !== 'attendance-settings') {
+            // Build the uniqueness check
+            $existingQuery = AttendanceModificationRequest::where('requested_by', $user->id)
+                ->where('module', $module)
+                ->whereIn('status', ['pending', 'approved']);
 
-        if ($this->isDailyScopedModule($module)) {
-            $existingQuery->whereBetween('created_at', [$todayStart, $todayEnd]);
-        } elseif (!empty($validated['date'])) {
-            $existingQuery->where('date', $validated['date']);
-        } else {
-            $existingQuery->whereNull('date');
-        }
+            if ($this->isDailyScopedModule($module)) {
+                $existingQuery->whereBetween('created_at', [$todayStart, $todayEnd]);
+            } elseif (!empty($validated['date'])) {
+                $existingQuery->where('date', $validated['date']);
+            } else {
+                $existingQuery->whereNull('date');
+            }
 
-        $existing = $existingQuery->first();
+            $existing = $existingQuery->first();
 
-        if ($existing) {
-            return response()->json([
-                'success' => false,
-                'message' => $existing->status === 'pending'
-                    ? ($this->isDailyScopedModule($module)
-                        ? 'You already have a pending request for today.'
-                        : 'You already have a pending request.')
-                    : ($this->isDailyScopedModule($module)
-                        ? 'You already have an approved request for today.'
-                        : 'You already have an approved request.'),
-            ], 422);
+            if ($existing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $existing->status === 'pending'
+                        ? ($this->isDailyScopedModule($module)
+                            ? 'You already have a pending request for today.'
+                            : 'You already have a pending request.')
+                        : ($this->isDailyScopedModule($module)
+                            ? 'You already have an approved request for today.'
+                            : 'You already have an approved request.'),
+                ], 422);
+            }
         }
 
         $modRequest = AttendanceModificationRequest::create([
@@ -127,6 +147,7 @@ class AttendanceModificationRequestController extends Controller
             'requested_by' => $user->id,
             'date' => $validated['date'] ?? null,
             'reason' => $validated['reason'],
+            'payload' => $validated['payload'] ?? null,
             'status' => 'pending',
         ]);
 
@@ -145,7 +166,7 @@ class AttendanceModificationRequestController extends Controller
     public function checkAccess(Request $request)
     {
         $request->validate([
-            'module' => 'required|string|in:attendance,deductions,government-rates,allowances,thirteenth-month-pay,loans,cash-bonds,salary-adjustments',
+            'module' => 'required|string|in:' . implode(',', self::ALLOWED_MODULES),
             'date' => 'nullable|date',
         ]);
 
@@ -185,6 +206,7 @@ class AttendanceModificationRequestController extends Controller
                 'loans' => 'loans',
                 'cash-bonds' => 'cash bonds',
                 'salary-adjustments' => 'salary adjustments',
+                'attendance-settings' => 'attendance settings',
             ];
 
             if ($this->isDailyScopedModule($module)) {
@@ -237,12 +259,29 @@ class AttendanceModificationRequestController extends Controller
             ], 422);
         }
 
-        $modificationRequest->update([
-            'status' => 'approved',
-            'reviewed_by' => $user->id,
-            'reviewed_at' => now(),
-            'review_notes' => $request->input('notes'),
-        ]);
+        try {
+            DB::transaction(function () use ($request, $user, $modificationRequest) {
+                $this->applyApprovedRequestPayload($modificationRequest);
+
+                $modificationRequest->update([
+                    'status' => 'approved',
+                    'reviewed_by' => $user->id,
+                    'reviewed_at' => now(),
+                    'review_notes' => $request->input('notes'),
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('[Module Access Request] Approval failed', [
+                'request_id' => $modificationRequest->id,
+                'module' => $modificationRequest->module,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to approve request: ' . $e->getMessage(),
+            ], 422);
+        }
 
         $modificationRequest->load(['requester', 'reviewer']);
 
@@ -319,5 +358,177 @@ class AttendanceModificationRequestController extends Controller
         $count = $query->count();
 
         return response()->json(['count' => $count]);
+    }
+
+    private function applyApprovedRequestPayload(AttendanceModificationRequest $modificationRequest): void
+    {
+        if ($modificationRequest->module !== 'attendance-settings') {
+            return;
+        }
+
+        $payload = $modificationRequest->payload;
+        if (!is_array($payload) || empty($payload['type'])) {
+            throw new \RuntimeException('Attendance settings payload is missing or invalid.');
+        }
+
+        $type = (string) $payload['type'];
+
+        if ($type === 'project_schedule_update') {
+            $projectId = isset($payload['project_id']) ? (int) $payload['project_id'] : 0;
+            if ($projectId <= 0) {
+                throw new \RuntimeException('Project ID is required for project schedule update.');
+            }
+
+            $project = Project::find($projectId);
+            if (!$project) {
+                throw new \RuntimeException('Project not found for this request.');
+            }
+
+            $schedule = $this->normalizeProjectSchedule($payload['schedule'] ?? []);
+            $project->update($schedule);
+            $this->recalculateProjectAttendances([$projectId]);
+            return;
+        }
+
+        if ($type === 'project_bulk_schedule_update') {
+            $projectIds = collect($payload['project_ids'] ?? [])
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($projectIds)) {
+                throw new \RuntimeException('No target projects provided for bulk schedule update.');
+            }
+
+            $schedule = $this->normalizeProjectSchedule($payload['schedule'] ?? []);
+            Project::whereIn('id', $projectIds)->update($schedule);
+            $this->recalculateProjectAttendances($projectIds);
+            return;
+        }
+
+        if ($type === 'employee_schedule_update') {
+            $employeeIds = collect($payload['employee_ids'] ?? [])
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($employeeIds)) {
+                throw new \RuntimeException('No employees provided for schedule override update.');
+            }
+
+            $schedule = $this->normalizeEmployeeSchedulePayload($payload);
+            Employee::whereIn('id', $employeeIds)->update($schedule);
+            $this->recalculateEmployeeAttendances($employeeIds);
+            return;
+        }
+
+        throw new \RuntimeException('Unsupported attendance settings request type.');
+    }
+
+    private function normalizeProjectSchedule(array $schedule): array
+    {
+        $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
+        $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
+        $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
+
+        $timeIn = $schedule['time_in'] ?? null;
+        $timeOut = $schedule['time_out'] ?? null;
+        $grace = $schedule['grace_period_minutes'] ?? null;
+
+        $timeIn = $timeIn ?: $defaultTimeIn;
+        $timeOut = $timeOut ?: $defaultTimeOut;
+        $grace = $grace === null || $grace === '' ? $defaultGrace : (int) $grace;
+
+        if (!$this->isValidTime($timeIn) || !$this->isValidTime($timeOut)) {
+            throw new \RuntimeException('Invalid time format in schedule payload.');
+        }
+
+        if ($grace < 0 || $grace > 180) {
+            throw new \RuntimeException('Invalid grace period in schedule payload.');
+        }
+
+        return [
+            'time_in' => $timeIn,
+            'time_out' => $timeOut,
+            'grace_period_minutes' => $grace,
+        ];
+    }
+
+    private function normalizeEmployeeSchedulePayload(array $payload): array
+    {
+        if (($payload['clear_override'] ?? false) === true) {
+            return [
+                'attendance_time_in' => null,
+                'attendance_time_out' => null,
+                'attendance_grace_period_minutes' => null,
+            ];
+        }
+
+        $timeIn = $payload['attendance_time_in'] ?? null;
+        $timeOut = $payload['attendance_time_out'] ?? null;
+        $grace = $payload['attendance_grace_period_minutes'] ?? null;
+
+        if ($timeIn !== null && $timeIn !== '' && !$this->isValidTime((string) $timeIn)) {
+            throw new \RuntimeException('Invalid attendance_time_in format in payload.');
+        }
+
+        if ($timeOut !== null && $timeOut !== '' && !$this->isValidTime((string) $timeOut)) {
+            throw new \RuntimeException('Invalid attendance_time_out format in payload.');
+        }
+
+        if ($grace !== null && $grace !== '') {
+            $grace = (int) $grace;
+            if ($grace < 0 || $grace > 180) {
+                throw new \RuntimeException('Invalid attendance grace period in payload.');
+            }
+        } else {
+            $grace = null;
+        }
+
+        return [
+            'attendance_time_in' => $timeIn ?: null,
+            'attendance_time_out' => $timeOut ?: null,
+            'attendance_grace_period_minutes' => $grace,
+        ];
+    }
+
+    private function recalculateProjectAttendances(array $projectIds): void
+    {
+        if (empty($projectIds)) {
+            return;
+        }
+
+        $employeeIds = Employee::whereIn('project_id', $projectIds)->pluck('id');
+        if ($employeeIds->isEmpty()) {
+            return;
+        }
+
+        $this->recalculateEmployeeAttendances($employeeIds->all());
+    }
+
+    private function recalculateEmployeeAttendances(array $employeeIds): void
+    {
+        if (empty($employeeIds)) {
+            return;
+        }
+
+        Attendance::with(['employee.project'])
+            ->whereIn('employee_id', $employeeIds)
+            ->whereNotNull('time_in')
+            ->whereNotNull('time_out')
+            ->chunkById(200, function ($attendances) {
+                foreach ($attendances as $attendance) {
+                    $attendance->calculateHours();
+                }
+            });
+    }
+
+    private function isValidTime(string $time): bool
+    {
+        return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time) === 1;
     }
 }

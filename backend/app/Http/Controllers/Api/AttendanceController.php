@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\AuditLog;
+use App\Models\Payroll;
 use App\Services\AttendanceService;
 use App\Services\BiometricService;
 use App\Services\PunchRecordImportService;
@@ -32,6 +33,7 @@ class AttendanceController extends Controller
         // Manual entry and editing: admin and hr only (store/destroy), payrollist can update
         $this->middleware('role:admin,hr')->only(['store', 'destroy', 'markAbsent']);
         $this->middleware('role:admin,hr,payrollist')->only(['update']);
+        $this->middleware('role:admin')->only(['recalculateDateRange']);
 
         // Approval actions: admin, hr, and manager
         $this->middleware('role:admin,hr,manager')->only(['approve', 'reject']);
@@ -603,6 +605,141 @@ class AttendanceController extends Controller
             'message' => "Marked {$marked} employees as absent",
             'date' => $date,
             'marked' => $marked,
+        ]);
+    }
+
+    /**
+     * Recalculate attendance hours for selected employees and date range.
+     * Intended for admin historical corrections after schedule/rules updates.
+     */
+    public function recalculateDateRange(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_ids' => 'required|array|min:1',
+            'employee_ids.*' => 'integer|exists:employees,id',
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+        ]);
+
+        $employeeIds = collect($validated['employee_ids'])
+            ->unique()
+            ->values()
+            ->all();
+
+        $dateFrom = Carbon::parse($validated['date_from'])->toDateString();
+        $dateTo = Carbon::parse($validated['date_to'])->toDateString();
+
+        $baseQuery = Attendance::query()
+            ->whereIn('employee_id', $employeeIds)
+            ->whereBetween('attendance_date', [$dateFrom, $dateTo]);
+
+        $totalRecords = (clone $baseQuery)->count();
+
+        $completeQuery = (clone $baseQuery)
+            ->whereNotNull('time_in')
+            ->whereNotNull('time_out')
+            ->orderBy('id');
+
+        $processableRecords = (clone $completeQuery)->count();
+        $skippedIncomplete = max(0, $totalRecords - $processableRecords);
+
+        $recalculated = 0;
+        $failed = 0;
+        $errorDetails = [];
+
+        $completeQuery->chunkById(200, function ($attendances) use (&$recalculated, &$failed, &$errorDetails) {
+            foreach ($attendances as $attendance) {
+                try {
+                    DB::transaction(function () use ($attendance) {
+                        $attendance->calculateHours();
+                        $attendance->save();
+                    });
+                    $recalculated++;
+                } catch (\Throwable $e) {
+                    $failed++;
+
+                    if (count($errorDetails) < 20) {
+                        $errorDetails[] = [
+                            'attendance_id' => $attendance->id,
+                            'employee_id' => $attendance->employee_id,
+                            'attendance_date' => $attendance->attendance_date,
+                            'error' => $e->getMessage(),
+                        ];
+                    }
+
+                    Log::error('[Attendance Recalculate Range] Failed recalculation', [
+                        'attendance_id' => $attendance->id,
+                        'employee_id' => $attendance->employee_id,
+                        'attendance_date' => $attendance->attendance_date,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }, 'id');
+
+        $payrollOverlapQuery = Payroll::query()
+            ->whereDate('period_start', '<=', $dateTo)
+            ->whereDate('period_end', '>=', $dateFrom)
+            ->whereHas('items', function ($query) use ($employeeIds) {
+                $query->whereIn('employee_id', $employeeIds);
+            })
+            ->select(['id', 'payroll_number', 'period_name', 'period_start', 'period_end', 'status'])
+            ->orderByDesc('period_start');
+
+        $draftPayrolls = (clone $payrollOverlapQuery)
+            ->where('status', 'draft')
+            ->get();
+
+        $lockedPayrolls = (clone $payrollOverlapQuery)
+            ->where('status', '!=', 'draft')
+            ->get();
+
+        $mapPayrolls = function ($payrolls) {
+            return $payrolls->map(function ($payroll) {
+                return [
+                    'id' => $payroll->id,
+                    'payroll_number' => $payroll->payroll_number,
+                    'period_name' => $payroll->period_name,
+                    'period_start' => $payroll->period_start,
+                    'period_end' => $payroll->period_end,
+                    'status' => $payroll->status,
+                ];
+            })->values();
+        };
+
+        $summary = [
+            'employees_selected' => count($employeeIds),
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'total_records_found' => $totalRecords,
+            'processable_records' => $processableRecords,
+            'recalculated' => $recalculated,
+            'skipped_incomplete' => $skippedIncomplete,
+            'failed' => $failed,
+        ];
+
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'module' => 'attendance',
+            'action' => 'recalculate_date_range',
+            'description' => 'Recalculated attendance for selected employees and date range',
+            'old_values' => null,
+            'new_values' => [
+                'employee_ids' => $employeeIds,
+                'summary' => $summary,
+            ],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'message' => 'Attendance recalculation completed',
+            'summary' => $summary,
+            'impacted_payrolls' => [
+                'draft' => $mapPayrolls($draftPayrolls),
+                'locked' => $mapPayrolls($lockedPayrolls),
+            ],
+            'error_details' => $errorDetails,
         ]);
     }
 

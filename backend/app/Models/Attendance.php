@@ -346,7 +346,7 @@ class Attendance extends Model
 
     /**
      * Get schedule configuration for attendance calculation
-     * Priority: Project/Department settings (from Attendance Settings UI) -> System defaults
+     * Priority: Employee override (Attendance Settings UI) -> Project/Department -> System defaults
      */
     private function getScheduleConfig(Carbon $timeIn): array
     {
@@ -355,7 +355,25 @@ class Attendance extends Model
         $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
         $defaultHours = (float) config('payroll.standard_hours_per_day', 8);
 
-        $project = $this->employee?->project;
+        $employee = $this->employee;
+
+        // Highest priority: employee-specific attendance schedule override
+        if ($employee && (
+            $employee->attendance_time_in !== null ||
+            $employee->attendance_time_out !== null ||
+            $employee->attendance_grace_period_minutes !== null
+        )) {
+            return [
+                'standard_time_in' => $employee->attendance_time_in ?: $defaultTimeIn,
+                'standard_time_out' => $employee->attendance_time_out ?: $defaultTimeOut,
+                'grace_period_minutes' => $employee->attendance_grace_period_minutes !== null
+                    ? (int) $employee->attendance_grace_period_minutes
+                    : $defaultGrace,
+                'standard_hours' => $defaultHours,
+            ];
+        }
+
+        $project = $employee?->project;
 
         // If no project assigned, use system defaults
         if (!$project) {
