@@ -78,6 +78,22 @@ const attendanceService = {
   },
 
   /**
+   * Get captured device names with employee counts and saved metadata
+   */
+  async getDeviceSummaries() {
+    const response = await api.get("/attendance/device-summaries");
+    return response.data;
+  },
+
+  /**
+   * Save designation/location metadata for a device name
+   */
+  async saveDeviceProfile(data) {
+    const response = await api.post("/attendance/device-profiles", data);
+    return response.data;
+  },
+
+  /**
    * Approve attendance record
    */
   async approve(id, notes = null) {
@@ -149,7 +165,9 @@ const attendanceService = {
    * Get modification requests
    */
   async getModificationRequests(params = {}) {
-    const response = await api.get("/attendance-modification-requests", { params: { ...params, module: 'attendance' } });
+    const response = await api.get("/attendance-modification-requests", {
+      params: { ...params, module: "attendance" },
+    });
     return response.data;
   },
 
@@ -157,7 +175,10 @@ const attendanceService = {
    * Submit a modification request for a specific date
    */
   async submitModificationRequest(data) {
-    const response = await api.post("/attendance-modification-requests", { ...data, module: 'attendance' });
+    const response = await api.post("/attendance-modification-requests", {
+      ...data,
+      module: "attendance",
+    });
     return response.data;
   },
 
@@ -165,9 +186,12 @@ const attendanceService = {
    * Check if user has access to modify attendance for a date
    */
   async checkModificationAccess(date) {
-    const response = await api.get("/attendance-modification-requests/check-access", {
-      params: { date, module: 'attendance' },
-    });
+    const response = await api.get(
+      "/attendance-modification-requests/check-access",
+      {
+        params: { date, module: "attendance" },
+      },
+    );
     return response.data;
   },
 
@@ -175,9 +199,12 @@ const attendanceService = {
    * Get count of pending modification requests (admin)
    */
   async getModificationPendingCount() {
-    const response = await api.get("/attendance-modification-requests/pending-count", {
-      params: { module: 'attendance' },
-    });
+    const response = await api.get(
+      "/attendance-modification-requests/pending-count",
+      {
+        params: { module: "attendance" },
+      },
+    );
     return response.data;
   },
 
@@ -185,7 +212,10 @@ const attendanceService = {
    * Approve a modification request (admin)
    */
   async approveModificationRequest(id, notes = null) {
-    const response = await api.post(`/attendance-modification-requests/${id}/approve`, { notes });
+    const response = await api.post(
+      `/attendance-modification-requests/${id}/approve`,
+      { notes },
+    );
     return response.data;
   },
 
@@ -193,7 +223,10 @@ const attendanceService = {
    * Reject a modification request (admin)
    */
   async rejectModificationRequest(id, notes) {
-    const response = await api.post(`/attendance-modification-requests/${id}/reject`, { notes });
+    const response = await api.post(
+      `/attendance-modification-requests/${id}/reject`,
+      { notes },
+    );
     return response.data;
   },
 };

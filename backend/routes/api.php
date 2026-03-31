@@ -213,6 +213,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/attendance/sync-employees', [App\Http\Controllers\Api\AttendanceController::class, 'syncEmployees']);
     Route::post('/attendance/clear-device-logs', [App\Http\Controllers\Api\AttendanceController::class, 'clearDeviceLogs']);
     Route::get('/attendance/device-info', [App\Http\Controllers\Api\AttendanceController::class, 'deviceInfo']);
+    Route::get('/attendance/device-summaries', [App\Http\Controllers\Api\AttendanceController::class, 'deviceSummaries']);
+    Route::post('/attendance/device-profiles', [App\Http\Controllers\Api\AttendanceController::class, 'upsertDeviceProfile']);
     Route::get('/attendance/pending-approvals', [App\Http\Controllers\Api\AttendanceController::class, 'pendingApprovals']);
     Route::get('/attendance/missing', [App\Http\Controllers\Api\AttendanceController::class, 'getMissingAttendance']);
     Route::get('/attendance/summary', [App\Http\Controllers\Api\AttendanceController::class, 'summary']);

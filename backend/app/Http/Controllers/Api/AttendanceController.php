@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\AuditLog;
+use App\Models\DeviceProfile;
 use App\Models\Payroll;
 use App\Services\AttendanceService;
 use App\Services\BiometricService;
@@ -39,7 +40,14 @@ class AttendanceController extends Controller
         $this->middleware('role:admin,hr,manager')->only(['approve', 'reject']);
 
         // Biometric import and device management: admin and hr only
-        $this->middleware('role:admin,hr')->only(['importBiometric', 'fetchFromDevice', 'syncEmployees', 'clearDeviceLogs']);
+        $this->middleware('role:admin,hr')->only([
+            'importBiometric',
+            'fetchFromDevice',
+            'syncEmployees',
+            'clearDeviceLogs',
+            'deviceSummaries',
+            'upsertDeviceProfile',
+        ]);
     }
     public function index(Request $request)
     {
@@ -853,6 +861,136 @@ class AttendanceController extends Controller
     {
         $info = $this->biometricService->getDeviceInfo();
         return response()->json($info);
+    }
+
+    /**
+     * List captured device names and unique employee counts from imported attendance.
+     */
+    public function deviceSummaries()
+    {
+        try {
+            $deviceStats = [];
+
+            Attendance::query()
+                ->select(['id', 'employee_id', 'device_name', 'device_hours'])
+                ->where(function ($query) {
+                    $query->whereNotNull('device_name')
+                        ->orWhereNotNull('device_hours');
+                })
+                ->orderBy('id')
+                ->chunkById(1000, function ($rows) use (&$deviceStats) {
+                    foreach ($rows as $row) {
+                        $deviceNames = [];
+
+                        $primaryDevice = trim((string) ($row->device_name ?? ''));
+                        if ($primaryDevice !== '') {
+                            $deviceNames[] = $primaryDevice;
+                        }
+
+                        if (is_array($row->device_hours)) {
+                            foreach (array_keys($row->device_hours) as $deviceName) {
+                                $name = trim((string) $deviceName);
+                                if ($name !== '' && !in_array($name, $deviceNames, true)) {
+                                    $deviceNames[] = $name;
+                                }
+                            }
+                        }
+
+                        foreach ($deviceNames as $name) {
+                            $key = strtolower($name);
+                            if (!isset($deviceStats[$key])) {
+                                $deviceStats[$key] = [
+                                    'device_name' => $name,
+                                    'attendance_count' => 0,
+                                    'employee_ids' => [],
+                                ];
+                            }
+
+                            $deviceStats[$key]['attendance_count']++;
+                            if (!empty($row->employee_id)) {
+                                $deviceStats[$key]['employee_ids'][(string) $row->employee_id] = true;
+                            }
+                        }
+                    }
+                }, 'id');
+
+            $profiles = DeviceProfile::query()
+                ->get()
+                ->keyBy(fn($profile) => strtolower(trim((string) $profile->device_name)));
+
+            foreach ($profiles as $key => $profile) {
+                if (!isset($deviceStats[$key])) {
+                    $deviceStats[$key] = [
+                        'device_name' => trim((string) $profile->device_name),
+                        'attendance_count' => 0,
+                        'employee_ids' => [],
+                    ];
+                }
+            }
+
+            $summaries = collect($deviceStats)
+                ->map(function ($entry, $key) use ($profiles) {
+                    $profile = $profiles->get($key);
+
+                    return [
+                        'device_name' => $entry['device_name'],
+                        'employee_count' => count($entry['employee_ids']),
+                        'attendance_count' => $entry['attendance_count'],
+                        'designation' => $profile?->designation,
+                        'location' => $profile?->location,
+                    ];
+                })
+                ->sortBy('device_name', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+
+            return response()->json($summaries);
+        } catch (\Throwable $e) {
+            Log::error('Failed to build device summaries: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load device summaries',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Create/update designation/location metadata for a device name.
+     */
+    public function upsertDeviceProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'device_name' => 'required|string|max:255',
+            'designation' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+        ]);
+
+        $deviceName = trim((string) $validated['device_name']);
+        if ($deviceName === '') {
+            return response()->json([
+                'message' => 'Device name is required.',
+            ], 422);
+        }
+
+        $profile = DeviceProfile::firstOrNew(['device_name' => $deviceName]);
+
+        $designation = isset($validated['designation'])
+            ? trim((string) $validated['designation'])
+            : '';
+        $location = isset($validated['location'])
+            ? trim((string) $validated['location'])
+            : '';
+
+        $profile->designation = $designation !== '' ? $designation : null;
+        $profile->location = $location !== '' ? $location : null;
+        $profile->save();
+
+        return response()->json([
+            'message' => 'Device profile saved successfully',
+            'profile' => $profile,
+        ]);
     }
 
     /**

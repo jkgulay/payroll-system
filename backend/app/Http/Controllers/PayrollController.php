@@ -12,6 +12,7 @@ use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\CompanyInfo;
+use App\Models\DeviceProfile;
 use App\Services\PayrollService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -577,8 +578,8 @@ class PayrollController extends Controller
             'period_start' => 'sometimes|date',
             'period_end' => 'sometimes|date|after_or_equal:' . (
                 $request->has('period_start')
-                    ? 'period_start'
-                    : Carbon::parse($payroll->period_start)->toDateString()
+                ? 'period_start'
+                : Carbon::parse($payroll->period_start)->toDateString()
             ),
             'payment_date' => 'sometimes|date',
             'notes' => 'nullable|string',
@@ -1146,7 +1147,19 @@ class PayrollController extends Controller
 
             $companyInfo = CompanyInfo::first();
             $filterInfo  = null;
-            $filterType  = 'department';
+            $filterType  = 'device';
+            $deviceMetaMap = DeviceProfile::query()
+                ->get(['device_name', 'designation', 'location'])
+                ->mapWithKeys(function ($profile) {
+                    $key = strtolower(trim((string) $profile->device_name));
+                    return [
+                        $key => [
+                            'designation' => $profile->designation,
+                            'location' => $profile->location,
+                        ],
+                    ];
+                })
+                ->all();
 
             $fontCache      = storage_path('fonts');
             $installedFonts = $fontCache . '/installed-fonts.json';
@@ -1157,7 +1170,7 @@ class PayrollController extends Controller
                 }
             }
 
-            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
+            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo', 'deviceMetaMap'))
                 ->setOptions([
                     'isHtml5ParserEnabled'    => false,
                     'isRemoteEnabled'         => false,
