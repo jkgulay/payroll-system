@@ -27,8 +27,8 @@
             <div>
               <h1 class="page-title">Attendance Settings</h1>
               <p class="page-subtitle">
-                Configure per-project schedules for accurate attendance and
-                payroll
+                Configure project schedules and employee schedule overrides for
+                accurate attendance and payroll
               </p>
             </div>
           </div>
@@ -39,6 +39,21 @@
             >
               <v-icon size="20">mdi-calendar-multiple</v-icon>
               <span>Set All Schedules</span>
+            </button>
+            <button
+              class="action-btn action-btn-secondary"
+              @click="openEmployeeScheduleDialog"
+            >
+              <v-icon size="20">mdi-account-clock</v-icon>
+              <span>Set Employee Schedule</span>
+            </button>
+            <button
+              class="action-btn action-btn-tertiary"
+              @click="openRecalculateDialog"
+              v-if="isAdmin"
+            >
+              <v-icon size="20">mdi-calendar-refresh</v-icon>
+              <span>Recalculate Range</span>
             </button>
           </div>
         </div>
@@ -466,24 +481,406 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Employee Schedule Dialog -->
+    <v-dialog v-model="employeeDialog" max-width="760px" persistent>
+      <v-card class="modern-dialog-card" elevation="24">
+        <v-card-title class="modern-dialog-header">
+          <div class="d-flex align-center w-100">
+            <div class="dialog-icon-badge">
+              <v-icon size="24">mdi-account-clock</v-icon>
+            </div>
+            <div class="flex-grow-1">
+              <div class="text-h5 font-weight-bold">
+                Employee Schedule Override
+              </div>
+              <div class="text-subtitle-2 text-white-70">
+                Applies to selected employee(s) and takes priority over project
+                schedule
+              </div>
+            </div>
+            <v-btn
+              icon
+              variant="text"
+              color="white"
+              @click="closeEmployeeScheduleDialog"
+              size="small"
+              class="ml-2"
+            >
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+        </v-card-title>
+
+        <v-card-text class="pa-6">
+          <v-form ref="employeeFormRef" @submit.prevent="saveEmployeeSchedule">
+            <v-row>
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary"
+                      >mdi-account-multiple</v-icon
+                    >
+                    Employees
+                  </label>
+                  <v-autocomplete
+                    v-model="employeeScheduleForm.employee_ids"
+                    :items="employeeScheduleOptions"
+                    item-title="label"
+                    item-value="id"
+                    multiple
+                    chips
+                    closable-chips
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-account-search"
+                    placeholder="Select one or multiple employees"
+                  ></v-autocomplete>
+                </div>
+              </v-col>
+            </v-row>
+
+            <v-row>
+              <v-col cols="12" md="4">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-clock-in</v-icon>
+                    Time In
+                  </label>
+                  <v-text-field
+                    v-model="employeeScheduleForm.attendance_time_in"
+                    type="time"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-clock-in"
+                    color="primary"
+                    :disabled="employeeScheduleForm.clear_override"
+                    clearable
+                  ></v-text-field>
+                </div>
+              </v-col>
+              <v-col cols="12" md="4">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary">mdi-clock-out</v-icon>
+                    Time Out
+                  </label>
+                  <v-text-field
+                    v-model="employeeScheduleForm.attendance_time_out"
+                    type="time"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-clock-out"
+                    color="primary"
+                    :disabled="employeeScheduleForm.clear_override"
+                    clearable
+                  ></v-text-field>
+                </div>
+              </v-col>
+              <v-col cols="12" md="4">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary"
+                      >mdi-timer-outline</v-icon
+                    >
+                    Grace Period (mins)
+                  </label>
+                  <v-text-field
+                    v-model.number="
+                      employeeScheduleForm.attendance_grace_period_minutes
+                    "
+                    type="number"
+                    min="0"
+                    max="180"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-timer-outline"
+                    color="primary"
+                    :disabled="employeeScheduleForm.clear_override"
+                    clearable
+                  ></v-text-field>
+                </div>
+              </v-col>
+            </v-row>
+
+            <v-row>
+              <v-col cols="12">
+                <v-checkbox
+                  v-model="employeeScheduleForm.clear_override"
+                  label="Clear employee override and use project/default schedule"
+                  color="primary"
+                  hide-details
+                ></v-checkbox>
+              </v-col>
+            </v-row>
+
+            <div class="info-note">
+              Employee schedule override is prioritized during attendance
+              calculation and punch import.
+            </div>
+          </v-form>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            color="grey-darken-1"
+            size="large"
+            @click="closeEmployeeScheduleDialog"
+            prepend-icon="mdi-close"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            size="large"
+            :loading="employeeScheduleSaving"
+            @click="saveEmployeeSchedule"
+            prepend-icon="mdi-check"
+            class="px-6"
+            elevation="2"
+          >
+            <span class="font-weight-bold">Apply</span>
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Recalculate Attendance Dialog -->
+    <v-dialog v-model="recalcDialog" max-width="760px" persistent>
+      <v-card class="modern-dialog-card" elevation="24">
+        <v-card-title class="modern-dialog-header">
+          <div class="d-flex align-center w-100">
+            <div class="dialog-icon-badge">
+              <v-icon size="24">mdi-calendar-refresh</v-icon>
+            </div>
+            <div class="flex-grow-1">
+              <div class="text-h5 font-weight-bold">Recalculate Attendance</div>
+              <div class="text-subtitle-2 text-white-70">
+                Recompute attendance hours for selected employees and date range
+              </div>
+            </div>
+            <v-btn
+              icon
+              variant="text"
+              color="white"
+              @click="closeRecalculateDialog"
+              size="small"
+              class="ml-2"
+            >
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+        </v-card-title>
+
+        <v-card-text class="pa-6">
+          <v-form
+            ref="recalcFormRef"
+            @submit.prevent="runRecalculateAttendance"
+          >
+            <v-row>
+              <v-col cols="12">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary"
+                      >mdi-account-multiple</v-icon
+                    >
+                    Employees
+                  </label>
+                  <v-autocomplete
+                    v-model="recalcForm.employee_ids"
+                    :items="employeeScheduleOptions"
+                    item-title="label"
+                    item-value="id"
+                    multiple
+                    chips
+                    closable-chips
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-account-search"
+                    placeholder="Select employee(s) for attendance recalculation"
+                  ></v-autocomplete>
+                </div>
+              </v-col>
+            </v-row>
+
+            <v-row>
+              <v-col cols="12" md="6">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary"
+                      >mdi-calendar-start</v-icon
+                    >
+                    Date From
+                  </label>
+                  <v-text-field
+                    v-model="recalcForm.date_from"
+                    type="date"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-start"
+                    color="primary"
+                  ></v-text-field>
+                </div>
+              </v-col>
+              <v-col cols="12" md="6">
+                <div class="form-field-wrapper">
+                  <label class="form-label">
+                    <v-icon size="small" color="primary"
+                      >mdi-calendar-end</v-icon
+                    >
+                    Date To
+                  </label>
+                  <v-text-field
+                    v-model="recalcForm.date_to"
+                    type="date"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-calendar-end"
+                    color="primary"
+                  ></v-text-field>
+                </div>
+              </v-col>
+            </v-row>
+
+            <div class="info-note">
+              Notes: This recalculates only records with both time in and time
+              out. Draft payrolls that overlap the range can be reprocessed
+              after review.
+            </div>
+          </v-form>
+
+          <div v-if="recalcResult" class="recalc-result mt-5">
+            <v-alert type="info" variant="tonal" class="mb-3">
+              {{ recalcResult.message || "Attendance recalculation completed" }}
+            </v-alert>
+
+            <div class="recalc-summary-grid">
+              <div class="recalc-summary-item">
+                <span class="recalc-label">Records Found</span>
+                <strong>{{
+                  recalcResult.summary?.total_records_found ?? 0
+                }}</strong>
+              </div>
+              <div class="recalc-summary-item">
+                <span class="recalc-label">Recalculated</span>
+                <strong>{{ recalcResult.summary?.recalculated ?? 0 }}</strong>
+              </div>
+              <div class="recalc-summary-item">
+                <span class="recalc-label">Skipped Incomplete</span>
+                <strong>{{
+                  recalcResult.summary?.skipped_incomplete ?? 0
+                }}</strong>
+              </div>
+              <div class="recalc-summary-item">
+                <span class="recalc-label">Failed</span>
+                <strong>{{ recalcResult.summary?.failed ?? 0 }}</strong>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <div class="recalc-list-title">Impacted Draft Payrolls</div>
+              <div
+                v-if="(recalcResult.impacted_payrolls?.draft || []).length"
+                class="recalc-chip-wrap"
+              >
+                <v-chip
+                  v-for="payroll in recalcResult.impacted_payrolls.draft"
+                  :key="`draft-${payroll.id}`"
+                  color="warning"
+                  size="small"
+                  variant="outlined"
+                >
+                  {{ payroll.payroll_number || `#${payroll.id}` }}
+                </v-chip>
+              </div>
+              <div v-else class="recalc-empty">
+                No draft payroll overlaps found.
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <div class="recalc-list-title">Impacted Locked Payrolls</div>
+              <div
+                v-if="(recalcResult.impacted_payrolls?.locked || []).length"
+                class="recalc-chip-wrap"
+              >
+                <v-chip
+                  v-for="payroll in recalcResult.impacted_payrolls.locked"
+                  :key="`locked-${payroll.id}`"
+                  color="error"
+                  size="small"
+                  variant="outlined"
+                >
+                  {{ payroll.payroll_number || `#${payroll.id}` }}
+                </v-chip>
+              </div>
+              <div v-else class="recalc-empty">
+                No locked payroll overlaps found.
+              </div>
+            </div>
+          </div>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            color="grey-darken-1"
+            size="large"
+            @click="closeRecalculateDialog"
+            prepend-icon="mdi-close"
+          >
+            Close
+          </v-btn>
+          <v-btn
+            color="primary"
+            size="large"
+            :loading="recalcSaving"
+            @click="runRecalculateAttendance"
+            prepend-icon="mdi-refresh"
+            class="px-6"
+            elevation="2"
+          >
+            <span class="font-weight-bold">Run Recalculation</span>
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import api from "@/services/api";
+import moduleAccessService from "@/services/moduleAccessService";
+import { useAuthStore } from "@/stores/auth";
 import { devLog } from "@/utils/devLog";
 
 const DEFAULT_TIME_IN = "07:30";
 const DEFAULT_TIME_OUT = "17:00";
 const DEFAULT_GRACE = 3;
 
+const authStore = useAuthStore();
+const isAdmin = computed(() => authStore.userRole === "admin");
+const isPayrollist = computed(() => authStore.userRole === "payrollist");
+
 const loading = ref(false);
 const saving = ref(false);
 const bulkSaving = ref(false);
+const employeeScheduleSaving = ref(false);
+const recalcSaving = ref(false);
 const dialog = ref(false);
 const bulkDialog = ref(false);
+const employeeDialog = ref(false);
+const recalcDialog = ref(false);
 const projects = ref([]);
+const employeeScheduleOptions = ref([]);
 const search = ref("");
 const snackbar = ref(false);
 const snackbarText = ref("");
@@ -491,6 +888,9 @@ const snackbarColor = ref("success");
 const selectedProject = ref(null);
 const formRef = ref(null);
 const bulkFormRef = ref(null);
+const employeeFormRef = ref(null);
+const recalcFormRef = ref(null);
+const recalcResult = ref(null);
 
 const formData = ref({
   time_in: null,
@@ -503,6 +903,20 @@ const bulkFormData = ref({
   time_out: DEFAULT_TIME_OUT,
   grace_period_minutes: DEFAULT_GRACE,
   exclude_project_ids: [],
+});
+
+const employeeScheduleForm = ref({
+  employee_ids: [],
+  attendance_time_in: DEFAULT_TIME_IN,
+  attendance_time_out: DEFAULT_TIME_OUT,
+  attendance_grace_period_minutes: DEFAULT_GRACE,
+  clear_override: false,
+});
+
+const recalcForm = ref({
+  employee_ids: [],
+  date_from: null,
+  date_to: null,
 });
 
 const headers = [
@@ -553,6 +967,31 @@ const fetchProjects = async () => {
   }
 };
 
+const fetchEmployeeScheduleOptions = async () => {
+  try {
+    const response = await api.get("/employees/schedules", {
+      params: { activity_status: "active" },
+    });
+
+    employeeScheduleOptions.value = (response.data || []).map((employee) => {
+      const projectName = employee.project?.name || "No Project";
+      const positionName = employee.position || "N/A";
+      const sourceLabel =
+        employee.schedule_source === "employee"
+          ? "Employee Override"
+          : "Project Schedule";
+
+      return {
+        id: employee.id,
+        label: `${employee.employee_number} - ${employee.full_name} | ${positionName} | ${projectName} [${sourceLabel}]`,
+      };
+    });
+  } catch (error) {
+    showSnackbar("Failed to load employee list", "error");
+    devLog.error("Error fetching employee schedule options:", error);
+  }
+};
+
 const formatScheduleTime = (value) => {
   if (!value) return null;
   const [hours, minutes] = value.split(":");
@@ -584,6 +1023,51 @@ const openBulkDialog = () => {
   bulkDialog.value = true;
 };
 
+const openEmployeeScheduleDialog = async () => {
+  if (employeeScheduleOptions.value.length === 0) {
+    await fetchEmployeeScheduleOptions();
+  }
+
+  employeeScheduleForm.value = {
+    employee_ids: [],
+    attendance_time_in: DEFAULT_TIME_IN,
+    attendance_time_out: DEFAULT_TIME_OUT,
+    attendance_grace_period_minutes: DEFAULT_GRACE,
+    clear_override: false,
+  };
+
+  employeeDialog.value = true;
+};
+
+const toDateInputValue = (dateValue) => {
+  const year = dateValue.getFullYear();
+  const month = String(dateValue.getMonth() + 1).padStart(2, "0");
+  const day = String(dateValue.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const openRecalculateDialog = async () => {
+  if (!isAdmin.value) {
+    showSnackbar("Only admin can run attendance recalculation", "warning");
+    return;
+  }
+
+  if (employeeScheduleOptions.value.length === 0) {
+    await fetchEmployeeScheduleOptions();
+  }
+
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  recalcForm.value = {
+    employee_ids: [],
+    date_from: toDateInputValue(firstDayOfMonth),
+    date_to: toDateInputValue(today),
+  };
+  recalcResult.value = null;
+  recalcDialog.value = true;
+};
+
 const resetToDefault = () => {
   formData.value = {
     time_in: DEFAULT_TIME_IN,
@@ -610,13 +1094,27 @@ const saveSchedule = async () => {
 
   saving.value = true;
   try {
-    const payload = normalizeSchedulePayload({
-      ...selectedProject.value,
-      ...formData.value,
-    });
-    await api.put(`/projects/${selectedProject.value.id}`, payload);
-    showSnackbar("Schedule updated successfully", "success");
-    await fetchProjects();
+    const schedulePayload = normalizeSchedulePayload(formData.value);
+
+    if (isPayrollist.value) {
+      await submitAttendanceSettingsRequest(
+        "project_schedule_update",
+        {
+          project_id: selectedProject.value.id,
+          project_name: selectedProject.value.name,
+          schedule: schedulePayload,
+        },
+        `Schedule change request submitted for ${selectedProject.value.name}`,
+      );
+    } else {
+      await api.put(
+        `/projects/${selectedProject.value.id}/schedule`,
+        schedulePayload,
+      );
+      showSnackbar("Schedule updated successfully", "success");
+      await fetchProjects();
+    }
+
     closeDialog();
   } catch (error) {
     const message =
@@ -637,9 +1135,37 @@ const saveBulkSchedule = async () => {
   bulkSaving.value = true;
   try {
     const payload = normalizeBulkPayload(bulkFormData.value);
-    await api.post("/projects/bulk-schedule", payload);
-    showSnackbar("Schedules updated successfully", "success");
-    await fetchProjects();
+
+    if (isPayrollist.value) {
+      const excludeIds = payload.exclude_project_ids || [];
+      const targetProjectIds = projects.value
+        .filter((project) => !excludeIds.includes(project.id))
+        .map((project) => project.id);
+
+      if (!targetProjectIds.length) {
+        showSnackbar("No target projects available for request", "warning");
+        return;
+      }
+
+      await submitAttendanceSettingsRequest(
+        "project_bulk_schedule_update",
+        {
+          project_ids: targetProjectIds,
+          excluded_project_ids: excludeIds,
+          schedule: {
+            time_in: payload.time_in,
+            time_out: payload.time_out,
+            grace_period_minutes: payload.grace_period_minutes,
+          },
+        },
+        `Bulk schedule change request submitted for ${targetProjectIds.length} project(s)`,
+      );
+    } else {
+      await api.post("/projects/bulk-schedule", payload);
+      showSnackbar("Schedules updated successfully", "success");
+      await fetchProjects();
+    }
+
     closeBulkDialog();
   } catch (error) {
     const message =
@@ -651,12 +1177,117 @@ const saveBulkSchedule = async () => {
   }
 };
 
+const saveEmployeeSchedule = async () => {
+  if (!employeeFormRef.value) return;
+
+  const valid = await employeeFormRef.value.validate();
+  if (!valid.valid) return;
+
+  if (!employeeScheduleForm.value.employee_ids.length) {
+    showSnackbar("Please select at least one employee", "warning");
+    return;
+  }
+
+  employeeScheduleSaving.value = true;
+  try {
+    const payload = {
+      employee_ids: employeeScheduleForm.value.employee_ids,
+      attendance_time_in:
+        employeeScheduleForm.value.clear_override === true
+          ? null
+          : employeeScheduleForm.value.attendance_time_in || null,
+      attendance_time_out:
+        employeeScheduleForm.value.clear_override === true
+          ? null
+          : employeeScheduleForm.value.attendance_time_out || null,
+      attendance_grace_period_minutes:
+        employeeScheduleForm.value.clear_override === true
+          ? null
+          : employeeScheduleForm.value.attendance_grace_period_minutes === "" ||
+              employeeScheduleForm.value.attendance_grace_period_minutes ===
+                undefined
+            ? null
+            : employeeScheduleForm.value.attendance_grace_period_minutes,
+      clear_override: employeeScheduleForm.value.clear_override,
+    };
+
+    if (isPayrollist.value) {
+      await submitAttendanceSettingsRequest(
+        "employee_schedule_update",
+        payload,
+        `Employee schedule override request submitted for ${payload.employee_ids.length} employee(s)`,
+      );
+    } else {
+      if (payload.employee_ids.length === 1) {
+        await api.put(
+          `/employees/${payload.employee_ids[0]}/schedule`,
+          payload,
+        );
+      } else {
+        await api.post("/employees/bulk-schedule", payload);
+      }
+
+      showSnackbar("Employee schedule updated successfully", "success");
+      await fetchEmployeeScheduleOptions();
+    }
+
+    closeEmployeeScheduleDialog();
+  } catch (error) {
+    const message =
+      error.response?.data?.message || "Failed to update employee schedule";
+    showSnackbar(message, "error");
+    devLog.error("Error saving employee schedule:", error);
+  } finally {
+    employeeScheduleSaving.value = false;
+  }
+};
+
+const runRecalculateAttendance = async () => {
+  if (!isAdmin.value) {
+    showSnackbar("Only admin can run attendance recalculation", "warning");
+    return;
+  }
+
+  if (!recalcForm.value.employee_ids.length) {
+    showSnackbar("Please select at least one employee", "warning");
+    return;
+  }
+
+  if (!recalcForm.value.date_from || !recalcForm.value.date_to) {
+    showSnackbar("Please select both date range values", "warning");
+    return;
+  }
+
+  if (recalcForm.value.date_to < recalcForm.value.date_from) {
+    showSnackbar("Date To must be on or after Date From", "warning");
+    return;
+  }
+
+  recalcSaving.value = true;
+  try {
+    const payload = {
+      employee_ids: recalcForm.value.employee_ids,
+      date_from: recalcForm.value.date_from,
+      date_to: recalcForm.value.date_to,
+    };
+
+    const response = await api.post("/attendance/recalculate-range", payload);
+    recalcResult.value = response.data;
+    showSnackbar(
+      response.data?.message || "Attendance recalculation completed",
+      "success",
+    );
+  } catch (error) {
+    const message =
+      error.response?.data?.message || "Failed to recalculate attendance";
+    showSnackbar(message, "error");
+    devLog.error("Error recalculating attendance:", error);
+  } finally {
+    recalcSaving.value = false;
+  }
+};
+
 const normalizeSchedulePayload = (payload) => ({
-  code: payload.code,
-  name: payload.name,
-  description: payload.description,
-  head_employee_id: payload.head_employee_id,
-  is_active: payload.is_active,
   time_in: payload.time_in || null,
   time_out: payload.time_out || null,
   grace_period_minutes:
@@ -665,6 +1296,33 @@ const normalizeSchedulePayload = (payload) => ({
       ? null
       : payload.grace_period_minutes,
 });
+
+const submitAttendanceSettingsRequest = async (
+  type,
+  payload,
+  successMessage,
+) => {
+  const typeLabel = {
+    project_schedule_update: "project schedule update",
+    project_bulk_schedule_update: "bulk project schedule update",
+    employee_schedule_update: "employee schedule override update",
+  };
+
+  const reason = `Payrollist requested ${typeLabel[type] || "attendance settings change"}`;
+
+  await moduleAccessService.submitRequest("attendance-settings", {
+    reason,
+    payload: {
+      type,
+      ...payload,
+    },
+  });
+
+  showSnackbar(
+    successMessage || "Request submitted. Waiting for admin approval.",
+    "success",
+  );
+};
 
 const normalizeBulkPayload = (payload) => ({
   time_in: payload.time_in || null,
@@ -695,6 +1353,27 @@ const closeBulkDialog = () => {
     grace_period_minutes: DEFAULT_GRACE,
     exclude_project_ids: [],
   };
+};
+
+const closeEmployeeScheduleDialog = () => {
+  employeeDialog.value = false;
+  employeeScheduleForm.value = {
+    employee_ids: [],
+    attendance_time_in: DEFAULT_TIME_IN,
+    attendance_time_out: DEFAULT_TIME_OUT,
+    attendance_grace_period_minutes: DEFAULT_GRACE,
+    clear_override: false,
+  };
+};
+
+const closeRecalculateDialog = () => {
+  recalcDialog.value = false;
+  recalcForm.value = {
+    employee_ids: [],
+    date_from: null,
+    date_to: null,
+  };
+  recalcResult.value = null;
 };
 
 const showSnackbar = (text, color = "success") => {
@@ -780,6 +1459,27 @@ onMounted(() => {
 .action-btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 20px rgba(237, 152, 95, 0.4);
+}
+
+.action-btn-secondary {
+  background: #ffffff;
+  color: #001f3d;
+  border: 1px solid rgba(0, 31, 61, 0.2);
+}
+
+.action-btn-secondary:hover {
+  background: rgba(0, 31, 61, 0.06);
+  transform: translateY(-1px);
+}
+
+.action-btn-tertiary {
+  background: #001f3d;
+  color: #ffffff;
+}
+
+.action-btn-tertiary:hover {
+  background: #0e365f;
+  transform: translateY(-1px);
 }
 
 .page-title-section {
@@ -969,6 +1669,52 @@ onMounted(() => {
 
 .info-note {
   margin-top: 12px;
+  font-size: 12px;
+  color: rgba(0, 31, 61, 0.6);
+}
+
+.recalc-result {
+  background: rgba(0, 31, 61, 0.03);
+  border: 1px solid rgba(0, 31, 61, 0.1);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.recalc-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.recalc-summary-item {
+  background: #ffffff;
+  border: 1px solid rgba(0, 31, 61, 0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recalc-label {
+  font-size: 12px;
+  color: rgba(0, 31, 61, 0.65);
+}
+
+.recalc-list-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #001f3d;
+  margin-bottom: 8px;
+}
+
+.recalc-chip-wrap {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recalc-empty {
   font-size: 12px;
   color: rgba(0, 31, 61, 0.6);
 }

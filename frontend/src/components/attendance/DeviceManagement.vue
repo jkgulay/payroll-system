@@ -161,6 +161,95 @@
       </v-col>
 
       <!-- Last Sync Info -->
+      <v-col cols="12">
+        <v-card>
+          <v-card-title
+            class="text-h6 d-flex align-center justify-space-between"
+          >
+            <span>Imported Device Summary</span>
+            <v-btn
+              size="small"
+              variant="tonal"
+              color="primary"
+              @click="loadDeviceSummaries"
+              :loading="loadingDeviceSummaries"
+            >
+              <v-icon start>mdi-refresh</v-icon>
+              Refresh List
+            </v-btn>
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text>
+            <v-alert type="info" variant="tonal" class="mb-4">
+              Device names are detected from imported punch records. You can
+              assign designation/location per device for payroll by-device PDF
+              exports.
+            </v-alert>
+
+            <v-progress-linear
+              v-if="loadingDeviceSummaries"
+              indeterminate
+              color="primary"
+              class="mb-3"
+            />
+
+            <div v-else-if="deviceSummaries.length === 0">
+              <v-alert type="info" variant="tonal">
+                No imported device names found yet.
+              </v-alert>
+            </div>
+
+            <v-table v-else density="compact">
+              <thead>
+                <tr>
+                  <th>Device Name</th>
+                  <th class="text-center">Employees Captured</th>
+                  <th class="text-center">Attendance Records</th>
+                  <th>Designation</th>
+                  <th>Location</th>
+                  <th class="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="device in deviceSummaries" :key="device.device_name">
+                  <td>{{ device.device_name }}</td>
+                  <td class="text-center">{{ device.employee_count }}</td>
+                  <td class="text-center">{{ device.attendance_count }}</td>
+                  <td style="min-width: 200px">
+                    <v-text-field
+                      v-model="device.designation"
+                      label="Designation"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                    />
+                  </td>
+                  <td style="min-width: 200px">
+                    <v-text-field
+                      v-model="device.location"
+                      label="Location"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                    />
+                  </td>
+                  <td class="text-center">
+                    <v-btn
+                      color="primary"
+                      size="small"
+                      @click="saveDeviceProfile(device)"
+                      :loading="Boolean(savingProfiles[device.device_name])"
+                    >
+                      Save
+                    </v-btn>
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
       <v-col cols="12" v-if="lastSync">
         <v-alert type="success" variant="tonal">
           <v-alert-title>Last Sync</v-alert-title>
@@ -215,6 +304,9 @@ const fetching = ref(false);
 const clearingLogs = ref(false);
 const deviceInfo = ref(null);
 const deviceError = ref(null);
+const deviceSummaries = ref([]);
+const loadingDeviceSummaries = ref(false);
+const savingProfiles = ref({});
 const lastSync = ref(null);
 const syncDialog = ref(false);
 const clearDialog = ref(false);
@@ -239,6 +331,52 @@ const loadDeviceInfo = async () => {
     deviceInfo.value = null;
   } finally {
     loadingInfo.value = false;
+  }
+};
+
+const loadDeviceSummaries = async () => {
+  loadingDeviceSummaries.value = true;
+  try {
+    const summaries = await attendanceService.getDeviceSummaries();
+    deviceSummaries.value = (summaries || []).map((entry) => ({
+      ...entry,
+      designation: entry.designation || "",
+      location: entry.location || "",
+    }));
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to load imported device summary",
+    );
+  } finally {
+    loadingDeviceSummaries.value = false;
+  }
+};
+
+const saveDeviceProfile = async (device) => {
+  const key = device.device_name;
+  savingProfiles.value = {
+    ...savingProfiles.value,
+    [key]: true,
+  };
+
+  try {
+    const result = await attendanceService.saveDeviceProfile({
+      device_name: device.device_name,
+      designation: device.designation?.trim() || null,
+      location: device.location?.trim() || null,
+    });
+
+    device.designation = result.profile?.designation || "";
+    device.location = result.profile?.location || "";
+    toast.success(`Saved profile for ${device.device_name}`);
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to save device profile",
+    );
+  } finally {
+    const next = { ...savingProfiles.value };
+    delete next[key];
+    savingProfiles.value = next;
   }
 };
 
@@ -268,11 +406,12 @@ const fetchFromDevice = async () => {
   try {
     const result = await attendanceService.fetchFromDevice(fetchForm);
     toast.success(
-      `Fetched ${result.imported} records. Failed: ${result.failed || 0}`
+      `Fetched ${result.imported} records. Failed: ${result.failed || 0}`,
     );
     lastSync.value = `Fetched ${
       result.imported
     } records at ${new Date().toLocaleString()}`;
+    await loadDeviceSummaries();
   } catch (error) {
     toast.error(error.response?.data?.message || "Failed to fetch from device");
   } finally {
@@ -301,5 +440,6 @@ const clearLogs = async () => {
 
 onMounted(() => {
   loadDeviceInfo();
+  loadDeviceSummaries();
 });
 </script>

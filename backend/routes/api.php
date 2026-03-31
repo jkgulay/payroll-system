@@ -168,6 +168,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/employees/import-file', [App\Http\Controllers\Api\EmployeeImportController::class, 'importFromFile']); // NEW: Fast file upload method
     Route::post('/employees/import', [App\Http\Controllers\Api\EmployeeImportController::class, 'import']); // OLD: JSON data method (kept for backwards compatibility)
     Route::get('/employees/import/template', [App\Http\Controllers\Api\EmployeeImportController::class, 'downloadTemplate']);
+    Route::get('/employees/schedules', [App\Http\Controllers\Api\EmployeeController::class, 'scheduleList']);
+    Route::put('/employees/{employee}/schedule', [App\Http\Controllers\Api\EmployeeController::class, 'updateSchedule']);
+    Route::post('/employees/bulk-schedule', [App\Http\Controllers\Api\EmployeeController::class, 'bulkSchedule']);
 
     // Employees - specific routes must come before resource routes
     Route::get('/employees/departments', [App\Http\Controllers\Api\EmployeeController::class, 'getDepartments']);
@@ -187,6 +190,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Projects & Locations
     Route::apiResource('projects', App\Http\Controllers\Api\ProjectController::class);
+    Route::put('projects/{project}/schedule', [App\Http\Controllers\Api\ProjectController::class, 'updateSchedule']);
     Route::post('projects/bulk-schedule', [App\Http\Controllers\Api\ProjectController::class, 'bulkSchedule']);
     Route::get('projects/{project}/employees', [App\Http\Controllers\Api\ProjectController::class, 'employees']);
     Route::post('projects/{project}/mark-complete', [App\Http\Controllers\Api\ProjectController::class, 'markComplete']);
@@ -209,12 +213,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/attendance/sync-employees', [App\Http\Controllers\Api\AttendanceController::class, 'syncEmployees']);
     Route::post('/attendance/clear-device-logs', [App\Http\Controllers\Api\AttendanceController::class, 'clearDeviceLogs']);
     Route::get('/attendance/device-info', [App\Http\Controllers\Api\AttendanceController::class, 'deviceInfo']);
+    Route::get('/attendance/device-summaries', [App\Http\Controllers\Api\AttendanceController::class, 'deviceSummaries']);
+    Route::post('/attendance/device-profiles', [App\Http\Controllers\Api\AttendanceController::class, 'upsertDeviceProfile']);
     Route::get('/attendance/pending-approvals', [App\Http\Controllers\Api\AttendanceController::class, 'pendingApprovals']);
     Route::get('/attendance/missing', [App\Http\Controllers\Api\AttendanceController::class, 'getMissingAttendance']);
     Route::get('/attendance/summary', [App\Http\Controllers\Api\AttendanceController::class, 'summary']);
     Route::get('/attendance/summary/export', [App\Http\Controllers\Api\AttendanceController::class, 'exportSummary']);
     Route::get('/attendance/employee/{employee}/summary', [App\Http\Controllers\Api\AttendanceController::class, 'employeeSummary']);
     Route::post('/attendance/mark-absent', [App\Http\Controllers\Api\AttendanceController::class, 'markAbsent']);
+    Route::post('/attendance/recalculate-range', [App\Http\Controllers\Api\AttendanceController::class, 'recalculateDateRange']);
     Route::post('/attendance/{attendance}/approve', [App\Http\Controllers\Api\AttendanceController::class, 'approve']);
     Route::post('/attendance/{attendance}/reject', [App\Http\Controllers\Api\AttendanceController::class, 'reject']);
 
@@ -263,6 +270,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Payroll - specific routes MUST come before apiResource (Protected by role middleware)
     Route::post('/payrolls/validate', [App\Http\Controllers\PayrollController::class, 'validatePayrollCreation'])->middleware('role:admin,payrollist');
+    Route::post('/payrolls/overtime/candidates', [App\Http\Controllers\PayrollController::class, 'overtimeCandidates'])->middleware('role:admin,payrollist');
+    Route::get('/payrolls/overtime/employee/{employee}/attendance', [App\Http\Controllers\PayrollController::class, 'overtimeEmployeeAttendance'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister'])->middleware('role:admin,payrollist');

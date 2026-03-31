@@ -175,6 +175,21 @@ class AttendanceService
         $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
         $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
 
+        // Highest priority: employee-specific attendance schedule override
+        if ($employee && (
+            $employee->attendance_time_in !== null ||
+            $employee->attendance_time_out !== null ||
+            $employee->attendance_grace_period_minutes !== null
+        )) {
+            return [
+                'standard_time_in' => $employee->attendance_time_in ?: $defaultTimeIn,
+                'standard_time_out' => $employee->attendance_time_out ?: $defaultTimeOut,
+                'grace_period_minutes' => $employee->attendance_grace_period_minutes !== null
+                    ? (int) $employee->attendance_grace_period_minutes
+                    : $defaultGrace,
+            ];
+        }
+
         if (!$employee || !$employee->project) {
             return [
                 'standard_time_in' => $defaultTimeIn,

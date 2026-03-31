@@ -68,9 +68,21 @@ class PayrollService
             $payrollItems = []; // Collect items for insert
             $allAdjustmentIds = []; // Collect salary adjustment IDs to mark after successful insert
             $allBonusIds = []; // Collect bonus IDs to mark as paid after successful insert
+            $selectedOvertimeEmployeeIds = collect($payroll->overtime_employee_ids ?? [])
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
 
             foreach ($employees as $employee) {
-                $item = $this->calculatePayrollItem($payroll, $employee, $holidays);
+                $includeOvertime = empty($selectedOvertimeEmployeeIds)
+                    ? true
+                    : in_array((int) $employee->id, $selectedOvertimeEmployeeIds, true);
+
+                $item = $this->calculatePayrollItem($payroll, $employee, $holidays, [
+                    'include_overtime' => $includeOvertime,
+                ]);
 
                 // Skip employees with ₱0 or negative gross pay
                 // These employees have no complete attendance records, so they shouldn't be included in payroll
@@ -351,8 +363,10 @@ class PayrollService
     /**
      * Calculate payroll item for a specific employee (OPTIMIZED)
      */
-    public function calculatePayrollItem(Payroll $payroll, Employee $employee, array $holidays = [])
+    public function calculatePayrollItem(Payroll $payroll, Employee $employee, array $holidays = [], array $options = [])
     {
+        $includeOvertime = $options['include_overtime'] ?? true;
+
         // OPTIMIZATION: Use preloaded attendances (already eager loaded)
         $attendances = $employee->attendances;
 
@@ -405,7 +419,7 @@ class PayrollService
                 $holidayDays += ($attendance->status === 'half_day') ? 0.5 : 1;
 
                 // Handle holiday overtime with specific rates
-                if ($attendance->overtime_hours > 0) {
+                if ($includeOvertime && $attendance->overtime_hours > 0) {
                     if ($holiday->type === 'regular') {
                         // Regular holiday overtime
                         if ($isSunday) {
@@ -434,7 +448,10 @@ class PayrollService
                 } elseif ($attendance->status === 'half_day') {
                     if ($isSunday) {
                         // Half day on Sunday - add 4 hours (half of standard 8)
-                        $hoursWorked = ($attendance->regular_hours ?? $standardHours) / 2;
+                        $hoursWorked = min(
+                            ($attendance->regular_hours ?? ($standardHours / 2)),
+                            ($standardHours / 2)
+                        );
                         $sundayRegularHours += $hoursWorked;
                     } else {
                         $regularDays += 0.5; // Half day counts as 0.5
@@ -442,7 +459,7 @@ class PayrollService
                 }
 
                 // Add overtime - separate Sunday from regular days
-                if ($attendance->overtime_hours > 0) {
+                if ($includeOvertime && $attendance->overtime_hours > 0) {
                     if ($isSunday) {
                         $sundayOtHours += $attendance->overtime_hours;
                     } else {

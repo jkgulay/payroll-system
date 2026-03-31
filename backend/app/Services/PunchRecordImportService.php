@@ -48,8 +48,16 @@ class PunchRecordImportService
         $dateRange = ['min' => null, 'max' => null]; // Track date range for bulk queries
 
         foreach ($punchData as $row) {
-            $staffCode    = trim($row['Staff Code'] ?? '');
-            $rawPunchDate = trim($row['Punch Date'] ?? '');
+            $staffCode = trim($row['Staff Code'] ?? '');
+            // Primary expected header is "Punch Date" (list-view export).
+            // Keep a safe fallback for "Punch Time" variants from other device exports.
+            $rawPunchDate = trim((string) (
+                $row['Punch Date']
+                ?? $row['Punch Time']
+                ?? $row['PunchDate']
+                ?? $row['PunchTime']
+                ?? ''
+            ));
 
             if ($staffCode === '' || $rawPunchDate === '') {
                 $skipped++;
@@ -139,7 +147,11 @@ class PunchRecordImportService
                 ->whereIn('employee_id', $employeeIds)
                 ->get();
             foreach ($attendances as $att) {
-                $existingAttendances[$att->employee_id][$att->attendance_date] = $att;
+                $attendanceDateKey = $att->attendance_date instanceof Carbon
+                    ? $att->attendance_date->format('Y-m-d')
+                    : (string) $att->attendance_date;
+
+                $existingAttendances[$att->employee_id][$attendanceDateKey] = $att;
             }
         }
 
@@ -190,7 +202,10 @@ class PunchRecordImportService
                 $existingAtt = $existingAttendances[$empId][$dateStr] ?? null;
 
                 try {
-                    $result = $this->processPunchRecordOptimized(
+                    // Transaction per employee+date keeps each import unit atomic.
+                    // Use a cloned attendance model to avoid mutating cache state
+                    // when a transaction rolls back.
+                    $result = DB::transaction(function () use (
                         $employee,
                         $attendanceDate,
                         $timeEntries,
@@ -198,7 +213,19 @@ class PunchRecordImportService
                         $punchMap,
                         $existingAtt,
                         $schedule
-                    );
+                    ) {
+                        $workingAttendance = $existingAtt ? clone $existingAtt : null;
+
+                        return $this->processPunchRecordOptimized(
+                            $employee,
+                            $attendanceDate,
+                            $timeEntries,
+                            $deviceName,
+                            $punchMap,
+                            $workingAttendance,
+                            $schedule
+                        );
+                    });
 
                     // Update the cache so subsequent dates for same employee use updated data
                     if ($result['attendance']) {
@@ -249,251 +276,21 @@ class PunchRecordImportService
      */
     protected function processPunchRecord(Employee $employee, Carbon $attendanceDate, string $timeEntries, ?string $deviceName = null, array $punchDeviceMap = []): array
     {
-        // Parse time entries (multiple times may be on separate lines or separated by \n)
-        $times = [];
-        $lines = preg_split('/[\r\n]+/', trim($timeEntries));
-
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (preg_match('/^(\d{1,2}):(\d{2})$/', $line, $matches)) {
-                $hour = (int)$matches[1];
-                $minute = (int)$matches[2];
-
-                // Skip obvious errors: 00:00-00:05 (midnight punches are usually biometric errors)
-                if ($hour == 0 && $minute <= 5) {
-                    continue;
-                }
-
-                $times[] = Carbon::create($attendanceDate->year, $attendanceDate->month, $attendanceDate->day, $hour, $minute);
-            }
-        }
-
-        // If no valid times found, skip
-        if (empty($times)) {
-            return ['action' => 'skipped'];
-        }
-
-        // Sort times chronologically
-        usort($times, function ($a, $b) {
-            return $a->timestamp - $b->timestamp;
-        });
-
-        // Deduplicate punches that are too close together (e.g., 5-minute window)
-        // Keeps the first punch in a cluster, skips subsequent rapid punches
-        $times = $this->deduplicatePunches($times);
-
-        // If no valid times remain after deduplication, skip
-        if (empty($times)) {
-            return ['action' => 'skipped'];
-        }
-
-        // Check if attendance record already exists
-        $attendance = Attendance::where('employee_id', $employee->id)
+        $existingAtt = Attendance::where('employee_id', $employee->id)
             ->where('attendance_date', $attendanceDate->format('Y-m-d'))
             ->first();
 
-        $action = $attendance ? 'updated' : 'created';
-
-        // Create new attendance if doesn't exist
-        if (!$attendance) {
-            $attendance = Attendance::create([
-                'employee_id' => $employee->id,
-                'attendance_date' => $attendanceDate->format('Y-m-d'),
-                'status' => 'present',
-                'is_manual_entry' => false,
-                'device_name' => $deviceName,
-                'approval_status' => 'approved',
-                'is_approved' => true,
-                'created_by' => auth()->id() ?? 1,
-            ]);
-        } else {
-            // Clear ALL time and calculated fields for clean re-import
-            if ($deviceName !== null) {
-                $attendance->device_name = $deviceName;
-            }
-            $attendance->time_in = null;
-            $attendance->time_out = null;
-            $attendance->break_start = null;
-            $attendance->break_end = null;
-            $attendance->ot_time_in = null;
-            $attendance->ot_time_out = null;
-            $attendance->ot_time_in_2 = null;
-            $attendance->ot_time_out_2 = null;
-            $attendance->regular_hours = 0;
-            $attendance->overtime_hours = 0;
-            $attendance->undertime_hours = 0;
-            $attendance->status = 'present'; // Reset status, will be recalculated
-        }
-
-        // Get employee's schedule to detect OT sessions
         $schedule = $this->getScheduleForEmployee($employee, $attendanceDate);
-        $scheduledTimeOut = Carbon::parse($attendanceDate->format('Y-m-d') . ' ' . $schedule['standard_time_out']);
 
-        // Get configurable punch detection settings
-        $breakMinHours = (int) config('payroll.attendance.break_detection_min_hours', 3);
-        $breakMaxHours = (int) config('payroll.attendance.break_detection_max_hours', 6);
-        $smartDetectionMinutes = (int) config('payroll.attendance.smart_detection_window_minutes', 120);
-
-        // Track whether OT was auto-created by setTimeOutWithOtSplit (not from explicit OT punches).
-        // When auto-split, subsequent punches should extend ot_time_out rather than starting OT2,
-        // because the employee never explicitly clocked out for their regular shift.
-        $otAutoSplit = false;
-
-        // Process each punch time individually to properly assign to regular shift or OT sessions
-        foreach ($times as $timestamp) {
-            $timeString = $timestamp->format('H:i:s');
-            $dateStr = $attendanceDate->format('Y-m-d');
-
-            // 1. First punch = time_in
-            if (!$attendance->time_in) {
-                $attendance->time_in = $timeString;
-            }
-            // 2. Second punch - could be break_start (if 3+ punches and configured hours after time_in) or time_out
-            elseif (!$attendance->break_start && !$attendance->time_out) {
-                $canBeBreak = false;
-
-                // Only consider break detection when there are 3+ punches.
-                // With exactly 2 punches the second is always time_out — there
-                // won't be a subsequent punch to close the break, which would
-                // leave an orphan break_start and no time_out (half_day fallback).
-                if (count($times) >= 3) {
-                    $timeIn = Carbon::parse($dateStr . ' ' . $attendance->time_in);
-                    $hoursAfterTimeIn = $timeIn->diffInHours($timestamp);
-
-                    // Also check against scheduled time_in as fallback
-                    // When an employee arrives very late, the break detection window shifts too far
-                    // Using the scheduled time_in ensures lunch breaks are still detected correctly
-                    $scheduledTimeIn = Carbon::parse($dateStr . ' ' . $schedule['standard_time_in']);
-                    $hoursAfterScheduledTimeIn = $scheduledTimeIn->diffInHours($timestamp);
-
-                    $isBreakAfterActual = $hoursAfterTimeIn >= $breakMinHours && $hoursAfterTimeIn <= $breakMaxHours;
-                    $isBreakAfterScheduled = $hoursAfterScheduledTimeIn >= $breakMinHours && $hoursAfterScheduledTimeIn <= $breakMaxHours;
-                    $canBeBreak = $isBreakAfterActual || $isBreakAfterScheduled;
-                }
-
-                if ($canBeBreak) {
-                    $attendance->break_start = $timeString;
-                } else {
-                    // It's time_out — but check if it's far past scheduled time_out (OT split needed)
-                    if ($this->setTimeOutWithOtSplit($attendance, $timestamp, $scheduledTimeOut, $smartDetectionMinutes, $dateStr)) {
-                        $otAutoSplit = true;
-                    }
-                }
-            }
-            // 3. Third punch - if we have break_start, check if this is break_end or time_out
-            elseif ($attendance->break_start && !$attendance->break_end && !$attendance->time_out) {
-                // Smart detection: if this punch is within configured window of scheduled time_out, treat as time_out
-                // Otherwise treat as break_end (expecting a 4th punch)
-                $minutesBeforeScheduledOut = $scheduledTimeOut->diffInMinutes($timestamp, false);
-
-                // If punch is within configured window of scheduled time_out, assume it's time_out (not break_end)
-                if ($minutesBeforeScheduledOut >= -$smartDetectionMinutes) {
-                    // This is end of day — clear orphan break_start since we never got break_end
-                    $attendance->break_start = null;
-                    if ($this->setTimeOutWithOtSplit($attendance, $timestamp, $scheduledTimeOut, $smartDetectionMinutes, $dateStr)) {
-                        $otAutoSplit = true;
-                    }
-                } else {
-                    // Still early in the day, this is break_end
-                    $attendance->break_end = $timeString;
-                }
-            }
-            // 4. Fourth punch - if we had break, this is time_out (with OT split check)
-            elseif ($attendance->break_start && $attendance->break_end && !$attendance->time_out) {
-                if ($this->setTimeOutWithOtSplit($attendance, $timestamp, $scheduledTimeOut, $smartDetectionMinutes, $dateStr)) {
-                    $otAutoSplit = true;
-                }
-            }
-            // 5. Fifth+ punch - check if OT (> 2h past scheduled time_out)
-            elseif ($attendance->time_out) {
-                // Use the same 2-hour window as setTimeOutWithOtSplit for consistency.
-                // Punch beyond scheduledTimeOut + 2h = OT. Within = adjust time_out.
-                if ($timestamp->gt($scheduledTimeOut->copy()->addMinutes($smartDetectionMinutes))) {
-                    $actualTimeOut = Carbon::parse($dateStr . ' ' . $attendance->time_out);
-
-                    // If time_out was set past schedule (within the 2h window), snap it back
-                    // now that a subsequent punch confirms the employee was working OT all along.
-                    if ($actualTimeOut->gt($scheduledTimeOut) && !$attendance->ot_time_in) {
-                        $attendance->time_out = $scheduledTimeOut->format('H:i:s');
-                    }
-
-                    $otStartTime = $scheduledTimeOut->format('H:i:s');
-
-                    // Track OT sessions (up to 2 sessions)
-                    if (!$attendance->ot_time_in) {
-                        // First OT punch - set OT session starting from shift end
-                        $attendance->ot_time_in = $otStartTime;
-                        $attendance->ot_time_out = $timeString;
-                    } elseif (!$attendance->ot_time_out) {
-                        // Close first OT session
-                        $attendance->ot_time_out = $timeString;
-                    } elseif ($otAutoSplit) {
-                        // OT1 was auto-created by setTimeOutWithOtSplit (employee never explicitly
-                        // clocked out for their regular shift). All subsequent punches are part of
-                        // the same continuous work session — extend OT1 end time.
-                        $attendance->ot_time_out = $timeString;
-                    } elseif (!$attendance->ot_time_in_2) {
-                        // OT1 is complete — check if it was trivially short (< 60 min).
-                        // A short OT1 typically means punch 5 was an OT clock-in (not end),
-                        // and this punch is the actual OT end. Extend OT1 instead of
-                        // starting a new OT2 session.
-                        $ot1In = Carbon::parse($dateStr . ' ' . $attendance->ot_time_in);
-                        $ot1Out = Carbon::parse($dateStr . ' ' . $attendance->ot_time_out);
-                        if ($ot1Out->lt($ot1In)) {
-                            $ot1Out->addDay();
-                        }
-                        $ot1Minutes = $ot1In->diffInMinutes($ot1Out);
-
-                        if ($ot1Minutes < 60) {
-                            // OT1 rounds to 0h via floor() — extend it with this punch
-                            $attendance->ot_time_out = $timeString;
-                        } else {
-                            // Genuine first session — start second OT session
-                            $attendance->ot_time_in_2 = $timeString;
-                        }
-                    } elseif (!$attendance->ot_time_out_2) {
-                        // Close second OT session
-                        $attendance->ot_time_out_2 = $timeString;
-                    } else {
-                        // More than 2 OT sessions, extend last OT out
-                        $attendance->ot_time_out_2 = $timeString;
-                    }
-                } else {
-                    // Within grace period - adjust regular time_out
-                    $attendance->time_out = $timeString;
-                }
-            }
-        }
-
-        // If employee has time_in but no time_out, mark as half_day (incomplete attendance)
-        // Don't auto-complete - we don't know when they actually left
-        if ($attendance->time_in && !$attendance->time_out) {
-            $attendance->status = 'half_day';
-            $attendance->regular_hours = 4; // Give half day credit (4 hours)
-        }
-
-        // Save and calculate hours
-        $attendance->save();
-
-        // Only calculate hours if we have complete attendance (both time_in and time_out)
-        if ($attendance->time_in && $attendance->time_out) {
-            // calculateHours() handles status internally (present/late/half_day)
-            // based on schedule, grace period, and half-day threshold rules.
-            // Do NOT call adjustAttendanceStatus() after this — it would overwrite
-            // the correct status (e.g., revert half_day back to present).
-            $attendance->calculateHours();
-        } else {
-            // Incomplete attendance (no time_out) — apply fallback status logic
-            $this->adjustAttendanceStatus($attendance);
-        }
-
-        // Calculate per-device hour distribution from punch-device mapping
-        if (!empty($punchDeviceMap)) {
-            $attendance->device_hours = $this->calculateDeviceHours($attendance, $punchDeviceMap, $attendanceDate->format('Y-m-d'));
-            $attendance->save();
-        }
-
-        return ['action' => $action, 'attendance' => $attendance->fresh()];
+        return $this->processPunchRecordOptimized(
+            $employee,
+            $attendanceDate,
+            $timeEntries,
+            $deviceName,
+            $punchDeviceMap,
+            $existingAtt,
+            $schedule
+        );
     }
 
     /**
@@ -641,6 +438,14 @@ class PunchRecordImportService
         }
 
         usort($times, fn($a, $b) => $a->timestamp - $b->timestamp);
+
+        // Keep optimized path behavior aligned with production expectations:
+        // suppress rapid duplicate punches before assignment logic.
+        $times = $this->deduplicatePunches($times);
+
+        if (empty($times)) {
+            return ['action' => 'skipped', 'attendance' => $existingAtt];
+        }
 
         $action = $existingAtt ? 'updated' : 'created';
         $dateStr = $attendanceDate->format('Y-m-d');
@@ -829,6 +634,21 @@ class PunchRecordImportService
         $defaultTimeIn = config('payroll.attendance.standard_time_in', '07:30');
         $defaultTimeOut = config('payroll.attendance.standard_time_out', '17:00');
         $defaultGrace = (int) config('payroll.attendance.grace_period_minutes', 3);
+
+        // Highest priority: employee-specific attendance schedule override
+        if ($employee && (
+            $employee->attendance_time_in !== null ||
+            $employee->attendance_time_out !== null ||
+            $employee->attendance_grace_period_minutes !== null
+        )) {
+            return [
+                'standard_time_in' => $employee->attendance_time_in ?: $defaultTimeIn,
+                'standard_time_out' => $employee->attendance_time_out ?: $defaultTimeOut,
+                'grace_period_minutes' => $employee->attendance_grace_period_minutes !== null
+                    ? (int) $employee->attendance_grace_period_minutes
+                    : $defaultGrace,
+            ];
+        }
 
         if (!$employee || !$employee->project) {
             return [

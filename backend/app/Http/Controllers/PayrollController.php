@@ -12,6 +12,7 @@ use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\CompanyInfo;
+use App\Models\DeviceProfile;
 use App\Services\PayrollService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -247,9 +248,13 @@ class PayrollController extends Controller
             'has_attendance' => 'nullable|boolean',
             'excluded_positions' => 'nullable|array',
             'excluded_positions.*' => 'string',
+            'overtime_employee_ids' => 'nullable|array',
+            'overtime_employee_ids.*' => 'integer|exists:employees,id',
             // Allow force create to bypass validation
             'force_create' => 'nullable|boolean',
         ]);
+
+        $overtimeEmployeeIds = $this->normalizeEmployeeIds($validated['overtime_employee_ids'] ?? []);
 
         // Run validation check unless force_create is true
         if (!($validated['force_create'] ?? false)) {
@@ -284,6 +289,7 @@ class PayrollController extends Controller
                 'deduct_sss' => $validated['deduct_sss'] ?? true,
                 'deduct_philhealth' => $validated['deduct_philhealth'] ?? true,
                 'deduct_pagibig' => $validated['deduct_pagibig'] ?? true,
+                'overtime_employee_ids' => !empty($overtimeEmployeeIds) ? $overtimeEmployeeIds : null,
             ]);
 
             // Explicitly save and ensure the ID is generated before proceeding
@@ -302,6 +308,7 @@ class PayrollController extends Controller
                 'included_employee_id' => $validated['included_employee_id'] ?? null,
                 'has_attendance' => $validated['has_attendance'] ?? false,
                 'excluded_positions' => $validated['excluded_positions'] ?? [],
+                'overtime_employee_ids' => $overtimeEmployeeIds,
             ];
             $this->generatePayrollItems($payroll, $filters);
 
@@ -323,6 +330,7 @@ class PayrollController extends Controller
                     'period_name' => $payroll->period_name,
                     'period_start' => $payroll->period_start,
                     'period_end' => $payroll->period_end,
+                    'overtime_employee_ids' => $payroll->overtime_employee_ids,
                     'items_count' => $payroll->items_count,
                 ],
             ]);
@@ -408,6 +416,153 @@ class PayrollController extends Controller
         return response()->json($payroll);
     }
 
+    public function overtimeCandidates(Request $request)
+    {
+        $validated = $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+            'payroll_scope' => 'nullable|in:all,individual',
+            'individual_target' => 'nullable|in:position,employee',
+            'included_position' => 'nullable|string',
+            'included_employee_id' => 'nullable|integer|exists:employees,id',
+            'has_attendance' => 'nullable|boolean',
+            'excluded_positions' => 'nullable|array',
+            'excluded_positions.*' => 'string',
+        ]);
+
+        $periodStart = $validated['period_start'];
+        $periodEnd = $validated['period_end'];
+
+        $employeeQuery = Employee::query()->where(function ($q) use ($periodStart, $periodEnd) {
+            $q->whereIn('activity_status', ['active', 'on_leave'])
+                ->orWhereHas('attendances', function ($subQ) use ($periodStart, $periodEnd) {
+                    $subQ->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                        ->where('status', '!=', 'absent');
+                });
+        });
+
+        if (($validated['has_attendance'] ?? false) === true) {
+            $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
+                $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                    ->where('status', '!=', 'absent')
+                    ->where('approval_status', 'approved');
+            });
+        }
+
+        if (($validated['payroll_scope'] ?? 'all') === 'individual') {
+            if (($validated['individual_target'] ?? null) === 'position' && !empty($validated['included_position'])) {
+                $employeeQuery->whereHas('positionRate', function ($q) use ($validated) {
+                    $q->where('position_name', $validated['included_position']);
+                });
+            }
+
+            if (($validated['individual_target'] ?? null) === 'employee' && !empty($validated['included_employee_id'])) {
+                $employeeQuery->where('id', $validated['included_employee_id']);
+            }
+        }
+
+        if (!empty($validated['excluded_positions'])) {
+            $employeeQuery->where(function ($q) use ($validated) {
+                $q->whereDoesntHave('positionRate')
+                    ->orWhereHas('positionRate', function ($positionQuery) use ($validated) {
+                        $positionQuery->whereNotIn('position_name', $validated['excluded_positions']);
+                    });
+            });
+        }
+
+        $employees = $employeeQuery
+            ->with('positionRate:id,position_name')
+            ->orderBy('employee_number')
+            ->get(['id', 'employee_number', 'first_name', 'last_name', 'activity_status']);
+
+        $employeeIds = $employees->pluck('id');
+
+        $attendanceByEmployee = Attendance::whereIn('employee_id', $employeeIds)
+            ->whereBetween('attendance_date', [$periodStart, $periodEnd])
+            ->where('status', '!=', 'absent')
+            ->where('approval_status', 'approved')
+            ->get([
+                'id',
+                'employee_id',
+                'attendance_date',
+                'time_in',
+                'time_out',
+                'ot_time_in',
+                'ot_time_out',
+                'ot_time_in_2',
+                'ot_time_out_2',
+                'overtime_hours',
+                'regular_hours',
+            ])
+            ->groupBy('employee_id');
+
+        $rows = $employees->map(function ($employee) use ($attendanceByEmployee) {
+            $records = $attendanceByEmployee->get($employee->id, collect());
+
+            $hasOvertimeRequest = $records->contains(function ($record) {
+                return (float) ($record->overtime_hours ?? 0) > 0
+                    || !empty($record->ot_time_in)
+                    || !empty($record->ot_time_in_2);
+            });
+
+            return [
+                'id' => $employee->id,
+                'employee_number' => $employee->employee_number,
+                'full_name' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')),
+                'position' => $employee->positionRate->position_name ?? null,
+                'activity_status' => $employee->activity_status,
+                'attendance_days' => $records->count(),
+                'total_regular_hours' => round((float) $records->sum('regular_hours'), 2),
+                'total_overtime_hours' => round((float) $records->sum('overtime_hours'), 2),
+                'has_overtime_request' => $hasOvertimeRequest,
+            ];
+        })->sortByDesc('has_overtime_request')->values();
+
+        return response()->json([
+            'employees' => $rows,
+            'total' => $rows->count(),
+        ]);
+    }
+
+    public function overtimeEmployeeAttendance(Request $request, Employee $employee)
+    {
+        $validated = $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+        ]);
+
+        $rows = Attendance::where('employee_id', $employee->id)
+            ->whereBetween('attendance_date', [$validated['period_start'], $validated['period_end']])
+            ->orderBy('attendance_date')
+            ->get([
+                'id',
+                'attendance_date',
+                'status',
+                'approval_status',
+                'time_in',
+                'time_out',
+                'break_start',
+                'break_end',
+                'ot_time_in',
+                'ot_time_out',
+                'ot_time_in_2',
+                'ot_time_out_2',
+                'regular_hours',
+                'overtime_hours',
+                'undertime_hours',
+                'late_hours',
+            ]);
+
+        return response()->json([
+            'employee' => [
+                'id' => $employee->id,
+                'employee_number' => $employee->employee_number,
+                'full_name' => $employee->full_name,
+            ],
+            'attendance' => $rows,
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $payroll = Payroll::findOrFail($id);
@@ -423,15 +578,24 @@ class PayrollController extends Controller
             'period_start' => 'sometimes|date',
             'period_end' => 'sometimes|date|after_or_equal:' . (
                 $request->has('period_start')
-                    ? 'period_start'
-                    : Carbon::parse($payroll->period_start)->toDateString()
+                ? 'period_start'
+                : Carbon::parse($payroll->period_start)->toDateString()
             ),
             'payment_date' => 'sometimes|date',
             'notes' => 'nullable|string',
             'deduct_sss' => 'sometimes|boolean',
             'deduct_philhealth' => 'sometimes|boolean',
             'deduct_pagibig' => 'sometimes|boolean',
+            'overtime_employee_ids' => 'nullable|array',
+            'overtime_employee_ids.*' => 'integer|exists:employees,id',
         ]);
+
+        if (array_key_exists('overtime_employee_ids', $validated)) {
+            $validated['overtime_employee_ids'] = $this->normalizeEmployeeIds($validated['overtime_employee_ids'] ?? []);
+            if (empty($validated['overtime_employee_ids'])) {
+                $validated['overtime_employee_ids'] = null;
+            }
+        }
 
         $oldValues = $payroll->toArray();
 
@@ -903,6 +1067,8 @@ class PayrollController extends Controller
             $groupedItems = null;
             $filterInfo = null;
             $filterType = $validated['filter_type'] ?? 'all';
+            $isIndividualPayroll = false;
+            $individualEmployeeName = null;
 
             if (!empty($validated['filter_type']) && $validated['filter_type'] !== 'all') {
                 if ($validated['filter_type'] === 'employee' && !empty($validated['employee_ids'])) {
@@ -911,6 +1077,8 @@ class PayrollController extends Controller
                         $employee = Employee::find($validated['employee_ids'][0]);
                         if ($employee) {
                             $filterInfo = 'Employee: ' . $employee->first_name . ' ' . $employee->last_name;
+                            $isIndividualPayroll = true;
+                            $individualEmployeeName = trim($employee->first_name . ' ' . $employee->last_name);
                         }
                     } else {
                         $filterInfo = 'Multiple Employees (' . count($validated['employee_ids']) . ')';
@@ -938,6 +1106,15 @@ class PayrollController extends Controller
                 }
             }
 
+            if (!$isIndividualPayroll && $payroll->items->count() === 1) {
+                $isIndividualPayroll = true;
+                $employee = $payroll->items->first()?->employee;
+                if ($employee) {
+                    $individualEmployeeName = $employee->full_name
+                        ?? trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
+                }
+            }
+
             // Get company info from database
             $companyInfo = CompanyInfo::first();
 
@@ -951,7 +1128,7 @@ class PayrollController extends Controller
                 }
             }
 
-            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
+            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo', 'isIndividualPayroll', 'individualEmployeeName'))
                 ->setOptions([
                     'isHtml5ParserEnabled'    => false,
                     'isRemoteEnabled'         => false,
@@ -983,7 +1160,19 @@ class PayrollController extends Controller
 
             $companyInfo = CompanyInfo::first();
             $filterInfo  = null;
-            $filterType  = 'department';
+            $filterType  = 'device';
+            $deviceMetaMap = DeviceProfile::query()
+                ->get(['device_name', 'designation', 'location'])
+                ->mapWithKeys(function ($profile) {
+                    $key = strtolower(trim((string) $profile->device_name));
+                    return [
+                        $key => [
+                            'designation' => $profile->designation,
+                            'location' => $profile->location,
+                        ],
+                    ];
+                })
+                ->all();
 
             $fontCache      = storage_path('fonts');
             $installedFonts = $fontCache . '/installed-fonts.json';
@@ -994,7 +1183,7 @@ class PayrollController extends Controller
                 }
             }
 
-            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo'))
+            $pdf = Pdf::loadView('payroll.register', compact('payroll', 'filterInfo', 'groupedItems', 'filterType', 'companyInfo', 'deviceMetaMap'))
                 ->setOptions([
                     'isHtml5ParserEnabled'    => false,
                     'isRemoteEnabled'         => false,
@@ -1293,11 +1482,18 @@ class PayrollController extends Controller
         $totalNet = 0;
         $allAdjustmentIds = []; // Track salary adjustment IDs to mark as applied
         $allBonusIds = []; // Track bonus IDs to mark as paid
+        $selectedOvertimeEmployeeIds = $this->normalizeEmployeeIds($filters['overtime_employee_ids'] ?? []);
 
         foreach ($employees as $employee) {
             try {
                 // Use PayrollService for holiday-aware calculation
-                $item = $this->payrollService->calculatePayrollItem($payroll, $employee, $holidays);
+                $includeOvertime = empty($selectedOvertimeEmployeeIds)
+                    ? true
+                    : in_array((int) $employee->id, $selectedOvertimeEmployeeIds, true);
+
+                $item = $this->payrollService->calculatePayrollItem($payroll, $employee, $holidays, [
+                    'include_overtime' => $includeOvertime,
+                ]);
 
                 // Validate calculated values before creating record
                 if (!is_numeric($item['gross_pay']) || !is_finite($item['gross_pay'])) {
@@ -1362,6 +1558,16 @@ class PayrollController extends Controller
             'total_deductions' => $totalDeductions,
             'total_net' => $totalNet,
         ]);
+    }
+
+    private function normalizeEmployeeIds(array $ids): array
+    {
+        return collect($ids)
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

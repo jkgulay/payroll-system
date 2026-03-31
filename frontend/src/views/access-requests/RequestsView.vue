@@ -3,7 +3,11 @@
     <div class="modern-card">
       <div class="page-header">
         <div class="page-icon-badge">
-          <v-icon icon="mdi-clipboard-list-outline" size="24" color="white"></v-icon>
+          <v-icon
+            icon="mdi-clipboard-list-outline"
+            size="24"
+            color="white"
+          ></v-icon>
         </div>
         <div class="page-header-content">
           <h1 class="page-title">Access Requests</h1>
@@ -38,6 +42,16 @@
           <v-badge
             v-if="pendingCounts.attendance > 0"
             :content="pendingCounts.attendance"
+            color="error"
+            class="ml-2"
+            inline
+          ></v-badge>
+        </v-tab>
+        <v-tab value="attendance-settings">
+          Attendance Settings
+          <v-badge
+            v-if="pendingCounts['attendance-settings'] > 0"
+            :content="pendingCounts['attendance-settings']"
             color="error"
             class="ml-2"
             inline
@@ -141,7 +155,12 @@
           >
             Clear
           </v-btn>
-          <v-chip v-if="hasActiveFilters" size="small" color="info" variant="tonal">
+          <v-chip
+            v-if="hasActiveFilters"
+            size="small"
+            color="info"
+            variant="tonal"
+          >
             {{ activeFilterCount }} active filter
           </v-chip>
         </v-toolbar>
@@ -155,15 +174,21 @@
         >
           <template v-slot:item.requester="{ item }">
             <div>
-              <div class="font-weight-medium">{{ item.requester?.name || 'Unknown' }}</div>
+              <div class="font-weight-medium">
+                {{ item.requester?.name || "Unknown" }}
+              </div>
               <div class="text-caption text-medium-emphasis">
-                {{ item.requester?.role || '' }}
+                {{ item.requester?.role || "" }}
               </div>
             </div>
           </template>
 
           <template v-slot:item.module="{ item }">
-            <v-chip :color="getModuleColor(item.module)" size="small" variant="flat">
+            <v-chip
+              :color="getModuleColor(item.module)"
+              size="small"
+              variant="flat"
+            >
               {{ getModuleLabel(item.module) }}
             </v-chip>
           </template>
@@ -173,7 +198,11 @@
           </template>
 
           <template v-slot:item.status="{ item }">
-            <v-chip :color="getStatusColor(item.status)" size="small" variant="flat">
+            <v-chip
+              :color="getStatusColor(item.status)"
+              size="small"
+              variant="flat"
+            >
               {{ item.status }}
             </v-chip>
           </template>
@@ -205,7 +234,7 @@
               ></v-btn>
             </div>
             <span v-else class="text-caption text-medium-emphasis">
-              {{ item.reviewed_at ? formatDateTime(item.reviewed_at) : '' }}
+              {{ item.reviewed_at ? formatDateTime(item.reviewed_at) : "" }}
             </span>
           </template>
 
@@ -214,7 +243,9 @@
               <v-icon size="64" color="success">mdi-check-all</v-icon>
               <p class="text-h6 mt-4">No access requests</p>
               <p class="text-body-2 text-medium-emphasis">
-                There are no {{ statusFilter === 'all' ? '' : statusFilter }} requests at this time.
+                There are no
+                {{ statusFilter === "all" ? "" : statusFilter }} requests at
+                this time.
               </p>
               <v-btn
                 class="mt-3"
@@ -239,23 +270,34 @@
           <v-divider></v-divider>
           <v-card-text class="pa-4">
             <p class="text-body-2 mb-4">
-              Rejecting <strong>{{ getModuleLabel(selectedRequest?.module) }}</strong> request from
+              Rejecting
+              <strong>{{ getModuleLabel(selectedRequest?.module) }}</strong>
+              request from
               <strong>{{ selectedRequest?.requester?.name }}</strong>
-              <span v-if="selectedRequest?.date">for date <strong>{{ formatDate(selectedRequest?.date) }}</strong></span>.
+              <span v-if="selectedRequest?.date"
+                >for date
+                <strong>{{ formatDate(selectedRequest?.date) }}</strong></span
+              >.
             </p>
             <v-textarea
               v-model="rejectNotes"
               label="Rejection Reason"
               variant="outlined"
               rows="3"
-              :rules="[v => !!v || 'Reason is required']"
+              :rules="[(v) => !!v || 'Reason is required']"
               placeholder="Provide a reason for rejecting this request"
             ></v-textarea>
           </v-card-text>
           <v-divider></v-divider>
           <v-card-actions class="pa-4">
             <v-spacer></v-spacer>
-            <v-btn variant="text" @click="rejectDialog = false; rejectNotes = ''">
+            <v-btn
+              variant="text"
+              @click="
+                rejectDialog = false;
+                rejectNotes = '';
+              "
+            >
               Cancel
             </v-btn>
             <v-btn
@@ -285,39 +327,42 @@ const route = useRoute();
 const toast = useToast();
 
 const ALL_MODULES = [
-  'attendance',
-  'government-rates',
-  'deductions',
-  'allowances',
-  'thirteenth-month-pay',
-  'loans',
-  'cash-bonds',
-  'salary-adjustments'
+  "attendance",
+  "attendance-settings",
+  "government-rates",
+  "deductions",
+  "allowances",
+  "thirteenth-month-pay",
+  "loans",
+  "cash-bonds",
+  "salary-adjustments",
 ];
 
 const moduleLabels = {
-  'attendance': 'Attendance',
-  'government-rates': 'Government Rates',
-  'deductions': 'Deductions',
-  'allowances': 'Allowances',
-  'thirteenth-month-pay': '13th Month Pay',
-  'loans': 'Loans',
-  'cash-bonds': 'Cash Bonds',
-  'salary-adjustments': 'Salary Adjustments',
+  attendance: "Attendance",
+  "attendance-settings": "Attendance Settings",
+  "government-rates": "Government Rates",
+  deductions: "Deductions",
+  allowances: "Allowances",
+  "thirteenth-month-pay": "13th Month Pay",
+  loans: "Loans",
+  "cash-bonds": "Cash Bonds",
+  "salary-adjustments": "Salary Adjustments",
 };
 
 const moduleColors = {
-  'attendance': 'green',
-  'government-rates': 'brown',
-  'deductions': 'orange',
-  'allowances': 'blue',
-  'thirteenth-month-pay': 'purple',
-  'loans': 'teal',
-  'cash-bonds': 'indigo',
-  'salary-adjustments': 'cyan',
+  attendance: "green",
+  "attendance-settings": "deep-orange",
+  "government-rates": "brown",
+  deductions: "orange",
+  allowances: "blue",
+  "thirteenth-month-pay": "purple",
+  loans: "teal",
+  "cash-bonds": "indigo",
+  "salary-adjustments": "cyan",
 };
 
-const activeTab = ref(route.query.tab || 'all');
+const activeTab = ref(route.query.tab || "all");
 const loading = ref(false);
 const processing = ref(false);
 const requests = ref([]);
@@ -329,13 +374,14 @@ const rejectNotes = ref("");
 const pendingCounts = ref({
   total: 0,
   attendance: 0,
-  'government-rates': 0,
+  "attendance-settings": 0,
+  "government-rates": 0,
   deductions: 0,
   allowances: 0,
-  'thirteenth-month-pay': 0,
+  "thirteenth-month-pay": 0,
   loans: 0,
-  'cash-bonds': 0,
-  'salary-adjustments': 0,
+  "cash-bonds": 0,
+  "salary-adjustments": 0,
 });
 
 const statusOptions = [
@@ -356,7 +402,7 @@ const baseHeaders = [
 ];
 
 const headers = computed(() => {
-  if (activeTab.value === 'all') {
+  if (activeTab.value === "all") {
     return [
       { title: "Requested By", key: "requester", sortable: true },
       { title: "Request Type", key: "module", sortable: true },
@@ -367,29 +413,31 @@ const headers = computed(() => {
 });
 
 const tabTitle = computed(() => {
-  if (activeTab.value === 'all') return 'All';
+  if (activeTab.value === "all") return "All";
   return moduleLabels[activeTab.value] || activeTab.value;
 });
 
 const filteredRequests = computed(() => {
   let filtered = requests.value;
 
-  if (activeTab.value !== 'all') {
-    filtered = filtered.filter(r => r.module === activeTab.value);
+  if (activeTab.value !== "all") {
+    filtered = filtered.filter((r) => r.module === activeTab.value);
   }
 
-  if (statusFilter.value !== 'all') {
-    filtered = filtered.filter(r => r.status === statusFilter.value);
+  if (statusFilter.value !== "all") {
+    filtered = filtered.filter((r) => r.status === statusFilter.value);
   }
 
   return filtered;
 });
 
-const hasActiveFilters = computed(() => statusFilter.value !== 'all');
-const activeFilterCount = computed(() => (statusFilter.value !== 'all' ? 1 : 0));
+const hasActiveFilters = computed(() => statusFilter.value !== "all");
+const activeFilterCount = computed(() =>
+  statusFilter.value !== "all" ? 1 : 0,
+);
 
 const clearTableFilters = () => {
-  statusFilter.value = 'all';
+  statusFilter.value = "all";
 };
 
 function getModuleLabel(module) {
@@ -397,7 +445,7 @@ function getModuleLabel(module) {
 }
 
 function getModuleColor(module) {
-  return moduleColors[module] || 'grey';
+  return moduleColors[module] || "grey";
 }
 
 function formatDate(dateStr) {
@@ -429,23 +477,27 @@ function getStatusColor(status) {
 const loadRequests = async () => {
   loading.value = true;
   try {
-    const response = await moduleAccessService.getRequestsForModules(ALL_MODULES, {});
+    const response = await moduleAccessService.getRequestsForModules(
+      ALL_MODULES,
+      {},
+    );
     requests.value = response.data || [];
 
     const counts = {
       total: 0,
       attendance: 0,
-      'government-rates': 0,
+      "attendance-settings": 0,
+      "government-rates": 0,
       deductions: 0,
       allowances: 0,
-      'thirteenth-month-pay': 0,
+      "thirteenth-month-pay": 0,
       loans: 0,
-      'cash-bonds': 0,
-      'salary-adjustments': 0,
+      "cash-bonds": 0,
+      "salary-adjustments": 0,
     };
 
-    requests.value.forEach(r => {
-      if (r.status === 'pending' && counts[r.module] !== undefined) {
+    requests.value.forEach((r) => {
+      if (r.status === "pending" && counts[r.module] !== undefined) {
         counts[r.module]++;
         counts.total++;
       }
@@ -487,7 +539,7 @@ const rejectRequest = async () => {
   try {
     await moduleAccessService.rejectRequest(
       selectedRequest.value.id,
-      rejectNotes.value
+      rejectNotes.value,
     );
     toast.success("Request rejected");
     rejectDialog.value = false;
@@ -502,11 +554,14 @@ const rejectRequest = async () => {
   }
 };
 
-watch(() => route.query.tab, (newTab) => {
-  if (newTab && ALL_MODULES.includes(newTab)) {
-    activeTab.value = newTab;
-  }
-});
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab && ALL_MODULES.includes(newTab)) {
+      activeTab.value = newTab;
+    }
+  },
+);
 
 onMounted(() => {
   if (route.query.tab && ALL_MODULES.includes(route.query.tab)) {

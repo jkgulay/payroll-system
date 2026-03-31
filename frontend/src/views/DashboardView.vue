@@ -75,7 +75,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-label">Period Payroll</div>
-            <div class="stat-value">
+            <div class="stat-value stat-value-currency">
               ₱{{ formatNumber(stats.periodPayroll) }}
             </div>
             <div class="stat-meta">Current month</div>
@@ -208,7 +208,9 @@
                 <v-icon size="24">mdi-file-document-edit-outline</v-icon>
               </div>
               <div class="action-item-content">
-                <div class="action-item-title">Attendance Modification Requests</div>
+                <div class="action-item-title">
+                  Attendance Modification Requests
+                </div>
                 <div class="action-item-desc">
                   {{ stats.pendingModificationRequests }} awaiting approval
                 </div>
@@ -534,7 +536,6 @@ async function refreshData() {
     refreshing.value = false;
   }
 }
-
 </script>
 
 <style scoped lang="scss">
@@ -631,6 +632,7 @@ async function refreshData() {
   position: relative;
   overflow: hidden;
   height: 100%;
+  min-width: 0;
 
   &::before {
     content: "";
@@ -718,6 +720,15 @@ async function refreshData() {
   line-height: 1;
   margin-bottom: 6px;
   letter-spacing: -1px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.stat-value-currency {
+  font-size: clamp(22px, 1.15rem + 1vw, 30px);
+  line-height: 1.15;
+  letter-spacing: -0.4px;
 }
 
 .stat-meta {
@@ -732,6 +743,51 @@ async function refreshData() {
 
   .v-icon {
     color: #ed985f !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .stat-card-new {
+    padding: 20px;
+    gap: 12px;
+  }
+
+  .stat-icon-circle {
+    width: 54px;
+    height: 54px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stat-card-new {
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .stat-arrow {
+    display: none;
+  }
+
+  .stat-icon-circle {
+    width: 48px;
+    height: 48px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .stat-value-currency {
+    font-size: clamp(18px, 4.8vw, 24px);
+  }
+
+  .stat-label,
+  .stat-meta {
+    font-size: 12px;
   }
 }
 

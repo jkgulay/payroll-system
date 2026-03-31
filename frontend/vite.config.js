@@ -17,7 +17,7 @@ try {
   visualizer = (await import("rollup-plugin-visualizer")).visualizer;
 } catch (e) {
   console.warn(
-    "rollup-plugin-visualizer not installed - bundle analysis disabled"
+    "rollup-plugin-visualizer not installed - bundle analysis disabled",
   );
 }
 
@@ -174,6 +174,7 @@ export default defineConfig({
       "axios",
       "date-fns",
       "vue-virtual-scroller",
+      "xlsx",
     ],
     exclude: ["vue-demi"],
   },

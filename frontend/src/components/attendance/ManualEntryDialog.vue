@@ -301,6 +301,7 @@ const formData = reactive({
   break_end: "",
   ot_time_in: "",
   ot_time_out: "",
+  updated_at: null,
   notes: "",
   requires_approval: true,
 });
@@ -364,6 +365,7 @@ const save = async () => {
       break_end: formData.break_end ? formData.break_end + ":00" : null,
       ot_time_in: formData.ot_time_in ? formData.ot_time_in + ":00" : null,
       ot_time_out: formData.ot_time_out ? formData.ot_time_out + ":00" : null,
+      updated_at: props.attendance ? formData.updated_at : undefined,
       notes: formData.notes || null,
     };
 
@@ -414,6 +416,13 @@ const save = async () => {
         }
       }
     } else {
+      if (error.response?.status === 409) {
+        toast.error(
+          error.response?.data?.message ||
+            "This attendance was changed by another user. Please reopen and save again.",
+        );
+        return;
+      }
       toast.error(error.response?.data?.message || "Failed to save attendance");
     }
   } finally {
@@ -444,6 +453,7 @@ watch(
           break_end: props.attendance.break_end?.substring(0, 5) || "",
           ot_time_in: props.attendance.ot_time_in?.substring(0, 5) || "",
           ot_time_out: props.attendance.ot_time_out?.substring(0, 5) || "",
+          updated_at: props.attendance.updated_at || null,
           notes:
             props.attendance.manual_reason ||
             props.attendance.edit_reason ||
@@ -460,6 +470,7 @@ watch(
           break_end: "",
           ot_time_in: "",
           ot_time_out: "",
+          updated_at: null,
           notes: "",
           requires_approval: true,
         });

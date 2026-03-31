@@ -245,6 +245,12 @@ class ProjectController extends Controller
      */
     public function bulkSchedule(Request $request): JsonResponse
     {
+        if ($request->user()?->role !== 'admin') {
+            return response()->json([
+                'message' => 'Only admin can apply attendance schedule changes directly.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'time_in' => 'nullable|date_format:H:i',
             'time_out' => 'nullable|date_format:H:i',
@@ -284,6 +290,39 @@ class ProjectController extends Controller
         return response()->json([
             'message' => 'Schedules updated successfully',
             'updated_count' => $projectIds->count(),
+        ]);
+    }
+
+    /**
+     * Update attendance schedule for a single project (admin only)
+     */
+    public function updateSchedule(Request $request, Project $project): JsonResponse
+    {
+        if ($request->user()?->role !== 'admin') {
+            return response()->json([
+                'message' => 'Only admin can apply attendance schedule changes directly.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'time_in' => 'nullable|date_format:H:i',
+            'time_out' => 'nullable|date_format:H:i',
+            'grace_period_minutes' => 'nullable|integer|min:0|max:180',
+        ]);
+
+        $validated = $this->applyDefaultSchedule($validated);
+
+        $project->update([
+            'time_in' => $validated['time_in'],
+            'time_out' => $validated['time_out'],
+            'grace_period_minutes' => $validated['grace_period_minutes'],
+        ]);
+
+        $this->recalculateProjectAttendances($project);
+
+        return response()->json([
+            'message' => 'Schedule updated successfully',
+            'project' => $project->fresh(),
         ]);
     }
 
