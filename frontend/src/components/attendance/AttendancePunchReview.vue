@@ -4,25 +4,15 @@
       <v-row>
         <v-col cols="12" md="3">
           <v-text-field
-            v-model="filters.date_from"
-            label="Date From"
+            v-model="filters.date"
+            label="Date"
             type="date"
             density="compact"
             variant="outlined"
             hide-details
           ></v-text-field>
         </v-col>
-        <v-col cols="12" md="3">
-          <v-text-field
-            v-model="filters.date_to"
-            label="Date To"
-            type="date"
-            density="compact"
-            variant="outlined"
-            hide-details
-          ></v-text-field>
-        </v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="5">
           <v-autocomplete
             v-model="filters.employee_id"
             :items="employees"
@@ -44,7 +34,7 @@
             </template>
           </v-autocomplete>
         </v-col>
-        <v-col cols="12" md="2" class="d-flex align-center justify-end ga-2">
+        <v-col cols="12" md="4" class="d-flex align-center justify-end ga-2">
           <v-btn
             variant="outlined"
             color="grey"
@@ -85,7 +75,11 @@
         {{ formatDate(item.date) }}
       </template>
 
-      <template v-for="timeKey in timeKeys" v-slot:[`item.${timeKey}`]="{ item }" :key="timeKey">
+      <template
+        v-for="timeKey in timeKeys"
+        v-slot:[`item.${timeKey}`]="{ item }"
+        :key="timeKey"
+      >
         <v-chip
           v-if="item[timeKey]"
           size="x-small"
@@ -113,9 +107,9 @@
       <template v-slot:no-data>
         <div class="text-center py-8">
           <v-icon size="52" color="grey">mdi-clipboard-search-outline</v-icon>
-          <p class="text-h6 mt-3 mb-1">No records in selected range</p>
+          <p class="text-h6 mt-3 mb-1">No records for selected date</p>
           <p class="text-body-2 text-medium-emphasis mb-0">
-            Adjust date range or employee filter.
+            Adjust date or employee filter.
           </p>
         </div>
       </template>
@@ -137,14 +131,11 @@ const attendance = ref([]);
 const employees = ref([]);
 
 const today = new Date();
-const priorDate = new Date();
-priorDate.setDate(today.getDate() - 14);
 
 const toDateValue = (value) => value.toISOString().split("T")[0];
 
 const filters = reactive({
-  date_from: toDateValue(priorDate),
-  date_to: toDateValue(today),
+  date: toDateValue(today),
   employee_id: null,
 });
 
@@ -156,7 +147,11 @@ const dayHeaders = [
   { title: "Date", key: "date" },
   { title: "Week", key: "week" },
   { title: "Device Name", key: "device_name" },
-  ...timeKeys.map((timeKey, idx) => ({ title: `Time${idx + 1}`, key: timeKey, sortable: false })),
+  ...timeKeys.map((timeKey, idx) => ({
+    title: `Time${idx + 1}`,
+    key: timeKey,
+    sortable: false,
+  })),
   { title: "Actions", key: "actions", sortable: false },
 ];
 
@@ -252,15 +247,15 @@ const loadEmployees = async () => {
 };
 
 const loadAttendance = async () => {
-  if (!filters.date_from || !filters.date_to) {
+  if (!filters.date) {
     return;
   }
 
   loading.value = true;
   try {
     const response = await attendanceService.getAttendance({
-      date_from: filters.date_from,
-      date_to: filters.date_to,
+      date_from: filters.date,
+      date_to: filters.date,
       employee_id: filters.employee_id || undefined,
       per_page: 10000,
     });
@@ -274,14 +269,13 @@ const loadAttendance = async () => {
 };
 
 const clearFilters = () => {
-  filters.date_from = toDateValue(priorDate);
-  filters.date_to = toDateValue(today);
+  filters.date = toDateValue(today);
   filters.employee_id = null;
   loadAttendance();
 };
 
 watch(
-  () => [filters.date_from, filters.date_to, filters.employee_id],
+  () => [filters.date, filters.employee_id],
   () => {
     loadAttendance();
   },

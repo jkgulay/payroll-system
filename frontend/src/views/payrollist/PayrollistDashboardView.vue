@@ -90,7 +90,9 @@
             </div>
             <div class="stat-content">
               <div class="stat-label">Latest Payslip</div>
-              <div class="stat-value">₱{{ formatNumber(latestPayslip) }}</div>
+              <div class="stat-value stat-value-currency">
+                ₱{{ formatNumber(latestPayslip) }}
+              </div>
               <div class="stat-meta">Click to download</div>
             </div>
             <div class="stat-arrow">
@@ -178,7 +180,7 @@
                       {{ formatDate(payslip.payroll.period_start) }} -
                       {{ formatDate(payslip.payroll.period_end) }}
                     </div>
-                    <div class="payslip-amount">
+                    <div class="payslip-amount payslip-money">
                       ₱{{ formatNumber(payslip.net_pay) }}
                     </div>
                   </div>
@@ -225,14 +227,14 @@
 
                 <div class="payslip-detail-item">
                   <span class="detail-label">Gross Pay</span>
-                  <span class="detail-value amount-positive"
+                  <span class="detail-value amount-positive detail-money"
                     >₱{{ formatNumber(currentPayslip.gross_pay) }}</span
                   >
                 </div>
 
                 <div class="payslip-detail-item">
                   <span class="detail-label">Deductions</span>
-                  <span class="detail-value amount-negative"
+                  <span class="detail-value amount-negative detail-money"
                     >₱{{ formatNumber(currentPayslip.total_deductions) }}</span
                   >
                 </div>
@@ -241,7 +243,7 @@
 
                 <div class="payslip-detail-item-main">
                   <span class="detail-label-main">Net Pay</span>
-                  <span class="detail-value-main"
+                  <span class="detail-value-main detail-money-main"
                     >₱{{ formatNumber(currentPayslip.net_pay) }}</span
                   >
                 </div>
@@ -637,6 +639,7 @@ function formatHoursDisplay(hours) {
   position: relative;
   overflow: hidden;
   height: 100%;
+  min-width: 0;
 
   &::before {
     content: "";
@@ -723,6 +726,15 @@ function formatHoursDisplay(hours) {
   color: #001f3d;
   line-height: 1;
   margin-bottom: 4px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.stat-value-currency {
+  font-size: clamp(18px, 1rem + 0.7vw, 24px);
+  line-height: 1.15;
+  letter-spacing: -0.3px;
 }
 
 .stat-meta {
@@ -735,6 +747,41 @@ function formatHoursDisplay(hours) {
   transform: translateX(0);
   transition: all 0.3s ease;
   color: #ed985f;
+}
+
+@media (max-width: 1200px) {
+  .stat-card-new {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .stat-icon-circle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stat-card-new {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .stat-arrow {
+    display: none;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .stat-value-currency {
+    font-size: clamp(16px, 4.4vw, 21px);
+  }
 }
 
 .welcome-badge {
@@ -908,6 +955,17 @@ function formatHoursDisplay(hours) {
   color: #10b981;
 }
 
+.payslip-money {
+  max-width: 100%;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.payslip-amount.payslip-money {
+  font-size: clamp(15px, 0.9rem + 0.45vw, 18px);
+}
+
 .payslip-download {
   transition: transform 0.3s ease;
 }
@@ -923,12 +981,15 @@ function formatHoursDisplay(hours) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .detail-label {
   font-size: 14px;
   color: rgba(0, 31, 61, 0.6);
   font-weight: 500;
+  flex: 1;
+  min-width: 0;
 }
 
 .detail-value {
@@ -943,6 +1004,14 @@ function formatHoursDisplay(hours) {
   &.amount-negative {
     color: #ef4444;
   }
+}
+
+.detail-money {
+  text-align: right;
+  max-width: 60%;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .payslip-detail-divider {
@@ -960,6 +1029,7 @@ function formatHoursDisplay(hours) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 16px;
   background: linear-gradient(
     135deg,
@@ -975,12 +1045,42 @@ function formatHoursDisplay(hours) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex: 1;
+  min-width: 0;
 }
 
 .detail-value-main {
   font-size: 28px;
   color: #10b981;
   font-weight: 700;
+}
+
+.detail-money-main {
+  text-align: right;
+  max-width: 60%;
+  font-size: clamp(20px, 1rem + 1vw, 28px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 600px) {
+  .payslip-item {
+    align-items: flex-start;
+  }
+
+  .detail-money,
+  .detail-money-main {
+    max-width: 58%;
+  }
+
+  .payslip-amount.payslip-money {
+    font-size: clamp(14px, 4vw, 16px);
+  }
+
+  .detail-money-main {
+    font-size: clamp(18px, 5vw, 24px);
+  }
 }
 
 // Payslip Actions

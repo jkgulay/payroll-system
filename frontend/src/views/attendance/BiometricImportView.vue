@@ -74,7 +74,9 @@
                     </div>
                     <div class="requirement-content">
                       <div class="requirement-label">File Format</div>
-                      <div class="requirement-value">Excel (.xls, .xlsx)</div>
+                      <div class="requirement-value">
+                        Excel (.xls, .xlsx) or CSV (Excel auto-converts to CSV)
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -140,12 +142,14 @@
                   staffFile ? staffFile.name : "Drop file or click to browse"
                 }}
               </p>
-              <p class="drop-zone-hint">Excel files only (.xlsx, .xls)</p>
+              <p class="drop-zone-hint">
+                Excel or CSV files (.xlsx, .xls, .csv)
+              </p>
             </div>
             <input
               ref="staffFileInput"
               type="file"
-              accept=".xls,.xlsx"
+              accept=".xls,.xlsx,.csv"
               style="display: none"
               @change="handleStaffFileSelect"
             />
@@ -166,11 +170,52 @@
               size="small"
               @click="importStaffInformation"
               :loading="importingStaff"
-              :disabled="!staffFile"
+              :disabled="!staffFile || preparingStaffFile"
             >
               <v-icon start size="18">mdi-import</v-icon>
               Import
             </v-btn>
+          </div>
+
+          <div v-if="staffFile" class="conversion-badge-row">
+            <div v-if="preparingStaffFile" class="conversion-preparing">
+              <v-progress-circular
+                indeterminate
+                size="16"
+                width="2"
+                color="#ed985f"
+              />
+              <span>Preparing CSV preview...</span>
+            </div>
+
+            <div
+              v-else-if="staffPreparationInfo"
+              class="conversion-badge"
+              :class="{
+                'conversion-badge-converted': staffPreparationInfo.converted,
+                'conversion-badge-fallback': staffPreparationInfo.fallback,
+              }"
+            >
+              <v-icon size="14">mdi-file-delimited-outline</v-icon>
+              <span class="conversion-title">
+                {{
+                  staffPreparationInfo.converted
+                    ? "Converted to CSV"
+                    : staffPreparationInfo.fallback
+                      ? "Using Original Excel"
+                      : "CSV Ready"
+                }}
+              </span>
+              <span class="conversion-meta">
+                Upload: {{ formatFileSize(staffPreparationInfo.uploadSize) }}
+              </span>
+              <span
+                v-if="staffPreparationInfo.converted"
+                class="conversion-meta muted"
+              >
+                from {{ formatFileSize(staffPreparationInfo.originalSize) }}
+              </span>
+            </div>
           </div>
 
           <!-- Progress Bar -->
@@ -316,7 +361,9 @@
                     </div>
                     <div class="requirement-content">
                       <div class="requirement-label">File Format</div>
-                      <div class="requirement-value">Excel (.xls, .xlsx)</div>
+                      <div class="requirement-value">
+                        Excel (.xls, .xlsx) or CSV (Excel auto-converts to CSV)
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -340,12 +387,14 @@
                   punchFile ? punchFile.name : "Drop file or click to browse"
                 }}
               </p>
-              <p class="drop-zone-hint">Excel files only (.xlsx, .xls)</p>
+              <p class="drop-zone-hint">
+                Excel or CSV files (.xlsx, .xls, .csv)
+              </p>
             </div>
             <input
               ref="punchFileInput"
               type="file"
-              accept=".xls,.xlsx"
+              accept=".xls,.xlsx,.csv"
               style="display: none"
               @change="handlePunchFileSelect"
             />
@@ -366,11 +415,52 @@
               size="small"
               @click="importPunchRecords"
               :loading="importingPunch"
-              :disabled="!punchFile"
+              :disabled="!punchFile || preparingPunchFile"
             >
               <v-icon start size="18">mdi-import</v-icon>
               Import
             </v-btn>
+          </div>
+
+          <div v-if="punchFile" class="conversion-badge-row">
+            <div v-if="preparingPunchFile" class="conversion-preparing">
+              <v-progress-circular
+                indeterminate
+                size="16"
+                width="2"
+                color="#ed985f"
+              />
+              <span>Preparing CSV preview...</span>
+            </div>
+
+            <div
+              v-else-if="punchPreparationInfo"
+              class="conversion-badge"
+              :class="{
+                'conversion-badge-converted': punchPreparationInfo.converted,
+                'conversion-badge-fallback': punchPreparationInfo.fallback,
+              }"
+            >
+              <v-icon size="14">mdi-file-delimited-outline</v-icon>
+              <span class="conversion-title">
+                {{
+                  punchPreparationInfo.converted
+                    ? "Converted to CSV"
+                    : punchPreparationInfo.fallback
+                      ? "Using Original Excel"
+                      : "CSV Ready"
+                }}
+              </span>
+              <span class="conversion-meta">
+                Upload: {{ formatFileSize(punchPreparationInfo.uploadSize) }}
+              </span>
+              <span
+                v-if="punchPreparationInfo.converted"
+                class="conversion-meta muted"
+              >
+                from {{ formatFileSize(punchPreparationInfo.originalSize) }}
+              </span>
+            </div>
           </div>
 
           <!-- Progress Bar -->
@@ -573,6 +663,9 @@ const staffImportResult = ref(null);
 const staffUploadProgress = ref(0);
 const staffProcessing = ref(false);
 const staffProgressDetail = ref("");
+const staffPreparedFile = ref(null);
+const staffPreparationInfo = ref(null);
+const preparingStaffFile = ref(false);
 
 // Default values for missing data
 const defaultPosition = ref(null);
@@ -608,31 +701,319 @@ const punchImportResult = ref(null);
 const punchUploadProgress = ref(0);
 const punchProcessing = ref(false);
 const punchProgressDetail = ref("");
+const punchPreparedFile = ref(null);
+const punchPreparationInfo = ref(null);
+const preparingPunchFile = ref(false);
 
 // Template Dialog
 const templateDialog = ref(false);
+let xlsxModule = null;
 
-const handleStaffFileSelect = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    staffFile.value = file;
-    staffImportResult.value = null;
+const getXlsxModule = async () => {
+  if (xlsxModule) return xlsxModule;
+
+  try {
+    xlsxModule = await import("xlsx");
+    return xlsxModule;
+  } catch (error) {
+    devLog.error("Failed to load xlsx module:", error);
+    throw new Error(
+      "Spreadsheet converter is not ready. Refresh the page or restart the dev server with --force.",
+    );
   }
 };
 
-const handleStaffDrop = (event) => {
+const getFileExtension = (file) => {
+  if (!file?.name || !file.name.includes(".")) return "";
+  return file.name.split(".").pop().toLowerCase();
+};
+
+const isSupportedImportFile = (file) => {
+  const ext = getFileExtension(file);
+  return ["xls", "xlsx", "csv"].includes(ext);
+};
+
+const isExcelFile = (file) => {
+  const ext = getFileExtension(file);
+  return ext === "xls" || ext === "xlsx";
+};
+
+const convertExcelFileToCsv = async (file) => {
+  const XLSX = await getXlsxModule();
+  const arrayBuffer = await file.arrayBuffer();
+  const workbook = XLSX.read(arrayBuffer, {
+    type: "array",
+    raw: false,
+    cellDates: false,
+  });
+
+  const firstSheetName = workbook.SheetNames?.[0];
+  if (!firstSheetName) {
+    throw new Error("The Excel file has no readable worksheet.");
+  }
+
+  const worksheet = workbook.Sheets[firstSheetName];
+  const csv = XLSX.utils.sheet_to_csv(worksheet, {
+    blankrows: false,
+    FS: ",",
+    RS: "\n",
+    dateNF: "yyyy-mm-dd hh:mm:ss",
+  });
+
+  const normalizedCsv = csv.replace(/\r\n/g, "\n");
+  const baseName = file.name.replace(/\.[^.]+$/, "");
+  return new File([normalizedCsv], `${baseName}.csv`, {
+    type: "text/csv;charset=utf-8",
+  });
+};
+
+const prepareFileForImport = async (
+  file,
+  { setDetail, setProgress, importLabel },
+) => {
+  if (!file) {
+    throw new Error("No file selected");
+  }
+
+  if (!isSupportedImportFile(file)) {
+    throw new Error("Please upload a valid file (.xls, .xlsx, or .csv)");
+  }
+
+  if (!isExcelFile(file)) {
+    setDetail("Uploading CSV file...");
+    setProgress(10);
+    return file;
+  }
+
+  setDetail("Converting Excel file to CSV...");
+  setProgress(10);
+
+  try {
+    const converted = await convertExcelFileToCsv(file);
+    setDetail("Excel converted to CSV. Uploading optimized file...");
+    setProgress(18);
+    return converted;
+  } catch (error) {
+    devLog.error(`CSV conversion failed for ${importLabel}:`, error);
+    toast.warning(
+      "Could not convert to CSV. Uploading original Excel file for compatibility.",
+    );
+    setDetail("Using original Excel file for upload...");
+    setProgress(12);
+    return file;
+  }
+};
+
+const buildPreparationInfo = ({
+  originalFile,
+  uploadFile,
+  converted,
+  fallback = false,
+}) => ({
+  converted,
+  fallback,
+  originalName: originalFile.name,
+  originalSize: originalFile.size,
+  uploadName: uploadFile.name,
+  uploadSize: uploadFile.size,
+});
+
+const prepareSelectedFile = async (
+  file,
+  {
+    importLabel,
+    setSelectedFile,
+    setPreparedFile,
+    setPreparationInfo,
+    setIsPreparing,
+    clearResult,
+  },
+) => {
+  if (!file) return;
+
+  if (!isSupportedImportFile(file)) {
+    toast.error("Please upload a valid file (.xls, .xlsx, or .csv)");
+    return;
+  }
+
+  setSelectedFile(file);
+  setPreparedFile(null);
+  setPreparationInfo(null);
+  clearResult();
+  setIsPreparing(true);
+
+  if (!isExcelFile(file)) {
+    setPreparedFile(file);
+    setPreparationInfo(
+      buildPreparationInfo({
+        originalFile: file,
+        uploadFile: file,
+        converted: false,
+      }),
+    );
+    setIsPreparing(false);
+    return;
+  }
+
+  try {
+    const convertedFile = await convertExcelFileToCsv(file);
+    setPreparedFile(convertedFile);
+    setPreparationInfo(
+      buildPreparationInfo({
+        originalFile: file,
+        uploadFile: convertedFile,
+        converted: true,
+      }),
+    );
+  } catch (error) {
+    devLog.error(`CSV pre-conversion failed for ${importLabel}:`, error);
+    toast.warning(
+      "Preview conversion failed. The importer will use original Excel for compatibility.",
+    );
+    setPreparedFile(file);
+    setPreparationInfo(
+      buildPreparationInfo({
+        originalFile: file,
+        uploadFile: file,
+        converted: false,
+        fallback: true,
+      }),
+    );
+  } finally {
+    setIsPreparing(false);
+  }
+};
+
+const handleStaffFileSelect = async (event) => {
+  const file = event.target.files[0];
+  await prepareSelectedFile(file, {
+    importLabel: "staff import",
+    setSelectedFile: (value) => (staffFile.value = value),
+    setPreparedFile: (value) => (staffPreparedFile.value = value),
+    setPreparationInfo: (value) => (staffPreparationInfo.value = value),
+    setIsPreparing: (value) => (preparingStaffFile.value = value),
+    clearResult: () => {
+      staffImportResult.value = null;
+    },
+  });
+};
+
+const handleStaffDrop = async (event) => {
   isDraggingStaff.value = false;
   const file = event.dataTransfer.files[0];
-  if (file && (file.name.endsWith(".xls") || file.name.endsWith(".xlsx"))) {
-    staffFile.value = file;
-    staffImportResult.value = null;
-  } else {
-    toast.error("Please upload a valid Excel file (.xls or .xlsx)");
-  }
+  await prepareSelectedFile(file, {
+    importLabel: "staff import",
+    setSelectedFile: (value) => (staffFile.value = value),
+    setPreparedFile: (value) => (staffPreparedFile.value = value),
+    setPreparationInfo: (value) => (staffPreparationInfo.value = value),
+    setIsPreparing: (value) => (preparingStaffFile.value = value),
+    clearResult: () => {
+      staffImportResult.value = null;
+    },
+  });
 };
 
 // Read a streaming response (JSON lines) and call handlers for progress/complete/error
 const readStream = async (response, { onProgress, onComplete, onError }) => {
+  const extractJsonObjects = (text) => {
+    const messages = [];
+    if (!text) return { messages, remaining: "" };
+
+    let start = -1;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let lastConsumedIndex = 0;
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+
+      if (start === -1) {
+        if (ch === "{") {
+          start = i;
+          depth = 1;
+          inString = false;
+          escaped = false;
+        }
+        continue;
+      }
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (ch === "{") {
+        depth++;
+        continue;
+      }
+
+      if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          const candidate = text.slice(start, i + 1);
+          try {
+            messages.push(JSON.parse(candidate));
+          } catch {
+            // ignore malformed candidate and continue scanning
+          }
+          lastConsumedIndex = i + 1;
+          start = -1;
+        }
+      }
+    }
+
+    if (start !== -1) {
+      return { messages, remaining: text.slice(start) };
+    }
+
+    return { messages, remaining: text.slice(lastConsumedIndex) };
+  };
+
+  if (!response.body) {
+    const fallbackText = await response.text();
+    if (!fallbackText.trim()) return;
+
+    const { messages } = extractJsonObjects(fallbackText);
+    for (const msg of messages) {
+      if (msg.type === "progress" && onProgress) onProgress(msg);
+      else if (msg.type === "complete" && onComplete) onComplete(msg);
+      else if (msg.type === "error" && onError) onError(msg);
+      else if (
+        (msg.imported !== undefined ||
+          msg.updated !== undefined ||
+          msg.skipped !== undefined ||
+          msg.failed !== undefined) &&
+        onComplete
+      ) {
+        onComplete({ ...msg, type: "complete" });
+      }
+    }
+    return;
+  }
+
+  const handleMessage = (msg) => {
+    if (!msg || typeof msg !== "object") return;
+    if (msg.type === "progress" && onProgress) onProgress(msg);
+    else if (msg.type === "complete" && onComplete) onComplete(msg);
+    else if (msg.type === "error" && onError) onError(msg);
+  };
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -641,30 +1022,40 @@ const readStream = async (response, { onProgress, onComplete, onError }) => {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop(); // keep incomplete last line in buffer
 
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const msg = JSON.parse(line);
-        if (msg.type === "progress" && onProgress) onProgress(msg);
-        else if (msg.type === "complete" && onComplete) onComplete(msg);
-        else if (msg.type === "error" && onError) onError(msg);
-      } catch {
-        // skip malformed lines
+    const extracted = extractJsonObjects(buffer);
+    buffer = extracted.remaining;
+
+    for (const msg of extracted.messages) {
+      if (
+        msg.type === undefined &&
+        (msg.imported !== undefined ||
+          msg.updated !== undefined ||
+          msg.skipped !== undefined ||
+          msg.failed !== undefined)
+      ) {
+        handleMessage({ ...msg, type: "complete" });
+      } else {
+        handleMessage(msg);
       }
     }
   }
 
   // Process any remaining buffer
   if (buffer.trim()) {
-    try {
-      const msg = JSON.parse(buffer);
-      if (msg.type === "complete" && onComplete) onComplete(msg);
-      else if (msg.type === "error" && onError) onError(msg);
-    } catch {
-      // ignore
+    const extracted = extractJsonObjects(buffer);
+    for (const msg of extracted.messages) {
+      if (
+        msg.type === undefined &&
+        (msg.imported !== undefined ||
+          msg.updated !== undefined ||
+          msg.skipped !== undefined ||
+          msg.failed !== undefined)
+      ) {
+        handleMessage({ ...msg, type: "complete" });
+      } else {
+        handleMessage(msg);
+      }
     }
   }
 };
@@ -692,8 +1083,20 @@ const importStaffInformation = async () => {
   staffProgressDetail.value = "";
 
   try {
+    staffProcessing.value = true;
+    staffProgressDetail.value = "Preparing file...";
+
+    const uploadFile =
+      staffPreparedFile.value ||
+      (await prepareFileForImport(staffFile.value, {
+        setDetail: (detail) => (staffProgressDetail.value = detail),
+        setProgress: (value) => (staffUploadProgress.value = value),
+        importLabel: "staff import",
+      }));
+
     const formData = new FormData();
-    formData.append("file", staffFile.value);
+    formData.append("file", uploadFile);
+    formData.append("original_filename", staffFile.value.name);
 
     // Add default values if set
     if (defaultPosition.value) {
@@ -758,7 +1161,9 @@ const importStaffInformation = async () => {
     });
 
     if (!completed) {
-      throw new Error("Stream ended without completion message");
+      throw new Error(
+        `Stream ended without completion message. Last status: ${staffProgressDetail.value || "No server status received"}`,
+      );
     }
   } catch (error) {
     toast.error(error.message || "Failed to import staff information");
@@ -779,23 +1184,33 @@ const importStaffInformation = async () => {
 };
 
 // Punch Records Handlers
-const handlePunchFileSelect = (event) => {
+const handlePunchFileSelect = async (event) => {
   const file = event.target.files[0];
-  if (file) {
-    punchFile.value = file;
-    punchImportResult.value = null;
-  }
+  await prepareSelectedFile(file, {
+    importLabel: "punch import",
+    setSelectedFile: (value) => (punchFile.value = value),
+    setPreparedFile: (value) => (punchPreparedFile.value = value),
+    setPreparationInfo: (value) => (punchPreparationInfo.value = value),
+    setIsPreparing: (value) => (preparingPunchFile.value = value),
+    clearResult: () => {
+      punchImportResult.value = null;
+    },
+  });
 };
 
-const handlePunchDrop = (event) => {
+const handlePunchDrop = async (event) => {
   isDraggingPunch.value = false;
   const file = event.dataTransfer.files[0];
-  if (file && (file.name.endsWith(".xls") || file.name.endsWith(".xlsx"))) {
-    punchFile.value = file;
-    punchImportResult.value = null;
-  } else {
-    toast.error("Please upload a valid Excel file (.xls or .xlsx)");
-  }
+  await prepareSelectedFile(file, {
+    importLabel: "punch import",
+    setSelectedFile: (value) => (punchFile.value = value),
+    setPreparedFile: (value) => (punchPreparedFile.value = value),
+    setPreparationInfo: (value) => (punchPreparationInfo.value = value),
+    setIsPreparing: (value) => (preparingPunchFile.value = value),
+    clearResult: () => {
+      punchImportResult.value = null;
+    },
+  });
 };
 
 const importPunchRecords = async () => {
@@ -808,8 +1223,20 @@ const importPunchRecords = async () => {
   punchProgressDetail.value = "";
 
   try {
+    punchProcessing.value = true;
+    punchProgressDetail.value = "Preparing file...";
+
+    const uploadFile =
+      punchPreparedFile.value ||
+      (await prepareFileForImport(punchFile.value, {
+        setDetail: (detail) => (punchProgressDetail.value = detail),
+        setProgress: (value) => (punchUploadProgress.value = value),
+        importLabel: "punch import",
+      }));
+
     const formData = new FormData();
-    formData.append("file", punchFile.value);
+    formData.append("file", uploadFile);
+    formData.append("original_filename", punchFile.value.name);
 
     // Use fetch for streaming response
     const response = await fetch(
@@ -869,7 +1296,9 @@ const importPunchRecords = async () => {
     });
 
     if (!completed) {
-      throw new Error("Stream ended without completion message");
+      throw new Error(
+        `Stream ended without completion message. Last status: ${punchProgressDetail.value || "No server status received"}`,
+      );
     }
   } catch (error) {
     toast.error(error.message || "Failed to import punch records");
@@ -1254,6 +1683,57 @@ const showTemplateInfo = () => {
   font-size: 12px;
   color: #64748b;
   flex-shrink: 0;
+}
+
+.conversion-badge-row {
+  padding: 0 24px 12px;
+}
+
+.conversion-preparing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.conversion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #1d4ed8;
+}
+
+.conversion-badge-converted {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.22);
+  color: #15803d;
+}
+
+.conversion-badge-fallback {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #b45309;
+}
+
+.conversion-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.conversion-meta {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.conversion-meta.muted {
+  color: #64748b;
+  font-weight: 500;
 }
 
 /* Progress Container */

@@ -242,14 +242,14 @@
 
                 <div class="payslip-detail-item">
                   <span class="detail-label">Gross Pay</span>
-                  <span class="detail-value amount-positive"
+                  <span class="detail-value amount-positive detail-money"
                     >₱{{ formatNumber(currentPayslip.gross_pay) }}</span
                   >
                 </div>
 
                 <div class="payslip-detail-item">
                   <span class="detail-label">Deductions</span>
-                  <span class="detail-value amount-negative"
+                  <span class="detail-value amount-negative detail-money"
                     >₱{{ formatNumber(currentPayslip.total_deductions) }}</span
                   >
                 </div>
@@ -258,7 +258,7 @@
 
                 <div class="payslip-detail-item-main">
                   <span class="detail-label-main">Net Pay</span>
-                  <span class="detail-value-main"
+                  <span class="detail-value-main detail-money-main"
                     >₱{{ formatNumber(currentPayslip.net_pay) }}</span
                   >
                 </div>
@@ -949,7 +949,12 @@ async function fetchHRStats() {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const startDate = thirtyDaysAgo.toISOString().split("T")[0];
 
-    const [employeesResponse, applicationsResponse, leavesResponse, resignationsResponse] = await Promise.all([
+    const [
+      employeesResponse,
+      applicationsResponse,
+      leavesResponse,
+      resignationsResponse,
+    ] = await Promise.all([
       api.get("/employees", { params: { per_page: 1 } }),
       api.get("/employee-applications", { params: { status: "pending" } }),
       api.get("/employee-applications", {
@@ -975,9 +980,7 @@ async function fetchHRStats() {
       0;
 
     hrStats.value.pendingLeaves =
-      leavesResponse.data.data?.length ||
-      leavesResponse.data.length ||
-      0;
+      leavesResponse.data.data?.length || leavesResponse.data.length || 0;
 
     hrStats.value.recentResignations =
       resignationsResponse.data.data?.length ||
@@ -1734,12 +1737,15 @@ function getResumeStatusColor(status) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .detail-label {
   font-size: 13px;
   color: rgba(0, 31, 61, 0.6);
   font-weight: 500;
+  flex: 1;
+  min-width: 0;
 }
 
 .detail-value {
@@ -1756,6 +1762,14 @@ function getResumeStatusColor(status) {
   }
 }
 
+.detail-money {
+  text-align: right;
+  max-width: 60%;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .payslip-detail-divider {
   height: 1px;
   background: rgba(0, 31, 61, 0.1);
@@ -1770,6 +1784,7 @@ function getResumeStatusColor(status) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 16px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-radius: 12px;
@@ -1781,12 +1796,34 @@ function getResumeStatusColor(status) {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex: 1;
+  min-width: 0;
 }
 
 .detail-value-main {
   font-size: 24px;
   color: #001f3d;
   font-weight: 700;
+}
+
+.detail-money-main {
+  text-align: right;
+  max-width: 60%;
+  font-size: clamp(18px, 0.95rem + 0.8vw, 24px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 600px) {
+  .detail-money,
+  .detail-money-main {
+    max-width: 58%;
+  }
+
+  .detail-money-main {
+    font-size: clamp(17px, 5vw, 22px);
+  }
 }
 
 .payslip-actions {

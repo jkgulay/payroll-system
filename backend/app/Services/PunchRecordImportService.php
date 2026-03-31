@@ -147,7 +147,11 @@ class PunchRecordImportService
                 ->whereIn('employee_id', $employeeIds)
                 ->get();
             foreach ($attendances as $att) {
-                $existingAttendances[$att->employee_id][$att->attendance_date] = $att;
+                $attendanceDateKey = $att->attendance_date instanceof Carbon
+                    ? $att->attendance_date->format('Y-m-d')
+                    : (string) $att->attendance_date;
+
+                $existingAttendances[$att->employee_id][$attendanceDateKey] = $att;
             }
         }
 

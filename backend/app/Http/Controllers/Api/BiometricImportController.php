@@ -29,15 +29,22 @@ class BiometricImportController extends Controller
     private function sendProgress(string $phase, int $current, int $total, string $detail = ''): void
     {
         $pct = $total > 0 ? round(($current / $total) * 100) : 0;
-        echo json_encode([
+        $this->sendMessage([
             'type'    => 'progress',
             'phase'   => $phase,
             'current' => $current,
             'total'   => $total,
             'percent' => $pct,
             'detail'  => $detail,
-        ]) . "\n";
+        ]);
+    }
 
+    /**
+     * Send one NDJSON message line and flush output buffers.
+     */
+    private function sendMessage(array $payload): void
+    {
+        echo json_encode($payload) . "\n";
         if (ob_get_level()) {
             ob_flush();
         }
@@ -61,6 +68,8 @@ class BiometricImportController extends Controller
 
         $file = $request->file('file');
         $originalName = $file->getClientOriginalName();
+        $fileExtension = strtolower($file->getClientOriginalExtension());
+        $fileType = $fileExtension === 'csv' ? 'csv' : 'excel';
         $filePath = $file->storeAs('biometric_imports', 'staff_import_' . time() . '.' . $file->getClientOriginalExtension());
         $fullPath = Storage::path($filePath);
 
@@ -73,18 +82,23 @@ class BiometricImportController extends Controller
         $ip = $request->ip();
         $ua = $request->userAgent();
 
-        return new StreamedResponse(function () use ($fullPath, $filePath, $defaults, $originalName, $userId, $ip, $ua) {
+        return new StreamedResponse(function () use ($fullPath, $filePath, $defaults, $originalName, $userId, $ip, $ua, $fileType) {
             try {
                 // Phase 1: Parsing file
-                $this->sendProgress('parsing', 0, 1, 'Reading Excel file...');
-                $staffData = $this->parseExcelFile($fullPath);
+                $this->sendProgress(
+                    'parsing',
+                    0,
+                    1,
+                    $fileType === 'csv' ? 'Reading CSV file...' : 'Reading Excel file...'
+                );
+                $staffData = $this->parseImportFile($fullPath);
                 $this->sendProgress('parsing', 1, 1, 'File parsed');
 
                 if (empty($staffData)) {
-                    echo json_encode([
+                    $this->sendMessage([
                         'type' => 'error',
                         'message' => 'No valid data found in file',
-                    ]) . "\n";
+                    ]);
                     return;
                 }
 
@@ -120,7 +134,7 @@ class BiometricImportController extends Controller
 
                 Storage::delete($filePath);
 
-                echo json_encode([
+                $this->sendMessage([
                     'type' => 'complete',
                     'message' => 'Staff information imported successfully',
                     'imported' => $result['imported'],
@@ -128,14 +142,14 @@ class BiometricImportController extends Controller
                     'skipped' => $result['skipped'],
                     'failed' => $result['failed'],
                     'errors' => $result['error_details'] ?? [],
-                ]) . "\n";
-            } catch (\Exception $e) {
+                ]);
+            } catch (\Throwable $e) {
                 Log::error('Staff import failed: ' . $e->getMessage());
                 Storage::delete($filePath);
-                echo json_encode([
+                $this->sendMessage([
                     'type' => 'error',
                     'message' => 'Failed to import staff information: ' . $e->getMessage(),
-                ]) . "\n";
+                ]);
             }
         }, 200, [
             'Content-Type' => 'text/plain',
@@ -159,6 +173,8 @@ class BiometricImportController extends Controller
 
         $file = $request->file('file');
         $originalName = $file->getClientOriginalName();
+        $fileExtension = strtolower($file->getClientOriginalExtension());
+        $fileType = $fileExtension === 'csv' ? 'csv' : 'excel';
         $filePath = $file->storeAs('biometric_imports', 'punch_import_' . time() . '.' . $file->getClientOriginalExtension());
         $fullPath = Storage::path($filePath);
 
@@ -166,18 +182,23 @@ class BiometricImportController extends Controller
         $ip = $request->ip();
         $ua = $request->userAgent();
 
-        return new StreamedResponse(function () use ($fullPath, $filePath, $originalName, $userId, $ip, $ua) {
+        return new StreamedResponse(function () use ($fullPath, $filePath, $originalName, $userId, $ip, $ua, $fileType) {
             try {
                 // Phase 1: Parsing file
-                $this->sendProgress('parsing', 0, 1, 'Reading Excel file...');
-                $punchData = $this->parseExcelFile($fullPath);
+                $this->sendProgress(
+                    'parsing',
+                    0,
+                    1,
+                    $fileType === 'csv' ? 'Reading CSV file...' : 'Reading Excel file...'
+                );
+                $punchData = $this->parseImportFile($fullPath);
                 $this->sendProgress('parsing', 1, 1, 'File parsed');
 
                 if (empty($punchData)) {
-                    echo json_encode([
+                    $this->sendMessage([
                         'type' => 'error',
                         'message' => 'No valid data found in file',
-                    ]) . "\n";
+                    ]);
                     return;
                 }
 
@@ -212,7 +233,7 @@ class BiometricImportController extends Controller
 
                 Storage::delete($filePath);
 
-                echo json_encode([
+                $this->sendMessage([
                     'type' => 'complete',
                     'message' => 'Punch records imported successfully',
                     'imported' => $result['imported'],
@@ -220,14 +241,14 @@ class BiometricImportController extends Controller
                     'skipped' => $result['skipped'],
                     'failed' => $result['failed'],
                     'errors' => $result['error_details'] ?? [],
-                ]) . "\n";
-            } catch (\Exception $e) {
+                ]);
+            } catch (\Throwable $e) {
                 Log::error('Punch record import failed: ' . $e->getMessage());
                 Storage::delete($filePath);
-                echo json_encode([
+                $this->sendMessage([
                     'type' => 'error',
                     'message' => 'Failed to import punch records: ' . $e->getMessage(),
-                ]) . "\n";
+                ]);
             }
         }, 200, [
             'Content-Type' => 'text/plain',
@@ -237,7 +258,82 @@ class BiometricImportController extends Controller
     }
 
     /**
-     * Parse Excel/CSV file and return array of data
+     * Parse import file and return array of data.
+     */
+    protected function parseImportFile(string $filePath): array
+    {
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        if ($extension === 'csv') {
+            return $this->parseCsvFile($filePath);
+        }
+
+        return $this->parseExcelFile($filePath);
+    }
+
+    /**
+     * Parse CSV file quickly for import processing.
+     */
+    protected function parseCsvFile(string $filePath): array
+    {
+        $handle = fopen($filePath, 'r');
+        if (!$handle) {
+            throw new \Exception('Failed to open CSV file');
+        }
+
+        try {
+            $headers = null;
+            $data = [];
+
+            while (($row = fgetcsv($handle)) !== false) {
+                if ($headers === null) {
+                    $headers = array_map(function ($header) {
+                        $header = (string) $header;
+                        $header = preg_replace('/^\xEF\xBB\xBF/', '', $header);
+                        return trim($header);
+                    }, $row);
+                    continue;
+                }
+
+                $hasValue = false;
+                foreach ($row as $cellValue) {
+                    if (trim((string) $cellValue) !== '') {
+                        $hasValue = true;
+                        break;
+                    }
+                }
+
+                if (!$hasValue) {
+                    continue;
+                }
+
+                $rowData = [];
+                foreach ($headers as $index => $header) {
+                    if ($header === '') {
+                        continue;
+                    }
+
+                    $value = $row[$index] ?? null;
+                    $value = is_string($value) ? trim($value) : $value;
+                    $rowData[$header] = ($value !== null && $value !== '') ? (string) $value : null;
+                }
+
+                if (!empty($rowData)) {
+                    $data[] = $rowData;
+                }
+            }
+
+            return $data;
+        } catch (\Exception $e) {
+            Log::error('Failed to parse CSV file: ' . $e->getMessage());
+            throw new \Exception('Failed to parse CSV file: ' . $e->getMessage());
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    /**
+     * Parse Excel file and return array of data.
      */
     protected function parseExcelFile(string $filePath): array
     {
@@ -311,7 +407,7 @@ class BiometricImportController extends Controller
                 'optional_columns' => ['Punch Type', 'Punch Address', 'Device Name', 'Punch Photo', 'Remark'],
                 'date_format' => 'YYYY-MM-DD HH:MM (e.g., 2026-02-02 17:18)',
                 'notes' => 'Each row is one punch event. Multiple punches for the same employee and date are grouped automatically.',
-                'format' => 'Excel (.xls, .xlsx)',
+                'format' => 'Excel (.xls, .xlsx) or CSV',
             ],
         ]);
     }
