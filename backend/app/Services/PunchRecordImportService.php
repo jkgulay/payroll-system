@@ -506,6 +506,8 @@ class PunchRecordImportService
                 if ($canBeBreak) {
                     $attendance->break_start = $timeString;
                 } else {
+                    // Set time_out first so setTimeOutWithOtSplit sees it (fixes 2-punch OT split)
+                    $attendance->time_out = $timeString;
                     if ($this->setTimeOutWithOtSplit($attendance, $timestamp, $scheduledTimeOut, $smartDetectionMinutes, $dateStr)) {
                         $otAutoSplit = true;
                     }
@@ -560,16 +562,18 @@ class PunchRecordImportService
             }
         }
 
-        // Handle incomplete attendance
+        // Handle incomplete attendance — no time_out means the record is incomplete.
+        // Leave time_out null so it shows in Missing Attendance tab and is excluded from payroll.
+        // Use status = 'incomplete' so it is identifiable; calculateHours() will not
+        // be called (time_out is null), and adjustAttendanceStatus will confirm 'incomplete'.
         if ($attendance->time_in && !$attendance->time_out) {
-            $attendance->status = 'half_day';
-            $attendance->regular_hours = 4;
+            $attendance->status = 'incomplete';
         }
 
         // Save attendance (no transaction - already handled at batch level)
         $attendance->save();
 
-        // Calculate hours
+        // Calculate hours only when both time_in and time_out exist
         if ($attendance->time_in && $attendance->time_out) {
             $attendance->calculateHours();
         } else {
@@ -597,7 +601,12 @@ class PunchRecordImportService
             return;
         }
 
-        // If no time_out, status already set to half_day above - don't change it
+        // If time_in exists but time_out is missing, this is incomplete.
+        // Leave status as 'incomplete' (already set) so it appears in Missing Attendance
+        // tab and is excluded from payroll (query filters out 'incomplete' records).
+        if (!$attendance->time_out) {
+            return;
+        }
         if (!$attendance->time_out) {
             return;
         }

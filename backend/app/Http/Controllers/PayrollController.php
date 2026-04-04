@@ -125,31 +125,37 @@ class PayrollController extends Controller
             });
         }
 
-        // Only include employees who have attendance in the period (warn if only incomplete records exist)
+        // Only include employees who have COMPLETE attendance in the period.
+        // Records with status='incomplete' (no time_out) are excluded and appear in Missing Attendance tab.
         $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
             $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                ->where('status', '!=', 'incomplete')
                 ->where('status', '!=', 'absent')
-                ->where('approval_status', 'approved');
+                ->where('approval_status', 'approved')
+                ->whereNotNull('time_in')
+                ->whereNotNull('time_out');
         });
 
         $employeeIds = $employeeQuery->pluck('id');
 
-        // Step 2: Find incomplete attendance records for these employees
+        // Step 2: Find incomplete/missing attendance records for these employees (for Missing Attendance tab)
+        // Explicitly include 'incomplete' status records so they appear in Missing Attendance tab.
+        // The status='incomplete' means no time_out was recorded (already diagnosed by punch import).
         $incompleteRecords = Attendance::whereBetween('attendance_date', [$periodStart, $periodEnd])
             ->whereIn('employee_id', $employeeIds)
-            ->where('status', '!=', 'absent')
-            ->where('approval_status', 'approved')
             ->where(function ($q) {
-                // Missing time_in for payable statuses
-                $q->where(function ($sq) {
-                    $sq->whereIn('status', ['present', 'late', 'half_day'])
-                        ->whereNull('time_in');
-                })
-                    // Missing time_out (excluding half_day which may legitimately lack time_out)
+                // Records already marked incomplete (no time_out) — show regardless of other fields
+                $q->where('status', 'incomplete')
+                    // OR missing time_in for payable statuses
+                    ->orWhere(function ($sq) {
+                        $sq->whereIn('status', ['present', 'late', 'half_day'])
+                            ->whereNull('time_in');
+                    })
+                    // OR missing time_out (records with time_in but no time_out, excluding incomplete)
                     ->orWhere(function ($sq) {
                         $sq->whereNotNull('time_in')
                             ->whereNull('time_out')
-                            ->where('status', '!=', 'half_day');
+                            ->where('status', '!=', 'incomplete');
                     })
                     // OR missing break_end when break_start exists
                     ->orWhere(function ($sq) {
@@ -187,9 +193,11 @@ class PayrollController extends Controller
         $issues = $incompleteRecords->map(function ($record) {
             $issuesList = [];
 
-            if (!$record->time_in && in_array($record->status, ['present', 'late', 'half_day'], true)) {
+            // Missing time_in: check payable statuses (incomplete records may have null time_in too)
+            if (!$record->time_in && in_array($record->status, ['present', 'late', 'half_day', 'incomplete'], true)) {
                 $issuesList[] = 'Missing time in';
             }
+            // Missing time_out: applies to any record with time_in but no time_out
             if ($record->time_in && !$record->time_out) {
                 $issuesList[] = 'Missing time out';
             }

@@ -91,7 +91,27 @@ class AttendanceService
             return ['action' => 'created', 'attendance' => $attendance];
         }
 
-        // Update existing record
+        // Deduplicate punches within a 5-minute window to prevent rapid re-punches
+        // from incorrectly setting time_out too early. Only applied to new punches
+        // passed individually from BiometricService (one punch per call in live-fetch).
+        $existingTimes = [];
+        $dateString = $attendanceDate;  // attendanceDate is already 'Y-m-d' string from parse->format
+        if ($attendance->time_in)   $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->time_in);
+        if ($attendance->time_out)  $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->time_out);
+        if ($attendance->ot_time_in)  $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->ot_time_in);
+        if ($attendance->ot_time_out) $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->ot_time_out);
+        if ($attendance->ot_time_in_2)  $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->ot_time_in_2);
+        if ($attendance->ot_time_out_2) $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->ot_time_out_2);
+
+        if (!empty($existingTimes)) {
+            usort($existingTimes, fn($a, $b) => $a->timestamp - $b->timestamp);
+            $lastPunch = $existingTimes[count($existingTimes) - 1];
+            $diff = $timestamp->diffInMinutes($lastPunch);
+            if ($diff <= 5) {
+                return ['action' => 'skipped', 'attendance' => $attendance]; // duplicate, skip
+            }
+        }
+
         $this->updateAttendanceTime($attendance, $timestamp);
         return ['action' => 'updated', 'attendance' => $attendance];
     }
@@ -137,6 +157,7 @@ class AttendanceService
                     $attendance->time_out = $timeString;
                 }
             } else {
+                // Set time_out first so subsequent OT detection works correctly (fixes 2-punch OT split)
                 $attendance->time_out = $timeString;
             }
         }
@@ -163,7 +184,16 @@ class AttendanceService
         }
 
         $attendance->save();
-        $attendance->calculateHours();
+
+        // Only calculate hours when both time_in and time_out exist (complete record).
+        // If time_out is missing, mark as incomplete so it appears in Missing Attendance
+        // tab and is excluded from payroll.
+        if ($attendance->time_in && $attendance->time_out) {
+            $attendance->calculateHours();
+        } elseif ($attendance->time_in && !$attendance->time_out) {
+            $attendance->status = 'incomplete';
+            $attendance->save();
+        }
     }
 
     /**
@@ -391,10 +421,11 @@ class AttendanceService
             ->get();
 
         return [
-            'total_days' => $attendance->count(),
+            'total_days' => $attendance->where('status', '!=', 'incomplete')->count(),
             'present_days' => $attendance->where('status', 'present')->count(),
             'absent_days' => $attendance->where('status', 'absent')->count(),
             'leave_days' => $attendance->where('status', 'leave')->count(),
+            'incomplete_days' => $attendance->where('status', 'incomplete')->count(),
             'total_regular_hours' => $attendance->sum('regular_hours'),
             'total_overtime_hours' => $attendance->sum('overtime_hours'),
             'total_undertime_hours' => $attendance->sum('undertime_hours'),

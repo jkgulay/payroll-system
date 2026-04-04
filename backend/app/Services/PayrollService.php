@@ -166,15 +166,11 @@ class PayrollService
                 // Attendances for payroll period only (with needed columns)
                 'attendances' => function ($q) use ($payroll) {
                     $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                        ->whereNotNull('time_out')
+                        ->where('status', '!=', 'incomplete')
                         ->where('status', '!=', 'absent')
                         ->where('approval_status', 'approved')
                         ->whereNotNull('time_in')
-                        ->where(function ($sub) {
-                            // Include records with time_out OR half-day records
-                            // (half-day entries may lack time_out but have valid regular_hours)
-                            $sub->whereNotNull('time_out')
-                                ->orWhere('status', 'half_day');
-                        })
                         ->select(
                             'id',
                             'employee_id',
