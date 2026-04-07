@@ -162,7 +162,7 @@ class MaintenanceController extends Controller
                 'without_position' => $employeesWithoutPosition,
                 'without_project' => $employeesWithoutProject,
                 'without_user_account' => $employeesWithoutUser,
-                'has_issues' => $employeesWithoutPosition > 0 || $activeEmployees == 0,
+                'has_issues' => $employeesWithoutPosition > 0 || $employeesWithoutProject > 0 || $activeEmployees == 0,
             ];
 
             // Attendance Health Check
@@ -200,12 +200,18 @@ class MaintenanceController extends Controller
             $pendingLeaves = DB::table('employee_leaves')->where('status', 'pending')->count();
             $pendingLoans = DB::table('employee_loans')->where('status', 'pending')->count();
             $pendingResignations = DB::table('resignations')->where('status', 'pending')->count();
+            $pendingAttendanceCorrections = DB::table('attendance_corrections')->where('status', 'pending')->count();
+            $pendingAccessRequests = DB::table('module_access_requests')->where('status', 'pending')->count();
+            $pendingResumeReviews = DB::table('hr_resumes')->where('status', 'pending')->count();
 
             $health['pending_approvals'] = [
                 'leaves' => $pendingLeaves,
                 'loans' => $pendingLoans,
                 'resignations' => $pendingResignations,
-                'total' => $pendingLeaves + $pendingLoans + $pendingResignations,
+                'attendance_corrections' => $pendingAttendanceCorrections,
+                'access_requests' => $pendingAccessRequests,
+                'resume_reviews' => $pendingResumeReviews,
+                'total' => $pendingLeaves + $pendingLoans + $pendingResignations + $pendingAttendanceCorrections + $pendingAccessRequests + $pendingResumeReviews,
             ];
 
             // Overall System Health
@@ -216,6 +222,7 @@ class MaintenanceController extends Controller
             if ($activeEmployees == 0) $criticalIssues++;
             if ($adminUsers == 0) $criticalIssues++;
             if ($employeesWithoutPosition > 0) $warnings++;
+            if ($employeesWithoutProject > 0) $warnings++;
             if ($pendingCorrections > 10) $warnings++;
 
             $health['overall'] = [
@@ -275,10 +282,10 @@ class MaintenanceController extends Controller
             DB::beginTransaction();
 
             // Delete any orphaned payroll items (where payroll doesn't exist)
-            $orphanedItems = DB::statement("
-                DELETE FROM payroll_items 
-                WHERE payroll_id NOT IN (SELECT id FROM payrolls)
-            ");
+            $orphanedItems = DB::delete("
+                    DELETE FROM payroll_items 
+                    WHERE payroll_id NOT IN (SELECT id FROM payrolls)
+                ");
 
             // Reset sequences for all tables
             $tables = ['payrolls', 'payroll_items'];
