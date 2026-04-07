@@ -244,7 +244,7 @@
     </div>
 
     <!-- Create/Edit Dialog - Modern UI -->
-    <v-dialog v-model="dialog" max-width="860px" persistent scrollable>
+    <v-dialog v-model="dialog" max-width="1280px" width="94vw" persistent scrollable>
       <v-card class="modern-dialog payroll-form-dialog">
         <!-- Enhanced Header -->
         <v-card-title class="dialog-header payroll-dialog-header">
@@ -270,7 +270,7 @@
 
         <v-card-text
           class="dialog-content payroll-dialog-content"
-          style="max-height: 76vh"
+          style="max-height: 86vh"
           @keydown.capture="handlePayrollFormKeydown"
         >
           <v-form ref="form" v-model="valid" class="payroll-form">
