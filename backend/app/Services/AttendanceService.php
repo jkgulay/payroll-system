@@ -368,11 +368,25 @@ class AttendanceService
             return 'absent';
         }
 
-        if ($timeIn || $timeOut) {
-            return 'present';
+        if (!$timeIn && !$timeOut) {
+            return 'absent';
         }
 
-        return 'absent';
+        // Check schedule-based lateness before returning 'present'
+        if ($timeIn) {
+            $schedule = $this->getScheduleForEmployee($employee, Carbon::parse($attendanceDate));
+            $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
+
+            $scheduledTimeIn = Carbon::parse($attendanceDate . ' ' . $schedule['standard_time_in'])
+                ->addMinutes($gracePeriodMinutes);
+            $actualTimeIn = Carbon::parse($attendanceDate . ' ' . $timeIn);
+
+            if ($actualTimeIn->gt($scheduledTimeIn)) {
+                return 'late';
+            }
+        }
+
+        return 'present';
     }
 
     /**

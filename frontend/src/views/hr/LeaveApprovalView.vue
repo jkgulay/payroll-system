@@ -159,28 +159,43 @@
           </template>
 
           <template #item.actions="{ item }">
-            <v-btn
-              icon="mdi-eye"
-              size="small"
-              variant="text"
-              @click="viewLeave(item)"
-            ></v-btn>
-            <v-btn
-              v-if="item.status === 'pending'"
-              icon="mdi-check"
-              size="small"
-              variant="text"
-              color="success"
-              @click="openApproveDialog(item)"
-            ></v-btn>
-            <v-btn
-              v-if="item.status === 'pending'"
-              icon="mdi-close"
-              size="small"
-              variant="text"
-              color="error"
-              @click="openRejectDialog(item)"
-            ></v-btn>
+            <v-menu location="bottom end">
+              <template #activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon="mdi-dots-vertical"
+                  size="small"
+                  variant="text"
+                  title="Actions"
+                ></v-btn>
+              </template>
+              <v-list density="compact">
+                <v-list-item @click="viewLeave(item)">
+                  <template #prepend>
+                    <v-icon size="18">mdi-eye</v-icon>
+                  </template>
+                  <v-list-item-title>View</v-list-item-title>
+                </v-list-item>
+                <v-list-item
+                  v-if="item.status === 'pending'"
+                  @click="openApproveDialog(item)"
+                >
+                  <template #prepend>
+                    <v-icon size="18" color="success">mdi-check</v-icon>
+                  </template>
+                  <v-list-item-title>Approve</v-list-item-title>
+                </v-list-item>
+                <v-list-item
+                  v-if="item.status === 'pending'"
+                  @click="openRejectDialog(item)"
+                >
+                  <template #prepend>
+                    <v-icon size="18" color="error">mdi-close</v-icon>
+                  </template>
+                  <v-list-item-title>Reject</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </template>
         </v-data-table>
       </div>
@@ -316,7 +331,11 @@
             <v-icon size="18">mdi-close</v-icon>
             Reject
           </v-btn>
-          <v-btn variant="outlined" color="grey" @click="showViewDialog = false">
+          <v-btn
+            variant="outlined"
+            color="grey"
+            @click="showViewDialog = false"
+          >
             Close
           </v-btn>
         </v-card-actions>

@@ -607,9 +607,6 @@ class PunchRecordImportService
         if (!$attendance->time_out) {
             return;
         }
-        if (!$attendance->time_out) {
-            return;
-        }
 
         // If both time_in and time_out exist, check regular_hours to determine status
         $halfDayThreshold = (float) config('payroll.attendance.half_day_hours_threshold', 5.0);
@@ -619,16 +616,10 @@ class PunchRecordImportService
             $attendance->status = 'present';
         }
 
-        // Check if late (more than grace period)
-        $dateStr = $attendance->attendance_date instanceof Carbon
-            ? $attendance->attendance_date->format('Y-m-d')
-            : $attendance->attendance_date;
-        $timeIn = Carbon::parse($dateStr . ' ' . $attendance->time_in);
-        $schedule = $this->getScheduleForEmployee($attendance->employee, Carbon::parse($dateStr));
-        $scheduledTimeIn = Carbon::parse($dateStr . ' ' . $schedule['standard_time_in']);
-        $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
-
-        if ($attendance->status === 'present' && $timeIn->gt($scheduledTimeIn->copy()->addMinutes($gracePeriodMinutes))) {
+        // Sync status based on late_hours (set by calculateHours).
+        // After calculateHours(), if late_hours > 0 but status is still 'present',
+        // re-sync to 'late' so the schedule-based grace period is respected.
+        if ($attendance->late_hours > 0 && $attendance->status === 'present') {
             $attendance->status = 'late';
         }
 

@@ -186,76 +186,69 @@
 
           <!-- Actions -->
           <template v-slot:item.actions="{ item }">
-            <div class="d-flex gap-2">
-              <v-btn
-                icon
-                size="small"
-                variant="text"
-                color="info"
-                @click="viewDetails(item)"
-              >
-                <v-icon>mdi-eye</v-icon>
-                <v-tooltip activator="parent" location="top"
-                  >View Details</v-tooltip
+            <v-menu location="bottom end">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon="mdi-dots-vertical"
+                  size="small"
+                  variant="text"
+                  title="Actions"
+                ></v-btn>
+              </template>
+              <v-list density="compact">
+                <v-list-item @click="viewDetails(item)">
+                  <template v-slot:prepend>
+                    <v-icon size="18">mdi-eye</v-icon>
+                  </template>
+                  <v-list-item-title>View Details</v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="item.status === 'pending'"
+                  @click="openApproveDialog(item)"
                 >
-              </v-btn>
+                  <template v-slot:prepend>
+                    <v-icon size="18" color="success">mdi-check</v-icon>
+                  </template>
+                  <v-list-item-title>Approve</v-list-item-title>
+                </v-list-item>
 
-              <v-btn
-                v-if="item.status === 'pending'"
-                icon
-                size="small"
-                variant="text"
-                color="success"
-                @click="openApproveDialog(item)"
-              >
-                <v-icon>mdi-check</v-icon>
-                <v-tooltip activator="parent" location="top">Approve</v-tooltip>
-              </v-btn>
-
-              <v-btn
-                v-if="item.status === 'pending'"
-                icon
-                size="small"
-                variant="text"
-                color="error"
-                @click="openRejectDialog(item)"
-              >
-                <v-icon>mdi-close</v-icon>
-                <v-tooltip activator="parent" location="top">Reject</v-tooltip>
-              </v-btn>
-
-              <v-btn
-                v-if="item.status === 'approved' && !item.final_pay_amount"
-                icon
-                size="small"
-                variant="text"
-                color="primary"
-                @click="openFinalPayDialog(item)"
-              >
-                <v-icon>mdi-calculator</v-icon>
-                <v-tooltip activator="parent" location="top"
-                  >Calculate Final Pay</v-tooltip
+                <v-list-item
+                  v-if="item.status === 'pending'"
+                  @click="openRejectDialog(item)"
                 >
-              </v-btn>
+                  <template v-slot:prepend>
+                    <v-icon size="18" color="error">mdi-close</v-icon>
+                  </template>
+                  <v-list-item-title>Reject</v-list-item-title>
+                </v-list-item>
 
-              <v-btn
-                v-if="
-                  item.status === 'approved' &&
-                  item.final_pay_amount &&
-                  !item.final_pay_released
-                "
-                icon
-                size="small"
-                variant="text"
-                color="success"
-                @click="openReleaseDialog(item)"
-              >
-                <v-icon>mdi-cash-check</v-icon>
-                <v-tooltip activator="parent" location="top"
-                  >Release Final Pay</v-tooltip
+                <v-list-item
+                  v-if="item.status === 'approved' && !item.final_pay_amount"
+                  @click="openFinalPayDialog(item)"
                 >
-              </v-btn>
-            </div>
+                  <template v-slot:prepend>
+                    <v-icon size="18" color="primary">mdi-calculator</v-icon>
+                  </template>
+                  <v-list-item-title>Calculate Final Pay</v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="
+                    item.status === 'approved' &&
+                    item.final_pay_amount &&
+                    !item.final_pay_released
+                  "
+                  @click="openReleaseDialog(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon size="18" color="success">mdi-cash-check</v-icon>
+                  </template>
+                  <v-list-item-title>Release Final Pay</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </template>
         </v-data-table>
       </div>

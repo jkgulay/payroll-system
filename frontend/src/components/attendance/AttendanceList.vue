@@ -230,7 +230,9 @@
 
       <template v-slot:no-data>
         <div class="text-center py-8">
-          <v-icon size="52" color="grey">mdi-clipboard-text-search-outline</v-icon>
+          <v-icon size="52" color="grey"
+            >mdi-clipboard-text-search-outline</v-icon
+          >
           <p class="text-h6 mt-3 mb-1">No attendance records found</p>
           <p class="text-body-2 text-medium-emphasis mb-4">
             Adjust the filters or clear them to view available records.
@@ -296,6 +298,7 @@ const statusOptions = [
   { title: "Absent", value: "absent" },
   { title: "Late", value: "late" },
   { title: "Half Day", value: "half_day" },
+  { title: "Incomplete", value: "incomplete" },
   { title: "On Leave", value: "on_leave" },
 ];
 
@@ -326,15 +329,18 @@ const loadAttendance = async () => {
 
   isFetchingAttendance.value = true;
   try {
-    const response = await attendanceService.getAttendance({
-      date_from: filters.date,
-      date_to: filters.date,
-      status: filters.status,
-      per_page: 10000, // Fetch all records
-    }, {
-      cacheTTL: 15000,
-      skipToast: true,
-    });
+    const response = await attendanceService.getAttendance(
+      {
+        date_from: filters.date,
+        date_to: filters.date,
+        status: filters.status,
+        per_page: 10000, // Fetch all records
+      },
+      {
+        cacheTTL: 15000,
+        skipToast: true,
+      },
+    );
     attendance.value = response.data || [];
     sessionStorage.setItem(cacheKey, JSON.stringify(attendance.value));
   } catch (error) {
@@ -394,6 +400,7 @@ const getStatusColor = (status) => {
     absent: "error",
     late: "warning",
     half_day: "info",
+    incomplete: "orange",
     on_leave: "purple",
   };
   return colors[status] || "grey";
@@ -431,6 +438,7 @@ const formatStatusLabel = (status) => {
     absent: "Absent",
     late: "Late",
     half_day: "Half Day",
+    incomplete: "Incomplete",
     on_leave: "On Leave",
   };
   return labels[status] || status;

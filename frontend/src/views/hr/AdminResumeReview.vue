@@ -143,63 +143,75 @@
           </template>
 
           <template v-slot:item.actions="{ item }">
-            <v-btn
-              icon
-              size="small"
-              @click="viewResume(item)"
-              title="View Details"
-            >
-              <v-icon>mdi-eye</v-icon>
-            </v-btn>
-            <v-btn
-              v-if="!item.is_application"
-              icon
-              size="small"
-              @click="downloadResume(item)"
-              title="Download"
-            >
-              <v-icon>mdi-download</v-icon>
-            </v-btn>
-            <v-btn
-              v-if="item.status === 'pending' && !item.is_application"
-              icon
-              size="small"
-              color="success"
-              @click="openApproveDialog(item)"
-              title="Approve"
-            >
-              <v-icon>mdi-check</v-icon>
-            </v-btn>
-            <v-btn
-              v-if="item.status === 'pending' && !item.is_application"
-              icon
-              size="small"
-              color="error"
-              @click="openRejectDialog(item)"
-              title="Reject"
-            >
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
-            <v-btn
-              v-if="item.status === 'pending' && item.is_application"
-              icon
-              size="small"
-              color="success"
-              @click="openApproveApplicationDialog(item)"
-              title="Approve Application"
-            >
-              <v-icon>mdi-check-circle</v-icon>
-            </v-btn>
-            <v-btn
-              v-if="item.status === 'pending' && item.is_application"
-              icon
-              size="small"
-              color="error"
-              @click="openRejectApplicationDialog(item)"
-              title="Reject Application"
-            >
-              <v-icon>mdi-close-circle</v-icon>
-            </v-btn>
+            <v-menu location="bottom end">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon="mdi-dots-vertical"
+                  size="small"
+                  variant="text"
+                  title="Actions"
+                ></v-btn>
+              </template>
+              <v-list density="compact">
+                <v-list-item @click="viewResume(item)">
+                  <template v-slot:prepend>
+                    <v-icon size="18">mdi-eye</v-icon>
+                  </template>
+                  <v-list-item-title>View Details</v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="!item.is_application"
+                  @click="downloadResume(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon size="18">mdi-download</v-icon>
+                  </template>
+                  <v-list-item-title>Download</v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="item.status === 'pending' && !item.is_application"
+                  @click="openApproveDialog(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon size="18" color="success">mdi-check</v-icon>
+                  </template>
+                  <v-list-item-title>Approve</v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="item.status === 'pending' && !item.is_application"
+                  @click="openRejectDialog(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon size="18" color="error">mdi-close</v-icon>
+                  </template>
+                  <v-list-item-title>Reject</v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="item.status === 'pending' && item.is_application"
+                  @click="openApproveApplicationDialog(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon size="18" color="success">mdi-check-circle</v-icon>
+                  </template>
+                  <v-list-item-title>Approve Application</v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="item.status === 'pending' && item.is_application"
+                  @click="openRejectApplicationDialog(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon size="18" color="error">mdi-close-circle</v-icon>
+                  </template>
+                  <v-list-item-title>Reject Application</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </template>
         </v-data-table>
       </div>
