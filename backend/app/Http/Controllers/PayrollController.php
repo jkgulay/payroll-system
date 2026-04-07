@@ -532,6 +532,132 @@ class PayrollController extends Controller
         ]);
     }
 
+    public function payrollPunchReview(Request $request)
+    {
+        $validated = $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+            'payroll_scope' => 'nullable|in:all,individual',
+            'individual_target' => 'nullable|in:position,employee',
+            'included_position' => 'nullable|string',
+            'included_employee_id' => 'nullable|integer|exists:employees,id',
+            'has_attendance' => 'nullable|boolean',
+            'excluded_positions' => 'nullable|array',
+            'excluded_positions.*' => 'string',
+            'date' => 'nullable|date',
+            'employee_id' => 'nullable|integer|exists:employees,id',
+        ]);
+
+        $periodStart = $validated['period_start'];
+        $periodEnd = $validated['period_end'];
+
+        $employeeQuery = Employee::query()->where(function ($q) use ($periodStart, $periodEnd) {
+            $q->whereIn('activity_status', ['active', 'on_leave'])
+                ->orWhereHas('attendances', function ($subQ) use ($periodStart, $periodEnd) {
+                    $subQ->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                        ->where('status', '!=', 'absent');
+                });
+        });
+
+        if (($validated['has_attendance'] ?? false) === true) {
+            $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
+                $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                    ->where('status', '!=', 'absent')
+                    ->where('approval_status', 'approved');
+            });
+        }
+
+        if (($validated['payroll_scope'] ?? 'all') === 'individual') {
+            if (($validated['individual_target'] ?? null) === 'position' && !empty($validated['included_position'])) {
+                $employeeQuery->whereHas('positionRate', function ($q) use ($validated) {
+                    $q->where('position_name', $validated['included_position']);
+                });
+            }
+
+            if (($validated['individual_target'] ?? null) === 'employee' && !empty($validated['included_employee_id'])) {
+                $employeeQuery->where('id', $validated['included_employee_id']);
+            }
+        }
+
+        if (!empty($validated['excluded_positions'])) {
+            $employeeQuery->where(function ($q) use ($validated) {
+                $q->whereDoesntHave('positionRate')
+                    ->orWhereHas('positionRate', function ($positionQuery) use ($validated) {
+                        $positionQuery->whereNotIn('position_name', $validated['excluded_positions']);
+                    });
+            });
+        }
+
+        $employeeIds = $employeeQuery->pluck('id');
+
+        if ($employeeIds->isEmpty()) {
+            return response()->json([
+                'attendance' => [],
+                'employees' => [],
+                'total' => 0,
+            ]);
+        }
+
+        $attendanceQuery = Attendance::query()
+            ->with(['employee:id,employee_number,first_name,last_name'])
+            ->whereIn('employee_id', $employeeIds)
+            ->whereBetween('attendance_date', [$periodStart, $periodEnd])
+            ->where('status', '!=', 'absent');
+
+        if (!empty($validated['date'])) {
+            $attendanceQuery->whereDate('attendance_date', $validated['date']);
+        }
+
+        if (!empty($validated['employee_id'])) {
+            $attendanceQuery->where('employee_id', $validated['employee_id']);
+        }
+
+        $attendance = $attendanceQuery
+            ->orderBy('attendance_date')
+            ->orderBy('employee_id')
+            ->get([
+                'id',
+                'employee_id',
+                'attendance_date',
+                'status',
+                'approval_status',
+                'time_in',
+                'break_start',
+                'break_end',
+                'time_out',
+                'ot_time_in',
+                'ot_time_out',
+                'ot_time_in_2',
+                'ot_time_out_2',
+                'device_name',
+                'regular_hours',
+                'overtime_hours',
+                'undertime_hours',
+                'late_hours',
+                'updated_at',
+            ]);
+
+        $employees = $attendance
+            ->pluck('employee')
+            ->filter()
+            ->unique('id')
+            ->map(function ($employee) {
+                return [
+                    'id' => $employee->id,
+                    'employee_number' => $employee->employee_number,
+                    'full_name' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')),
+                ];
+            })
+            ->sortBy('employee_number', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        return response()->json([
+            'attendance' => $attendance,
+            'employees' => $employees,
+            'total' => $attendance->count(),
+        ]);
+    }
+
     public function overtimeEmployeeAttendance(Request $request, Employee $employee)
     {
         $validated = $request->validate([
