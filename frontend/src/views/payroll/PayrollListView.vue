@@ -244,7 +244,7 @@
     </div>
 
     <!-- Create/Edit Dialog - Modern UI -->
-    <v-dialog v-model="dialog" max-width="860px" persistent scrollable>
+    <v-dialog v-model="dialog" max-width="1280px" width="94vw" persistent scrollable>
       <v-card class="modern-dialog payroll-form-dialog">
         <!-- Enhanced Header -->
         <v-card-title class="dialog-header payroll-dialog-header">
@@ -270,7 +270,7 @@
 
         <v-card-text
           class="dialog-content payroll-dialog-content"
-          style="max-height: 76vh"
+          style="max-height: 86vh"
           @keydown.capture="handlePayrollFormKeydown"
         >
           <v-form ref="form" v-model="valid" class="payroll-form">
@@ -304,7 +304,7 @@
                 :class="{ active: currentStep === 2, done: currentStep > 2 }"
               >
                 <span class="wizard-step-index">2</span>
-                <span class="wizard-step-label">Employees & Overtime</span>
+                <span class="wizard-step-label">Employees, Overtime & Review</span>
               </button>
               <button
                 type="button"
@@ -720,6 +720,141 @@
                 </tbody>
               </v-table>
             </div>
+
+            <v-col cols="12" class="px-0 mt-2">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-timeline-clock-outline</v-icon>
+                </div>
+                <h3 class="section-title">Punch Review (Payroll Period)</h3>
+              </div>
+            </v-col>
+
+            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
+              <template v-slot:prepend>
+                <v-icon icon="mdi-information"></v-icon>
+              </template>
+              <div class="text-caption">
+                Review and edit punches for employees with attendance records in
+                this payroll period. Saved edits are used directly for payroll
+                computation and exports.
+              </div>
+            </v-alert>
+
+            <v-row class="mt-0">
+              <v-col cols="12" md="3">
+                <v-text-field
+                  v-model="payrollPunchFilters.date"
+                  label="Review Date"
+                  type="date"
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-calendar"
+                  :min="formData.period_start || undefined"
+                  :max="formData.period_end || undefined"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-autocomplete
+                  v-model="payrollPunchFilters.employee_id"
+                  :items="payrollPunchEmployees"
+                  item-title="full_name"
+                  item-value="id"
+                  label="Employee"
+                  placeholder="Filter by employee (optional)"
+                  prepend-inner-icon="mdi-account-search"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                >
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props">
+                      <template v-slot:subtitle>
+                        {{ item.raw.employee_number || "No ID" }}
+                      </template>
+                    </v-list-item>
+                  </template>
+                </v-autocomplete>
+              </v-col>
+              <v-col cols="12" md="3" class="d-flex align-center justify-end ga-2">
+                <v-btn
+                  variant="outlined"
+                  color="grey"
+                  prepend-icon="mdi-filter-remove"
+                  @click="clearPayrollPunchFilters"
+                >
+                  Clear
+                </v-btn>
+                <v-btn
+                  color="#ED985F"
+                  prepend-icon="mdi-refresh"
+                  :loading="payrollPunchLoading"
+                  @click="loadPayrollPunchReview"
+                >
+                  Refresh
+                </v-btn>
+              </v-col>
+            </v-row>
+
+            <v-data-table
+              :headers="payrollPunchHeaders"
+              :items="payrollPunchDayViewRows"
+              :loading="payrollPunchLoading"
+              :items-per-page="10"
+              :items-per-page-options="[
+                { value: 10, title: '10' },
+                { value: 20, title: '20' },
+                { value: 50, title: '50' },
+              ]"
+              class="elevation-0 payroll-punch-review-table mb-2"
+            >
+              <template v-slot:item.staff_code="{ item }">
+                <span class="font-weight-medium">{{ item.staff_code }}</span>
+              </template>
+
+              <template v-slot:item.date="{ item }">
+                {{ formatDate(item.date) }}
+              </template>
+
+              <template
+                v-for="timeKey in payrollPunchTimeKeys"
+                v-slot:[`item.${timeKey}`]="{ item }"
+                :key="timeKey"
+              >
+                <v-chip
+                  v-if="item[timeKey]"
+                  size="x-small"
+                  color="success"
+                  variant="flat"
+                  class="payroll-punch-time-chip"
+                >
+                  {{ item[timeKey] }}
+                </v-chip>
+                <span v-else class="text-medium-emphasis">-</span>
+              </template>
+
+              <template v-slot:item.actions="{ item }">
+                <v-btn
+                  size="small"
+                  variant="text"
+                  color="#001f3d"
+                  prepend-icon="mdi-pencil"
+                  @click="openPayrollPunchEdit(item.source)"
+                >
+                  Edit
+                </v-btn>
+              </template>
+
+              <template v-slot:no-data>
+                <div class="text-center py-6">
+                  <v-icon size="48" color="grey">mdi-clipboard-search-outline</v-icon>
+                  <p class="text-subtitle-1 mt-2 mb-1">No punch records found</p>
+                  <p class="text-body-2 text-medium-emphasis mb-0">
+                    Adjust the review date or employee filter, then refresh.
+                  </p>
+                </div>
+              </template>
+            </v-data-table>
             </div>
 
             <div v-show="currentStep === 3">
@@ -869,6 +1004,13 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <ManualEntryDialog
+      v-model="payrollPunchEditDialog"
+      :attendance="payrollPunchSelectedAttendance"
+      :prefilledDate="payrollPunchPrefilledDate"
+      @saved="handlePayrollPunchSaved"
+    />
 
     <!-- Delete Confirmation Dialog - Modern Design -->
     <v-dialog v-model="deleteDialog" max-width="550">
@@ -1248,6 +1390,7 @@ import api from "@/services/api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 import { usePositionRates } from "@/composables/usePositionRates";
+import ManualEntryDialog from "@/components/attendance/ManualEntryDialog.vue";
 
 const router = useRouter();
 const toast = useToast();
@@ -1312,6 +1455,15 @@ const overtimePreviewEmployeeId = ref(null);
 const selectedEmployeeAttendance = ref([]);
 const employeeAttendanceLoading = ref(false);
 const attendanceRowSaving = ref({});
+const payrollPunchLoading = ref(false);
+const payrollPunchRecords = ref([]);
+const payrollPunchFilters = ref({
+  date: "",
+  employee_id: null,
+});
+const payrollPunchEditDialog = ref(false);
+const payrollPunchSelectedAttendance = ref(null);
+const payrollPunchPrefilledDate = ref(null);
 
 const individualTargetOptions = [
   { title: "Position", value: "position" },
@@ -1413,6 +1565,118 @@ const selectedOvertimeEmployees = computed(() => {
   const selected = new Set(formData.value.overtime_employee_ids);
   return overtimeCandidates.value.filter((candidate) => selected.has(candidate.id));
 });
+
+const payrollPunchTimeKeys = Array.from(
+  { length: 10 },
+  (_, idx) => `time${idx + 1}`,
+);
+
+const payrollPunchHeaders = [
+  { title: "Staff Code", key: "staff_code" },
+  { title: "Name", key: "name" },
+  { title: "Date", key: "date" },
+  { title: "Week", key: "week" },
+  { title: "Device Name", key: "device_name" },
+  ...payrollPunchTimeKeys.map((timeKey, idx) => ({
+    title: `Time${idx + 1}`,
+    key: timeKey,
+    sortable: false,
+  })),
+  { title: "Actions", key: "actions", sortable: false },
+];
+
+const payrollPunchFieldMap = [
+  { field: "time_in" },
+  { field: "break_start" },
+  { field: "break_end" },
+  { field: "time_out" },
+  { field: "ot_time_in" },
+  { field: "ot_time_out" },
+  { field: "ot_time_in_2" },
+  { field: "ot_time_out_2" },
+];
+
+const payrollPunchEmployees = computed(() => {
+  const sourceEmployees = Array.isArray(payrollPunchRecords.value)
+    ? payrollPunchRecords.value
+        .map((record) => record.employee)
+        .filter((employee) => employee && employee.id)
+    : [];
+
+  const unique = new Map();
+  sourceEmployees.forEach((employee) => {
+    if (!unique.has(employee.id)) {
+      unique.set(employee.id, {
+        id: employee.id,
+        full_name:
+          employee.full_name ||
+          `${employee.first_name || ""} ${employee.last_name || ""}`.trim(),
+        employee_number: employee.employee_number,
+      });
+    }
+  });
+
+  return Array.from(unique.values()).sort((a, b) =>
+    String(a.employee_number || "").localeCompare(
+      String(b.employee_number || ""),
+      undefined,
+      { numeric: true },
+    ),
+  );
+});
+
+const payrollPunchDayViewRows = computed(() => {
+  return payrollPunchRecords.value.map((record) => {
+    const row = {
+      source: record,
+      staff_code: record.employee?.employee_number || "-",
+      name: record.employee?.full_name || "-",
+      date: record.attendance_date,
+      week: getWeekDay(record.attendance_date),
+      device_name: record.device_name || "-",
+    };
+
+    const punchTimes = getRecordPunches(record)
+      .map((entry) => entry.time)
+      .slice(0, 10);
+
+    payrollPunchTimeKeys.forEach((timeKey, idx) => {
+      row[timeKey] = punchTimes[idx] || null;
+    });
+
+    return row;
+  });
+});
+
+const getWeekDay = (dateValue) => {
+  if (!dateValue) {
+    return "-";
+  }
+
+  const safeDate = `${String(dateValue).slice(0, 10)}T00:00:00`;
+  return new Date(safeDate).toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+};
+
+const normalizePunchTime = (timeValue) => {
+  if (!timeValue) {
+    return null;
+  }
+
+  return String(timeValue).slice(0, 5);
+};
+
+const getRecordPunches = (record) => {
+  const punches = payrollPunchFieldMap
+    .map(({ field }) => ({
+      time: normalizePunchTime(record[field]),
+    }))
+    .filter((entry) => entry.time);
+
+  punches.sort((a, b) => a.time.localeCompare(b.time));
+  return punches;
+};
 
 const { handleKeydown: handlePayrollFormKeydown } = useKeyboardFirstFlow({
   onEscape: () => {
@@ -1543,6 +1807,13 @@ function openCreateDialog() {
   overtimeCandidatesLoaded.value = false;
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
+  payrollPunchRecords.value = [];
+  payrollPunchFilters.value = {
+    date: "",
+    employee_id: null,
+  };
+  payrollPunchSelectedAttendance.value = null;
+  payrollPunchPrefilledDate.value = null;
   dialog.value = true;
 }
 
@@ -1571,6 +1842,13 @@ function editPayroll(item) {
   overtimeCandidatesLoaded.value = false;
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
+  payrollPunchRecords.value = [];
+  payrollPunchFilters.value = {
+    date: item.period_start || "",
+    employee_id: null,
+  };
+  payrollPunchSelectedAttendance.value = null;
+  payrollPunchPrefilledDate.value = null;
   dialog.value = true;
 }
 
@@ -1582,6 +1860,14 @@ function closeDialog() {
   overtimeCandidatesLoaded.value = false;
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
+  payrollPunchRecords.value = [];
+  payrollPunchFilters.value = {
+    date: "",
+    employee_id: null,
+  };
+  payrollPunchEditDialog.value = false;
+  payrollPunchSelectedAttendance.value = null;
+  payrollPunchPrefilledDate.value = null;
 }
 
 function validateStepOne() {
@@ -1629,11 +1915,18 @@ function validateStepTwo() {
   return true;
 }
 
-function goNextStep() {
+async function goNextStep() {
   if (currentStep.value === 1 && !validateStepOne()) return;
   if (currentStep.value === 2 && !validateStepTwo()) return;
   if (currentStep.value < 3) {
     currentStep.value += 1;
+
+    if (currentStep.value === 2) {
+      if (!payrollPunchFilters.value.date && formData.value.period_start) {
+        payrollPunchFilters.value.date = formData.value.period_start;
+      }
+      await loadPayrollPunchReview();
+    }
   }
 }
 
@@ -1699,6 +1992,74 @@ async function loadOvertimeCandidates() {
     );
   } finally {
     overtimeCandidatesLoading.value = false;
+  }
+}
+
+async function loadPayrollPunchReview() {
+  if (!formData.value.period_start || !formData.value.period_end) {
+    toast.error("Please set payroll period start and end dates first");
+    return;
+  }
+
+  payrollPunchLoading.value = true;
+  try {
+    const payload = {
+      period_start: formData.value.period_start,
+      period_end: formData.value.period_end,
+      ...payrollScopePayload(),
+    };
+
+    if (payrollPunchFilters.value.date) {
+      payload.date = payrollPunchFilters.value.date;
+    }
+
+    if (payrollPunchFilters.value.employee_id) {
+      payload.employee_id = payrollPunchFilters.value.employee_id;
+    }
+
+    const response = await api.post("/payrolls/punch-review", payload);
+    payrollPunchRecords.value = response.data?.attendance || [];
+
+    if (payrollPunchFilters.value.employee_id) {
+      const validEmployeeIds = new Set(
+        (response.data?.employees || []).map((employee) => employee.id),
+      );
+      if (!validEmployeeIds.has(payrollPunchFilters.value.employee_id)) {
+        payrollPunchFilters.value.employee_id = null;
+      }
+    }
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to load payroll punch review",
+    );
+  } finally {
+    payrollPunchLoading.value = false;
+  }
+}
+
+function clearPayrollPunchFilters() {
+  payrollPunchFilters.value = {
+    date: formData.value.period_start || "",
+    employee_id: null,
+  };
+  loadPayrollPunchReview();
+}
+
+function openPayrollPunchEdit(attendance) {
+  payrollPunchSelectedAttendance.value = attendance;
+  payrollPunchPrefilledDate.value = attendance?.attendance_date || null;
+  payrollPunchEditDialog.value = true;
+}
+
+async function handlePayrollPunchSaved() {
+  payrollPunchEditDialog.value = false;
+  payrollPunchSelectedAttendance.value = null;
+  payrollPunchPrefilledDate.value = null;
+
+  await loadPayrollPunchReview();
+
+  if (overtimePreviewEmployeeId.value) {
+    await loadSelectedEmployeeAttendance();
   }
 }
 
@@ -2116,6 +2477,16 @@ async function saveSignatureSettings() {
 .attendance-day-view :deep(td),
 .attendance-day-view :deep(th) {
   white-space: nowrap;
+}
+
+.payroll-punch-review-table :deep(td),
+.payroll-punch-review-table :deep(th) {
+  white-space: nowrap;
+}
+
+.payroll-punch-time-chip {
+  min-width: 50px;
+  justify-content: center;
 }
 
 .payroll-dates-row {

@@ -125,31 +125,37 @@ class PayrollController extends Controller
             });
         }
 
-        // Only include employees who have attendance in the period (warn if only incomplete records exist)
+        // Only include employees who have COMPLETE attendance in the period.
+        // Records with status='incomplete' (no time_out) are excluded and appear in Missing Attendance tab.
         $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
             $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                ->where('status', '!=', 'incomplete')
                 ->where('status', '!=', 'absent')
-                ->where('approval_status', 'approved');
+                ->where('approval_status', 'approved')
+                ->whereNotNull('time_in')
+                ->whereNotNull('time_out');
         });
 
         $employeeIds = $employeeQuery->pluck('id');
 
-        // Step 2: Find incomplete attendance records for these employees
+        // Step 2: Find incomplete/missing attendance records for these employees (for Missing Attendance tab)
+        // Explicitly include 'incomplete' status records so they appear in Missing Attendance tab.
+        // The status='incomplete' means no time_out was recorded (already diagnosed by punch import).
         $incompleteRecords = Attendance::whereBetween('attendance_date', [$periodStart, $periodEnd])
             ->whereIn('employee_id', $employeeIds)
-            ->where('status', '!=', 'absent')
-            ->where('approval_status', 'approved')
             ->where(function ($q) {
-                // Missing time_in for payable statuses
-                $q->where(function ($sq) {
-                    $sq->whereIn('status', ['present', 'late', 'half_day'])
-                        ->whereNull('time_in');
-                })
-                    // Missing time_out (excluding half_day which may legitimately lack time_out)
+                // Records already marked incomplete (no time_out) — show regardless of other fields
+                $q->where('status', 'incomplete')
+                    // OR missing time_in for payable statuses
+                    ->orWhere(function ($sq) {
+                        $sq->whereIn('status', ['present', 'late', 'half_day'])
+                            ->whereNull('time_in');
+                    })
+                    // OR missing time_out (records with time_in but no time_out, excluding incomplete)
                     ->orWhere(function ($sq) {
                         $sq->whereNotNull('time_in')
                             ->whereNull('time_out')
-                            ->where('status', '!=', 'half_day');
+                            ->where('status', '!=', 'incomplete');
                     })
                     // OR missing break_end when break_start exists
                     ->orWhere(function ($sq) {
@@ -187,9 +193,11 @@ class PayrollController extends Controller
         $issues = $incompleteRecords->map(function ($record) {
             $issuesList = [];
 
-            if (!$record->time_in && in_array($record->status, ['present', 'late', 'half_day'], true)) {
+            // Missing time_in: check payable statuses (incomplete records may have null time_in too)
+            if (!$record->time_in && in_array($record->status, ['present', 'late', 'half_day', 'incomplete'], true)) {
                 $issuesList[] = 'Missing time in';
             }
+            // Missing time_out: applies to any record with time_in but no time_out
             if ($record->time_in && !$record->time_out) {
                 $issuesList[] = 'Missing time out';
             }
@@ -521,6 +529,132 @@ class PayrollController extends Controller
         return response()->json([
             'employees' => $rows,
             'total' => $rows->count(),
+        ]);
+    }
+
+    public function payrollPunchReview(Request $request)
+    {
+        $validated = $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+            'payroll_scope' => 'nullable|in:all,individual',
+            'individual_target' => 'nullable|in:position,employee',
+            'included_position' => 'nullable|string',
+            'included_employee_id' => 'nullable|integer|exists:employees,id',
+            'has_attendance' => 'nullable|boolean',
+            'excluded_positions' => 'nullable|array',
+            'excluded_positions.*' => 'string',
+            'date' => 'nullable|date',
+            'employee_id' => 'nullable|integer|exists:employees,id',
+        ]);
+
+        $periodStart = $validated['period_start'];
+        $periodEnd = $validated['period_end'];
+
+        $employeeQuery = Employee::query()->where(function ($q) use ($periodStart, $periodEnd) {
+            $q->whereIn('activity_status', ['active', 'on_leave'])
+                ->orWhereHas('attendances', function ($subQ) use ($periodStart, $periodEnd) {
+                    $subQ->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                        ->where('status', '!=', 'absent');
+                });
+        });
+
+        if (($validated['has_attendance'] ?? false) === true) {
+            $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
+                $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
+                    ->where('status', '!=', 'absent')
+                    ->where('approval_status', 'approved');
+            });
+        }
+
+        if (($validated['payroll_scope'] ?? 'all') === 'individual') {
+            if (($validated['individual_target'] ?? null) === 'position' && !empty($validated['included_position'])) {
+                $employeeQuery->whereHas('positionRate', function ($q) use ($validated) {
+                    $q->where('position_name', $validated['included_position']);
+                });
+            }
+
+            if (($validated['individual_target'] ?? null) === 'employee' && !empty($validated['included_employee_id'])) {
+                $employeeQuery->where('id', $validated['included_employee_id']);
+            }
+        }
+
+        if (!empty($validated['excluded_positions'])) {
+            $employeeQuery->where(function ($q) use ($validated) {
+                $q->whereDoesntHave('positionRate')
+                    ->orWhereHas('positionRate', function ($positionQuery) use ($validated) {
+                        $positionQuery->whereNotIn('position_name', $validated['excluded_positions']);
+                    });
+            });
+        }
+
+        $employeeIds = $employeeQuery->pluck('id');
+
+        if ($employeeIds->isEmpty()) {
+            return response()->json([
+                'attendance' => [],
+                'employees' => [],
+                'total' => 0,
+            ]);
+        }
+
+        $attendanceQuery = Attendance::query()
+            ->with(['employee:id,employee_number,first_name,last_name'])
+            ->whereIn('employee_id', $employeeIds)
+            ->whereBetween('attendance_date', [$periodStart, $periodEnd])
+            ->where('status', '!=', 'absent');
+
+        if (!empty($validated['date'])) {
+            $attendanceQuery->whereDate('attendance_date', $validated['date']);
+        }
+
+        if (!empty($validated['employee_id'])) {
+            $attendanceQuery->where('employee_id', $validated['employee_id']);
+        }
+
+        $attendance = $attendanceQuery
+            ->orderBy('attendance_date')
+            ->orderBy('employee_id')
+            ->get([
+                'id',
+                'employee_id',
+                'attendance_date',
+                'status',
+                'approval_status',
+                'time_in',
+                'break_start',
+                'break_end',
+                'time_out',
+                'ot_time_in',
+                'ot_time_out',
+                'ot_time_in_2',
+                'ot_time_out_2',
+                'device_name',
+                'regular_hours',
+                'overtime_hours',
+                'undertime_hours',
+                'late_hours',
+                'updated_at',
+            ]);
+
+        $employees = $attendance
+            ->pluck('employee')
+            ->filter()
+            ->unique('id')
+            ->map(function ($employee) {
+                return [
+                    'id' => $employee->id,
+                    'employee_number' => $employee->employee_number,
+                    'full_name' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')),
+                ];
+            })
+            ->sortBy('employee_number', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        return response()->json([
+            'attendance' => $attendance,
+            'employees' => $employees,
+            'total' => $attendance->count(),
         ]);
     }
 
