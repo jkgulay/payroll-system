@@ -17,7 +17,7 @@
             </div>
             <div>
               <h1 class="page-title">System Maintenance</h1>
-              <p class="page-subtitle"> 
+              <p class="page-subtitle">
                 Monitor system health and perform maintenance tasks
               </p>
             </div>
@@ -244,7 +244,12 @@
               {{
                 healthData.employees?.active === 0
                   ? "No active employees. Add employees to create payrolls."
-                  : `${healthData.employees.without_position} employee(s) need position assignment.`
+                  : healthData.employees?.without_position > 0 &&
+                      healthData.employees?.without_project > 0
+                    ? `${healthData.employees.without_position} employee(s) need position assignment and ${healthData.employees.without_project} employee(s) need project assignment.`
+                    : healthData.employees?.without_position > 0
+                      ? `${healthData.employees.without_position} employee(s) need position assignment.`
+                      : `${healthData.employees.without_project} employee(s) need project assignment.`
               }}
             </p>
           </div>
@@ -390,6 +395,39 @@
                     healthData.pending_approvals?.resignations || 0
                   }}</span>
                   <span class="pending-label">Resignations</span>
+                </div>
+              </div>
+              <div class="pending-item">
+                <div class="pending-icon corrections">
+                  <v-icon size="20">mdi-calendar-edit</v-icon>
+                </div>
+                <div class="pending-content">
+                  <span class="pending-value">{{
+                    healthData.pending_approvals?.attendance_corrections || 0
+                  }}</span>
+                  <span class="pending-label">Attendance Corrections</span>
+                </div>
+              </div>
+              <div class="pending-item">
+                <div class="pending-icon access-requests">
+                  <v-icon size="20">mdi-shield-lock-open</v-icon>
+                </div>
+                <div class="pending-content">
+                  <span class="pending-value">{{
+                    healthData.pending_approvals?.access_requests || 0
+                  }}</span>
+                  <span class="pending-label">Access Requests</span>
+                </div>
+              </div>
+              <div class="pending-item">
+                <div class="pending-icon resumes">
+                  <v-icon size="20">mdi-file-account</v-icon>
+                </div>
+                <div class="pending-content">
+                  <span class="pending-value">{{
+                    healthData.pending_approvals?.resume_reviews || 0
+                  }}</span>
+                  <span class="pending-label">Resume Reviews</span>
                 </div>
               </div>
             </div>
@@ -564,7 +602,7 @@ async function cleanDatabase() {
 .header-main {
   display: flex;
   justify-content: space-between;
-  }
+}
 
 .action-btn {
   display: inline-flex;
@@ -1107,6 +1145,18 @@ async function cleanDatabase() {
 
   &.resignations {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  &.corrections {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  }
+
+  &.access-requests {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  }
+
+  &.resumes {
+    background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
   }
 }
 
