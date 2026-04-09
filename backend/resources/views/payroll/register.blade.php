@@ -276,43 +276,83 @@
         }
 
         .table-signature-block.individual-signature-spacing table.signature-table {
-            margin-top: 20mm;
+            margin-top: 24mm;
+        }
+
+        /* ===== INDIVIDUAL PAYROLL LAYOUT TUNING =====
+           Applies only when the export contains one employee. */
+        body.single-employee-payroll {
+            font-size: 14px;
+            padding-top: 7mm;
+            padding-bottom: 5mm;
+        }
+
+        body.single-employee-payroll .single-employee-content-shell {
+            width: 97%;
+            margin: 0 auto;
+        }
+
+        body.single-employee-payroll .header {
+            margin-top: 3mm;
+            margin-bottom: 10px;
+        }
+
+        body.single-employee-payroll .project-info {
+            margin: 9px 0 7px 0;
+            font-size: 13px;
+        }
+
+        body.single-employee-payroll table.payroll-table th,
+        body.single-employee-payroll table.payroll-table td {
+            font-size: 12.5px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+        body.single-employee-payroll table.payroll-table thead th {
+            font-size: 11px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+        }
+
+        body.single-employee-payroll tr.employee-row td {
+            height: 34px;
+        }
+
+        body.single-employee-payroll .nothing-follows {
+            font-size: 12px;
+            padding-top: 6px !important;
+            padding-bottom: 6px !important;
+        }
+
+        body.single-employee-payroll .total-row td {
+            font-size: 12px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+        }
+
+        body.single-employee-payroll .table-signature-block {
+            margin-top: 4px;
         }
     </style>
 </head>
 
-<body>
-    @php
-    $rowsPerPage = 10;
-    $deviceMetaMap = $deviceMetaMap ?? [];
-    $isIndividualPayroll = $isIndividualPayroll ?? ($payroll->items->count() === 1);
-    $individualEmployeeName = $individualEmployeeName ?? ($isIndividualPayroll ? ($payroll->items->first()?->employee?->full_name ?? null) : null);
-    $headerCompanyName = trim((string) data_get($companyInfo, 'company_name', ''));
-    $headerCompanyAddress = trim((string) data_get($companyInfo, 'address', ''));
-    $resolvedCompanyName = $headerCompanyName !== '' ? $headerCompanyName : 'GIOVANNI CONSTRUCTION';
-    $resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress : 'Imadejas Subdivision, Capitol Bonbon';
-    @endphp
+@php
+$rowsPerPage = 10;
+$deviceMetaMap = $deviceMetaMap ?? [];
+$isIndividualPayroll = $isIndividualPayroll ?? ($payroll->items->count() === 1);
+$individualEmployeeName = $individualEmployeeName ?? ($isIndividualPayroll ? ($payroll->items->first()?->employee?->full_name ?? null) : null);
+$headerCompanyName = trim((string) data_get($companyInfo, 'company_name', ''));
+$headerCompanyAddress = trim((string) data_get($companyInfo, 'address', ''));
+$resolvedCompanyName = $headerCompanyName !== '' ? $headerCompanyName : 'GIOVANNI CONSTRUCTION';
+$resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress : 'Imadejas Subdivision, Capitol Bonbon';
+@endphp
 
-    <div class="header">
-        <div class="company-name">{{ $resolvedCompanyName }}</div>
-        <div class="company-address">{{ $resolvedCompanyAddress }}</div>
-        <div class="title">P A Y R O L L</div>
-        <div class="period">
-            {{ \Carbon\Carbon::parse($payroll->period_start)->format('F d') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('d, Y') }}
-        </div>
-    </div>
+<body class="{{ $isIndividualPayroll ? 'single-employee-payroll' : '' }}">
 
+    <div class="{{ $isIndividualPayroll ? 'single-employee-content-shell' : '' }}">
 
-    @if($groupedItems)
-    {{-- Multiple groups: separate table for each --}}
-    @foreach($groupedItems as $groupName => $items)
-    @php
-    $groupMeta = $deviceMetaMap[strtolower(trim((string) $groupName))] ?? null;
-    $groupLabel = $filterType === 'staff_type' ? 'STAFF TYPE' : ($filterType === 'device' ? 'DEVICE' : 'PROJECT');
-    @endphp
-    @if(!$loop->first)
-    <div style="page-break-before: always; margin-top: 6px;">
-        <div class="header" style="margin-bottom: 4px;">
+        <div class="header">
             <div class="company-name">{{ $resolvedCompanyName }}</div>
             <div class="company-address">{{ $resolvedCompanyAddress }}</div>
             <div class="title">P A Y R O L L</div>
@@ -320,6 +360,36 @@
                 {{ \Carbon\Carbon::parse($payroll->period_start)->format('F d') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('d, Y') }}
             </div>
         </div>
+
+
+        @if($groupedItems)
+        {{-- Multiple groups: separate table for each --}}
+        @foreach($groupedItems as $groupName => $items)
+        @php
+        $groupMeta = $deviceMetaMap[strtolower(trim((string) $groupName))] ?? null;
+        $groupLabel = $filterType === 'staff_type' ? 'STAFF TYPE' : ($filterType === 'device' ? 'DEVICE' : 'PROJECT');
+        @endphp
+        @if(!$loop->first)
+        <div style="page-break-before: always; margin-top: 6px;">
+            <div class="header" style="margin-bottom: 4px;">
+                <div class="company-name">{{ $resolvedCompanyName }}</div>
+                <div class="company-address">{{ $resolvedCompanyAddress }}</div>
+                <div class="title">P A Y R O L L</div>
+                <div class="period">
+                    {{ \Carbon\Carbon::parse($payroll->period_start)->format('F d') }} - {{ \Carbon\Carbon::parse($payroll->period_end)->format('d, Y') }}
+                </div>
+            </div>
+            <div class="project-info">
+                <div><strong>{{ $groupLabel }}:</strong> {{ $groupName }}</div>
+                @if($filterType === 'device')
+                <div><strong>DESIGNATION:</strong> {{ $groupMeta['designation'] ?? 'N/A' }}</div>
+                <div><strong>LOCATION:</strong> {{ $groupMeta['location'] ?? 'N/A' }}</div>
+                @else
+                <div><strong>DESIGNATION:</strong> {{ $items->first()?->employee?->project?->description ?? 'N/A' }}</div>
+                @endif
+            </div>
+        </div>
+        @else
         <div class="project-info">
             <div><strong>{{ $groupLabel }}:</strong> {{ $groupName }}</div>
             @if($filterType === 'device')
@@ -329,145 +399,134 @@
             <div><strong>DESIGNATION:</strong> {{ $items->first()?->employee?->project?->description ?? 'N/A' }}</div>
             @endif
         </div>
-    </div>
-    @else
-    <div class="project-info">
-        <div><strong>{{ $groupLabel }}:</strong> {{ $groupName }}</div>
-        @if($filterType === 'device')
-        <div><strong>DESIGNATION:</strong> {{ $groupMeta['designation'] ?? 'N/A' }}</div>
-        <div><strong>LOCATION:</strong> {{ $groupMeta['location'] ?? 'N/A' }}</div>
-        @else
-        <div><strong>DESIGNATION:</strong> {{ $items->first()?->employee?->project?->description ?? 'N/A' }}</div>
         @endif
-    </div>
-    @endif
 
-    <table class="payroll-table">
-        <colgroup>
-            <col style="width: 13.5%">
-            <col style="width: 4.5%">
-            <col style="width: 3%">
-            <col style="width: 5%">
-            <col style="width: 2.8%">
-            <col style="width: 4.5%">
-            <col style="width: 2.8%">
-            <col style="width: 4.5%">
-            <col style="width: 4.3%">
-            <col style="width: 4.3%">
-            <col style="width: 5.5%">
-            <col style="width: 3.8%">
-            <col style="width: 3.5%">
-            <col style="width: 3%">
-            <col style="width: 3.8%">
-            <col style="width: 3.8%">
-            <col style="width: 3.5%">
-            <col style="width: 3.5%">
-            <col style="width: 3.5%">
-            <col style="width: 5.5%">
-            <col style="width: 7%">
-        </colgroup>
-        <thead>
-            <tr>
-                <th rowspan="2">NAME</th>
-                <th rowspan="2">RATE</th>
-                <th rowspan="2">No. of<br>Days</th>
-                <th rowspan="2">AMOUNT</th>
-                <th colspan="4">OVERTIME</th>
-                <th rowspan="2">Adj. Prev.<br>Salary</th>
-                <th rowspan="2">Allowance</th>
-                <th rowspan="2">GROSS<br>AMOUNT</th>
-                <th rowspan="2">Employee's<br>Savings</th>
-                <th rowspan="2">Loans</th>
-                <th rowspan="2">UT</th>
-                <th rowspan="2">Deductions</th>
-                <th rowspan="2">Cash<br>Advance</th>
-                <th colspan="3">PREMIUMS</th>
-                <th rowspan="2">NET<br>AMOUNT</th>
-                <th rowspan="2">SIGNATURE</th>
-            </tr>
-            <tr>
-                <th>HRS</th>
-                <th>REG OT</th>
-                <th>HRS</th>
-                <th>SUN/SPL. HOL.</th>
-                <th>SSS</th>
-                <th>PHIC</th>
-                <th>HDMF</th>
-            </tr>
-        </thead>
-        <tbody>
-            @php
-            $lastPageMaxRows = 10;
-            $totalGroupItems = count($items);
-            $pageBreakIndices = [];
-            $pi = 0;
-            while ($pi < $totalGroupItems) {
-                $remaining=$totalGroupItems - $pi;
-                if ($remaining <=$lastPageMaxRows) break;
-                if ($remaining <=$rowsPerPage) {
-                $pageBreakIndices[]=$pi + ($remaining - $lastPageMaxRows);
-                break;
-                }
-                $pageBreakIndices[]=$pi + $rowsPerPage;
-                $pi +=$rowsPerPage;
-                }
-                $currentPageStart=0;
-                @endphp
-                @foreach($items as $index=> $item)
-                @php
-                $undertimeDeduction = $item->undertime_deduction ?? 0;
-                $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
-                $sunSplHolHours = ($item->special_ot_hours ?? 0) + ($item->sunday_hours ?? 0);
-                $sunSplHolPay = ($item->special_ot_pay ?? 0) + ($item->sunday_pay ?? 0);
-                @endphp
-                {{-- Add header before each new page of data --}}
-                @if(in_array($index, $pageBreakIndices))
-                @php
-                $pageItems = $items->slice($currentPageStart, $index - $currentPageStart);
-                $pageUndertimeDeduction = $pageItems->sum(function($entry) {
-                return $entry->undertime_deduction ?? 0;
-                });
-                $pageAmount = $pageItems->sum(function($entry) {
-                return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
-                });
-                $pageSunSplHolHours = $pageItems->sum(function($entry) {
-                return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
-                });
-                $pageSunSplHolPay = $pageItems->sum(function($entry) {
-                return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
-                });
-                @endphp
+        <table class="payroll-table">
+            <colgroup>
+                <col style="width: 13.5%">
+                <col style="width: 4.5%">
+                <col style="width: 3%">
+                <col style="width: 5%">
+                <col style="width: 2.8%">
+                <col style="width: 4.5%">
+                <col style="width: 2.8%">
+                <col style="width: 4.5%">
+                <col style="width: 4.3%">
+                <col style="width: 4.3%">
+                <col style="width: 5.5%">
+                <col style="width: 3.8%">
+                <col style="width: 3.5%">
+                <col style="width: 3%">
+                <col style="width: 3.8%">
+                <col style="width: 3.8%">
+                <col style="width: 3.5%">
+                <col style="width: 3.5%">
+                <col style="width: 3.5%">
+                <col style="width: 5.5%">
+                <col style="width: 7%">
+            </colgroup>
+            <thead>
                 <tr>
-                    <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
+                    <th rowspan="2">NAME</th>
+                    <th rowspan="2">RATE</th>
+                    <th rowspan="2">No. of<br>Days</th>
+                    <th rowspan="2">AMOUNT</th>
+                    <th colspan="4">OVERTIME</th>
+                    <th rowspan="2">Adj. Prev.<br>Salary</th>
+                    <th rowspan="2">Allowance</th>
+                    <th rowspan="2">GROSS<br>AMOUNT</th>
+                    <th rowspan="2">Employee's<br>Savings</th>
+                    <th rowspan="2">Loans</th>
+                    <th rowspan="2">UT</th>
+                    <th rowspan="2">Deductions</th>
+                    <th rowspan="2">Cash<br>Advance</th>
+                    <th colspan="3">PREMIUMS</th>
+                    <th rowspan="2">NET<br>AMOUNT</th>
+                    <th rowspan="2">SIGNATURE</th>
                 </tr>
-                <tr class="total-row">
-                    <td class="text-left"><strong>T O T A L</strong></td>
-                    <td></td>
-                    <td></td>
-                    <td class="text-right">{{ number_format($pageAmount, 2) }}</td>
-                    <td>{{ number_format($pageItems->sum('regular_ot_hours'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('regular_ot_pay'), 2) }}</td>
-                    <td>{{ number_format($pageSunSplHolHours, 2) }}</td>
-                    <td class="text-right">{{ number_format($pageSunSplHolPay, 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('salary_adjustment'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('other_allowances'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('gross_pay'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('employee_savings'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('loans'), 2) }}</td>
-                    <td class="text-right">{{ $pageUndertimeDeduction > 0 ? number_format($pageUndertimeDeduction, 2) : '' }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum(function($entry) { return ($entry->employee_deductions ?? 0) + ($entry->other_deductions ?? 0); }), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('cash_advance'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('sss'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('philhealth'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('pagibig'), 2) }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('net_pay'), 2) }}</td>
-                    <td></td>
+                <tr>
+                    <th>HRS</th>
+                    <th>REG OT</th>
+                    <th>HRS</th>
+                    <th>SUN/SPL. HOL.</th>
+                    <th>SSS</th>
+                    <th>PHIC</th>
+                    <th>HDMF</th>
                 </tr>
-        </tbody>
-    </table>
-    <div class="table-signature-block {{ $isIndividualPayroll ? 'individual-signature-spacing' : '' }}">
-        @include('payroll.partials.signature')
-    </div>
+            </thead>
+            <tbody>
+                @php
+                $lastPageMaxRows = 10;
+                $totalGroupItems = count($items);
+                $pageBreakIndices = [];
+                $pi = 0;
+                while ($pi < $totalGroupItems) {
+                    $remaining=$totalGroupItems - $pi;
+                    if ($remaining <=$lastPageMaxRows) break;
+                    if ($remaining <=$rowsPerPage) {
+                    $pageBreakIndices[]=$pi + ($remaining - $lastPageMaxRows);
+                    break;
+                    }
+                    $pageBreakIndices[]=$pi + $rowsPerPage;
+                    $pi +=$rowsPerPage;
+                    }
+                    $currentPageStart=0;
+                    @endphp
+                    @foreach($items as $index=> $item)
+                    @php
+                    $undertimeDeduction = $item->undertime_deduction ?? 0;
+                    $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
+                    $sunSplHolHours = ($item->special_ot_hours ?? 0) + ($item->sunday_hours ?? 0);
+                    $sunSplHolPay = ($item->special_ot_pay ?? 0) + ($item->sunday_pay ?? 0);
+                    @endphp
+                    {{-- Add header before each new page of data --}}
+                    @if(in_array($index, $pageBreakIndices))
+                    @php
+                    $pageItems = $items->slice($currentPageStart, $index - $currentPageStart);
+                    $pageUndertimeDeduction = $pageItems->sum(function($entry) {
+                    return $entry->undertime_deduction ?? 0;
+                    });
+                    $pageAmount = $pageItems->sum(function($entry) {
+                    return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
+                    });
+                    $pageSunSplHolHours = $pageItems->sum(function($entry) {
+                    return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+                    });
+                    $pageSunSplHolPay = $pageItems->sum(function($entry) {
+                    return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
+                    });
+                    @endphp
+                    <tr>
+                        <td colspan="21" class="nothing-follows"><em>*** nothing follows ***</em></td>
+                    </tr>
+                    <tr class="total-row">
+                        <td class="text-left"><strong>T O T A L</strong></td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-right">{{ number_format($pageAmount, 2) }}</td>
+                        <td>{{ number_format($pageItems->sum('regular_ot_hours'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('regular_ot_pay'), 2) }}</td>
+                        <td>{{ number_format($pageSunSplHolHours, 2) }}</td>
+                        <td class="text-right">{{ number_format($pageSunSplHolPay, 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('salary_adjustment'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('other_allowances'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('gross_pay'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('employee_savings'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('loans'), 2) }}</td>
+                        <td class="text-right">{{ $pageUndertimeDeduction > 0 ? number_format($pageUndertimeDeduction, 2) : '' }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum(function($entry) { return ($entry->employee_deductions ?? 0) + ($entry->other_deductions ?? 0); }), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('cash_advance'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('sss'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('philhealth'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('pagibig'), 2) }}</td>
+                        <td class="text-right">{{ number_format($pageItems->sum('net_pay'), 2) }}</td>
+                        <td></td>
+                    </tr>
+            </tbody>
+        </table>
+        <div class="table-signature-block {{ $isIndividualPayroll ? 'individual-signature-spacing' : '' }}">
+            @include('payroll.partials.signature')
+        </div>
     </div>
 
     <div style="page-break-before: always; margin-top: 6px;">
@@ -922,6 +981,7 @@
         @include('payroll.partials.signature')
     </div>
     @endif
+    </div>
 </body>
 
 </html>
