@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\EmployeeLoan;
 use App\Models\LoanPayment;
+use App\Models\DeductionPayment;
 use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
@@ -69,6 +70,13 @@ class PayrollController extends Controller
         $excludedPositions = $validated['excluded_positions'] ?? [];
 
         if ($payrollScope === 'individual') {
+            if (empty($individualTarget)) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Please select whether to target a position or a specific employee.',
+                ], 422);
+            }
+
             if ($individualTarget === 'position' && empty($includedPosition)) {
                 return response()->json([
                     'valid' => false,
@@ -91,7 +99,13 @@ class PayrollController extends Controller
             // Only check employees who have at least one attendance record
             $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
                 $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
-                    ->where('status', '!=', 'absent');
+                    ->where('status', '!=', 'absent')
+                    ->where('approval_status', 'approved')
+                    ->whereNotNull('time_in')
+                    ->where(function ($sub) {
+                        $sub->whereNotNull('time_out')
+                            ->orWhere('status', 'half_day');
+                    });
             });
         } else {
             // Check all active/on_leave employees OR anyone with attendance
@@ -274,6 +288,8 @@ class PayrollController extends Controller
 
         DB::beginTransaction();
         try {
+            $scopePayload = $this->normalizePayrollScopePayload($validated);
+
             $payroll = new Payroll([
                 'period_name' => $validated['period_name'],
                 'period_start' => $validated['period_start'],
@@ -282,6 +298,12 @@ class PayrollController extends Controller
                 'status' => 'draft',
                 'created_by' => auth()->id(),
                 'notes' => $validated['notes'] ?? null,
+                'payroll_scope' => $scopePayload['payroll_scope'],
+                'individual_target' => $scopePayload['individual_target'],
+                'included_position' => $scopePayload['included_position'],
+                'included_employee_id' => $scopePayload['included_employee_id'],
+                'has_attendance' => $scopePayload['has_attendance'],
+                'excluded_positions' => $scopePayload['excluded_positions'],
                 'deduct_sss' => $validated['deduct_sss'] ?? true,
                 'deduct_philhealth' => $validated['deduct_philhealth'] ?? true,
                 'deduct_pagibig' => $validated['deduct_pagibig'] ?? true,
@@ -297,15 +319,9 @@ class PayrollController extends Controller
             }
 
             // Generate payroll items for all active employees
-            $filters = [
-                'payroll_scope' => $validated['payroll_scope'] ?? 'all',
-                'individual_target' => $validated['individual_target'] ?? null,
-                'included_position' => $validated['included_position'] ?? null,
-                'included_employee_id' => $validated['included_employee_id'] ?? null,
-                'has_attendance' => $validated['has_attendance'] ?? false,
-                'excluded_positions' => $validated['excluded_positions'] ?? [],
+            $filters = array_merge($scopePayload, [
                 'overtime_employee_ids' => $overtimeEmployeeIds,
-            ];
+            ]);
             $this->generatePayrollItems($payroll, $filters);
 
             DB::commit();
@@ -441,7 +457,12 @@ class PayrollController extends Controller
             $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
                 $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
                     ->where('status', '!=', 'absent')
-                    ->where('approval_status', 'approved');
+                    ->where('approval_status', 'approved')
+                    ->whereNotNull('time_in')
+                    ->where(function ($sub) {
+                        $sub->whereNotNull('time_out')
+                            ->orWhere('status', 'half_day');
+                    });
             });
         }
 
@@ -477,6 +498,11 @@ class PayrollController extends Controller
             ->whereBetween('attendance_date', [$periodStart, $periodEnd])
             ->where('status', '!=', 'absent')
             ->where('approval_status', 'approved')
+            ->whereNotNull('time_in')
+            ->where(function ($query) {
+                $query->whereNotNull('time_out')
+                    ->orWhere('status', 'half_day');
+            })
             ->get([
                 'id',
                 'employee_id',
@@ -551,7 +577,12 @@ class PayrollController extends Controller
             $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
                 $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
                     ->where('status', '!=', 'absent')
-                    ->where('approval_status', 'approved');
+                    ->where('approval_status', 'approved')
+                    ->whereNotNull('time_in')
+                    ->where(function ($sub) {
+                        $sub->whereNotNull('time_out')
+                            ->orWhere('status', 'half_day');
+                    });
             });
         }
 
@@ -705,12 +736,57 @@ class PayrollController extends Controller
             ),
             'payment_date' => 'sometimes|date',
             'notes' => 'nullable|string',
+            'payroll_scope' => 'sometimes|in:all,individual',
+            'individual_target' => 'nullable|in:position,employee',
+            'included_position' => 'nullable|string',
+            'included_employee_id' => 'nullable|integer|exists:employees,id',
+            'has_attendance' => 'sometimes|boolean',
+            'excluded_positions' => 'nullable|array',
+            'excluded_positions.*' => 'string',
             'deduct_sss' => 'sometimes|boolean',
             'deduct_philhealth' => 'sometimes|boolean',
             'deduct_pagibig' => 'sometimes|boolean',
             'overtime_employee_ids' => 'nullable|array',
             'overtime_employee_ids.*' => 'integer|exists:employees,id',
         ]);
+
+        $scopeFieldKeys = [
+            'payroll_scope',
+            'individual_target',
+            'included_position',
+            'included_employee_id',
+            'has_attendance',
+            'excluded_positions',
+        ];
+        $incomingScopeChanges = array_intersect_key($validated, array_flip($scopeFieldKeys));
+        if (!empty($incomingScopeChanges)) {
+            $normalizedScope = $this->normalizePayrollScopePayload(array_merge(
+                $this->extractScopePayloadFromPayroll($payroll),
+                $incomingScopeChanges
+            ));
+
+            if ($normalizedScope['payroll_scope'] === 'individual') {
+                if (empty($normalizedScope['individual_target'])) {
+                    return response()->json([
+                        'message' => 'Please select whether to target a position or a specific employee.',
+                    ], 422);
+                }
+
+                if ($normalizedScope['individual_target'] === 'position' && empty($normalizedScope['included_position'])) {
+                    return response()->json([
+                        'message' => 'Please select a position for individual payroll.',
+                    ], 422);
+                }
+
+                if ($normalizedScope['individual_target'] === 'employee' && empty($normalizedScope['included_employee_id'])) {
+                    return response()->json([
+                        'message' => 'Please select an employee for individual payroll.',
+                    ], 422);
+                }
+            }
+
+            $validated = array_merge($validated, $normalizedScope);
+        }
 
         if (array_key_exists('overtime_employee_ids', $validated)) {
             $validated['overtime_employee_ids'] = $this->normalizeEmployeeIds($validated['overtime_employee_ids'] ?? []);
@@ -720,28 +796,66 @@ class PayrollController extends Controller
         }
 
         $oldValues = $payroll->toArray();
+        $recalculationFields = [
+            'period_start',
+            'period_end',
+            'payment_date',
+            'deduct_sss',
+            'deduct_philhealth',
+            'deduct_pagibig',
+            'payroll_scope',
+            'individual_target',
+            'included_position',
+            'included_employee_id',
+            'has_attendance',
+            'excluded_positions',
+            'overtime_employee_ids',
+        ];
+        $shouldRecalculate = $this->hasRecalculationChanges($payroll, $validated, $recalculationFields);
 
         DB::beginTransaction();
         try {
+            if ($shouldRecalculate) {
+                // Reverse previously recorded payroll side effects before regenerating items.
+                $this->reverseLoanPaymentsForPayroll($payroll);
+                $this->reverseDeductionPaymentsForPayroll($payroll);
+                $this->reverseSalaryAdjustmentsForPayroll($payroll);
+                $this->reverseBonusesForPayroll($payroll);
+            }
+
             $payroll->update($validated);
+
+            if ($shouldRecalculate) {
+                $payroll->refresh();
+                $employeeIdsForRecalculation = $this->resolveEmployeeIdsForRecalculation($payroll);
+                $payrollService = app(\App\Services\PayrollService::class);
+                $payrollService->reprocessPayroll($payroll, $employeeIdsForRecalculation);
+
+                // Re-apply loan/deduction progress after item regeneration.
+                $this->recordPaymentsForPayroll($payroll);
+            }
 
             // Log payroll update
             AuditLog::create([
                 'user_id' => auth()->id(),
                 'module' => 'payroll',
                 'action' => 'update_payroll',
-                'description' => "Payroll '{$payroll->period_name}' updated",
+                'description' => $shouldRecalculate
+                    ? "Payroll '{$payroll->period_name}' updated and recalculated"
+                    : "Payroll '{$payroll->period_name}' updated",
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
                 'old_values' => $oldValues,
-                'new_values' => $payroll->fresh()->toArray(),
+                'new_values' => $payroll->fresh()->loadCount('items')->toArray(),
             ]);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payroll updated successfully',
+                'message' => $shouldRecalculate
+                    ? 'Payroll updated and recalculated successfully'
+                    : 'Payroll updated successfully',
                 'data' => $payroll->load(['items.employee', 'creator'])
             ]);
         } catch (\Exception $e) {
@@ -854,6 +968,8 @@ class PayrollController extends Controller
 
         DB::beginTransaction();
         try {
+            $employeeIdsForRecalculation = $this->resolveEmployeeIdsForRecalculation($payroll);
+
             // First, reverse any loan/deduction/salary adjustment/bonus payments that were recorded for this payroll
             $this->reverseLoanPaymentsForPayroll($payroll);
             $this->reverseDeductionPaymentsForPayroll($payroll);
@@ -861,7 +977,7 @@ class PayrollController extends Controller
             $this->reverseBonusesForPayroll($payroll);
 
             $payrollService = app(\App\Services\PayrollService::class);
-            $payrollService->reprocessPayroll($payroll);
+            $payrollService->reprocessPayroll($payroll, $employeeIdsForRecalculation);
 
             // Re-record loan and deduction payments for the reprocessed payroll items
             $this->recordPaymentsForPayroll($payroll);
@@ -1469,44 +1585,7 @@ class PayrollController extends Controller
             ]);
         }
 
-        // Include employees who were working during the payroll period
-        // This includes: active employees, on_leave employees, or anyone with attendance during the period
-        $query = Employee::where(function ($q) use ($payroll) {
-            $q->whereIn('activity_status', ['active', 'on_leave'])
-                ->orWhereHas('attendances', function ($subQ) use ($payroll) {
-                    $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-                        ->where('status', '!=', 'absent');
-                });
-        });
-
-        // Filter by attendance if requested
-        if (!empty($filters['has_attendance'])) {
-            $query->whereHas('attendances', function ($q) use ($payroll) {
-                $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-                    ->where('status', '!=', 'absent');
-            });
-        }
-
-        if (($filters['payroll_scope'] ?? 'all') === 'individual') {
-            if (($filters['individual_target'] ?? null) === 'position' && !empty($filters['included_position'])) {
-                $query->whereHas('positionRate', function ($positionQuery) use ($filters) {
-                    $positionQuery->where('position_name', $filters['included_position']);
-                });
-            }
-
-            if (($filters['individual_target'] ?? null) === 'employee' && !empty($filters['included_employee_id'])) {
-                $query->where('id', $filters['included_employee_id']);
-            }
-        }
-
-        if (!empty($filters['excluded_positions']) && is_array($filters['excluded_positions'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->whereDoesntHave('positionRate')
-                    ->orWhereHas('positionRate', function ($positionQuery) use ($filters) {
-                        $positionQuery->whereNotIn('position_name', $filters['excluded_positions']);
-                    });
-            });
-        }
+        $query = $this->buildEmployeeSelectionQuery($payroll, $filters);
 
         // CRITICAL: Eager load attendances filtered by payroll period
         // Without this, calculatePayrollItem() would process ALL attendance records
@@ -1541,6 +1620,10 @@ class PayrollController extends Controller
             'loans' => function ($q) use ($payroll) {
                 $q->where('status', 'active')
                     ->where('balance', '>', 0)
+                    ->where(function ($query) use ($payroll) {
+                        $query->whereNull('first_payment_date')
+                            ->orWhere('first_payment_date', '<=', $payroll->period_end);
+                    })
                     ->where(function ($query) use ($payroll) {
                         $query->whereNull('maturity_date')
                             ->orWhere('maturity_date', '>=', $payroll->period_start);
@@ -1645,7 +1728,7 @@ class PayrollController extends Controller
                 $payrollItem = PayrollItem::create($item);
 
                 // Record deduction installments for this employee
-                $this->recordDeductionInstallments($payroll, $employee);
+                $this->recordDeductionInstallments($payroll, $employee, $payrollItem);
 
                 // Record loan payments for this employee
                 $this->recordLoanPayments($payroll, $employee, $payrollItem);
@@ -1698,6 +1781,256 @@ class PayrollController extends Controller
             ->all();
     }
 
+    private function normalizePayrollScopePayload(array $payload): array
+    {
+        $scope = ($payload['payroll_scope'] ?? 'all') === 'individual' ? 'individual' : 'all';
+        $target = $payload['individual_target'] ?? null;
+
+        $includedPosition = isset($payload['included_position'])
+            ? trim((string) $payload['included_position'])
+            : null;
+        if ($includedPosition === '') {
+            $includedPosition = null;
+        }
+
+        $includedEmployeeId = isset($payload['included_employee_id']) && $payload['included_employee_id'] !== ''
+            ? (int) $payload['included_employee_id']
+            : null;
+
+        $excludedPositions = collect($payload['excluded_positions'] ?? [])
+            ->filter(fn($position) => is_string($position) && trim($position) !== '')
+            ->map(fn($position) => trim((string) $position))
+            ->unique()
+            ->values()
+            ->all();
+
+        $normalized = [
+            'payroll_scope' => $scope,
+            'individual_target' => $target,
+            'included_position' => $includedPosition,
+            'included_employee_id' => $includedEmployeeId,
+            'has_attendance' => (bool) ($payload['has_attendance'] ?? false),
+            'excluded_positions' => $excludedPositions,
+        ];
+
+        if ($scope !== 'individual') {
+            $normalized['individual_target'] = null;
+            $normalized['included_position'] = null;
+            $normalized['included_employee_id'] = null;
+            return $normalized;
+        }
+
+        if ($target === 'position') {
+            $normalized['included_employee_id'] = null;
+            return $normalized;
+        }
+
+        if ($target === 'employee') {
+            $normalized['included_position'] = null;
+            return $normalized;
+        }
+
+        $normalized['individual_target'] = null;
+        $normalized['included_position'] = null;
+        $normalized['included_employee_id'] = null;
+
+        return $normalized;
+    }
+
+    private function extractScopePayloadFromPayroll(Payroll $payroll): array
+    {
+        $excludedPositions = $payroll->excluded_positions;
+        if (is_string($excludedPositions)) {
+            $decoded = json_decode($excludedPositions, true);
+            $excludedPositions = is_array($decoded) ? $decoded : [];
+        }
+
+        return $this->normalizePayrollScopePayload([
+            'payroll_scope' => $payroll->payroll_scope,
+            'individual_target' => $payroll->individual_target,
+            'included_position' => $payroll->included_position,
+            'included_employee_id' => $payroll->included_employee_id,
+            'has_attendance' => (bool) ($payroll->has_attendance ?? false),
+            'excluded_positions' => is_array($excludedPositions) ? $excludedPositions : [],
+        ]);
+    }
+
+    private function buildEmployeeSelectionQuery(Payroll $payroll, array $filters)
+    {
+        $normalizedFilters = $this->normalizePayrollScopePayload($filters);
+
+        // Include employees who were working during the payroll period
+        // This includes: active employees, on_leave employees, or anyone with attendance during the period
+        $query = Employee::where(function ($q) use ($payroll) {
+            $q->whereIn('activity_status', ['active', 'on_leave'])
+                ->orWhereHas('attendances', function ($subQ) use ($payroll) {
+                    $subQ->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                        ->where('status', '!=', 'absent');
+                });
+        });
+
+        if (!empty($normalizedFilters['has_attendance'])) {
+            $query->whereHas('attendances', function ($q) use ($payroll) {
+                $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
+                    ->where('status', '!=', 'absent')
+                    ->where('approval_status', 'approved')
+                    ->whereNotNull('time_in')
+                    ->where(function ($sub) {
+                        $sub->whereNotNull('time_out')
+                            ->orWhere('status', 'half_day');
+                    });
+            });
+        }
+
+        if ($normalizedFilters['payroll_scope'] === 'individual') {
+            if ($normalizedFilters['individual_target'] === 'position' && !empty($normalizedFilters['included_position'])) {
+                $query->whereHas('positionRate', function ($positionQuery) use ($normalizedFilters) {
+                    $positionQuery->where('position_name', $normalizedFilters['included_position']);
+                });
+            }
+
+            if ($normalizedFilters['individual_target'] === 'employee' && !empty($normalizedFilters['included_employee_id'])) {
+                $query->where('id', $normalizedFilters['included_employee_id']);
+            }
+        }
+
+        if (!empty($normalizedFilters['excluded_positions'])) {
+            $query->where(function ($q) use ($normalizedFilters) {
+                $q->whereDoesntHave('positionRate')
+                    ->orWhereHas('positionRate', function ($positionQuery) use ($normalizedFilters) {
+                        $positionQuery->whereNotIn('position_name', $normalizedFilters['excluded_positions']);
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    private function resolveEmployeeIdsForRecalculation(Payroll $payroll): array
+    {
+        if (!$this->hasPersistedScopeMetadata($payroll)) {
+            $legacyEmployeeIds = $payroll->items()
+                ->pluck('employee_id')
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            if (!empty($legacyEmployeeIds)) {
+                return $legacyEmployeeIds;
+            }
+
+            return $this->buildEmployeeSelectionQuery($payroll, [
+                'payroll_scope' => 'all',
+                'has_attendance' => false,
+                'excluded_positions' => [],
+            ])
+                ->orderBy('employee_number')
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        return $this->buildEmployeeSelectionQuery($payroll, $this->extractScopePayloadFromPayroll($payroll))
+            ->orderBy('employee_number')
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function hasPersistedScopeMetadata(Payroll $payroll): bool
+    {
+        $metadataFields = [
+            'payroll_scope',
+            'individual_target',
+            'included_position',
+            'included_employee_id',
+            'has_attendance',
+            'excluded_positions',
+        ];
+
+        foreach ($metadataFields as $field) {
+            if ($payroll->getRawOriginal($field) !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hasRecalculationChanges(Payroll $payroll, array $validated, array $fields): bool
+    {
+        foreach ($fields as $field) {
+            if (!array_key_exists($field, $validated)) {
+                continue;
+            }
+
+            $currentValue = $payroll->{$field};
+            $newValue = $validated[$field];
+
+            if (in_array($field, ['excluded_positions', 'overtime_employee_ids'], true)) {
+                $normalizeArray = function ($value): array {
+                    if (is_string($value)) {
+                        $decoded = json_decode($value, true);
+                        $value = is_array($decoded) ? $decoded : [];
+                    }
+
+                    return collect(is_array($value) ? $value : [])
+                        ->map(fn($item) => is_scalar($item) ? trim((string) $item) : null)
+                        ->filter(fn($item) => $item !== null && $item !== '')
+                        ->values()
+                        ->all();
+                };
+
+                if ($normalizeArray($currentValue) !== $normalizeArray($newValue)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if (in_array($field, ['deduct_sss', 'deduct_philhealth', 'deduct_pagibig', 'has_attendance'], true)) {
+                if ((bool) $currentValue !== (bool) $newValue) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($field === 'included_employee_id') {
+                if ((int) ($currentValue ?? 0) !== (int) ($newValue ?? 0)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if (in_array($field, ['period_start', 'period_end', 'payment_date'], true)) {
+                $normalizedCurrentDate = $currentValue ? Carbon::parse($currentValue)->toDateString() : null;
+                $normalizedNewDate = $newValue ? Carbon::parse($newValue)->toDateString() : null;
+
+                if ($normalizedCurrentDate !== $normalizedNewDate) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ((string) ($currentValue ?? '') !== (string) ($newValue ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Record all loan and deduction payments for a payroll
      * This is used after payroll processing to update loan/deduction balances
@@ -1712,7 +2045,7 @@ class PayrollController extends Controller
         foreach ($payrollItems as $payrollItem) {
             if ($payrollItem->employee) {
                 // Record deduction installments for this employee
-                $this->recordDeductionInstallments($payroll, $payrollItem->employee);
+                $this->recordDeductionInstallments($payroll, $payrollItem->employee, $payrollItem);
 
                 // Record loan payments for this employee
                 $this->recordLoanPayments($payroll, $payrollItem->employee, $payrollItem);
@@ -1723,8 +2056,11 @@ class PayrollController extends Controller
     /**
      * Record deduction installment payments when payroll is generated
      */
-    private function recordDeductionInstallments(Payroll $payroll, Employee $employee)
+    private function recordDeductionInstallments(Payroll $payroll, Employee $employee, ?PayrollItem $payrollItem = null)
     {
+        // Government deductions are computed from GovernmentRate settings, not manual deduction rows.
+        $governmentManagedDeductionTypes = ['sss', 'philhealth', 'pagibig', 'tax'];
+
         // Get active deductions for this employee in this payroll period
         $activeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
             ->where('status', 'active')
@@ -1736,6 +2072,10 @@ class PayrollController extends Controller
             ->get();
 
         foreach ($activeDeductions as $deduction) {
+            if (in_array($deduction->deduction_type, $governmentManagedDeductionTypes, true)) {
+                continue;
+            }
+
             // Calculate payment amount (use amount_per_cutoff, but not more than balance)
             $amountPerCutoff = $deduction->amount_per_cutoff;
             if (!$amountPerCutoff && $deduction->installments > 0) {
@@ -1759,6 +2099,24 @@ class PayrollController extends Controller
                 }
 
                 $deduction->update($updateData);
+
+                // Track exact deduction payments tied to this payroll for precise reversal.
+                if (Schema::hasTable('deduction_payments')) {
+                    $nextInstallmentNumber = DeductionPayment::where('employee_deduction_id', $deduction->id)
+                        ->max('installment_number');
+                    $nextInstallmentNumber = $nextInstallmentNumber ? ((int) $nextInstallmentNumber + 1) : 1;
+
+                    DeductionPayment::create([
+                        'employee_deduction_id' => $deduction->id,
+                        'payroll_id' => $payroll->id,
+                        'payroll_item_id' => $payrollItem?->id,
+                        'payment_date' => $payroll->payment_date,
+                        'amount' => $paymentAmount,
+                        'balance_after_payment' => (float) ($updateData['balance'] ?? $newBalance),
+                        'installment_number' => $nextInstallmentNumber,
+                        'remarks' => "Payroll deduction for {$payroll->period_name}",
+                    ]);
+                }
             }
         }
     }
@@ -1778,11 +2136,14 @@ class PayrollController extends Controller
         // 2nd cutoff = period ending on 16th or later of the month
         $isSecondCutoff = !$isSemiMonthly || $periodEnd->day >= 16;
 
-        // Get active loans for this employee with balance > 0
-        // Start deducting immediately once loan is active (ignore first_payment_date)
+        // Get active loans for this employee with balance > 0 and payment already due
         $activeLoans = EmployeeLoan::where('employee_id', $employee->id)
             ->where('status', 'active')
             ->where('balance', '>', 0)
+            ->where(function ($query) use ($payroll) {
+                $query->whereNull('first_payment_date')
+                    ->orWhere('first_payment_date', '<=', $payroll->period_end);
+            })
             ->where(function ($query) use ($payroll) {
                 // Loan hasn't matured yet (maturity date is null or after payroll period starts)
                 $query->whereNull('maturity_date')
@@ -1926,6 +2287,10 @@ class PayrollController extends Controller
             $loans = EmployeeLoan::where('employee_id', $employee->id)
                 ->whereIn('status', ['active', 'paid'])
                 ->where(function ($query) use ($payroll) {
+                    $query->whereNull('first_payment_date')
+                        ->orWhere('first_payment_date', '<=', $payroll->period_end);
+                })
+                ->where(function ($query) use ($payroll) {
                     $query->whereNull('maturity_date')
                         ->orWhere('maturity_date', '>=', $payroll->period_start);
                 })
@@ -2042,6 +2407,101 @@ class PayrollController extends Controller
      */
     private function reverseDeductionPaymentsForPayroll(Payroll $payroll)
     {
+        if (Schema::hasTable('deduction_payments')) {
+            $deductionPayments = DeductionPayment::where('payroll_id', $payroll->id)
+                ->orderByDesc('id')
+                ->get();
+
+            if ($deductionPayments->isNotEmpty()) {
+                foreach ($deductionPayments as $payment) {
+                    $deduction = EmployeeDeduction::find($payment->employee_deduction_id);
+                    if (!$deduction) {
+                        continue;
+                    }
+
+                    $newInstallmentsPaid = max(0, (int) $deduction->installments_paid - 1);
+                    $newBalance = min(
+                        (float) $deduction->total_amount,
+                        (float) $deduction->balance + (float) $payment->amount
+                    );
+
+                    $updateData = [
+                        'installments_paid' => $newInstallmentsPaid,
+                        'balance' => $newBalance,
+                    ];
+
+                    if ($deduction->status === 'completed' && $newBalance > 0) {
+                        $updateData['status'] = 'active';
+                    }
+
+                    $deduction->update($updateData);
+                }
+
+                DeductionPayment::where('payroll_id', $payroll->id)->delete();
+                return;
+            }
+        }
+
+        // Legacy fallback path (for payrolls created before deduction_payments existed):
+        // reconstruct exact applied amounts from payroll item deductions_breakdown.
+        $deductionAdjustments = [];
+        $payrollItems = PayrollItem::where('payroll_id', $payroll->id)
+            ->get(['deductions_breakdown']);
+
+        foreach ($payrollItems as $item) {
+            $breakdown = $item->deductions_breakdown;
+            if (!is_array($breakdown)) {
+                continue;
+            }
+
+            foreach ($breakdown as $entry) {
+                $deductionId = (int) ($entry['id'] ?? 0);
+                $amount = (float) ($entry['amount'] ?? 0);
+
+                if ($deductionId <= 0 || $amount <= 0) {
+                    continue;
+                }
+
+                if (!isset($deductionAdjustments[$deductionId])) {
+                    $deductionAdjustments[$deductionId] = [
+                        'amount' => 0,
+                        'installments' => 0,
+                    ];
+                }
+
+                $deductionAdjustments[$deductionId]['amount'] += $amount;
+                $deductionAdjustments[$deductionId]['installments'] += 1;
+            }
+        }
+
+        if (!empty($deductionAdjustments)) {
+            foreach ($deductionAdjustments as $deductionId => $adjustment) {
+                $deduction = EmployeeDeduction::find($deductionId);
+                if (!$deduction) {
+                    continue;
+                }
+
+                $newInstallmentsPaid = max(0, (int) $deduction->installments_paid - (int) $adjustment['installments']);
+                $newBalance = min(
+                    (float) $deduction->total_amount,
+                    (float) $deduction->balance + (float) $adjustment['amount']
+                );
+
+                $updateData = [
+                    'installments_paid' => $newInstallmentsPaid,
+                    'balance' => $newBalance,
+                ];
+
+                if ($deduction->status === 'completed' && $newBalance > 0) {
+                    $updateData['status'] = 'active';
+                }
+
+                $deduction->update($updateData);
+            }
+
+            return;
+        }
+
         // Get all employees in this payroll
         $employeeIds = PayrollItem::where('payroll_id', $payroll->id)->pluck('employee_id');
 

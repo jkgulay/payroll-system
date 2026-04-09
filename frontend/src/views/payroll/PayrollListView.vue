@@ -535,9 +535,9 @@
               <!-- Optional: Only With Attendance -->
               <v-checkbox
                 v-model="formData.has_attendance"
-                label="Only include employees with attendance"
+                label="Only include employees with payable attendance"
                 prepend-icon="mdi-calendar-check"
-                hint="Exclude employees who have no attendance records in this payroll period"
+                hint="Includes only approved attendance with time-in and either time-out or half-day status within this payroll period"
                 persistent-hint
                 color="#ed985f"
                 density="compact"
@@ -1861,18 +1861,30 @@ function editPayroll(item) {
   editMode.value = true;
   currentStep.value = 1;
   selectedPayroll.value = item;
+  const payrollScope = item.payroll_scope || "all";
+  const individualTarget = item.individual_target || "position";
+  const excludedPositions = Array.isArray(item.excluded_positions)
+    ? item.excluded_positions
+    : [];
+
   formData.value = {
     period_name: item.period_name,
     period_start: item.period_start,
     period_end: item.period_end,
     payment_date: item.payment_date,
     notes: item.notes || "",
-    payroll_scope: "all",
-    individual_target: "position",
-    included_position: null,
-    included_employee_id: null,
+    payroll_scope: payrollScope,
+    individual_target: individualTarget,
+    included_position:
+      payrollScope === "individual" && individualTarget === "position"
+        ? item.included_position
+        : null,
+    included_employee_id:
+      payrollScope === "individual" && individualTarget === "employee"
+        ? item.included_employee_id
+        : null,
     has_attendance: Boolean(item.has_attendance),
-    excluded_positions: [],
+    excluded_positions: payrollScope === "all" ? excludedPositions : [],
     overtime_employee_ids: item.overtime_employee_ids || [],
     deduct_sss: item.deduct_sss !== false,
     deduct_philhealth: item.deduct_philhealth !== false,
@@ -2228,34 +2240,11 @@ async function savePayroll() {
     period_end: formData.value.period_end,
     payment_date: formData.value.payment_date,
     notes: formData.value.notes,
-    payroll_scope: formData.value.payroll_scope,
-    individual_target: formData.value.individual_target,
+    ...payrollScopePayload(),
     deduct_sss: formData.value.deduct_sss,
     deduct_philhealth: formData.value.deduct_philhealth,
     deduct_pagibig: formData.value.deduct_pagibig,
   };
-
-  if (formData.value.payroll_scope === "individual") {
-    if (formData.value.individual_target === "position") {
-      payload.included_position = formData.value.included_position;
-    }
-
-    if (formData.value.individual_target === "employee") {
-      payload.included_employee_id = formData.value.included_employee_id;
-    }
-  }
-
-  // Add attendance filter if enabled
-  if (formData.value.has_attendance) {
-    payload.has_attendance = formData.value.has_attendance;
-  }
-
-  if (
-    Array.isArray(formData.value.excluded_positions) &&
-    formData.value.excluded_positions.length > 0
-  ) {
-    payload.excluded_positions = formData.value.excluded_positions;
-  }
 
   if (
     Array.isArray(formData.value.overtime_employee_ids) &&
@@ -2271,23 +2260,7 @@ async function savePayroll() {
       await api.post("/payrolls/validate", {
         period_start: formData.value.period_start,
         period_end: formData.value.period_end,
-        payroll_scope: formData.value.payroll_scope,
-        individual_target: formData.value.individual_target,
-        included_position:
-          formData.value.payroll_scope === "individual" &&
-          formData.value.individual_target === "position"
-            ? formData.value.included_position
-            : null,
-        included_employee_id:
-          formData.value.payroll_scope === "individual" &&
-          formData.value.individual_target === "employee"
-            ? formData.value.included_employee_id
-            : null,
-        has_attendance: formData.value.has_attendance || false,
-        excluded_positions:
-          formData.value.payroll_scope === "all"
-            ? formData.value.excluded_positions || []
-            : [],
+        ...payrollScopePayload(),
       });
     } catch (error) {
       saving.value = false;

@@ -4,224 +4,231 @@
 <head>
     <meta charset="utf-8">
     <title>Payslips - {{ $payroll->period_name }}</title>
-    <style>
+    @php
+    $pageScaleValue = (float) ($pageScale ?? 1);
+    $isA4ScaledLayout = $pageScaleValue < 0.999;
+        @endphp
+        <style>
         @page {
-            margin: {{ $pageMarginCss ?? '6mm 10mm 6mm 8mm' }};
-            size: {{ $pageSizeCss ?? '8.5in 13in' }};
+        margin: 6mm 10mm 6mm 8mm;
+        size: 8.5in 13in;
         }
 
         * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
         }
 
         body {
-            font-family: Arial, sans-serif;
-            font-size: 9.5px;
-            line-height: 1.4;
-            color: #000;
-            transform: scale({{ $pageScale ?? 1 }});
-            transform-origin: top left;
-            width: {{ $pageWidthPercent ?? 100 }}%;
+        font-family: Arial, sans-serif;
+        font-size: 9.5px;
+        line-height: 1.4;
+        color: #000;
+        }
+
+        body.a4-scaled-layout {
+        transform: scale(0.97);
+        transform-origin: top left;
+        width: 103.0928%;
         }
 
         .page-wrapper {
-            page-break-after: always;
-            position: relative;
+        page-break-after: always;
+        position: relative;
         }
 
         .page-wrapper:last-child {
-            page-break-after: auto;
+        page-break-after: auto;
         }
 
         .payslips-grid {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 7px 7px;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 7px 7px;
         }
 
         .payslip-cell {
-            width: 50%;
-            vertical-align: top;
-            padding: 0;
+        width: 50%;
+        vertical-align: top;
+        padding: 0;
         }
 
         .payslip {
-            border: 1px solid #000;
+        border: 1px solid #000;
         }
 
         /* Header */
         .slip-header {
-            text-align: center;
-            padding: 7px 10px;
-            border-bottom: 1px solid #000;
+        text-align: center;
+        padding: 7px 10px;
+        border-bottom: 1px solid #000;
         }
 
         .company-name {
-            font-size: 11.5px;
-            font-weight: bold;
-            letter-spacing: 0.5px;
+        font-size: 11.5px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
         }
 
         .company-address {
-            font-size: 8px;
-            margin-top: 1px;
+        font-size: 8px;
+        margin-top: 1px;
         }
 
         .company-phone {
-            font-size: 8px;
+        font-size: 8px;
         }
 
         /* Main content table - using table for alignment */
         .slip-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 9.5px;
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9.5px;
         }
 
         .slip-table td {
-            padding: 2.5px 10px;
-            vertical-align: top;
+        padding: 2.5px 10px;
+        vertical-align: top;
         }
 
         .slip-table .label-col {
-            width: 42%;
+        width: 42%;
         }
 
         .slip-table .colon-col {
-            width: 3%;
-            text-align: center;
+        width: 3%;
+        text-align: center;
         }
 
         .slip-table .value-col {
-            width: 27%;
-            text-align: right;
+        width: 27%;
+        text-align: right;
         }
 
         .slip-table .amount-col {
-            width: 28%;
-            text-align: right;
+        width: 28%;
+        text-align: right;
         }
 
         .slip-table .name-value {
-            text-align: right;
-            font-weight: bold;
+        text-align: right;
+        font-weight: bold;
         }
 
         .slip-table .bold {
-            font-weight: bold;
+        font-weight: bold;
         }
 
         .section-label {
-            font-weight: bold;
-            font-style: italic;
-            padding-top: 5px !important;
+        font-weight: bold;
+        font-style: italic;
+        padding-top: 5px !important;
         }
 
         /* Separator lines - only on first amount column */
         .separator-line td {
-            padding: 0 !important;
-            height: 1px;
+        padding: 0 !important;
+        height: 1px;
         }
 
         .separator-line .line-right {
-            border-top: 1px solid #000;
+        border-top: 1px solid #000;
         }
 
         .separator-line-thick td {
-            padding: 0 !important;
-            height: 1px;
+        padding: 0 !important;
+        height: 1px;
         }
 
         .separator-line-thick .line-right {
-            border-top: 2px solid #000;
+        border-top: 2px solid #000;
         }
 
         .space-row td {
-            padding: 2px !important;
+        padding: 2px !important;
         }
 
         /* Signature section inside payslip */
         .slip-signature {
-            padding: 7px 10px;
-            border-top: 1px solid #000;
-            font-size: 8px;
+        padding: 7px 10px;
+        border-top: 1px solid #000;
+        font-size: 8px;
         }
 
         .slip-signature table {
-            width: 100%;
-            border-collapse: collapse;
+        width: 100%;
+        border-collapse: collapse;
         }
 
         .slip-signature td {
-            padding: 2px 0;
+        padding: 2px 0;
         }
 
         .sig-name {
-            text-decoration: underline;
-            font-weight: bold;
-            font-style: italic;
+        text-decoration: underline;
+        font-weight: bold;
+        font-style: italic;
         }
 
         .received-line {
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            width: 100px;
+        border-bottom: 1px solid #000;
+        display: inline-block;
+        width: 100px;
         }
 
         /* Page footer signature section */
         .page-footer {
-            width: 100%;
-            margin-top: 12px;
-            border-top: 1px solid #000;
-            padding-top: 8px;
+        width: 100%;
+        margin-top: 12px;
+        border-top: 1px solid #000;
+        padding-top: 8px;
         }
 
         .footer-sig-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 9px;
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9px;
         }
 
         .footer-sig-table td {
-            padding: 2px 5px;
-            vertical-align: top;
-            width: 25%;
+        padding: 2px 5px;
+        vertical-align: top;
+        width: 25%;
         }
 
         .footer-sig-label {
-            font-size: 8px;
-            margin-bottom: 15px;
+        font-size: 8px;
+        margin-bottom: 15px;
         }
 
         .footer-sig-name {
-            font-weight: bold;
-            text-decoration: underline;
-            font-size: 9px;
+        font-weight: bold;
+        text-decoration: underline;
+        font-size: 9px;
         }
 
         .proprietor-section {
-            text-align: center;
-            margin-top: 12px;
-            padding-top: 8px;
-            border-top: 1px solid #000;
+        text-align: center;
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px solid #000;
         }
 
         .proprietor-name {
-            font-size: 10px;
-            font-weight: bold;
-            letter-spacing: 1px;
+        font-size: 10px;
+        font-weight: bold;
+        letter-spacing: 1px;
         }
 
         .proprietor-title {
-            font-size: 9px;
-            margin-top: 2px;
+        font-size: 9px;
+        margin-top: 2px;
         }
-    </style>
+        </style>
 </head>
 
-<body>
+<body class="{{ $isA4ScaledLayout ? 'a4-scaled-layout' : '' }}">
     @php
     $items = $payroll->items;
     $chunks = $items->chunk(4);
@@ -436,7 +443,7 @@
                                 <td class="line-right"></td>
                             </tr>
                             <tr>
-                                <td>Other Deduction</td>
+                                <td>Total Deductions</td>
                                 <td class="colon-col">:</td>
                                 <td class="value-col">-</td>
                                 <td class="amount-col">{{ $totalDeductions > 0 ? number_format($totalDeductions, 2) : '' }}</td>

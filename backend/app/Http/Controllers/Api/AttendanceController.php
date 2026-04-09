@@ -788,7 +788,25 @@ class AttendanceController extends Controller
                 $validated['date_to'] ?? null
             );
 
-            $result = $this->attendanceService->importBiometric($records);
+            // Keep live device fetch behavior consistent with punch-file imports:
+            // map raw device logs to punch rows and run through the same grouped importer.
+            $punchRows = collect($records)->map(function ($record) {
+                $staffCode = trim((string) ($record['employee_number'] ?? $record['biometric_id'] ?? ''));
+                $timestamp = trim((string) (
+                    $record['timestamp']
+                    ?? ((($record['date'] ?? '') && ($record['time'] ?? ''))
+                        ? ($record['date'] . ' ' . $record['time'])
+                        : '')
+                ));
+
+                return [
+                    'Staff Code' => $staffCode,
+                    'Punch Date' => $timestamp,
+                    'Device Name' => trim((string) ($record['device_name'] ?? $record['device'] ?? 'Biometric Device')),
+                ];
+            })->all();
+
+            $result = $this->punchRecordImportService->importPunchRecords($punchRows);
 
             AuditLog::create([
                 'user_id' => $request->user()->id,
@@ -799,7 +817,7 @@ class AttendanceController extends Controller
                 'new_values' => [
                     'records_imported' => $result['imported'],
                     'records_updated' => $result['updated'] ?? 0,
-                    'records_failed' => $result['errors'],
+                    'records_failed' => $result['failed'] ?? 0,
                 ],
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
@@ -809,7 +827,7 @@ class AttendanceController extends Controller
                 'message' => 'Attendance fetched from device successfully',
                 'imported' => $result['imported'],
                 'updated' => $result['updated'] ?? 0,
-                'failed' => $result['errors'],
+                'failed' => $result['failed'] ?? 0,
                 'errors' => $result['error_details'] ?? [],
             ]);
         } catch (\Exception $e) {

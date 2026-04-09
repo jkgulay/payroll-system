@@ -156,7 +156,11 @@ class PayrollService
     {
         $query = Employee::query();
 
-        if (!empty($employeeIds)) {
+        if (is_array($employeeIds)) {
+            if (empty($employeeIds)) {
+                return collect();
+            }
+
             $query->whereIn('id', $employeeIds);
         }
 
@@ -166,11 +170,15 @@ class PayrollService
                 // Attendances for payroll period only (with needed columns)
                 'attendances' => function ($q) use ($payroll) {
                     $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-                        ->whereNotNull('time_out')
-                        ->where('status', '!=', 'incomplete')
                         ->where('status', '!=', 'absent')
                         ->where('approval_status', 'approved')
                         ->whereNotNull('time_in')
+                        ->where(function ($sub) {
+                            // Keep behavior aligned with create flow: half-day entries
+                            // may legitimately have no time_out but still count.
+                            $sub->whereNotNull('time_out')
+                                ->orWhere('status', 'half_day');
+                        })
                         ->select(
                             'id',
                             'employee_id',
@@ -200,6 +208,7 @@ class PayrollService
                             'employee_id',
                             'allowance_type',
                             'allowance_name',
+                            'is_taxable',
                             'amount'
                         );
                 },
@@ -217,6 +226,10 @@ class PayrollService
                     $q->where('status', 'active')
                         ->where('balance', '>', 0)
                         ->where(function ($query) use ($payroll) {
+                            $query->whereNull('first_payment_date')
+                                ->orWhere('first_payment_date', '<=', $payroll->period_end);
+                        })
+                        ->where(function ($query) use ($payroll) {
                             $query->whereNull('maturity_date')
                                 ->orWhere('maturity_date', '>=', $payroll->period_start);
                         })
@@ -226,6 +239,7 @@ class PayrollService
                             'payment_frequency',
                             'semi_monthly_amortization',
                             'monthly_amortization',
+                            'first_payment_date',
                             'balance'
                         );
                 },
@@ -379,22 +393,39 @@ class PayrollService
         $holidayPay = 0;
         $totalUndertimeHours = 0;
 
-        // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
-        $rate = $employee->getBasicSalary();
+        // Resolve to a daily-equivalent rate used by payroll formulas.
+        // - daily: getBasicSalary() is already a daily rate
+        // - monthly: convert monthly base to per-day using configured working days
+        // - hourly: convert hourly base to per-day using standard hours
+        $baseRate = $employee->getBasicSalary();
         // Monthly basic salary for government contribution table lookups (SSS/PhilHealth/Pag-IBIG).
         // Using getMonthlyRate() is correct — contributions are based on BASIC salary, NOT gross pay.
         // Gross pay includes OT, allowances, and holiday premiums which must NOT inflate MSC/PMB.
         $monthlyBasicSalary = $employee->getMonthlyRate();
         $standardHours = config('payroll.standard_hours_per_day', 8);
-        $hourlyRate = $rate / $standardHours;
+        $workingDaysPerMonth = (float) config('payroll.working_days_per_month', 22);
+
+        if ($employee->salary_type === 'monthly') {
+            $rate = $workingDaysPerMonth > 0 ? ($baseRate / $workingDaysPerMonth) : 0;
+        } elseif ($employee->salary_type === 'hourly') {
+            $rate = $baseRate * $standardHours;
+        } else {
+            $rate = $baseRate;
+        }
+
+        $hourlyRate = $standardHours > 0 ? ($rate / $standardHours) : 0;
 
         // Process each attendance record
         foreach ($attendances as $attendance) {
             $attendanceDate = Carbon::parse($attendance->attendance_date);
 
-            // Accumulate undertime hours
+            // Avoid double-penalizing half-day records: half-day pay is already
+            // represented via regularDays += 0.5, so its attendance-side
+            // shortage should not be deducted again as undertime in payroll.
             if ($attendance->undertime_hours > 0) {
-                $totalUndertimeHours += $attendance->undertime_hours;
+                if ((string) ($attendance->status ?? '') !== 'half_day') {
+                    $totalUndertimeHours += $attendance->undertime_hours;
+                }
             }
 
             // Check if this date is Sunday (0 = Sunday in Carbon)
@@ -577,6 +608,9 @@ class PayrollService
         // OPTIMIZATION: Use preloaded relationships (no queries)
         $activeAllowances = $employee->allowances;
         $allowances = $activeAllowances->sum('amount') ?? 0;
+        $taxableAllowances = (float) $activeAllowances
+            ->where('is_taxable', true)
+            ->sum('amount');
 
         $allowancesBreakdown = $activeAllowances->map(function ($allowance) {
             return [
@@ -613,6 +647,7 @@ class PayrollService
             ? $employee->bonuses
             : collect();
         $bonusTotal = (float) $pendingBonuses->sum('amount');
+        $taxableBonusTotal = 0;
         $bonusIds = [];
 
         foreach ($pendingBonuses as $bonus) {
@@ -622,6 +657,11 @@ class PayrollService
                 'name' => $bonus->bonus_name ?: $bonus->bonus_type,
                 'amount' => (float) $bonus->amount,
             ];
+
+            if ((bool) ($bonus->is_taxable ?? true)) {
+                $taxableBonusTotal += (float) $bonus->amount;
+            }
+
             $bonusIds[] = $bonus->id;
         }
 
@@ -700,8 +740,11 @@ class PayrollService
         $isSemiMonthly = $periodDays <= 16;
 
         // Compute withholding tax from dynamic GovernmentRate tax table.
-        // Taxable base follows payroll-period income less mandatory contributions.
-        $taxableIncome = max($grossPay - $sss - $philhealth - $pagibig, 0);
+        // Taxable base excludes non-taxable allowances.
+        // Meal allowance remains excluded by default unless modeled as taxable allowance type.
+        $taxableSupplementalIncome = $taxableAllowances + $taxableBonusTotal;
+        $taxableGrossPay = $basicPay + $holidayPay + $totalOtPay + $taxableSupplementalIncome + $salaryAdjustment;
+        $taxableIncome = max($taxableGrossPay - $sss - $philhealth - $pagibig, 0);
         $withholdingTax = $this->calculateWithholdingTax($taxableIncome, $payroll->period_end, $isSemiMonthly);
 
         // For monthly loans on semi-monthly payrolls: only deduct on 2nd cutoff
@@ -713,6 +756,10 @@ class PayrollService
 
         $loanDeduction = 0;
         foreach ($activeLoans as $loan) {
+            if ($loan->first_payment_date && Carbon::parse($loan->first_payment_date)->gt($periodEnd)) {
+                continue;
+            }
+
             // Determine payment amount based on payroll period and loan payment frequency
             $amortization = 0;
             if ($loan->payment_frequency === 'semi_monthly') {
@@ -734,7 +781,7 @@ class PayrollService
         }
 
         // Employee savings
-        $employeeSavings = 0; // Can be configured
+        $employeeSavings = 0;
 
         // Cash advance (displayed separately in payroll register)
         $cashAdvance = 0;
@@ -742,14 +789,23 @@ class PayrollService
         // OPTIMIZATION: Use preloaded deductions
         $activeDeductions = $employee->deductions;
 
+        // Government deductions must come from GovernmentRate settings and
+        // employee contribution toggles only, never from manual deductions.
+        $governmentManagedDeductionTypes = ['sss', 'philhealth', 'pagibig', 'tax'];
+
         // Types that go into "Other Deductions" column (excluding cash advance)
         $otherDeductionTypes = ['damages'];
+        $employeeSavingsTypes = ['cooperative'];
 
         $employeeDeductions = 0;
         $otherDeductions = 0;
         $deductionsBreakdown = [];
 
         foreach ($activeDeductions as $deduction) {
+            if (in_array($deduction->deduction_type, $governmentManagedDeductionTypes, true)) {
+                continue;
+            }
+
             $amountPerCutoff = $deduction->amount_per_cutoff;
             if (!$amountPerCutoff && $deduction->installments > 0) {
                 $amountPerCutoff = $deduction->total_amount / $deduction->installments;
@@ -759,6 +815,8 @@ class PayrollService
 
             if ($deduction->deduction_type === 'cash_advance') {
                 $cashAdvance += $deductionAmount;
+            } elseif (in_array($deduction->deduction_type, $employeeSavingsTypes, true)) {
+                $employeeSavings += $deductionAmount;
             } elseif (in_array($deduction->deduction_type, $otherDeductionTypes)) {
                 $otherDeductions += $deductionAmount;
             } else {
@@ -956,92 +1014,6 @@ class PayrollService
      */
     private function calculateWithholdingTax(float $taxableIncome, $date = null, bool $isSemiMonthly = true): float
     {
-        if ($taxableIncome <= 0) {
-            return 0;
-        }
-
-        $effectiveDate = Carbon::parse($date ?? now())->toDateString();
-
-        // Cache active tax brackets per effective date for this request to avoid
-        // repeated queries when calculating many employees in one payroll run.
-        static $cachedTaxBracketsByDate = [];
-        if (!array_key_exists($effectiveDate, $cachedTaxBracketsByDate)) {
-            $cachedTaxBracketsByDate[$effectiveDate] = GovernmentRate::query()
-                ->where('is_active', true)
-                ->where('type', 'tax')
-                ->where('effective_date', '<=', $effectiveDate)
-                ->where(function ($q) use ($effectiveDate) {
-                    $q->whereNull('end_date')
-                        ->orWhere('end_date', '>=', $effectiveDate);
-                })
-                ->orderBy('effective_date', 'desc')
-                ->orderBy('min_salary', 'asc')
-                ->get();
-        }
-
-        $taxBrackets = $cachedTaxBracketsByDate[$effectiveDate];
-        $taxBracket = $taxBrackets->first(function ($bracket) use ($taxableIncome) {
-            $minSalary = (float) ($bracket->min_salary ?? 0);
-            $maxSalary = $bracket->max_salary !== null ? (float) $bracket->max_salary : null;
-
-            return $taxableIncome >= $minSalary
-                && ($maxSalary === null || $taxableIncome <= $maxSalary);
-        });
-
-        if (!$taxBracket) {
-            return 0;
-        }
-
-        // Support both common tax table styles from Government Rates UI:
-        // 1) Progressive base + marginal rate on excess over bracket min
-        // 2) Flat percentage per bracket when only employee_rate is provided
-        $baseTax = (float) ($taxBracket->employee_fixed ?? 0);
-        $marginalRate = (float) ($taxBracket->employee_rate ?? 0);
-        $bracketMin = (float) ($taxBracket->min_salary ?? 0);
-        $excess = max($taxableIncome - $bracketMin, 0);
-
-        $hasBaseTax = $taxBracket->employee_fixed !== null && $baseTax > 0;
-        $hasMarginalRate = $taxBracket->employee_rate !== null && $marginalRate > 0;
-
-        $taxAmount = 0;
-        if ($hasBaseTax && $hasMarginalRate) {
-            // Progressive TRAIN-style bracket.
-            $taxAmount = $baseTax + ($excess * ($marginalRate / 100));
-        } elseif ($hasBaseTax) {
-            // Fixed tax amount for the bracket.
-            $taxAmount = $baseTax;
-        } elseif ($hasMarginalRate) {
-            // If this effective-date table has lower brackets with base tax values,
-            // treat the rate as marginal on excess; otherwise treat as flat % table.
-            $taxBracketEffectiveDate = Carbon::parse($taxBracket->effective_date)->toDateString();
-            $hasLowerBaseBracket = $taxBrackets->contains(function ($bracket) use ($bracketMin, $taxBracketEffectiveDate) {
-                if (Carbon::parse($bracket->effective_date)->toDateString() !== $taxBracketEffectiveDate) {
-                    return false;
-                }
-
-                return (float) ($bracket->min_salary ?? 0) < $bracketMin
-                    && (float) ($bracket->employee_fixed ?? 0) > 0;
-            });
-
-            $taxableBase = $hasLowerBaseBracket ? $excess : $taxableIncome;
-            $taxAmount = $taxableBase * ($marginalRate / 100);
-        }
-
-        // Backward compatibility: allow a fixed total contribution fallback.
-        if ($taxAmount <= 0 && $taxBracket->total_contribution !== null) {
-            $taxAmount = (float) $taxBracket->total_contribution;
-        }
-
-        if ($taxAmount <= 0) {
-            return 0;
-        }
-
-        // Keep behavior aligned with contribution handling: tax tables are treated
-        // as monthly values and split for semi-monthly payrolls.
-        if ($isSemiMonthly) {
-            $taxAmount /= 2;
-        }
-
-        return round($taxAmount, 2);
+        return GovernmentRate::calculateTaxForIncome($taxableIncome, $date, $isSemiMonthly);
     }
 }

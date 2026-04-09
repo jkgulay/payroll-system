@@ -455,7 +455,7 @@
                     <td class="text-right">{{ number_format($pageItems->sum('employee_savings'), 2) }}</td>
                     <td class="text-right">{{ number_format($pageItems->sum('loans'), 2) }}</td>
                     <td class="text-right">{{ $pageUndertimeDeduction > 0 ? number_format($pageUndertimeDeduction, 2) : '' }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('employee_deductions'), 2) }}</td>
+                    <td class="text-right">{{ number_format($pageItems->sum(function($entry) { return ($entry->employee_deductions ?? 0) + ($entry->other_deductions ?? 0); }), 2) }}</td>
                     <td class="text-right">{{ number_format($pageItems->sum('cash_advance'), 2) }}</td>
                     <td class="text-right">{{ number_format($pageItems->sum('sss'), 2) }}</td>
                     <td class="text-right">{{ number_format($pageItems->sum('philhealth'), 2) }}</td>
@@ -563,7 +563,7 @@
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
                 <td class="text-right">{{ $item->loans > 0 ? number_format($item->loans, 2) : '' }}</td>
                 <td class="text-right">{{ $undertimeDeduction > 0 ? number_format($undertimeDeduction, 2) : '' }}</td>
-                <td class="text-right">{{ $item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '' }}</td>
+                <td class="text-right">{{ (($item->employee_deductions ?? 0) + ($item->other_deductions ?? 0)) > 0 ? number_format(($item->employee_deductions ?? 0) + ($item->other_deductions ?? 0), 2) : '' }}</td>
                 <td class="text-right">{{ $item->cash_advance > 0 ? number_format($item->cash_advance, 2) : '' }}</td>
                 <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
@@ -605,7 +605,7 @@
                 <td class="text-right">{{ number_format($finalPageItems->sum('employee_savings'), 2) }}</td>
                 <td class="text-right">{{ number_format($finalPageItems->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
-                <td class="text-right">{{ number_format($finalPageItems->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum(function($entry) { return ($entry->employee_deductions ?? 0) + ($entry->other_deductions ?? 0); }), 2) }}</td>
                 <td class="text-right">{{ number_format($finalPageItems->sum('cash_advance'), 2) }}</td>
                 <td class="text-right">{{ number_format($finalPageItems->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($finalPageItems->sum('philhealth'), 2) }}</td>
@@ -753,7 +753,7 @@
                     <td class="text-right">{{ number_format($pageItems->sum('employee_savings'), 2) }}</td>
                     <td class="text-right">{{ number_format($pageItems->sum('loans'), 2) }}</td>
                     <td class="text-right">{{ $pageUndertimeDeduction > 0 ? number_format($pageUndertimeDeduction, 2) : '' }}</td>
-                    <td class="text-right">{{ number_format($pageItems->sum('employee_deductions'), 2) }}</td>
+                    <td class="text-right">{{ number_format($pageItems->sum(function($entry) { return ($entry->employee_deductions ?? 0) + ($entry->other_deductions ?? 0); }), 2) }}</td>
                     <td class="text-right">{{ number_format($pageItems->sum('cash_advance'), 2) }}</td>
                     <td class="text-right">{{ number_format($pageItems->sum('sss'), 2) }}</td>
                     <td class="text-right">{{ number_format($pageItems->sum('philhealth'), 2) }}</td>
@@ -866,7 +866,7 @@
                 <td class="text-right">{{ $item->employee_savings > 0 ? number_format($item->employee_savings, 2) : '' }}</td>
                 <td class="text-right">{{ $item->loans > 0 ? number_format($item->loans, 2) : '' }}</td>
                 <td class="text-right">{{ $undertimeDeduction > 0 ? number_format($undertimeDeduction, 2) : '' }}</td>
-                <td class="text-right">{{ $item->employee_deductions > 0 ? number_format($item->employee_deductions, 2) : '' }}</td>
+                <td class="text-right">{{ (($item->employee_deductions ?? 0) + ($item->other_deductions ?? 0)) > 0 ? number_format(($item->employee_deductions ?? 0) + ($item->other_deductions ?? 0), 2) : '' }}</td>
                 <td class="text-right">{{ $item->cash_advance > 0 ? number_format($item->cash_advance, 2) : '' }}</td>
                 <td class="text-right">{{ $item->sss > 0 ? number_format($item->sss, 2) : '' }}</td>
                 <td class="text-right">{{ $item->philhealth > 0 ? number_format($item->philhealth, 2) : '' }}</td>
@@ -908,7 +908,7 @@
                 <td class="text-right">{{ number_format($finalPageItems->sum('employee_savings'), 2) }}</td>
                 <td class="text-right">{{ number_format($finalPageItems->sum('loans'), 2) }}</td>
                 <td class="text-right">{{ $totalUndertimeDeduction > 0 ? number_format($totalUndertimeDeduction, 2) : '' }}</td>
-                <td class="text-right">{{ number_format($finalPageItems->sum('employee_deductions'), 2) }}</td>
+                <td class="text-right">{{ number_format($finalPageItems->sum(function($entry) { return ($entry->employee_deductions ?? 0) + ($entry->other_deductions ?? 0); }), 2) }}</td>
                 <td class="text-right">{{ number_format($finalPageItems->sum('cash_advance'), 2) }}</td>
                 <td class="text-right">{{ number_format($finalPageItems->sum('sss'), 2) }}</td>
                 <td class="text-right">{{ number_format($finalPageItems->sum('philhealth'), 2) }}</td>

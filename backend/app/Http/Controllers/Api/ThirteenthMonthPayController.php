@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\EmployeeLoan;
 use App\Models\PayrollItem;
 use App\Models\CompanyInfo;
+use App\Models\GovernmentRate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -84,6 +85,19 @@ class ThirteenthMonthPayController extends Controller
 
                 $employees = $employeesQuery->get();
 
+                // Track already-consumed annual 13th-month non-taxable cap per employee
+                // from prior batches in the same year.
+                $usedTaxFreeByEmployee = ThirteenthMonthPayItem::query()
+                    ->selectRaw('employee_id, COALESCE(SUM(non_taxable_thirteenth_month), 0) as used_non_taxable')
+                    ->whereIn('employee_id', $employees->pluck('id'))
+                    ->whereHas('thirteenthMonthPay', function ($query) use ($year, $thirteenthMonth) {
+                        $query->where('year', $year)
+                            ->whereIn('status', ['computed', 'approved', 'paid'])
+                            ->where('id', '!=', $thirteenthMonth->id);
+                    })
+                    ->groupBy('employee_id')
+                    ->pluck('used_non_taxable', 'employee_id');
+
                 $totalAmount = 0;
 
                 foreach ($employees as $employee) {
@@ -112,12 +126,18 @@ class ThirteenthMonthPayController extends Controller
 
                     // Tax-free limit is 90,000 per year (Philippine law)
                     $taxFreeLimit = 90000;
-                    $nonTaxable = min($thirteenthMonthAmount, $taxFreeLimit);
-                    $taxable = max($thirteenthMonthAmount - $taxFreeLimit, 0);
+                    $alreadyUsedTaxFree = (float) ($usedTaxFreeByEmployee[$employee->id] ?? 0);
+                    $remainingTaxFree = max($taxFreeLimit - $alreadyUsedTaxFree, 0);
+                    $nonTaxable = min($thirteenthMonthAmount, $remainingTaxFree);
+                    $taxable = max($thirteenthMonthAmount - $nonTaxable, 0);
 
-                    // Calculate withholding tax on taxable amount (using annualized rate)
-                    // Simplified: 0% on first 250k, 20% on 250k-400k, 25% on 400k-800k, etc.
-                    $withholdingTax = $this->calculateWithholdingTax($taxable);
+                    // Use dynamic tax settings from /government-rates.
+                    // 13th month is a one-time payout, so do not split into semi-monthly.
+                    $withholdingTax = GovernmentRate::calculateTaxForIncome(
+                        (float) $taxable,
+                        $request->payment_date,
+                        false
+                    );
 
                     $netPay = $thirteenthMonthAmount - $withholdingTax;
 
@@ -245,35 +265,6 @@ class ThirteenthMonthPayController extends Controller
     }
 
     /**
-     * Calculate withholding tax (simplified Philippine TRAIN law)
-     */
-    private function calculateWithholdingTax($taxableAmount)
-    {
-        if ($taxableAmount <= 0) {
-            return 0;
-        }
-
-        // Philippine TRAIN law tax brackets (annualized)
-        $brackets = [
-            ['min' => 0, 'max' => 250000, 'rate' => 0, 'base' => 0],
-            ['min' => 250000, 'max' => 400000, 'rate' => 0.20, 'base' => 0],
-            ['min' => 400000, 'max' => 800000, 'rate' => 0.25, 'base' => 30000],
-            ['min' => 800000, 'max' => 2000000, 'rate' => 0.30, 'base' => 130000],
-            ['min' => 2000000, 'max' => 8000000, 'rate' => 0.32, 'base' => 490000],
-            ['min' => 8000000, 'max' => PHP_INT_MAX, 'rate' => 0.35, 'base' => 2410000],
-        ];
-
-        foreach ($brackets as $bracket) {
-            if ($taxableAmount >= $bracket['min'] && $taxableAmount < $bracket['max']) {
-                $excess = $taxableAmount - $bracket['min'];
-                return $bracket['base'] + ($excess * $bracket['rate']);
-            }
-        }
-
-        return 0;
-    }
-
-    /**
      * Export 13th month pay to PDF with department grouping (Simple format)
      */
     public function exportPdf($id, Request $request)
@@ -368,7 +359,7 @@ class ThirteenthMonthPayController extends Controller
 
             // Get C/A Balance from active loans
             $caBalance = EmployeeLoan::where('employee_id', $employeeId)
-                ->where('loan_type', 'cash_advance')
+                ->whereIn('loan_type', ['salary_advance', 'cash_advance'])
                 ->where('status', 'active')
                 ->sum('balance');
 
