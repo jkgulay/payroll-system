@@ -73,15 +73,17 @@ class GovernmentRate extends Model
 
     public function scopeForSalary($query, $salary)
     {
-        return $query->where(function ($q) use ($salary) {
-            $q->where(function ($subQ) use ($salary) {
-                $subQ->where('min_salary', '<=', $salary)
-                    ->where('max_salary', '>=', $salary);
-            })->orWhere(function ($subQ) use ($salary) {
-                $subQ->where('min_salary', '<=', $salary)
-                    ->whereNull('max_salary');
+        return $query
+            // Null min_salary is treated as 0 for non-bracket/manual rows.
+            ->where(function ($q) use ($salary) {
+                $q->whereNull('min_salary')
+                    ->orWhere('min_salary', '<=', $salary);
+            })
+            // Null max_salary is open-ended.
+            ->where(function ($q) use ($salary) {
+                $q->whereNull('max_salary')
+                    ->orWhere('max_salary', '>=', $salary);
             });
-        });
     }
 
     public function scopeEffectiveOn($query, $date = null)
@@ -104,6 +106,7 @@ class GovernmentRate extends Model
             ->forSalary($monthlySalary)
             ->effectiveOn($date)
             ->orderBy('effective_date', 'desc')
+            ->orderByRaw('COALESCE(min_salary, 0) DESC')
             ->first();
 
         if (!$rate) {
@@ -122,12 +125,31 @@ class GovernmentRate extends Model
             ? (float)$rate->employer_fixed
             : ($monthlySalary * ($rate->employer_rate / 100));
 
-        // Use total_contribution if specified (for fixed brackets)
-        if ($rate->total_contribution) {
+        // Use total_contribution if specified (for fixed brackets).
+        // If either side is missing, infer it from total to avoid returning zero.
+        if ($rate->total_contribution !== null) {
+            $totalContribution = (float) $rate->total_contribution;
+
+            $employeeFixed = $rate->employee_fixed !== null
+                ? (float) $rate->employee_fixed
+                : null;
+            $employerFixed = $rate->employer_fixed !== null
+                ? (float) $rate->employer_fixed
+                : null;
+
+            if ($employeeFixed === null && $employerFixed === null) {
+                $employeeFixed = round($totalContribution / 2, 2);
+                $employerFixed = round($totalContribution - $employeeFixed, 2);
+            } elseif ($employeeFixed === null) {
+                $employeeFixed = round(max($totalContribution - $employerFixed, 0), 2);
+            } elseif ($employerFixed === null) {
+                $employerFixed = round(max($totalContribution - $employeeFixed, 0), 2);
+            }
+
             return [
-                'employee' => $rate->employee_fixed ?? 0,
-                'employer' => $rate->employer_fixed ?? 0,
-                'total' => $rate->total_contribution,
+                'employee' => $employeeFixed,
+                'employer' => $employerFixed,
+                'total' => round($totalContribution, 2),
             ];
         }
 

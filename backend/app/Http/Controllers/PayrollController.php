@@ -125,17 +125,9 @@ class PayrollController extends Controller
             });
         }
 
-        // Only include employees who have COMPLETE attendance in the period.
-        // Records with status='incomplete' (no time_out) are excluded and appear in Missing Attendance tab.
-        $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
-            $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
-                ->where('status', '!=', 'incomplete')
-                ->where('status', '!=', 'absent')
-                ->where('approval_status', 'approved')
-                ->whereNotNull('time_in')
-                ->whereNotNull('time_out');
-        });
-
+        // Candidate employees that this payroll scope/filter can include.
+        // Do not require complete attendance here; we need to detect incomplete
+        // punches for this full candidate set.
         $employeeIds = $employeeQuery->pluck('id');
 
         // Step 2: Find incomplete/missing attendance records for these employees (for Missing Attendance tab)
@@ -258,30 +250,26 @@ class PayrollController extends Controller
             'excluded_positions.*' => 'string',
             'overtime_employee_ids' => 'nullable|array',
             'overtime_employee_ids.*' => 'integer|exists:employees,id',
-            // Allow force create to bypass validation
-            'force_create' => 'nullable|boolean',
         ]);
 
         $overtimeEmployeeIds = $this->normalizeEmployeeIds($validated['overtime_employee_ids'] ?? []);
 
-        // Run validation check unless force_create is true
-        if (!($validated['force_create'] ?? false)) {
-            $validationRequest = new Request([
-                'period_start' => $validated['period_start'],
-                'period_end' => $validated['period_end'],
-                'payroll_scope' => $validated['payroll_scope'] ?? 'all',
-                'individual_target' => $validated['individual_target'] ?? null,
-                'included_position' => $validated['included_position'] ?? null,
-                'included_employee_id' => $validated['included_employee_id'] ?? null,
-                'has_attendance' => $validated['has_attendance'] ?? false,
-                'excluded_positions' => $validated['excluded_positions'] ?? [],
-            ]);
+        // Always run attendance completeness validation before payroll creation.
+        $validationRequest = new Request([
+            'period_start' => $validated['period_start'],
+            'period_end' => $validated['period_end'],
+            'payroll_scope' => $validated['payroll_scope'] ?? 'all',
+            'individual_target' => $validated['individual_target'] ?? null,
+            'included_position' => $validated['included_position'] ?? null,
+            'included_employee_id' => $validated['included_employee_id'] ?? null,
+            'has_attendance' => $validated['has_attendance'] ?? false,
+            'excluded_positions' => $validated['excluded_positions'] ?? [],
+        ]);
 
-            $validationResponse = $this->validatePayrollCreation($validationRequest);
+        $validationResponse = $this->validatePayrollCreation($validationRequest);
 
-            if ($validationResponse->status() === 422) {
-                return $validationResponse;
-            }
+        if ($validationResponse->status() === 422) {
+            return $validationResponse;
         }
 
         DB::beginTransaction();
@@ -1628,6 +1616,12 @@ class PayrollController extends Controller
                 $item = $this->payrollService->calculatePayrollItem($payroll, $employee, $holidays, [
                     'include_overtime' => $includeOvertime,
                 ]);
+
+                // Keep create flow consistent with PayrollService::processPayroll()
+                // so reprocessing does not change employee inclusion unexpectedly.
+                if ($item['gross_pay'] <= 0) {
+                    continue;
+                }
 
                 // Validate calculated values before creating record
                 if (!is_numeric($item['gross_pay']) || !is_finite($item['gross_pay'])) {

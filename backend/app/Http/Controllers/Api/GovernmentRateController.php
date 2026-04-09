@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttendanceModificationRequest;
 use App\Models\GovernmentRate;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
@@ -10,6 +11,35 @@ use Illuminate\Http\JsonResponse;
 
 class GovernmentRateController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('role:admin,hr,payrollist');
+
+        $this->middleware(function (Request $request, $next) {
+            $user = $request->user();
+
+            if (!$user || in_array($user->role, ['admin', 'hr'], true)) {
+                return $next($request);
+            }
+
+            $hasApprovedToday = AttendanceModificationRequest::query()
+                ->where('requested_by', $user->id)
+                ->where('module', 'government-rates')
+                ->where('status', 'approved')
+                ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])
+                ->exists();
+
+            if (!$hasApprovedToday) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access request required for government rates.',
+                ], 403);
+            }
+
+            return $next($request);
+        });
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = GovernmentRate::query()->with(['createdBy', 'updatedBy']);

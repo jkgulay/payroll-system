@@ -43,6 +43,10 @@ return [
 
         // OT Grace Period (minimum gap between regular time_out and OT start)
         'ot_grace_period_minutes' => env('PAYROLL_OT_GRACE_MINUTES', 15),
+
+        // Limit how far back attendance records are recalculated after
+        // schedule updates, to avoid rewriting historical payroll periods.
+        'schedule_recalculation_lookback_days' => env('PAYROLL_SCHEDULE_RECALC_LOOKBACK_DAYS', 60),
     ],
 
     /*

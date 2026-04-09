@@ -113,7 +113,9 @@
           </v-col>
           <v-col cols="auto" v-if="hasActiveFilters">
             <v-chip size="small" color="info" variant="tonal">
-              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? "s" : "" }}
+              {{ activeFilterCount }} active filter{{
+                activeFilterCount > 1 ? "s" : ""
+              }}
             </v-chip>
           </v-col>
           <v-col cols="auto">
@@ -244,7 +246,13 @@
     </div>
 
     <!-- Create/Edit Dialog - Modern UI -->
-    <v-dialog v-model="dialog" max-width="1280px" width="94vw" persistent scrollable>
+    <v-dialog
+      v-model="dialog"
+      max-width="880px"
+      width="94vw"
+      persistent
+      scrollable
+    >
       <v-card class="modern-dialog payroll-form-dialog">
         <!-- Enhanced Header -->
         <v-card-title class="dialog-header payroll-dialog-header">
@@ -274,18 +282,13 @@
           @keydown.capture="handlePayrollFormKeydown"
         >
           <v-form ref="form" v-model="valid" class="payroll-form">
-            <v-alert
-              type="info"
-              variant="tonal"
-              density="compact"
-              class="mb-3"
-            >
+            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
               <template v-slot:prepend>
                 <v-icon icon="mdi-lightbulb-on-outline"></v-icon>
               </template>
               <div class="text-caption">
-                Fill in the payroll dates first, then choose optional filters and
-                deductions.
+                Fill in the payroll dates first, then choose optional filters
+                and deductions.
               </div>
             </v-alert>
 
@@ -304,7 +307,9 @@
                 :class="{ active: currentStep === 2, done: currentStep > 2 }"
               >
                 <span class="wizard-step-index">2</span>
-                <span class="wizard-step-label">Employees, Overtime & Review</span>
+                <span class="wizard-step-label"
+                  >Employees, Overtime & Review</span
+                >
               </button>
               <button
                 type="button"
@@ -317,627 +322,665 @@
             </div>
 
             <div v-show="currentStep === 1">
-
-            <!-- Section 1: Basic Information -->
-            <v-col cols="12" class="px-0">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon size="18">mdi-information</v-icon>
+              <!-- Section 1: Basic Information -->
+              <v-col cols="12" class="px-0">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-information</v-icon>
+                  </div>
+                  <h3 class="section-title">Basic Information</h3>
                 </div>
-                <h3 class="section-title">Basic Information</h3>
+              </v-col>
+
+              <!-- Period Name -->
+              <div class="form-field-wrapper mt-2">
+                <label class="form-label">
+                  <v-icon size="small" color="#ed985f">mdi-label</v-icon>
+                  Period Name <span class="text-error">*</span>
+                </label>
+                <v-text-field
+                  v-model="formData.period_name"
+                  placeholder="Enter period name"
+                  :rules="[(v) => !!v || 'Period name is required']"
+                  hint="Example: March 1–15, 2026"
+                  persistent-hint
+                  required
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-label"
+                  color="#ed985f"
+                ></v-text-field>
               </div>
-            </v-col>
 
-            <!-- Period Name -->
-            <div class="form-field-wrapper mt-2">
-              <label class="form-label">
-                <v-icon size="small" color="#ed985f">mdi-label</v-icon>
-                Period Name <span class="text-error">*</span>
-              </label>
-              <v-text-field
-                v-model="formData.period_name"
-                placeholder="Enter period name"
-                :rules="[(v) => !!v || 'Period name is required']"
-                hint="Example: March 1–15, 2026"
-                persistent-hint
-                required
-                variant="outlined"
-                density="compact"
-                prepend-inner-icon="mdi-label"
-                color="#ed985f"
-              ></v-text-field>
-            </div>
+              <v-row class="payroll-dates-row">
+                <!-- Period Start -->
+                <v-col cols="12" sm="6">
+                  <div class="form-field-wrapper">
+                    <label class="form-label">
+                      <v-icon size="small" color="#ed985f"
+                        >mdi-calendar-start</v-icon
+                      >
+                      Period Start <span class="text-error">*</span>
+                    </label>
+                    <v-text-field
+                      v-model="formData.period_start"
+                      type="date"
+                      placeholder="Select start date"
+                      :rules="startDateRules"
+                      required
+                      variant="outlined"
+                      density="compact"
+                      prepend-inner-icon="mdi-calendar-start"
+                      color="#ed985f"
+                    ></v-text-field>
+                  </div>
+                </v-col>
 
-            <v-row class="payroll-dates-row">
-              <!-- Period Start -->
-              <v-col cols="12" sm="6">
-                <div class="form-field-wrapper">
-                  <label class="form-label">
-                    <v-icon size="small" color="#ed985f"
-                      >mdi-calendar-start</v-icon
-                    >
-                    Period Start <span class="text-error">*</span>
-                  </label>
-                  <v-text-field
-                    v-model="formData.period_start"
-                    type="date"
-                    placeholder="Select start date"
-                    :rules="startDateRules"
-                    required
-                    variant="outlined"
-                    density="compact"
-                    prepend-inner-icon="mdi-calendar-start"
-                    color="#ed985f"
-                  ></v-text-field>
-                </div>
-              </v-col>
+                <!-- Period End -->
+                <v-col cols="12" sm="6">
+                  <div class="form-field-wrapper">
+                    <label class="form-label">
+                      <v-icon size="small" color="#ed985f"
+                        >mdi-calendar-end</v-icon
+                      >
+                      Period End <span class="text-error">*</span>
+                    </label>
+                    <v-text-field
+                      v-model="formData.period_end"
+                      type="date"
+                      placeholder="Select end date"
+                      :rules="endDateRules"
+                      required
+                      variant="outlined"
+                      density="compact"
+                      prepend-inner-icon="mdi-calendar-end"
+                      color="#ed985f"
+                    ></v-text-field>
+                  </div>
+                </v-col>
+              </v-row>
 
-              <!-- Period End -->
-              <v-col cols="12" sm="6">
-                <div class="form-field-wrapper">
-                  <label class="form-label">
-                    <v-icon size="small" color="#ed985f"
-                      >mdi-calendar-end</v-icon
-                    >
-                    Period End <span class="text-error">*</span>
-                  </label>
-                  <v-text-field
-                    v-model="formData.period_end"
-                    type="date"
-                    placeholder="Select end date"
-                    :rules="endDateRules"
-                    required
-                    variant="outlined"
-                    density="compact"
-                    prepend-inner-icon="mdi-calendar-end"
-                    color="#ed985f"
-                  ></v-text-field>
-                </div>
-              </v-col>
-            </v-row>
-
-            <!-- Payment Date -->
-            <div class="form-field-wrapper">
-              <label class="form-label">
-                <v-icon size="small" color="#ed985f">mdi-calendar-check</v-icon>
-                Payment Date <span class="text-error">*</span>
-              </label>
-              <v-text-field
-                v-model="formData.payment_date"
-                type="date"
-                placeholder="Select payment date"
-                :rules="paymentDateRules"
-                required
-                variant="outlined"
-                density="compact"
-                prepend-inner-icon="mdi-calendar-check"
-                color="#ed985f"
-              ></v-text-field>
-            </div>
+              <!-- Payment Date -->
+              <div class="form-field-wrapper">
+                <label class="form-label">
+                  <v-icon size="small" color="#ed985f"
+                    >mdi-calendar-check</v-icon
+                  >
+                  Payment Date <span class="text-error">*</span>
+                </label>
+                <v-text-field
+                  v-model="formData.payment_date"
+                  type="date"
+                  placeholder="Select payment date"
+                  :rules="paymentDateRules"
+                  required
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-calendar-check"
+                  color="#ed985f"
+                ></v-text-field>
+              </div>
             </div>
 
             <div v-show="currentStep === 2">
-
-            <!-- Section 2: Employee Selection -->
-            <v-col cols="12" class="px-0 mt-4">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon size="18">mdi-account-group</v-icon>
+              <!-- Section 2: Employee Selection -->
+              <v-col cols="12" class="px-0 mt-4">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-account-group</v-icon>
+                  </div>
+                  <h3 class="section-title">Employee Selection</h3>
                 </div>
-                <h3 class="section-title">Employee Selection</h3>
-              </div>
-            </v-col>
-
-            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-information"></v-icon>
-              </template>
-              <div class="text-caption">
-                <strong>Note:</strong> Choose whether to generate payroll for
-                all employees or only a selected position/employee.
-              </div>
-            </v-alert>
-
-            <v-btn-toggle
-              v-model="formData.payroll_scope"
-              color="primary"
-              variant="outlined"
-              divided
-              mandatory
-              class="mb-3"
-            >
-              <v-btn value="all" size="small">
-                <v-icon start>mdi-account-group</v-icon>
-                All Employees
-              </v-btn>
-              <v-btn value="individual" size="small">
-                <v-icon start>mdi-account-check</v-icon>
-                Individual Payroll
-              </v-btn>
-            </v-btn-toggle>
-
-            <v-row v-if="formData.payroll_scope === 'individual'" class="mt-0">
-              <v-col cols="12" md="5">
-                <v-select
-                  v-model="formData.individual_target"
-                  :items="individualTargetOptions"
-                  item-title="title"
-                  item-value="value"
-                  label="Individual Payroll By"
-                  variant="outlined"
-                  density="compact"
-                  prepend-inner-icon="mdi-filter"
-                ></v-select>
               </v-col>
 
-              <v-col cols="12" md="7" v-if="formData.individual_target === 'position'">
-                <v-autocomplete
-                  v-model="formData.included_position"
-                  :items="positionOptions"
-                  label="Select Position *"
-                  placeholder="Choose position"
-                  prepend-inner-icon="mdi-briefcase"
-                  clearable
-                  variant="outlined"
-                  density="compact"
-                  :rules="[(v) => !!v || 'Position is required']"
-                ></v-autocomplete>
-              </v-col>
-
-              <v-col cols="12" md="7" v-else>
-                <v-autocomplete
-                  v-model="formData.included_employee_id"
-                  :items="employeeOptions"
-                  :loading="employeeOptionsLoading"
-                  item-title="full_name"
-                  item-value="id"
-                  label="Select Employee *"
-                  placeholder="Search by name, employee number, or position"
-                  prepend-inner-icon="mdi-account-search"
-                  clearable
-                  variant="outlined"
-                  density="compact"
-                  :custom-filter="customEmployeeFilter"
-                  :rules="[(v) => !!v || 'Employee is required']"
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template v-slot:title>
-                        {{ item.raw.full_name }}
-                      </template>
-                      <template v-slot:subtitle>
-                        {{ item.raw.employee_number }} - {{ item.raw.position || "N/A" }}
-                      </template>
-                    </v-list-item>
-                  </template>
-                </v-autocomplete>
-              </v-col>
-            </v-row>
-
-            <!-- Optional: Only With Attendance -->
-            <v-checkbox
-              v-model="formData.has_attendance"
-              label="Only include employees with attendance"
-              prepend-icon="mdi-calendar-check"
-              hint="Exclude employees who have no attendance records in this payroll period"
-              persistent-hint
-              color="#ed985f"
-              density="compact"
-              class="mb-3 payroll-checkbox"
-            ></v-checkbox>
-
-            <v-autocomplete
-              v-if="formData.payroll_scope === 'all'"
-              v-model="formData.excluded_positions"
-              :items="positionOptions"
-              label="Exclude Positions (Optional)"
-              placeholder="Select positions to exclude from this payroll"
-              prepend-inner-icon="mdi-account-remove"
-              multiple
-              chips
-              closable-chips
-              clearable
-              variant="outlined"
-              density="compact"
-              hint="Employees with selected positions will not be included in payroll generation"
-              persistent-hint
-              class="mb-3"
-            ></v-autocomplete>
-
-            <v-col cols="12" class="px-0 mt-2">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon size="18">mdi-clock-check-outline</v-icon>
-                </div>
-                <h3 class="section-title">Overtime Selection & Day View</h3>
-              </div>
-            </v-col>
-
-            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-information"></v-icon>
-              </template>
-              <div class="text-caption">
-                Load employees for this payroll period, then select who should
-                have overtime included. You can also edit their daily time in,
-                time out, and OT times before payroll creation.
-              </div>
-            </v-alert>
-
-            <div class="d-flex flex-wrap ga-2 mb-3">
-              <v-btn
-                color="#ED985F"
+              <v-alert
+                type="info"
                 variant="tonal"
-                prepend-icon="mdi-refresh"
-                :loading="overtimeCandidatesLoading"
-                @click="loadOvertimeCandidates"
+                density="compact"
+                class="mb-3"
               >
-                Load Overtime Candidates
-              </v-btn>
-              <v-chip
-                v-if="overtimeCandidatesLoaded"
-                size="small"
-                color="info"
-                variant="tonal"
-              >
-                {{ overtimeCandidates.length }} employee(s) found
-              </v-chip>
-            </div>
-
-            <v-autocomplete
-              v-model="formData.overtime_employee_ids"
-              :items="overtimeCandidates"
-              item-title="display_name"
-              item-value="id"
-              label="Include Overtime For (Optional)"
-              placeholder="If empty, overtime is included for all employees"
-              prepend-inner-icon="mdi-account-clock"
-              multiple
-              chips
-              closable-chips
-              clearable
-              variant="outlined"
-              density="compact"
-              :disabled="!overtimeCandidatesLoaded"
-              class="mb-3"
-            >
-              <template v-slot:item="{ props, item }">
-                <v-list-item v-bind="props">
-                  <template v-slot:title>
-                    {{ item.raw.full_name }}
-                  </template>
-                  <template v-slot:subtitle>
-                    {{ item.raw.employee_number }} - {{ item.raw.position || "N/A" }}
-                    <span v-if="item.raw.has_overtime_request"> · OT request found</span>
-                  </template>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
-
-            <v-row class="mt-0">
-              <v-col cols="12" md="7">
-                <v-select
-                  v-model="overtimePreviewEmployeeId"
-                  :items="selectedOvertimeEmployees"
-                  item-title="display_name"
-                  item-value="id"
-                  label="View Daily Time For Selected Employee"
-                  prepend-inner-icon="mdi-calendar-clock"
-                  :disabled="selectedOvertimeEmployees.length === 0"
-                  variant="outlined"
-                  density="compact"
-                  clearable
-                ></v-select>
-              </v-col>
-              <v-col cols="12" md="5" class="d-flex align-center">
-                <v-btn
-                  variant="outlined"
-                  color="#ED985F"
-                  prepend-icon="mdi-table-eye"
-                  :disabled="!overtimePreviewEmployeeId"
-                  :loading="employeeAttendanceLoading"
-                  @click="loadSelectedEmployeeAttendance"
-                >
-                  Load Day View
-                </v-btn>
-              </v-col>
-            </v-row>
-
-            <div
-              v-if="selectedEmployeeAttendance.length > 0"
-              class="attendance-day-view mt-2 mb-4"
-            >
-              <v-table density="compact">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Time In</th>
-                    <th>Time Out</th>
-                    <th>OT In</th>
-                    <th>OT Out</th>
-                    <th>OT Hours</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="row in selectedEmployeeAttendance" :key="row.id">
-                    <td>{{ formatDate(row.attendance_date) }}</td>
-                    <td>
-                      <v-chip size="x-small" variant="tonal" color="info">
-                        {{ row.status }}
-                      </v-chip>
-                    </td>
-                    <td>
-                      <v-text-field
-                        v-model="row.time_in_input"
-                        type="time"
-                        density="compact"
-                        variant="outlined"
-                        hide-details
-                      ></v-text-field>
-                    </td>
-                    <td>
-                      <v-text-field
-                        v-model="row.time_out_input"
-                        type="time"
-                        density="compact"
-                        variant="outlined"
-                        hide-details
-                      ></v-text-field>
-                    </td>
-                    <td>
-                      <v-text-field
-                        v-model="row.ot_time_in_input"
-                        type="time"
-                        density="compact"
-                        variant="outlined"
-                        hide-details
-                      ></v-text-field>
-                    </td>
-                    <td>
-                      <v-text-field
-                        v-model="row.ot_time_out_input"
-                        type="time"
-                        density="compact"
-                        variant="outlined"
-                        hide-details
-                      ></v-text-field>
-                    </td>
-                    <td>{{ row.overtime_hours || 0 }}</td>
-                    <td>
-                      <v-btn
-                        size="small"
-                        color="#ED985F"
-                        variant="tonal"
-                        :loading="attendanceRowSaving[row.id]"
-                        @click="saveAttendanceRow(row)"
-                      >
-                        Save
-                      </v-btn>
-                    </td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </div>
-
-            <v-col cols="12" class="px-0 mt-2">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon size="18">mdi-timeline-clock-outline</v-icon>
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-information"></v-icon>
+                </template>
+                <div class="text-caption">
+                  <strong>Note:</strong> Choose whether to generate payroll for
+                  all employees or only a selected position/employee.
                 </div>
-                <h3 class="section-title">Punch Review (Payroll Period)</h3>
-              </div>
-            </v-col>
+              </v-alert>
 
-            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-information"></v-icon>
-              </template>
-              <div class="text-caption">
-                Review and edit punches for employees with attendance records in
-                this payroll period. Saved edits are used directly for payroll
-                computation and exports.
-              </div>
-            </v-alert>
-
-            <v-row class="mt-0">
-              <v-col cols="12" md="3">
-                <v-text-field
-                  v-model="payrollPunchFilters.date"
-                  label="Review Date"
-                  type="date"
-                  variant="outlined"
-                  density="compact"
-                  prepend-inner-icon="mdi-calendar"
-                  :min="formData.period_start || undefined"
-                  :max="formData.period_end || undefined"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-autocomplete
-                  v-model="payrollPunchFilters.employee_id"
-                  :items="payrollPunchEmployees"
-                  item-title="full_name"
-                  item-value="id"
-                  label="Employee"
-                  placeholder="Filter by employee (optional)"
-                  prepend-inner-icon="mdi-account-search"
-                  variant="outlined"
-                  density="compact"
-                  clearable
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template v-slot:subtitle>
-                        {{ item.raw.employee_number || "No ID" }}
-                      </template>
-                    </v-list-item>
-                  </template>
-                </v-autocomplete>
-              </v-col>
-              <v-col cols="12" md="3" class="d-flex align-center justify-end ga-2">
-                <v-btn
-                  variant="outlined"
-                  color="grey"
-                  prepend-icon="mdi-filter-remove"
-                  @click="clearPayrollPunchFilters"
-                >
-                  Clear
+              <v-btn-toggle
+                v-model="formData.payroll_scope"
+                color="primary"
+                variant="outlined"
+                divided
+                mandatory
+                class="mb-3"
+              >
+                <v-btn value="all" size="small">
+                  <v-icon start>mdi-account-group</v-icon>
+                  All Employees
                 </v-btn>
+                <v-btn value="individual" size="small">
+                  <v-icon start>mdi-account-check</v-icon>
+                  Individual Payroll
+                </v-btn>
+              </v-btn-toggle>
+
+              <v-row
+                v-if="formData.payroll_scope === 'individual'"
+                class="mt-0"
+              >
+                <v-col cols="12" md="5">
+                  <v-select
+                    v-model="formData.individual_target"
+                    :items="individualTargetOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="Individual Payroll By"
+                    variant="outlined"
+                    density="compact"
+                    prepend-inner-icon="mdi-filter"
+                  ></v-select>
+                </v-col>
+
+                <v-col
+                  cols="12"
+                  md="7"
+                  v-if="formData.individual_target === 'position'"
+                >
+                  <v-autocomplete
+                    v-model="formData.included_position"
+                    :items="positionOptions"
+                    label="Select Position *"
+                    placeholder="Choose position"
+                    prepend-inner-icon="mdi-briefcase"
+                    clearable
+                    variant="outlined"
+                    density="compact"
+                    :rules="[(v) => !!v || 'Position is required']"
+                  ></v-autocomplete>
+                </v-col>
+
+                <v-col cols="12" md="7" v-else>
+                  <v-autocomplete
+                    v-model="formData.included_employee_id"
+                    :items="employeeOptions"
+                    :loading="employeeOptionsLoading"
+                    item-title="full_name"
+                    item-value="id"
+                    label="Select Employee *"
+                    placeholder="Search by name, employee number, or position"
+                    prepend-inner-icon="mdi-account-search"
+                    clearable
+                    variant="outlined"
+                    density="compact"
+                    :custom-filter="customEmployeeFilter"
+                    :rules="[(v) => !!v || 'Employee is required']"
+                  >
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template v-slot:title>
+                          {{ item.raw.full_name }}
+                        </template>
+                        <template v-slot:subtitle>
+                          {{ item.raw.employee_number }} -
+                          {{ item.raw.position || "N/A" }}
+                        </template>
+                      </v-list-item>
+                    </template>
+                  </v-autocomplete>
+                </v-col>
+              </v-row>
+
+              <!-- Optional: Only With Attendance -->
+              <v-checkbox
+                v-model="formData.has_attendance"
+                label="Only include employees with attendance"
+                prepend-icon="mdi-calendar-check"
+                hint="Exclude employees who have no attendance records in this payroll period"
+                persistent-hint
+                color="#ed985f"
+                density="compact"
+                class="mb-3 payroll-checkbox"
+              ></v-checkbox>
+
+              <v-autocomplete
+                v-if="formData.payroll_scope === 'all'"
+                v-model="formData.excluded_positions"
+                :items="positionOptions"
+                label="Exclude Positions (Optional)"
+                placeholder="Select positions to exclude from this payroll"
+                prepend-inner-icon="mdi-account-remove"
+                multiple
+                chips
+                closable-chips
+                clearable
+                variant="outlined"
+                density="compact"
+                hint="Employees with selected positions will not be included in payroll generation"
+                persistent-hint
+                class="mb-3"
+              ></v-autocomplete>
+
+              <v-col cols="12" class="px-0 mt-2">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-clock-check-outline</v-icon>
+                  </div>
+                  <h3 class="section-title">Overtime Selection & Day View</h3>
+                </div>
+              </v-col>
+
+              <v-alert
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-3"
+              >
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-information"></v-icon>
+                </template>
+                <div class="text-caption">
+                  Load employees for this payroll period, then select who should
+                  have overtime included. You can also edit their daily time in,
+                  time out, and OT times before payroll creation.
+                </div>
+              </v-alert>
+
+              <div class="d-flex flex-wrap ga-2 mb-3">
                 <v-btn
                   color="#ED985F"
+                  variant="tonal"
                   prepend-icon="mdi-refresh"
-                  :loading="payrollPunchLoading"
-                  @click="loadPayrollPunchReview"
+                  :loading="overtimeCandidatesLoading"
+                  @click="loadOvertimeCandidates"
                 >
-                  Refresh
+                  Load Overtime Candidates
                 </v-btn>
-              </v-col>
-            </v-row>
-
-            <v-data-table
-              :headers="payrollPunchHeaders"
-              :items="payrollPunchDayViewRows"
-              :loading="payrollPunchLoading"
-              :items-per-page="10"
-              :items-per-page-options="[
-                { value: 10, title: '10' },
-                { value: 20, title: '20' },
-                { value: 50, title: '50' },
-              ]"
-              class="elevation-0 payroll-punch-review-table mb-2"
-            >
-              <template v-slot:item.staff_code="{ item }">
-                <span class="font-weight-medium">{{ item.staff_code }}</span>
-              </template>
-
-              <template v-slot:item.date="{ item }">
-                {{ formatDate(item.date) }}
-              </template>
-
-              <template
-                v-for="timeKey in payrollPunchTimeKeys"
-                v-slot:[`item.${timeKey}`]="{ item }"
-                :key="timeKey"
-              >
                 <v-chip
-                  v-if="item[timeKey]"
-                  size="x-small"
-                  color="success"
-                  variant="flat"
-                  class="payroll-punch-time-chip"
-                >
-                  {{ item[timeKey] }}
-                </v-chip>
-                <span v-else class="text-medium-emphasis">-</span>
-              </template>
-
-              <template v-slot:item.actions="{ item }">
-                <v-btn
+                  v-if="overtimeCandidatesLoaded"
                   size="small"
-                  variant="text"
-                  color="#001f3d"
-                  prepend-icon="mdi-pencil"
-                  @click="openPayrollPunchEdit(item.source)"
+                  color="info"
+                  variant="tonal"
                 >
-                  Edit
-                </v-btn>
-              </template>
+                  {{ overtimeCandidates.length }} employee(s) found
+                </v-chip>
+              </div>
 
-              <template v-slot:no-data>
-                <div class="text-center py-6">
-                  <v-icon size="48" color="grey">mdi-clipboard-search-outline</v-icon>
-                  <p class="text-subtitle-1 mt-2 mb-1">No punch records found</p>
-                  <p class="text-body-2 text-medium-emphasis mb-0">
-                    Adjust the review date or employee filter, then refresh.
-                  </p>
+              <v-autocomplete
+                v-model="formData.overtime_employee_ids"
+                :items="overtimeCandidates"
+                item-title="display_name"
+                item-value="id"
+                label="Include Overtime For (Optional)"
+                placeholder="If empty, overtime is included for all employees"
+                prepend-inner-icon="mdi-account-clock"
+                multiple
+                chips
+                closable-chips
+                clearable
+                variant="outlined"
+                density="compact"
+                :disabled="!overtimeCandidatesLoaded"
+                class="mb-3"
+              >
+                <template v-slot:item="{ props, item }">
+                  <v-list-item v-bind="props">
+                    <template v-slot:title>
+                      {{ item.raw.full_name }}
+                    </template>
+                    <template v-slot:subtitle>
+                      {{ item.raw.employee_number }} -
+                      {{ item.raw.position || "N/A" }}
+                      <span v-if="item.raw.has_overtime_request">
+                        · OT request found</span
+                      >
+                    </template>
+                  </v-list-item>
+                </template>
+              </v-autocomplete>
+
+              <v-row class="mt-0">
+                <v-col cols="12" md="7">
+                  <v-select
+                    v-model="overtimePreviewEmployeeId"
+                    :items="selectedOvertimeEmployees"
+                    item-title="display_name"
+                    item-value="id"
+                    label="View Daily Time For Selected Employee"
+                    prepend-inner-icon="mdi-calendar-clock"
+                    :disabled="selectedOvertimeEmployees.length === 0"
+                    variant="outlined"
+                    density="compact"
+                    clearable
+                  ></v-select>
+                </v-col>
+                <v-col cols="12" md="5" class="d-flex align-center">
+                  <v-btn
+                    variant="outlined"
+                    color="#ED985F"
+                    prepend-icon="mdi-table-eye"
+                    :disabled="!overtimePreviewEmployeeId"
+                    :loading="employeeAttendanceLoading"
+                    @click="loadSelectedEmployeeAttendance"
+                  >
+                    Load Day View
+                  </v-btn>
+                </v-col>
+              </v-row>
+
+              <div
+                v-if="selectedEmployeeAttendance.length > 0"
+                class="attendance-day-view mt-2 mb-4"
+              >
+                <v-table density="compact">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Time In</th>
+                      <th>Time Out</th>
+                      <th>OT In</th>
+                      <th>OT Out</th>
+                      <th>OT Hours</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in selectedEmployeeAttendance" :key="row.id">
+                      <td>{{ formatDate(row.attendance_date) }}</td>
+                      <td>
+                        <v-chip size="x-small" variant="tonal" color="info">
+                          {{ row.status }}
+                        </v-chip>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="row.time_in_input"
+                          type="time"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="row.time_out_input"
+                          type="time"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="row.ot_time_in_input"
+                          type="time"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        ></v-text-field>
+                      </td>
+                      <td>
+                        <v-text-field
+                          v-model="row.ot_time_out_input"
+                          type="time"
+                          density="compact"
+                          variant="outlined"
+                          hide-details
+                        ></v-text-field>
+                      </td>
+                      <td>{{ row.overtime_hours || 0 }}</td>
+                      <td>
+                        <v-btn
+                          size="small"
+                          color="#ED985F"
+                          variant="tonal"
+                          :loading="attendanceRowSaving[row.id]"
+                          @click="saveAttendanceRow(row)"
+                        >
+                          Save
+                        </v-btn>
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </div>
+
+              <v-col cols="12" class="px-0 mt-2">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-timeline-clock-outline</v-icon>
+                  </div>
+                  <h3 class="section-title">Punch Review (Payroll Period)</h3>
                 </div>
-              </template>
-            </v-data-table>
+              </v-col>
+
+              <v-alert
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-3"
+              >
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-information"></v-icon>
+                </template>
+                <div class="text-caption">
+                  Review and edit punches for employees with attendance records
+                  in this payroll period. Saved edits are used directly for
+                  payroll computation and exports.
+                </div>
+              </v-alert>
+
+              <v-row class="mt-0">
+                <v-col cols="12" md="3">
+                  <v-text-field
+                    v-model="payrollPunchFilters.date"
+                    label="Review Date"
+                    type="date"
+                    variant="outlined"
+                    density="compact"
+                    prepend-inner-icon="mdi-calendar"
+                    :min="formData.period_start || undefined"
+                    :max="formData.period_end || undefined"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-autocomplete
+                    v-model="payrollPunchFilters.employee_id"
+                    :items="payrollPunchEmployees"
+                    item-title="full_name"
+                    item-value="id"
+                    label="Employee"
+                    placeholder="Filter by employee (optional)"
+                    prepend-inner-icon="mdi-account-search"
+                    variant="outlined"
+                    density="compact"
+                    clearable
+                  >
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template v-slot:subtitle>
+                          {{ item.raw.employee_number || "No ID" }}
+                        </template>
+                      </v-list-item>
+                    </template>
+                  </v-autocomplete>
+                </v-col>
+                <v-col
+                  cols="12"
+                  md="3"
+                  class="d-flex align-center justify-end ga-2"
+                >
+                  <v-btn
+                    variant="outlined"
+                    color="grey"
+                    prepend-icon="mdi-filter-remove"
+                    @click="clearPayrollPunchFilters"
+                  >
+                    Clear
+                  </v-btn>
+                  <v-btn
+                    color="#ED985F"
+                    prepend-icon="mdi-refresh"
+                    :loading="payrollPunchLoading"
+                    @click="loadPayrollPunchReview"
+                  >
+                    Refresh
+                  </v-btn>
+                </v-col>
+              </v-row>
+
+              <v-data-table
+                :headers="payrollPunchHeaders"
+                :items="payrollPunchDayViewRows"
+                :loading="payrollPunchLoading"
+                :items-per-page="10"
+                :items-per-page-options="[
+                  { value: 10, title: '10' },
+                  { value: 20, title: '20' },
+                  { value: 50, title: '50' },
+                ]"
+                class="elevation-0 payroll-punch-review-table mb-2"
+              >
+                <template v-slot:item.staff_code="{ item }">
+                  <span class="font-weight-medium">{{ item.staff_code }}</span>
+                </template>
+
+                <template v-slot:item.date="{ item }">
+                  {{ formatDate(item.date) }}
+                </template>
+
+                <template
+                  v-for="timeKey in payrollPunchTimeKeys"
+                  v-slot:[`item.${timeKey}`]="{ item }"
+                  :key="timeKey"
+                >
+                  <v-chip
+                    v-if="item[timeKey]"
+                    size="x-small"
+                    color="success"
+                    variant="flat"
+                    class="payroll-punch-time-chip"
+                  >
+                    {{ item[timeKey] }}
+                  </v-chip>
+                  <span v-else class="text-medium-emphasis">-</span>
+                </template>
+
+                <template v-slot:item.actions="{ item }">
+                  <v-btn
+                    size="small"
+                    variant="text"
+                    color="#001f3d"
+                    prepend-icon="mdi-pencil"
+                    @click="openPayrollPunchEdit(item.source)"
+                  >
+                    Edit
+                  </v-btn>
+                </template>
+
+                <template v-slot:no-data>
+                  <div class="text-center py-6">
+                    <v-icon size="48" color="grey"
+                      >mdi-clipboard-search-outline</v-icon
+                    >
+                    <p class="text-subtitle-1 mt-2 mb-1">
+                      No punch records found
+                    </p>
+                    <p class="text-body-2 text-medium-emphasis mb-0">
+                      Adjust the review date or employee filter, then refresh.
+                    </p>
+                  </div>
+                </template>
+              </v-data-table>
             </div>
 
             <div v-show="currentStep === 3">
-
-            <!-- Section 3: Government Contributions -->
-            <v-col cols="12" class="px-0 mt-4">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon size="18">mdi-bank</v-icon>
+              <!-- Section 3: Government Contributions -->
+              <v-col cols="12" class="px-0 mt-4">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-bank</v-icon>
+                  </div>
+                  <h3 class="section-title">Government Contributions</h3>
                 </div>
-                <h3 class="section-title">Government Contributions</h3>
-              </div>
-            </v-col>
-
-            <v-alert type="info" variant="tonal" density="compact" class="mb-3">
-              <template v-slot:prepend>
-                <v-icon icon="mdi-information"></v-icon>
-              </template>
-              <div class="text-caption">
-                <strong>Note:</strong> Select which government contributions to
-                deduct for this payroll period. Unchecked contributions will not
-                be deducted, even if enabled for the employee.
-              </div>
-            </v-alert>
-
-            <v-row class="mt-n2">
-              <v-col cols="12" md="4">
-                <v-checkbox
-                  v-model="formData.deduct_sss"
-                  label="SSS"
-                  prepend-icon="mdi-shield-account"
-                  hint="Social Security System"
-                  persistent-hint
-                  color="#ed985f"
-                  density="compact"
-                  class="payroll-checkbox"
-                ></v-checkbox>
               </v-col>
-              <v-col cols="12" md="4">
-                <v-checkbox
-                  v-model="formData.deduct_philhealth"
-                  label="PhilHealth"
-                  prepend-icon="mdi-medical-bag"
-                  hint="Philippine Health Insurance"
-                  persistent-hint
-                  color="#ed985f"
-                  density="compact"
-                  class="payroll-checkbox"
-                ></v-checkbox>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-checkbox
-                  v-model="formData.deduct_pagibig"
-                  label="Pag-IBIG"
-                  prepend-icon="mdi-home-account"
-                  hint="Home Development Mutual Fund"
-                  persistent-hint
-                  color="#ed985f"
-                  density="compact"
-                  class="payroll-checkbox"
-                ></v-checkbox>
-              </v-col>
-            </v-row>
 
-            <div class="d-flex justify-space-between align-center mb-3">
-              <div class="text-caption text-medium-emphasis">
-                Enabled deductions for this payroll
+              <v-alert
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-3"
+              >
+                <template v-slot:prepend>
+                  <v-icon icon="mdi-information"></v-icon>
+                </template>
+                <div class="text-caption">
+                  <strong>Note:</strong> Select which government contributions
+                  to deduct for this payroll period. Unchecked contributions
+                  will not be deducted, even if enabled for the employee.
+                </div>
+              </v-alert>
+
+              <v-row class="mt-n2">
+                <v-col cols="12" md="4">
+                  <v-checkbox
+                    v-model="formData.deduct_sss"
+                    label="SSS"
+                    prepend-icon="mdi-shield-account"
+                    hint="Social Security System"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12" md="4">
+                  <v-checkbox
+                    v-model="formData.deduct_philhealth"
+                    label="PhilHealth"
+                    prepend-icon="mdi-medical-bag"
+                    hint="Philippine Health Insurance"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12" md="4">
+                  <v-checkbox
+                    v-model="formData.deduct_pagibig"
+                    label="Pag-IBIG"
+                    prepend-icon="mdi-home-account"
+                    hint="Home Development Mutual Fund"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </v-col>
+              </v-row>
+
+              <div class="d-flex justify-space-between align-center mb-3">
+                <div class="text-caption text-medium-emphasis">
+                  Enabled deductions for this payroll
+                </div>
+                <v-chip size="small" color="#ed985f" variant="tonal">
+                  {{ selectedContributionCount }} selected
+                </v-chip>
               </div>
-              <v-chip size="small" color="#ed985f" variant="tonal">
-                {{ selectedContributionCount }} selected
-              </v-chip>
-            </div>
 
-            <v-textarea
-              v-model="formData.notes"
-              label="Notes (Optional)"
-              rows="2"
-              counter="300"
-              maxlength="300"
-              variant="outlined"
-              density="compact"
-              prepend-icon="mdi-note-text"
-            ></v-textarea>
+              <v-textarea
+                v-model="formData.notes"
+                label="Notes (Optional)"
+                rows="2"
+                counter="300"
+                maxlength="300"
+                variant="outlined"
+                density="compact"
+                prepend-icon="mdi-note-text"
+              ></v-textarea>
             </div>
           </v-form>
         </v-card-text>
@@ -1162,8 +1205,7 @@
             <div class="text-caption">
               <strong>Important:</strong> Employees with incomplete attendance
               records may receive incorrect pay. Please complete all attendance
-              records before creating payroll, or these records will be excluded
-              from calculations.
+              records before creating payroll.
             </div>
           </v-alert>
 
@@ -1236,16 +1278,6 @@
           >
             <v-icon size="18" class="mr-1">mdi-clock-alert-outline</v-icon>
             Fix Attendance
-          </v-btn>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="warning"
-            variant="flat"
-            @click="forceCreatePayroll"
-            :loading="saving"
-          >
-            <v-icon size="18" class="mr-1">mdi-alert</v-icon>
-            Create Anyway
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -1476,7 +1508,10 @@ const endDateRules = [
   (value) => !!value || "End date is required",
   (value) => {
     if (!value || !formData.value.period_start) return true;
-    return value >= formData.value.period_start || "End date must be on/after start date";
+    return (
+      value >= formData.value.period_start ||
+      "End date must be on/after start date"
+    );
   },
 ];
 
@@ -1484,7 +1519,10 @@ const paymentDateRules = [
   (value) => !!value || "Payment date is required",
   (value) => {
     if (!value || !formData.value.period_end) return true;
-    return value >= formData.value.period_end || "Payment date must be on/after period end";
+    return (
+      value >= formData.value.period_end ||
+      "Payment date must be on/after period end"
+    );
   },
 ];
 
@@ -1563,7 +1601,9 @@ const activeFilterCount = computed(() => {
 const selectedOvertimeEmployees = computed(() => {
   if (!Array.isArray(formData.value.overtime_employee_ids)) return [];
   const selected = new Set(formData.value.overtime_employee_ids);
-  return overtimeCandidates.value.filter((candidate) => selected.has(candidate.id));
+  return overtimeCandidates.value.filter((candidate) =>
+    selected.has(candidate.id),
+  );
 });
 
 const payrollPunchTimeKeys = Array.from(
@@ -1979,9 +2019,9 @@ async function loadOvertimeCandidates() {
     }));
 
     const validIds = new Set(overtimeCandidates.value.map((row) => row.id));
-    formData.value.overtime_employee_ids = (formData.value.overtime_employee_ids || []).filter((id) =>
-      validIds.has(id),
-    );
+    formData.value.overtime_employee_ids = (
+      formData.value.overtime_employee_ids || []
+    ).filter((id) => validIds.has(id));
 
     overtimeCandidatesLoaded.value = true;
     selectedEmployeeAttendance.value = [];
@@ -2159,7 +2199,7 @@ function clearTableFilters() {
   statusFilter.value = "all";
 }
 
-async function savePayroll(forceCreate = false) {
+async function savePayroll() {
   const { valid } = await form.value.validate();
   if (!valid) return;
 
@@ -2210,21 +2250,22 @@ async function savePayroll(forceCreate = false) {
     payload.has_attendance = formData.value.has_attendance;
   }
 
-  if (Array.isArray(formData.value.excluded_positions) && formData.value.excluded_positions.length > 0) {
+  if (
+    Array.isArray(formData.value.excluded_positions) &&
+    formData.value.excluded_positions.length > 0
+  ) {
     payload.excluded_positions = formData.value.excluded_positions;
   }
 
-  if (Array.isArray(formData.value.overtime_employee_ids) && formData.value.overtime_employee_ids.length > 0) {
+  if (
+    Array.isArray(formData.value.overtime_employee_ids) &&
+    formData.value.overtime_employee_ids.length > 0
+  ) {
     payload.overtime_employee_ids = formData.value.overtime_employee_ids;
   }
 
-  // Add force_create flag if bypassing validation
-  if (forceCreate) {
-    payload.force_create = true;
-  }
-
-  // Step 1: Validate attendance completeness (unless forcing OR editing existing payroll)
-  if (!forceCreate && !editMode.value) {
+  // Step 1: Validate attendance completeness (new payroll only)
+  if (!editMode.value) {
     saving.value = true;
     try {
       await api.post("/payrolls/validate", {
@@ -2300,9 +2341,9 @@ async function savePayroll(forceCreate = false) {
 }
 
 function viewPayroll(item) {
-  api.get(`/payrolls/${item.id}`, { cacheTTL: 15000, skipToast: true }).catch(
-    () => {},
-  );
+  api
+    .get(`/payrolls/${item.id}`, { cacheTTL: 15000, skipToast: true })
+    .catch(() => {});
   router.push(`/payroll/${item.id}`);
 }
 
@@ -2335,11 +2376,6 @@ function goToMissingAttendance() {
   validationWarningDialog.value = false;
   dialog.value = false;
   router.push("/attendance?tab=missing");
-}
-
-async function forceCreatePayroll() {
-  validationWarningDialog.value = false;
-  await savePayroll(true); // Call with force flag
 }
 
 function getStatusColor(status) {

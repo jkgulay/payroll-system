@@ -43,6 +43,8 @@ class Holiday extends Model
             for ($year = now()->year - 1; $year <= now()->year + 2; $year++) {
                 Cache::forget("holidays_year_{$year}");
             }
+
+            static::bumpHolidayCacheVersion();
         });
 
         static::deleted(function () {
@@ -51,7 +53,15 @@ class Holiday extends Model
             for ($year = now()->year - 1; $year <= now()->year + 2; $year++) {
                 Cache::forget("holidays_year_{$year}");
             }
+
+            static::bumpHolidayCacheVersion();
         });
+    }
+
+    private static function bumpHolidayCacheVersion(): void
+    {
+        $currentVersion = (int) Cache::get('holidays_cache_version', 1);
+        Cache::forever('holidays_cache_version', $currentVersion + 1);
     }
 
     /**

@@ -11,6 +11,16 @@ use Carbon\Carbon;
 
 class HolidayController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('role:admin,hr,payrollist')->only([
+            'store',
+            'update',
+            'destroy',
+            'bulkStore',
+        ]);
+    }
+
     /**
      * Display a listing of holidays
      */
@@ -46,8 +56,8 @@ class HolidayController extends Controller
 
             // Pagination
             $perPage = $request->get('per_page', 15);
-            $holidays = $perPage === 'all' 
-                ? $query->get() 
+            $holidays = $perPage === 'all'
+                ? $query->get()
                 : $query->paginate($perPage);
 
             return response()->json([
@@ -305,7 +315,8 @@ class HolidayController extends Controller
     public function getYearHolidays(Request $request, $year)
     {
         try {
-            $cacheKey = 'holidays:year:' . $year;
+            $cacheVersion = (int) Cache::get('holidays_cache_version', 1);
+            $cacheKey = 'holidays:year:v' . $cacheVersion . ':' . $year;
             $holidays = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($year) {
                 return Holiday::active()
                     ->forYear($year)

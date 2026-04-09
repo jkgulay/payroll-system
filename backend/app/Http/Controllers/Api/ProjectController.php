@@ -128,8 +128,12 @@ class ProjectController extends Controller
             return;
         }
 
+        $lookbackDays = max((int) config('payroll.attendance.schedule_recalculation_lookback_days', 60), 0);
+        $recalculateFrom = now()->subDays($lookbackDays)->toDateString();
+
         Attendance::with(['employee.project'])
             ->whereIn('employee_id', $employeeIds)
+            ->whereDate('attendance_date', '>=', $recalculateFrom)
             ->whereNotNull('time_in')
             ->whereNotNull('time_out')
             ->chunkById(200, function ($attendances) {

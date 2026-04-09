@@ -309,7 +309,8 @@ class PayrollService
      */
     public function getHolidaysForPeriod(string $startDate, string $endDate): array
     {
-        $cacheKey = "holidays:{$startDate}:{$endDate}";
+        $cacheVersion = (int) Cache::get('holidays_cache_version', 1);
+        $cacheKey = "holidays:v{$cacheVersion}:{$startDate}:{$endDate}";
 
         return Cache::remember($cacheKey, 3600, function () use ($startDate, $endDate) {
             $start = Carbon::parse($startDate);
@@ -663,12 +664,16 @@ class PayrollService
         $pagibig = 0;
 
         if ($grossPay > 0) {
+            // Use payroll period end as the effective date so historical payrolls
+            // use the contribution tables active during that payroll period.
+            $contributionDate = $payroll->period_end;
+
             // SSS: Check both employee flag AND payroll flag
             if ($employee->has_sss && ($payroll->deduct_sss ?? true)) {
                 // Use custom SSS if set (already semi-monthly amount), otherwise calculate
                 $sss = $employee->custom_sss !== null
                     ? (float) $employee->custom_sss
-                    : $this->calculateSSS($monthlyBasicSalary);
+                    : $this->calculateSSS($monthlyBasicSalary, $contributionDate);
             }
 
             // PhilHealth: Check both employee flag AND payroll flag
@@ -676,7 +681,7 @@ class PayrollService
                 // Use custom PhilHealth if set (already semi-monthly amount), otherwise calculate
                 $philhealth = $employee->custom_philhealth !== null
                     ? (float) $employee->custom_philhealth
-                    : $this->calculatePhilHealth($monthlyBasicSalary);
+                    : $this->calculatePhilHealth($monthlyBasicSalary, $contributionDate);
             }
 
             // Pag-IBIG: Check both employee flag AND payroll flag
@@ -684,7 +689,7 @@ class PayrollService
                 // Use custom Pag-IBIG if set (already semi-monthly amount), otherwise calculate
                 $pagibig = $employee->custom_pagibig !== null
                     ? (float) $employee->custom_pagibig
-                    : $this->calculatePagibig($monthlyBasicSalary);
+                    : $this->calculatePagibig($monthlyBasicSalary, $contributionDate);
             }
         }
 
@@ -693,6 +698,11 @@ class PayrollService
         $periodEnd = Carbon::parse($payroll->period_end);
         $periodDays = $periodStart->diffInDays($periodEnd) + 1;
         $isSemiMonthly = $periodDays <= 16;
+
+        // Compute withholding tax from dynamic GovernmentRate tax table.
+        // Taxable base follows payroll-period income less mandatory contributions.
+        $taxableIncome = max($grossPay - $sss - $philhealth - $pagibig, 0);
+        $withholdingTax = $this->calculateWithholdingTax($taxableIncome, $payroll->period_end, $isSemiMonthly);
 
         // For monthly loans on semi-monthly payrolls: only deduct on 2nd cutoff
         // 2nd cutoff = period ending on 16th or later of the month
@@ -764,9 +774,10 @@ class PayrollService
             ];
         }
 
-        // Total deductions (including undertime deduction)
+        // Total deductions (including withholding tax and undertime deduction)
         $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
-            $employeeSavings + $cashAdvance + $employeeDeductions + $otherDeductions + $undertimeDeduction;
+            $withholdingTax + $employeeSavings + $cashAdvance + $employeeDeductions +
+            $otherDeductions + $undertimeDeduction;
 
         // Net pay = Gross pay - Total deductions
         $netPay = $grossPay - $totalDeductions;
@@ -795,7 +806,7 @@ class PayrollService
             'sss' => $sss,
             'philhealth' => $philhealth,
             'pagibig' => $pagibig,
-            'withholding_tax' => 0,
+            'withholding_tax' => $withholdingTax,
             'employee_savings' => $employeeSavings,
             'cash_advance' => $cashAdvance,
             'loans' => $loanDeduction,
@@ -816,13 +827,13 @@ class PayrollService
      * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
      *                                   SSS looks up MSC (Monthly Salary Credit) from basic salary only.
      */
-    private function calculateSSS($monthlyBasicSalary)
+    private function calculateSSS($monthlyBasicSalary, $date = null)
     {
         // Use monthly basic salary directly for SSS MSC table lookup
         $monthlySalary = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
-        $contribution = GovernmentRate::getContributionForSalary('sss', $monthlySalary);
+        $contribution = GovernmentRate::getContributionForSalary('sss', $monthlySalary, $date);
 
         if ($contribution && $contribution['employee'] > 0) {
             // Found in settings - use monthly amount, divide by 2 for semi-monthly
@@ -885,13 +896,13 @@ class PayrollService
      * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
      *                                   PhilHealth premium base is monthly basic salary per RA 11223.
      */
-    private function calculatePhilHealth($monthlyBasicSalary)
+    private function calculatePhilHealth($monthlyBasicSalary, $date = null)
     {
         // Use monthly basic salary directly for PhilHealth premium computation
         $monthlyGross = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
-        $contribution = GovernmentRate::getContributionForSalary('philhealth', $monthlyGross);
+        $contribution = GovernmentRate::getContributionForSalary('philhealth', $monthlyGross, $date);
 
         if ($contribution && $contribution['employee'] > 0) {
             // Found in settings - use monthly amount, divide by 2 for semi-monthly
@@ -914,13 +925,13 @@ class PayrollService
      * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
      *                                   HDMF contribution is based on monthly basic compensation.
      */
-    private function calculatePagibig($monthlyBasicSalary)
+    private function calculatePagibig($monthlyBasicSalary, $date = null)
     {
         // Use monthly basic salary directly for Pag-IBIG contribution computation
         $monthlyGross = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
-        $contribution = GovernmentRate::getContributionForSalary('pagibig', $monthlyGross);
+        $contribution = GovernmentRate::getContributionForSalary('pagibig', $monthlyGross, $date);
 
         if ($contribution && $contribution['employee'] > 0) {
             // Found in settings - use monthly amount, divide by 2 for semi-monthly
@@ -935,5 +946,102 @@ class PayrollService
         // Maximum monthly employee contribution = ₱200 → semi-monthly = ₱100
         // Minimum semi-monthly = ₱25 (₱50/month floor)
         return round(min(max($semiMonthlyContribution, 25), 100), 2);
+    }
+
+    /**
+     * Calculate withholding tax using dynamic GovernmentRate tax brackets.
+     *
+     * The tax table remains fully managed from the Government Rates UI.
+     * If no active tax bracket matches, tax is treated as zero.
+     */
+    private function calculateWithholdingTax(float $taxableIncome, $date = null, bool $isSemiMonthly = true): float
+    {
+        if ($taxableIncome <= 0) {
+            return 0;
+        }
+
+        $effectiveDate = Carbon::parse($date ?? now())->toDateString();
+
+        // Cache active tax brackets per effective date for this request to avoid
+        // repeated queries when calculating many employees in one payroll run.
+        static $cachedTaxBracketsByDate = [];
+        if (!array_key_exists($effectiveDate, $cachedTaxBracketsByDate)) {
+            $cachedTaxBracketsByDate[$effectiveDate] = GovernmentRate::query()
+                ->where('is_active', true)
+                ->where('type', 'tax')
+                ->where('effective_date', '<=', $effectiveDate)
+                ->where(function ($q) use ($effectiveDate) {
+                    $q->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $effectiveDate);
+                })
+                ->orderBy('effective_date', 'desc')
+                ->orderBy('min_salary', 'asc')
+                ->get();
+        }
+
+        $taxBrackets = $cachedTaxBracketsByDate[$effectiveDate];
+        $taxBracket = $taxBrackets->first(function ($bracket) use ($taxableIncome) {
+            $minSalary = (float) ($bracket->min_salary ?? 0);
+            $maxSalary = $bracket->max_salary !== null ? (float) $bracket->max_salary : null;
+
+            return $taxableIncome >= $minSalary
+                && ($maxSalary === null || $taxableIncome <= $maxSalary);
+        });
+
+        if (!$taxBracket) {
+            return 0;
+        }
+
+        // Support both common tax table styles from Government Rates UI:
+        // 1) Progressive base + marginal rate on excess over bracket min
+        // 2) Flat percentage per bracket when only employee_rate is provided
+        $baseTax = (float) ($taxBracket->employee_fixed ?? 0);
+        $marginalRate = (float) ($taxBracket->employee_rate ?? 0);
+        $bracketMin = (float) ($taxBracket->min_salary ?? 0);
+        $excess = max($taxableIncome - $bracketMin, 0);
+
+        $hasBaseTax = $taxBracket->employee_fixed !== null && $baseTax > 0;
+        $hasMarginalRate = $taxBracket->employee_rate !== null && $marginalRate > 0;
+
+        $taxAmount = 0;
+        if ($hasBaseTax && $hasMarginalRate) {
+            // Progressive TRAIN-style bracket.
+            $taxAmount = $baseTax + ($excess * ($marginalRate / 100));
+        } elseif ($hasBaseTax) {
+            // Fixed tax amount for the bracket.
+            $taxAmount = $baseTax;
+        } elseif ($hasMarginalRate) {
+            // If this effective-date table has lower brackets with base tax values,
+            // treat the rate as marginal on excess; otherwise treat as flat % table.
+            $taxBracketEffectiveDate = Carbon::parse($taxBracket->effective_date)->toDateString();
+            $hasLowerBaseBracket = $taxBrackets->contains(function ($bracket) use ($bracketMin, $taxBracketEffectiveDate) {
+                if (Carbon::parse($bracket->effective_date)->toDateString() !== $taxBracketEffectiveDate) {
+                    return false;
+                }
+
+                return (float) ($bracket->min_salary ?? 0) < $bracketMin
+                    && (float) ($bracket->employee_fixed ?? 0) > 0;
+            });
+
+            $taxableBase = $hasLowerBaseBracket ? $excess : $taxableIncome;
+            $taxAmount = $taxableBase * ($marginalRate / 100);
+        }
+
+        // Backward compatibility: allow a fixed total contribution fallback.
+        if ($taxAmount <= 0 && $taxBracket->total_contribution !== null) {
+            $taxAmount = (float) $taxBracket->total_contribution;
+        }
+
+        if ($taxAmount <= 0) {
+            return 0;
+        }
+
+        // Keep behavior aligned with contribution handling: tax tables are treated
+        // as monthly values and split for semi-monthly payrolls.
+        if ($isSemiMonthly) {
+            $taxAmount /= 2;
+        }
+
+        return round($taxAmount, 2);
     }
 }
