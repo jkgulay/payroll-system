@@ -422,147 +422,136 @@
               </div>
             </div>
 
-            <div v-show="currentStep === 2">
-              <!-- Section 2: Employee Selection -->
-              <v-col cols="12" class="px-0 mt-4">
+            <div v-show="currentStep === 2" class="step-two-workspace">
+              <div class="step-two-panel step-two-panel--scope mt-4">
                 <div class="section-header">
                   <div class="section-icon">
                     <v-icon size="18">mdi-account-group</v-icon>
                   </div>
-                  <h3 class="section-title">Employee Selection</h3>
+                  <h3 class="section-title">Employees & Scope</h3>
                 </div>
-              </v-col>
 
-              <v-alert
-                type="info"
-                variant="tonal"
-                density="compact"
-                class="mb-3"
-              >
-                <template v-slot:prepend>
-                  <v-icon icon="mdi-information"></v-icon>
-                </template>
-                <div class="text-caption">
-                  <strong>Note:</strong> Choose whether to generate payroll for
-                  all employees or only a selected position/employee.
-                </div>
-              </v-alert>
+                <p class="panel-intro mt-3 mb-3">
+                  Choose payroll scope and optional attendance constraints
+                  before setting overtime and punch review.
+                </p>
 
-              <v-btn-toggle
-                v-model="formData.payroll_scope"
-                color="primary"
-                variant="outlined"
-                divided
-                mandatory
-                class="mb-3"
-              >
-                <v-btn value="all" size="small">
-                  <v-icon start>mdi-account-group</v-icon>
-                  All Employees
-                </v-btn>
-                <v-btn value="individual" size="small">
-                  <v-icon start>mdi-account-check</v-icon>
-                  Individual Payroll
-                </v-btn>
-              </v-btn-toggle>
-
-              <v-row
-                v-if="formData.payroll_scope === 'individual'"
-                class="mt-0"
-              >
-                <v-col cols="12" md="5">
-                  <v-select
-                    v-model="formData.individual_target"
-                    :items="individualTargetOptions"
-                    item-title="title"
-                    item-value="value"
-                    label="Individual Payroll By"
+                <div class="scope-controls">
+                  <v-btn-toggle
+                    v-model="formData.payroll_scope"
+                    color="primary"
                     variant="outlined"
-                    density="compact"
-                    prepend-inner-icon="mdi-filter"
-                  ></v-select>
-                </v-col>
-
-                <v-col
-                  cols="12"
-                  md="7"
-                  v-if="formData.individual_target === 'position'"
-                >
-                  <v-autocomplete
-                    v-model="formData.included_position"
-                    :items="positionOptions"
-                    label="Select Position *"
-                    placeholder="Choose position"
-                    prepend-inner-icon="mdi-briefcase"
-                    clearable
-                    variant="outlined"
-                    density="compact"
-                    :rules="[(v) => !!v || 'Position is required']"
-                  ></v-autocomplete>
-                </v-col>
-
-                <v-col cols="12" md="7" v-else>
-                  <v-autocomplete
-                    v-model="formData.included_employee_id"
-                    :items="employeeOptions"
-                    :loading="employeeOptionsLoading"
-                    item-title="full_name"
-                    item-value="id"
-                    label="Select Employee *"
-                    placeholder="Search by name, employee number, or position"
-                    prepend-inner-icon="mdi-account-search"
-                    clearable
-                    variant="outlined"
-                    density="compact"
-                    :custom-filter="customEmployeeFilter"
-                    :rules="[(v) => !!v || 'Employee is required']"
+                    divided
+                    mandatory
+                    class="scope-toggle"
                   >
-                    <template v-slot:item="{ props, item }">
-                      <v-list-item v-bind="props">
-                        <template v-slot:title>
-                          {{ item.raw.full_name }}
-                        </template>
-                        <template v-slot:subtitle>
-                          {{ item.raw.employee_number }} -
-                          {{ item.raw.position || "N/A" }}
-                        </template>
-                      </v-list-item>
-                    </template>
-                  </v-autocomplete>
-                </v-col>
-              </v-row>
+                    <v-btn value="all" size="small">
+                      <v-icon start>mdi-account-group</v-icon>
+                      All Employees
+                    </v-btn>
+                    <v-btn value="individual" size="small">
+                      <v-icon start>mdi-account-check</v-icon>
+                      Individual Payroll
+                    </v-btn>
+                  </v-btn-toggle>
 
-              <!-- Optional: Only With Attendance -->
-              <v-checkbox
-                v-model="formData.has_attendance"
-                label="Only include employees with payable attendance"
-                prepend-icon="mdi-calendar-check"
-                hint="Includes only approved attendance with time-in and either time-out or half-day status within this payroll period"
-                persistent-hint
-                color="#ed985f"
-                density="compact"
-                class="mb-3 payroll-checkbox"
-              ></v-checkbox>
+                  <v-checkbox
+                    v-model="formData.has_attendance"
+                    label="Only include employees with payable attendance"
+                    prepend-icon="mdi-calendar-check"
+                    hint="Includes only approved attendance with time-in and either time-out or half-day status within this payroll period"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </div>
 
-              <v-autocomplete
-                v-if="formData.payroll_scope === 'all'"
-                v-model="formData.excluded_positions"
-                :items="positionOptions"
-                label="Exclude Positions (Optional)"
-                placeholder="Select positions to exclude from this payroll"
-                prepend-inner-icon="mdi-account-remove"
-                multiple
-                chips
-                closable-chips
-                clearable
-                variant="outlined"
-                density="compact"
-                hint="Employees with selected positions will not be included in payroll generation"
-                persistent-hint
-                class="mb-3"
-              ></v-autocomplete>
+                <v-row
+                  v-if="formData.payroll_scope === 'individual'"
+                  class="mt-0"
+                >
+                  <v-col cols="12" md="5">
+                    <v-select
+                      v-model="formData.individual_target"
+                      :items="individualTargetOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="Individual Payroll By"
+                      variant="outlined"
+                      density="compact"
+                      prepend-inner-icon="mdi-filter"
+                    ></v-select>
+                  </v-col>
 
-              <div class="step-two-panel mt-2">
+                  <v-col
+                    cols="12"
+                    md="7"
+                    v-if="formData.individual_target === 'position'"
+                  >
+                    <v-autocomplete
+                      v-model="formData.included_position"
+                      :items="positionOptions"
+                      label="Select Position *"
+                      placeholder="Choose position"
+                      prepend-inner-icon="mdi-briefcase"
+                      clearable
+                      variant="outlined"
+                      density="compact"
+                      :rules="[(v) => !!v || 'Position is required']"
+                    ></v-autocomplete>
+                  </v-col>
+
+                  <v-col cols="12" md="7" v-else>
+                    <v-autocomplete
+                      v-model="formData.included_employee_id"
+                      :items="employeeOptions"
+                      :loading="employeeOptionsLoading"
+                      item-title="full_name"
+                      item-value="id"
+                      label="Select Employee *"
+                      placeholder="Search by name, employee number, or position"
+                      prepend-inner-icon="mdi-account-search"
+                      clearable
+                      variant="outlined"
+                      density="compact"
+                      :custom-filter="customEmployeeFilter"
+                      :rules="[(v) => !!v || 'Employee is required']"
+                    >
+                      <template v-slot:item="{ props, item }">
+                        <v-list-item v-bind="props">
+                          <template v-slot:title>
+                            {{ item.raw.full_name }}
+                          </template>
+                          <template v-slot:subtitle>
+                            {{ item.raw.employee_number }} -
+                            {{ item.raw.position || "N/A" }}
+                          </template>
+                        </v-list-item>
+                      </template>
+                    </v-autocomplete>
+                  </v-col>
+                </v-row>
+
+                <v-autocomplete
+                  v-if="formData.payroll_scope === 'all'"
+                  v-model="formData.excluded_positions"
+                  :items="positionOptions"
+                  label="Exclude Positions (Optional)"
+                  placeholder="Select positions to exclude from this payroll"
+                  prepend-inner-icon="mdi-account-remove"
+                  multiple
+                  chips
+                  closable-chips
+                  clearable
+                  variant="outlined"
+                  density="compact"
+                  hint="Employees with selected positions will not be included in payroll generation"
+                  persistent-hint
+                ></v-autocomplete>
+              </div>
+
+              <div class="step-two-panel mt-4">
                 <div class="section-header">
                   <div class="section-icon">
                     <v-icon size="18">mdi-clock-check-outline</v-icon>
@@ -570,21 +559,10 @@
                   <h3 class="section-title">Overtime Selection & Day View</h3>
                 </div>
 
-                <v-alert
-                  type="info"
-                  variant="tonal"
-                  density="compact"
-                  class="mt-3 mb-3"
-                >
-                  <template v-slot:prepend>
-                    <v-icon icon="mdi-information"></v-icon>
-                  </template>
-                  <div class="text-caption">
-                    Load employees for this payroll period, then select who
-                    should have overtime included. You can also edit their daily
-                    time in, time out, and OT times before payroll creation.
-                  </div>
-                </v-alert>
+                <p class="panel-intro mt-3 mb-3">
+                  Build your overtime set quickly, then inspect or edit daily OT
+                  details for selected employees.
+                </p>
 
                 <div class="ot-toolbar mb-3">
                   <div class="ot-toolbar-primary">
@@ -594,6 +572,7 @@
                       prepend-icon="mdi-refresh"
                       :loading="overtimeCandidatesLoading"
                       @click="loadOvertimeCandidates"
+                      class="step-action-btn"
                     >
                       Load Overtime Candidates
                     </v-btn>
@@ -622,6 +601,7 @@
                       prepend-icon="mdi-checkbox-marked-circle-outline"
                       :disabled="!overtimeCandidatesLoaded"
                       @click="selectEmployeesWithOvertimeRequest"
+                      class="step-action-btn"
                     >
                       Add All With OT Request
                     </v-btn>
@@ -631,6 +611,7 @@
                       prepend-icon="mdi-select-all"
                       :disabled="!overtimeCandidatesLoaded"
                       @click="selectAllOvertimeCandidates"
+                      class="step-action-btn"
                     >
                       Select All
                     </v-btn>
@@ -640,6 +621,7 @@
                       color="grey"
                       prepend-icon="mdi-close-circle-outline"
                       @click="clearOvertimeSelection"
+                      class="step-action-btn"
                     >
                       Clear Selected
                     </v-btn>
@@ -660,7 +642,7 @@
                   density="compact"
                   :menu-props="{ maxHeight: 340 }"
                   :disabled="!overtimeCandidatesLoaded"
-                  class="mb-3"
+                  class="mb-2"
                 >
                   <template v-slot:selection="{ item, index }">
                     <v-chip
@@ -696,7 +678,7 @@
                   </template>
                 </v-autocomplete>
 
-                <div class="day-view-toolbar mb-2">
+                <div class="day-view-toolbar mt-3 mb-2">
                   <v-select
                     v-model="overtimePreviewEmployeeId"
                     :items="selectedOvertimeEmployees"
@@ -816,23 +798,12 @@
                   <h3 class="section-title">Punch Review (Payroll Period)</h3>
                 </div>
 
-                <v-alert
-                  type="info"
-                  variant="tonal"
-                  density="compact"
-                  class="mt-3 mb-3"
-                >
-                  <template v-slot:prepend>
-                    <v-icon icon="mdi-information"></v-icon>
-                  </template>
-                  <div class="text-caption">
-                    Review and edit punches for employees with attendance
-                    records in this payroll period. Saved edits are used
-                    directly for payroll computation and exports.
-                  </div>
-                </v-alert>
+                <p class="panel-intro mt-3 mb-3">
+                  Filters auto-refresh this table. Use Refresh Now only when you
+                  want an immediate manual reload.
+                </p>
 
-                <v-row class="mt-0 align-end">
+                <v-row class="mt-0 align-end punch-filter-grid">
                   <v-col cols="12" md="3">
                     <v-text-field
                       v-model="payrollPunchFilters.date"
@@ -874,6 +845,7 @@
                         color="grey"
                         prepend-icon="mdi-filter-remove"
                         @click="clearPayrollPunchFilters"
+                        class="step-action-btn"
                       >
                         Clear
                       </v-btn>
@@ -882,6 +854,7 @@
                         prepend-icon="mdi-refresh"
                         :loading="payrollPunchLoading"
                         @click="loadPayrollPunchReview"
+                        class="step-action-btn"
                       >
                         Refresh Now
                       </v-btn>
@@ -2604,11 +2577,45 @@ async function saveSignatureSettings() {
   color: #fff;
 }
 
+.step-two-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .step-two-panel {
-  border: 1px solid rgba(0, 31, 61, 0.1);
-  border-radius: 12px;
-  padding: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.12);
+  border-radius: 14px;
+  padding: 14px;
   background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 31, 61, 0.06);
+}
+
+.step-two-panel--scope {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 31, 61, 0.015) 0%,
+    rgba(237, 152, 95, 0.03) 100%
+  );
+}
+
+.panel-intro {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(0, 31, 61, 0.72);
+}
+
+.scope-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 38%);
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 10px;
+}
+
+.scope-toggle {
+  width: fit-content;
+  max-width: 100%;
 }
 
 .ot-toolbar {
@@ -2625,6 +2632,10 @@ async function saveSignatureSettings() {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.step-action-btn {
+  min-height: 36px;
 }
 
 .day-view-toolbar {
@@ -2663,6 +2674,10 @@ async function saveSignatureSettings() {
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.punch-filter-grid {
+  margin-bottom: 2px;
 }
 
 .payroll-punch-review-table {
@@ -3088,6 +3103,32 @@ async function saveSignatureSettings() {
 }
 
 @media (max-width: 960px) {
+  .scope-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .scope-toggle {
+    width: 100%;
+  }
+
+  .scope-toggle :deep(.v-btn) {
+    flex: 1 1 auto;
+  }
+
+  .ot-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ot-toolbar-primary,
+  .ot-toolbar-secondary {
+    width: 100%;
+  }
+
+  .ot-toolbar-secondary :deep(.v-btn) {
+    flex: 1 1 calc(50% - 8px);
+  }
+
   .day-view-toolbar {
     grid-template-columns: 1fr;
   }
@@ -3098,6 +3139,11 @@ async function saveSignatureSettings() {
 
   .punch-filter-actions {
     justify-content: flex-start;
+    width: 100%;
+  }
+
+  .punch-filter-actions :deep(.v-btn) {
+    flex: 1 1 calc(50% - 8px);
   }
 }
 </style>
