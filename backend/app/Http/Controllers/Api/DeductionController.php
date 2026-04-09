@@ -9,10 +9,26 @@ use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class DeductionController extends Controller
 {
+    private const GOVERNMENT_RATE_ONLY_TYPES = ['sss', 'philhealth', 'pagibig', 'tax'];
+    private const MANUAL_DEDUCTION_TYPES = [
+        'ppe',
+        'tools',
+        'uniform',
+        'absence',
+        'cash_advance',
+        'cash_bond',
+        'loan',
+        'insurance',
+        'cooperative',
+        'damages',
+        'other',
+    ];
+
     public function __construct()
     {
         // Admin, HR, and Payrollist can manage deductions
@@ -97,7 +113,7 @@ class DeductionController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
-            'deduction_type' => 'required|string|max:50',
+            'deduction_type' => ['required', 'string', 'max:50', Rule::in(self::MANUAL_DEDUCTION_TYPES)],
             'deduction_name' => 'nullable|string|max:100',
             'total_amount' => 'required|numeric|min:0.01',
             'amount_per_cutoff' => 'required|numeric|min:0.01',
@@ -108,6 +124,12 @@ class DeductionController extends Controller
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        if (in_array($validated['deduction_type'], self::GOVERNMENT_RATE_ONLY_TYPES, true)) {
+            return response()->json([
+                'message' => 'Government deductions (SSS, PhilHealth, Pag-IBIG, Tax) are computed from Government Rate settings and cannot be created as manual deductions.'
+            ], 422);
+        }
 
         // Auto-generate deduction_name from deduction_type if not provided
         if (empty($validated['deduction_name'])) {
@@ -213,7 +235,7 @@ class DeductionController extends Controller
         }
 
         $validated = $request->validate([
-            'deduction_type' => 'sometimes|in:ppe,tools,uniform,absence,cash_advance,cash_bond,sss,philhealth,pagibig,tax,loan,insurance,cooperative,other',
+            'deduction_type' => ['sometimes', Rule::in(self::MANUAL_DEDUCTION_TYPES)],
             'deduction_name' => 'nullable|string|max:100',
             'total_amount' => 'sometimes|numeric|min:0.01',
             'amount_per_cutoff' => 'sometimes|numeric|min:0.01',
@@ -225,6 +247,12 @@ class DeductionController extends Controller
             'notes' => 'nullable|string|max:1000',
             'status' => 'sometimes|in:active,completed,cancelled',
         ]);
+
+        if (isset($validated['deduction_type']) && in_array($validated['deduction_type'], self::GOVERNMENT_RATE_ONLY_TYPES, true)) {
+            return response()->json([
+                'message' => 'Government deductions (SSS, PhilHealth, Pag-IBIG, Tax) are computed from Government Rate settings and cannot be set as manual deductions.'
+            ], 422);
+        }
 
         // Recalculate balance if total amount changed
         if (isset($validated['total_amount'])) {
@@ -513,10 +541,18 @@ class DeductionController extends Controller
         DB::beginTransaction();
         try {
             $oldBalance = $deduction->balance;
+            if ((float) $validated['refund_amount'] > (float) $oldBalance) {
+                return response()->json([
+                    'message' => 'Refund amount cannot exceed current cash bond balance'
+                ], 422);
+            }
+
+            $newBalance = max(0, (float) $oldBalance - (float) $validated['refund_amount']);
+            $newStatus = $newBalance <= 0 ? 'completed' : 'active';
 
             $deduction->update([
-                'balance' => max(0, $oldBalance - $validated['refund_amount']),
-                'status' => 'completed',
+                'balance' => $newBalance,
+                'status' => $newStatus,
                 'notes' => ($deduction->notes ? $deduction->notes . "\n\n" : '') .
                     "Refunded on " . Carbon::parse($validated['refund_date'])->format('Y-m-d') .
                     ": ₱" . number_format($validated['refund_amount'], 2) .
@@ -531,7 +567,7 @@ class DeductionController extends Controller
                 'user_id' => auth()->id(),
                 'record_id' => $deduction->id,
                 'old_values' => json_encode(['balance' => $oldBalance, 'status' => 'active']),
-                'new_values' => json_encode(['balance' => 0, 'status' => 'completed']),
+                'new_values' => json_encode(['balance' => $newBalance, 'status' => $newStatus]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
@@ -562,7 +598,7 @@ class DeductionController extends Controller
             'employee_ids.*' => 'exists:employees,id',
             'department' => 'required_if:selection_mode,department',
             'position' => 'required_if:selection_mode,position',
-            'deduction_type' => 'required|string|max:50',
+            'deduction_type' => ['required', 'string', 'max:50', Rule::in(self::MANUAL_DEDUCTION_TYPES)],
             'deduction_name' => 'nullable|string|max:100',
             'total_amount' => 'required|numeric|min:0.01',
             'amount_per_cutoff' => 'required|numeric|min:0.01',
@@ -573,6 +609,12 @@ class DeductionController extends Controller
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        if (in_array($validated['deduction_type'], self::GOVERNMENT_RATE_ONLY_TYPES, true)) {
+            return response()->json([
+                'message' => 'Government deductions (SSS, PhilHealth, Pag-IBIG, Tax) are computed from Government Rate settings and cannot be bulk-created as manual deductions.'
+            ], 422);
+        }
 
         // Get employee IDs based on selection mode
         $employeeIds = [];

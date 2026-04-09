@@ -4,126 +4,133 @@
 <head>
     <meta charset="utf-8">
     <title>Payslip</title>
-    <style>
+    @php
+    $pageScaleValue = (float) ($pageScale ?? 1);
+    $isA4ScaledLayout = $pageScaleValue < 0.999;
+        @endphp
+        <style>
         @page {
-            size: {{ $pageSizeCss ?? '8.5in 13in' }};
-            margin: {{ $pageMarginCss ?? '6mm 10mm 6mm 8mm' }};
+        size: 8.5in 13in;
+        margin: 6mm 10mm 6mm 8mm;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            font-size: 11px;
-            transform: scale({{ $pageScale ?? 1 }});
-            transform-origin: top left;
-            width: {{ $pageWidthPercent ?? 100 }}%;
+        font-family: 'Arial', sans-serif;
+        margin: 0;
+        padding: 0;
+        font-size: 11px;
+        }
+
+        body.a4-scaled-layout {
+        transform: scale(0.97);
+        transform-origin: top left;
+        width: 103.0928%;
         }
 
         .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #333;
-            padding-bottom: 10px;
+        text-align: center;
+        margin-bottom: 20px;
+        border-bottom: 3px solid #333;
+        padding-bottom: 10px;
         }
 
         .company-name {
-            font-size: 23px;
-            font-weight: bold;
-            margin-bottom: 5px;
+        font-size: 23px;
+        font-weight: bold;
+        margin-bottom: 5px;
         }
 
         .payroll-title {
-            font-size: 17px;
-            font-weight: bold;
-            margin-top: 10px;
+        font-size: 17px;
+        font-weight: bold;
+        margin-top: 10px;
         }
 
         .period-info {
-            font-size: 12px;
-            margin-top: 5px;
+        font-size: 12px;
+        margin-top: 5px;
         }
 
         .section {
-            margin-bottom: 15px;
+        margin-bottom: 15px;
         }
 
         .section-title {
-            background-color: #f0f0f0;
-            padding: 5px 10px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            border-left: 4px solid #333;
+        background-color: #f0f0f0;
+        padding: 5px 10px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        border-left: 4px solid #333;
         }
 
         table {
-            width: 100%;
-            border-collapse: collapse;
+        width: 100%;
+        border-collapse: collapse;
         }
 
         table td {
-            padding: 6px 10px;
-            border: 1px solid #ddd;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
         }
 
         .label {
-            font-weight: bold;
-            width: 35%;
-            background-color: #f9f9f9;
-            white-space: nowrap;
+        font-weight: bold;
+        width: 35%;
+        background-color: #f9f9f9;
+        white-space: nowrap;
         }
 
         .value {
-            text-align: right;
+        text-align: right;
         }
 
         .total-row {
-            background-color: #e8e8e8;
-            font-weight: bold;
-            font-size: 13px;
+        background-color: #e8e8e8;
+        font-weight: bold;
+        font-size: 13px;
         }
 
         .net-pay {
-            background-color: #4CAF50;
-            color: white;
-            font-size: 15px;
+        background-color: #4CAF50;
+        color: white;
+        font-size: 15px;
         }
 
         .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 2px solid #333;
-            text-align: center;
-            font-size: 10px;
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 2px solid #333;
+        text-align: center;
+        font-size: 10px;
         }
 
         .acknowledgment {
-            margin-top: 40px;
-            font-size: 10px;
-            font-style: italic;
-            text-align: center;
+        margin-top: 40px;
+        font-size: 10px;
+        font-style: italic;
+        text-align: center;
         }
 
         .signature-section {
-            margin-top: 50px;
-            display: table;
-            width: 100%;
+        margin-top: 50px;
+        display: table;
+        width: 100%;
         }
 
         .signature-box {
-            display: table-cell;
-            width: 50%;
-            text-align: center;
+        display: table-cell;
+        width: 50%;
+        text-align: center;
         }
 
         .signature-line {
-            border-top: 1px solid #333;
-            margin: 40px 50px 5px 50px;
+        border-top: 1px solid #333;
+        margin: 40px 50px 5px 50px;
         }
-    </style>
+        </style>
 </head>
 
-<body>
+<body class="{{ $isA4ScaledLayout ? 'a4-scaled-layout' : '' }}">
     <div class="header">
         <div class="company-name">{{ $companyInfo->company_name ?? 'GIOVANNI CONSTRUCTION' }}</div>
         <div>{{ $companyInfo->address ?? 'Imadejas Subdivision, Capitol Bonbon' }}</div>
@@ -266,7 +273,10 @@
             </tr>
             @endforeach
             @endif
-            @if($item->other_deductions > 0)
+            @if(
+            ($item->other_deductions ?? 0) > 0
+            && (empty($item->deductions_breakdown) || !is_array($item->deductions_breakdown) || count($item->deductions_breakdown) === 0)
+            )
             <tr>
                 <td class="label">Other Deductions</td>
                 <td class="value">PHP {{ number_format($item->other_deductions, 2) }}</td>

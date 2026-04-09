@@ -183,7 +183,7 @@
                 :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
-                hint="Daily rate will be set automatically based on position"
+                hint="Position daily rate is used as payroll base and converted by salary type"
                 persistent-hint
                 @update:model-value="updateBasicSalary"
               ></v-select>
@@ -203,12 +203,12 @@
             <v-col cols="12" md="6">
               <v-text-field
                 :model-value="formatSalaryDisplay()"
-                label="Daily Rate"
+                label="Position Rate Reference"
                 prepend-inner-icon="mdi-cash"
                 readonly
                 variant="outlined"
                 density="comfortable"
-                hint="Based on selected position"
+                hint="Displayed as daily reference for the selected position"
                 persistent-hint
                 prefix="₱"
                 suffix="/day"
@@ -339,8 +339,14 @@
             </v-col>
 
             <v-col cols="12">
-              <v-alert type="info" variant="tonal" density="compact" class="mb-2">
-                Select which government contributions apply to this employee. Only selected contributions will be calculated in the payroll.
+              <v-alert
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-2"
+              >
+                Select which government contributions apply to this employee.
+                Only selected contributions will be calculated in the payroll.
               </v-alert>
             </v-col>
 
@@ -465,7 +471,11 @@ const ACTIVITY_STATUSES = [
 const SALARY_TYPES = [
   { title: "Daily", value: "daily" },
   { title: "Monthly", value: "monthly" },
+  { title: "Hourly", value: "hourly" },
 ];
+
+const DEFAULT_WORKING_DAYS_PER_MONTH = 22;
+const DEFAULT_STANDARD_HOURS_PER_DAY = 8;
 
 const formData = ref({
   // Personal Information
@@ -513,8 +523,28 @@ onMounted(async () => {
 // Update basic salary when position changes
 function updateBasicSalary(position) {
   if (position) {
-    formData.value.basic_salary = getRate(position);
+    const dailyRate = getRate(position);
+    formData.value.basic_salary = convertDailyRateBySalaryType(
+      dailyRate,
+      formData.value.salary_type,
+    );
   }
+}
+
+function convertDailyRateBySalaryType(dailyRate, salaryType) {
+  const normalizedDailyRate = Number(dailyRate) || 0;
+
+  if (salaryType === "monthly") {
+    return normalizedDailyRate * DEFAULT_WORKING_DAYS_PER_MONTH;
+  }
+
+  if (salaryType === "hourly") {
+    return DEFAULT_STANDARD_HOURS_PER_DAY > 0
+      ? normalizedDailyRate / DEFAULT_STANDARD_HOURS_PER_DAY
+      : normalizedDailyRate;
+  }
+
+  return normalizedDailyRate;
 }
 
 // Format salary display
@@ -590,6 +620,15 @@ watch(
       if (employeeForm.value) {
         employeeForm.value.resetValidation();
       }
+    }
+  },
+);
+
+watch(
+  () => formData.value.salary_type,
+  () => {
+    if (formData.value.position) {
+      updateBasicSalary(formData.value.position);
     }
   },
 );
@@ -724,4 +763,3 @@ watch(
   }
 }
 </style>
-

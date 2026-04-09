@@ -156,7 +156,11 @@ class PayrollService
     {
         $query = Employee::query();
 
-        if (!empty($employeeIds)) {
+        if (is_array($employeeIds)) {
+            if (empty($employeeIds)) {
+                return collect();
+            }
+
             $query->whereIn('id', $employeeIds);
         }
 
@@ -166,11 +170,15 @@ class PayrollService
                 // Attendances for payroll period only (with needed columns)
                 'attendances' => function ($q) use ($payroll) {
                     $q->whereBetween('attendance_date', [$payroll->period_start, $payroll->period_end])
-                        ->whereNotNull('time_out')
-                        ->where('status', '!=', 'incomplete')
                         ->where('status', '!=', 'absent')
                         ->where('approval_status', 'approved')
                         ->whereNotNull('time_in')
+                        ->where(function ($sub) {
+                            // Keep behavior aligned with create flow: half-day entries
+                            // may legitimately have no time_out but still count.
+                            $sub->whereNotNull('time_out')
+                                ->orWhere('status', 'half_day');
+                        })
                         ->select(
                             'id',
                             'employee_id',
@@ -200,6 +208,7 @@ class PayrollService
                             'employee_id',
                             'allowance_type',
                             'allowance_name',
+                            'is_taxable',
                             'amount'
                         );
                 },
@@ -217,6 +226,10 @@ class PayrollService
                     $q->where('status', 'active')
                         ->where('balance', '>', 0)
                         ->where(function ($query) use ($payroll) {
+                            $query->whereNull('first_payment_date')
+                                ->orWhere('first_payment_date', '<=', $payroll->period_end);
+                        })
+                        ->where(function ($query) use ($payroll) {
                             $query->whereNull('maturity_date')
                                 ->orWhere('maturity_date', '>=', $payroll->period_start);
                         })
@@ -226,6 +239,7 @@ class PayrollService
                             'payment_frequency',
                             'semi_monthly_amortization',
                             'monthly_amortization',
+                            'first_payment_date',
                             'balance'
                         );
                 },
@@ -309,7 +323,8 @@ class PayrollService
      */
     public function getHolidaysForPeriod(string $startDate, string $endDate): array
     {
-        $cacheKey = "holidays:{$startDate}:{$endDate}";
+        $cacheVersion = (int) Cache::get('holidays_cache_version', 1);
+        $cacheKey = "holidays:v{$cacheVersion}:{$startDate}:{$endDate}";
 
         return Cache::remember($cacheKey, 3600, function () use ($startDate, $endDate) {
             $start = Carbon::parse($startDate);
@@ -378,22 +393,39 @@ class PayrollService
         $holidayPay = 0;
         $totalUndertimeHours = 0;
 
-        // Get employee's effective rate (uses custom_pay_rate if set, otherwise position rate or basic_salary)
-        $rate = $employee->getBasicSalary();
+        // Resolve to a daily-equivalent rate used by payroll formulas.
+        // - daily: getBasicSalary() is already a daily rate
+        // - monthly: convert monthly base to per-day using configured working days
+        // - hourly: convert hourly base to per-day using standard hours
+        $baseRate = $employee->getBasicSalary();
         // Monthly basic salary for government contribution table lookups (SSS/PhilHealth/Pag-IBIG).
         // Using getMonthlyRate() is correct — contributions are based on BASIC salary, NOT gross pay.
         // Gross pay includes OT, allowances, and holiday premiums which must NOT inflate MSC/PMB.
         $monthlyBasicSalary = $employee->getMonthlyRate();
         $standardHours = config('payroll.standard_hours_per_day', 8);
-        $hourlyRate = $rate / $standardHours;
+        $workingDaysPerMonth = (float) config('payroll.working_days_per_month', 22);
+
+        if ($employee->salary_type === 'monthly') {
+            $rate = $workingDaysPerMonth > 0 ? ($baseRate / $workingDaysPerMonth) : 0;
+        } elseif ($employee->salary_type === 'hourly') {
+            $rate = $baseRate * $standardHours;
+        } else {
+            $rate = $baseRate;
+        }
+
+        $hourlyRate = $standardHours > 0 ? ($rate / $standardHours) : 0;
 
         // Process each attendance record
         foreach ($attendances as $attendance) {
             $attendanceDate = Carbon::parse($attendance->attendance_date);
 
-            // Accumulate undertime hours
+            // Avoid double-penalizing half-day records: half-day pay is already
+            // represented via regularDays += 0.5, so its attendance-side
+            // shortage should not be deducted again as undertime in payroll.
             if ($attendance->undertime_hours > 0) {
-                $totalUndertimeHours += $attendance->undertime_hours;
+                if ((string) ($attendance->status ?? '') !== 'half_day') {
+                    $totalUndertimeHours += $attendance->undertime_hours;
+                }
             }
 
             // Check if this date is Sunday (0 = Sunday in Carbon)
@@ -576,6 +608,9 @@ class PayrollService
         // OPTIMIZATION: Use preloaded relationships (no queries)
         $activeAllowances = $employee->allowances;
         $allowances = $activeAllowances->sum('amount') ?? 0;
+        $taxableAllowances = (float) $activeAllowances
+            ->where('is_taxable', true)
+            ->sum('amount');
 
         $allowancesBreakdown = $activeAllowances->map(function ($allowance) {
             return [
@@ -612,6 +647,7 @@ class PayrollService
             ? $employee->bonuses
             : collect();
         $bonusTotal = (float) $pendingBonuses->sum('amount');
+        $taxableBonusTotal = 0;
         $bonusIds = [];
 
         foreach ($pendingBonuses as $bonus) {
@@ -621,6 +657,11 @@ class PayrollService
                 'name' => $bonus->bonus_name ?: $bonus->bonus_type,
                 'amount' => (float) $bonus->amount,
             ];
+
+            if ((bool) ($bonus->is_taxable ?? true)) {
+                $taxableBonusTotal += (float) $bonus->amount;
+            }
+
             $bonusIds[] = $bonus->id;
         }
 
@@ -663,12 +704,16 @@ class PayrollService
         $pagibig = 0;
 
         if ($grossPay > 0) {
+            // Use payroll period end as the effective date so historical payrolls
+            // use the contribution tables active during that payroll period.
+            $contributionDate = $payroll->period_end;
+
             // SSS: Check both employee flag AND payroll flag
             if ($employee->has_sss && ($payroll->deduct_sss ?? true)) {
                 // Use custom SSS if set (already semi-monthly amount), otherwise calculate
                 $sss = $employee->custom_sss !== null
                     ? (float) $employee->custom_sss
-                    : $this->calculateSSS($monthlyBasicSalary);
+                    : $this->calculateSSS($monthlyBasicSalary, $contributionDate);
             }
 
             // PhilHealth: Check both employee flag AND payroll flag
@@ -676,7 +721,7 @@ class PayrollService
                 // Use custom PhilHealth if set (already semi-monthly amount), otherwise calculate
                 $philhealth = $employee->custom_philhealth !== null
                     ? (float) $employee->custom_philhealth
-                    : $this->calculatePhilHealth($monthlyBasicSalary);
+                    : $this->calculatePhilHealth($monthlyBasicSalary, $contributionDate);
             }
 
             // Pag-IBIG: Check both employee flag AND payroll flag
@@ -684,7 +729,7 @@ class PayrollService
                 // Use custom Pag-IBIG if set (already semi-monthly amount), otherwise calculate
                 $pagibig = $employee->custom_pagibig !== null
                     ? (float) $employee->custom_pagibig
-                    : $this->calculatePagibig($monthlyBasicSalary);
+                    : $this->calculatePagibig($monthlyBasicSalary, $contributionDate);
             }
         }
 
@@ -693,6 +738,14 @@ class PayrollService
         $periodEnd = Carbon::parse($payroll->period_end);
         $periodDays = $periodStart->diffInDays($periodEnd) + 1;
         $isSemiMonthly = $periodDays <= 16;
+
+        // Compute withholding tax from dynamic GovernmentRate tax table.
+        // Taxable base excludes non-taxable allowances.
+        // Meal allowance remains excluded by default unless modeled as taxable allowance type.
+        $taxableSupplementalIncome = $taxableAllowances + $taxableBonusTotal;
+        $taxableGrossPay = $basicPay + $holidayPay + $totalOtPay + $taxableSupplementalIncome + $salaryAdjustment;
+        $taxableIncome = max($taxableGrossPay - $sss - $philhealth - $pagibig, 0);
+        $withholdingTax = $this->calculateWithholdingTax($taxableIncome, $payroll->period_end, $isSemiMonthly);
 
         // For monthly loans on semi-monthly payrolls: only deduct on 2nd cutoff
         // 2nd cutoff = period ending on 16th or later of the month
@@ -703,6 +756,10 @@ class PayrollService
 
         $loanDeduction = 0;
         foreach ($activeLoans as $loan) {
+            if ($loan->first_payment_date && Carbon::parse($loan->first_payment_date)->gt($periodEnd)) {
+                continue;
+            }
+
             // Determine payment amount based on payroll period and loan payment frequency
             $amortization = 0;
             if ($loan->payment_frequency === 'semi_monthly') {
@@ -724,7 +781,7 @@ class PayrollService
         }
 
         // Employee savings
-        $employeeSavings = 0; // Can be configured
+        $employeeSavings = 0;
 
         // Cash advance (displayed separately in payroll register)
         $cashAdvance = 0;
@@ -732,14 +789,23 @@ class PayrollService
         // OPTIMIZATION: Use preloaded deductions
         $activeDeductions = $employee->deductions;
 
+        // Government deductions must come from GovernmentRate settings and
+        // employee contribution toggles only, never from manual deductions.
+        $governmentManagedDeductionTypes = ['sss', 'philhealth', 'pagibig', 'tax'];
+
         // Types that go into "Other Deductions" column (excluding cash advance)
         $otherDeductionTypes = ['damages'];
+        $employeeSavingsTypes = ['cooperative'];
 
         $employeeDeductions = 0;
         $otherDeductions = 0;
         $deductionsBreakdown = [];
 
         foreach ($activeDeductions as $deduction) {
+            if (in_array($deduction->deduction_type, $governmentManagedDeductionTypes, true)) {
+                continue;
+            }
+
             $amountPerCutoff = $deduction->amount_per_cutoff;
             if (!$amountPerCutoff && $deduction->installments > 0) {
                 $amountPerCutoff = $deduction->total_amount / $deduction->installments;
@@ -749,6 +815,8 @@ class PayrollService
 
             if ($deduction->deduction_type === 'cash_advance') {
                 $cashAdvance += $deductionAmount;
+            } elseif (in_array($deduction->deduction_type, $employeeSavingsTypes, true)) {
+                $employeeSavings += $deductionAmount;
             } elseif (in_array($deduction->deduction_type, $otherDeductionTypes)) {
                 $otherDeductions += $deductionAmount;
             } else {
@@ -764,9 +832,10 @@ class PayrollService
             ];
         }
 
-        // Total deductions (including undertime deduction)
+        // Total deductions (including withholding tax and undertime deduction)
         $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
-            $employeeSavings + $cashAdvance + $employeeDeductions + $otherDeductions + $undertimeDeduction;
+            $withholdingTax + $employeeSavings + $cashAdvance + $employeeDeductions +
+            $otherDeductions + $undertimeDeduction;
 
         // Net pay = Gross pay - Total deductions
         $netPay = $grossPay - $totalDeductions;
@@ -795,7 +864,7 @@ class PayrollService
             'sss' => $sss,
             'philhealth' => $philhealth,
             'pagibig' => $pagibig,
-            'withholding_tax' => 0,
+            'withholding_tax' => $withholdingTax,
             'employee_savings' => $employeeSavings,
             'cash_advance' => $cashAdvance,
             'loans' => $loanDeduction,
@@ -816,13 +885,13 @@ class PayrollService
      * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
      *                                   SSS looks up MSC (Monthly Salary Credit) from basic salary only.
      */
-    private function calculateSSS($monthlyBasicSalary)
+    private function calculateSSS($monthlyBasicSalary, $date = null)
     {
         // Use monthly basic salary directly for SSS MSC table lookup
         $monthlySalary = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
-        $contribution = GovernmentRate::getContributionForSalary('sss', $monthlySalary);
+        $contribution = GovernmentRate::getContributionForSalary('sss', $monthlySalary, $date);
 
         if ($contribution && $contribution['employee'] > 0) {
             // Found in settings - use monthly amount, divide by 2 for semi-monthly
@@ -885,13 +954,13 @@ class PayrollService
      * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
      *                                   PhilHealth premium base is monthly basic salary per RA 11223.
      */
-    private function calculatePhilHealth($monthlyBasicSalary)
+    private function calculatePhilHealth($monthlyBasicSalary, $date = null)
     {
         // Use monthly basic salary directly for PhilHealth premium computation
         $monthlyGross = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
-        $contribution = GovernmentRate::getContributionForSalary('philhealth', $monthlyGross);
+        $contribution = GovernmentRate::getContributionForSalary('philhealth', $monthlyGross, $date);
 
         if ($contribution && $contribution['employee'] > 0) {
             // Found in settings - use monthly amount, divide by 2 for semi-monthly
@@ -914,13 +983,13 @@ class PayrollService
      * @param float $monthlyBasicSalary  Employee's monthly basic salary (NOT gross pay).
      *                                   HDMF contribution is based on monthly basic compensation.
      */
-    private function calculatePagibig($monthlyBasicSalary)
+    private function calculatePagibig($monthlyBasicSalary, $date = null)
     {
         // Use monthly basic salary directly for Pag-IBIG contribution computation
         $monthlyGross = $monthlyBasicSalary;
 
         // Try to get from settings dialog configuration
-        $contribution = GovernmentRate::getContributionForSalary('pagibig', $monthlyGross);
+        $contribution = GovernmentRate::getContributionForSalary('pagibig', $monthlyGross, $date);
 
         if ($contribution && $contribution['employee'] > 0) {
             // Found in settings - use monthly amount, divide by 2 for semi-monthly
@@ -935,5 +1004,16 @@ class PayrollService
         // Maximum monthly employee contribution = ₱200 → semi-monthly = ₱100
         // Minimum semi-monthly = ₱25 (₱50/month floor)
         return round(min(max($semiMonthlyContribution, 25), 100), 2);
+    }
+
+    /**
+     * Calculate withholding tax using dynamic GovernmentRate tax brackets.
+     *
+     * The tax table remains fully managed from the Government Rates UI.
+     * If no active tax bracket matches, tax is treated as zero.
+     */
+    private function calculateWithholdingTax(float $taxableIncome, $date = null, bool $isSemiMonthly = true): float
+    {
+        return GovernmentRate::calculateTaxForIncome($taxableIncome, $date, $isSemiMonthly);
     }
 }

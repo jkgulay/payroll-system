@@ -272,7 +272,15 @@ class AttendanceService
             'created_by' => $data['created_by'] ?? null,
         ]);
 
-        $attendance->calculateHours();
+        if ($attendance->time_in && $attendance->time_out) {
+            $attendance->calculateHours();
+        } elseif ($attendance->time_in && !$attendance->time_out) {
+            $this->markIncompleteAttendance($attendance);
+        } else {
+            $this->resetComputedHours($attendance);
+            $attendance->save();
+        }
+
         return $attendance->fresh();
     }
 
@@ -325,7 +333,14 @@ class AttendanceService
         }
         $attendance->save();
 
-        $attendance->calculateHours();
+        if ($attendance->time_in && $attendance->time_out) {
+            $attendance->calculateHours();
+        } elseif ($attendance->time_in && !$attendance->time_out) {
+            $this->markIncompleteAttendance($attendance);
+        } else {
+            $this->resetComputedHours($attendance);
+            $attendance->save();
+        }
 
         // Log the change
         Log::info('Attendance updated', [
@@ -336,6 +351,22 @@ class AttendanceService
         ]);
 
         return $attendance;
+    }
+
+    private function markIncompleteAttendance(Attendance $attendance): void
+    {
+        $attendance->status = 'incomplete';
+        $this->resetComputedHours($attendance);
+        $attendance->save();
+    }
+
+    private function resetComputedHours(Attendance $attendance): void
+    {
+        $attendance->regular_hours = 0;
+        $attendance->overtime_hours = 0;
+        $attendance->undertime_hours = 0;
+        $attendance->late_hours = 0;
+        $attendance->night_differential_hours = 0;
     }
 
     private function determineStatus(
@@ -377,9 +408,9 @@ class AttendanceService
             $schedule = $this->getScheduleForEmployee($employee, Carbon::parse($attendanceDate));
             $gracePeriodMinutes = (int) $schedule['grace_period_minutes'];
 
-            $scheduledTimeIn = Carbon::parse($attendanceDate . ' ' . $schedule['standard_time_in'])
+            $scheduledTimeIn = Carbon::parse($date . ' ' . $schedule['standard_time_in'])
                 ->addMinutes($gracePeriodMinutes);
-            $actualTimeIn = Carbon::parse($attendanceDate . ' ' . $timeIn);
+            $actualTimeIn = Carbon::parse($date . ' ' . $timeIn);
 
             if ($actualTimeIn->gt($scheduledTimeIn)) {
                 return 'late';

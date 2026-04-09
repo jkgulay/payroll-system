@@ -277,22 +277,52 @@ class Employee extends Model
 
     /**
      * Get the effective basic salary for this employee
-     * Priority: custom_pay_rate > PositionRate daily_rate > manual basic_salary field
+     * Priority:
+     * 1) custom_pay_rate (salary-type aware value)
+     * 2) position daily_rate converted by salary_type when needed
+     * 3) stored basic_salary
      */
     public function getBasicSalary(): float
     {
+        $salaryType = $this->salary_type ?: 'daily';
+        $storedBasic = (float) ($this->basic_salary ?? 0);
+        $workingDaysPerMonth = (float) config('payroll.working_days_per_month', 22);
+        $standardHours = (float) config('payroll.standard_hours_per_day', 8);
+
         // Priority 1: Custom pay rate set by admin (overrides everything)
         if ($this->custom_pay_rate !== null) {
             return (float) $this->custom_pay_rate;
         }
 
-        // Priority 2: If employee has position_id, get rate from PositionRate table
+        $positionDailyRate = null;
         if ($this->position_id && $this->positionRate) {
-            return (float) $this->positionRate->daily_rate;
+            $positionDailyRate = (float) $this->positionRate->daily_rate;
         }
 
-        // Priority 3: Fallback to manual basic_salary field (for backward compatibility)
-        return (float) $this->basic_salary;
+        if ($salaryType === 'monthly') {
+            if ($positionDailyRate !== null) {
+                return $positionDailyRate * $workingDaysPerMonth;
+            }
+
+            return $storedBasic;
+        }
+
+        if ($salaryType === 'hourly') {
+            if ($positionDailyRate !== null) {
+                return $standardHours > 0
+                    ? ($positionDailyRate / $standardHours)
+                    : $positionDailyRate;
+            }
+
+            return $storedBasic;
+        }
+
+        // Daily (default): use linked position rate if available.
+        if ($positionDailyRate !== null) {
+            return $positionDailyRate;
+        }
+
+        return $storedBasic;
     }
 
     public function getSemiMonthlyRate(): float
@@ -304,6 +334,13 @@ class Employee extends Model
             $workingDaysPerSemiMonth = config('payroll.working_days_per_semi_month', 11);
             return $basicSalary * $workingDaysPerSemiMonth;
         }
+
+        if ($this->salary_type === 'hourly') {
+            $workingDaysPerSemiMonth = config('payroll.working_days_per_semi_month', 11);
+            $standardHours = config('payroll.standard_hours_per_day', 8);
+            return (float) ($basicSalary * $standardHours * $workingDaysPerSemiMonth);
+        }
+
         return $basicSalary / 2;
     }
 
@@ -333,6 +370,10 @@ class Employee extends Model
         if ($this->salary_type === 'daily') {
             // For daily workers, divide daily rate by hours per day
             return $basicSalary / $standardHours;
+        }
+
+        if ($this->salary_type === 'hourly') {
+            return $basicSalary;
         }
 
         // For monthly workers, calculate from monthly rate

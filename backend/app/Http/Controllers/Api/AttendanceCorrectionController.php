@@ -131,14 +131,21 @@ class AttendanceCorrectionController extends Controller
                 $attendance->status = $correction->requested_status;
             }
 
-            // Recalculate hours if both time_in and time_out exist
-            if ($attendance->time_in && $attendance->time_out) {
-                $timeIn = \Carbon\Carbon::parse($attendance->time_in);
-                $timeOut = \Carbon\Carbon::parse($attendance->time_out);
-                $attendance->hours_worked = $timeOut->diffInHours($timeIn);
-            }
-
             $attendance->save();
+
+            // Recompute canonical attendance fields used by payroll.
+            if ($attendance->time_in && $attendance->time_out) {
+                $attendance->calculateHours();
+            } else {
+                // Keep incomplete records visible for correction and excluded from payroll processing.
+                $attendance->status = 'incomplete';
+                $attendance->regular_hours = 0;
+                $attendance->overtime_hours = 0;
+                $attendance->undertime_hours = 0;
+                $attendance->late_hours = 0;
+                $attendance->night_differential_hours = 0;
+                $attendance->save();
+            }
 
             // Update correction status
             $correction->update([

@@ -85,7 +85,7 @@ class AIService
             // Execute with tool calling loop
             return $this->executeWithTools($messages, $tools);
         } catch (\Exception $e) {
-            Log::error('AI Service Exception', [
+            Log::error('AI Service Exception', [ 
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
