@@ -22,6 +22,12 @@ class AuditLogController extends Controller
                 'module',
                 'action',
                 'description',
+                'model_type',
+                'model_id',
+                'ip_address',
+                'user_agent',
+                'old_values',
+                'new_values',
                 'created_at',
             ])
             ->with([

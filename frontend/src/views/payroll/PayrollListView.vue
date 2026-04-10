@@ -739,6 +739,9 @@
                             <v-text-field
                               v-model="row.time_in_input"
                               type="time"
+                              step="60"
+                              lang="en-GB"
+                              class="day-time-input"
                               density="compact"
                               variant="outlined"
                               hide-details
@@ -748,6 +751,9 @@
                             <v-text-field
                               v-model="row.time_out_input"
                               type="time"
+                              step="60"
+                              lang="en-GB"
+                              class="day-time-input"
                               density="compact"
                               variant="outlined"
                               hide-details
@@ -757,6 +763,9 @@
                             <v-text-field
                               v-model="row.ot_time_in_input"
                               type="time"
+                              step="60"
+                              lang="en-GB"
+                              class="day-time-input"
                               density="compact"
                               variant="outlined"
                               hide-details
@@ -766,6 +775,9 @@
                             <v-text-field
                               v-model="row.ot_time_out_input"
                               type="time"
+                              step="60"
+                              lang="en-GB"
+                              class="day-time-input"
                               density="compact"
                               variant="outlined"
                               hide-details
@@ -2667,6 +2679,19 @@ async function saveSignatureSettings() {
 .attendance-day-view :deep(td),
 .attendance-day-view :deep(th) {
   white-space: nowrap;
+}
+
+.attendance-day-view :deep(.day-time-input) {
+  min-width: 132px;
+}
+
+.attendance-day-view :deep(.day-time-input .v-field) {
+  min-width: 132px;
+}
+
+.attendance-day-view :deep(.day-time-input input[type="time"]) {
+  min-width: 118px;
+  font-variant-numeric: tabular-nums;
 }
 
 .punch-filter-actions {

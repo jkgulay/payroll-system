@@ -218,21 +218,35 @@ class AttendanceController extends Controller
 
             DB::commit();
 
+            $updatedAttendance = $lockedAttendance->fresh();
+            $otFieldsTouched = $request->has('ot_time_in') || $request->has('ot_time_out');
+            $otValuesChanged =
+                ($request->has('ot_time_in') && (($oldValues['ot_time_in'] ?? null) !== $updatedAttendance->ot_time_in))
+                || ($request->has('ot_time_out') && (($oldValues['ot_time_out'] ?? null) !== $updatedAttendance->ot_time_out));
+
+            $action = ($otFieldsTouched && $otValuesChanged)
+                ? 'update_attendance_overtime'
+                : 'update_attendance';
+
+            $description = ($otFieldsTouched && $otValuesChanged)
+                ? 'Attendance overtime record updated during payroll review'
+                : 'Attendance record updated';
+
             // Log the update
             AuditLog::create([
                 'user_id' => $request->user()->id,
                 'module' => 'attendance',
-                'action' => 'update_attendance',
-                'description' => 'Attendance record updated',
+                'action' => $action,
+                'description' => $description,
                 'old_values' => $oldValues,
-                'new_values' => $lockedAttendance->fresh()->toArray(),
+                'new_values' => $updatedAttendance->toArray(),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
 
             return response()->json([
                 'message' => 'Attendance updated successfully',
-                'attendance' => $lockedAttendance->fresh()->load('employee'),
+                'attendance' => $updatedAttendance->load('employee'),
             ]);
         } catch (\Exception $e) {
             if (DB::transactionLevel() > 0) {

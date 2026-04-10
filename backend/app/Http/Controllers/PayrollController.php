@@ -347,6 +347,22 @@ class PayrollController extends Controller
                 ],
             ]);
 
+            if (!empty($overtimeEmployeeIds)) {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'module' => 'payroll',
+                    'action' => 'payroll_overtime_employees_set',
+                    'description' => "Payroll '{$payroll->period_name}' configured with " . count($overtimeEmployeeIds) . " overtime-eligible employee(s)",
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'new_values' => [
+                        'payroll_id' => $payroll->id,
+                        'overtime_employee_ids' => $overtimeEmployeeIds,
+                        'overtime_employee_count' => count($overtimeEmployeeIds),
+                    ],
+                ]);
+            }
+
             return response()->json([
                 'message' => 'Payroll created successfully',
                 'payroll' => $payroll->load(['items.employee', 'creator']),
@@ -670,6 +686,32 @@ class PayrollController extends Controller
             ->sortBy('employee_number', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
 
+        try {
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'payroll_punch_review',
+                'description' => "Reviewed payroll punch records for {$periodStart} to {$periodEnd}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'new_values' => [
+                    'period_start' => $periodStart,
+                    'period_end' => $periodEnd,
+                    'payroll_scope' => $validated['payroll_scope'] ?? 'all',
+                    'individual_target' => $validated['individual_target'] ?? null,
+                    'included_position' => $validated['included_position'] ?? null,
+                    'included_employee_id' => $validated['included_employee_id'] ?? null,
+                    'has_attendance' => (bool) ($validated['has_attendance'] ?? false),
+                    'excluded_positions' => $validated['excluded_positions'] ?? [],
+                    'date_filter' => $validated['date'] ?? null,
+                    'employee_filter' => $validated['employee_id'] ?? null,
+                    'result_count' => $attendance->count(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[Payroll Punch Review] Failed to create audit log: ' . $e->getMessage());
+        }
+
         return response()->json([
             'attendance' => $attendance,
             'employees' => $employees,
@@ -705,6 +747,26 @@ class PayrollController extends Controller
                 'undertime_hours',
                 'late_hours',
             ]);
+
+        try {
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'payroll_overtime_attendance_view',
+                'description' => "Viewed overtime attendance for {$employee->employee_number} ({$employee->full_name})",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'new_values' => [
+                    'employee_id' => $employee->id,
+                    'employee_number' => $employee->employee_number,
+                    'period_start' => $validated['period_start'],
+                    'period_end' => $validated['period_end'],
+                    'result_count' => $rows->count(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[Payroll Overtime Attendance] Failed to create audit log: ' . $e->getMessage());
+        }
 
         return response()->json([
             'employee' => [
@@ -795,6 +857,23 @@ class PayrollController extends Controller
             }
         }
 
+        $normalizeOvertimeIds = function ($value): array {
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                $value = is_array($decoded) ? $decoded : [];
+            }
+
+            return collect(is_array($value) ? $value : [])
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+        };
+
+        $oldOvertimeEmployeeIds = $normalizeOvertimeIds($payroll->overtime_employee_ids);
+
         $oldValues = $payroll->toArray();
         $recalculationFields = [
             'period_start',
@@ -835,6 +914,10 @@ class PayrollController extends Controller
                 $this->recordPaymentsForPayroll($payroll);
             }
 
+            $freshPayroll = $payroll->fresh()->loadCount('items');
+            $newOvertimeEmployeeIds = $normalizeOvertimeIds($freshPayroll->overtime_employee_ids);
+            $overtimeSelectionChanged = $oldOvertimeEmployeeIds !== $newOvertimeEmployeeIds;
+
             // Log payroll update
             AuditLog::create([
                 'user_id' => auth()->id(),
@@ -846,8 +929,29 @@ class PayrollController extends Controller
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
                 'old_values' => $oldValues,
-                'new_values' => $payroll->fresh()->loadCount('items')->toArray(),
+                'new_values' => $freshPayroll->toArray(),
             ]);
+
+            if ($overtimeSelectionChanged) {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'module' => 'payroll',
+                    'action' => 'payroll_overtime_employees_updated',
+                    'description' => "Payroll '{$freshPayroll->period_name}' overtime-eligible employees updated (" . count($oldOvertimeEmployeeIds) . ' -> ' . count($newOvertimeEmployeeIds) . ')',
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'old_values' => [
+                        'payroll_id' => $freshPayroll->id,
+                        'overtime_employee_ids' => $oldOvertimeEmployeeIds,
+                        'overtime_employee_count' => count($oldOvertimeEmployeeIds),
+                    ],
+                    'new_values' => [
+                        'payroll_id' => $freshPayroll->id,
+                        'overtime_employee_ids' => $newOvertimeEmployeeIds,
+                        'overtime_employee_count' => count($newOvertimeEmployeeIds),
+                    ],
+                ]);
+            }
 
             DB::commit();
 
