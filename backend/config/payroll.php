@@ -47,6 +47,12 @@ return [
         // Limit how far back attendance records are recalculated after
         // schedule updates, to avoid rewriting historical payroll periods.
         'schedule_recalculation_lookback_days' => env('PAYROLL_SCHEDULE_RECALC_LOOKBACK_DAYS', 60),
+
+        // Overnight punch carry-over:
+        // If enabled, punches at or before the cutoff time are attached to the
+        // previous attendance date so records like 20:14 -> 01:00 stay together.
+        'overnight_carry_enabled' => env('PAYROLL_OVERNIGHT_CARRY_ENABLED', true),
+        'overnight_carry_cutoff_hour' => env('PAYROLL_OVERNIGHT_CARRY_CUTOFF_HOUR', 6),
     ],
 
     /*
