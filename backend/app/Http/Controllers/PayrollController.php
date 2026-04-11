@@ -172,11 +172,6 @@ class PayrollController extends Controller
                     ->orWhere(function ($sq) {
                         $sq->whereNotNull('ot_time_in')
                             ->whereNull('ot_time_out');
-                    })
-                    // OR missing ot_time_out_2 when ot_time_in_2 exists
-                    ->orWhere(function ($sq) {
-                        $sq->whereNotNull('ot_time_in_2')
-                            ->whereNull('ot_time_out_2');
                     });
             })
             ->with(['employee:id,employee_number,first_name,last_name'])
@@ -190,9 +185,7 @@ class PayrollController extends Controller
                 'break_start',
                 'break_end',
                 'ot_time_in',
-                'ot_time_out',
-                'ot_time_in_2',
-                'ot_time_out_2'
+                'ot_time_out'
             ]);
 
         // Format the incomplete records
@@ -212,9 +205,6 @@ class PayrollController extends Controller
             }
             if ($record->ot_time_in && !$record->ot_time_out) {
                 $issuesList[] = 'Missing OT time out';
-            }
-            if ($record->ot_time_in_2 && !$record->ot_time_out_2) {
-                $issuesList[] = 'Missing OT2 time out';
             }
 
             return [

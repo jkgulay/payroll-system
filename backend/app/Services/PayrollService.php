@@ -668,8 +668,9 @@ class PayrollService
         $otherAllowances = $allowances + $mealAllowanceTotal + $bonusTotal;
 
         // Calculate salary adjustment from pending adjustments (OPTIMIZED - preloaded)
-        // Note: Sunday hours are NOT counted in days_worked - they appear in the sunday_hours column
-        $totalDaysWorked = $regularDays + $holidayDays;
+        // Business rule: "No. of Days" should count only regular weekday days.
+        // Sunday and holiday work are shown in SUN/SPL. HOL columns instead.
+        $totalDaysWorked = $regularDays;
 
         // OPTIMIZATION: Use preloaded salary adjustments
         $pendingAdjustments = $employee->salaryAdjustments;

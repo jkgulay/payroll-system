@@ -476,8 +476,9 @@ $resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress :
                     @php
                     $undertimeDeduction = $item->undertime_deduction ?? 0;
                     $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
-                    $sunSplHolHours = ($item->special_ot_hours ?? 0) + ($item->sunday_hours ?? 0);
-                    $sunSplHolPay = ($item->special_ot_pay ?? 0) + ($item->sunday_pay ?? 0);
+                    $standardHoursPerDay = (float) config('payroll.standard_hours_per_day', 8);
+                    $sunSplHolHours = (($item->special_ot_hours ?? 0) + ($item->sunday_hours ?? 0) + (($item->holiday_days ?? 0) * $standardHoursPerDay));
+                    $sunSplHolPay = (($item->special_ot_pay ?? 0) + ($item->sunday_pay ?? 0) + ($item->holiday_pay ?? 0));
                     @endphp
                     {{-- Add header before each new page of data --}}
                     @if(in_array($index, $pageBreakIndices))
@@ -490,10 +491,10 @@ $resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress :
                     return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
                     });
                     $pageSunSplHolHours = $pageItems->sum(function($entry) {
-                    return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+                    return (($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0) + (($entry->holiday_days ?? 0) * (float) config('payroll.standard_hours_per_day', 8)));
                     });
                     $pageSunSplHolPay = $pageItems->sum(function($entry) {
-                    return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
+                    return (($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0) + ($entry->holiday_pay ?? 0));
                     });
                     @endphp
                     <tr>
@@ -640,10 +641,10 @@ $resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress :
             return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
             });
             $totalSunSplHolHours = $finalPageItems->sum(function($entry) {
-            return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+            return (($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0) + (($entry->holiday_days ?? 0) * (float) config('payroll.standard_hours_per_day', 8)));
             });
             $totalSunSplHolPay = $finalPageItems->sum(function($entry) {
-            return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
+            return (($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0) + ($entry->holiday_pay ?? 0));
             });
             @endphp
             <tr>
@@ -774,8 +775,9 @@ $resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress :
                 @php
                 $undertimeDeduction = $item->undertime_deduction ?? 0;
                 $amount = ($item->effective_rate ?? 0) * ($item->days_worked ?? 0);
-                $sunSplHolHours = ($item->special_ot_hours ?? 0) + ($item->sunday_hours ?? 0);
-                $sunSplHolPay = ($item->special_ot_pay ?? 0) + ($item->sunday_pay ?? 0);
+                $standardHoursPerDay = (float) config('payroll.standard_hours_per_day', 8);
+                $sunSplHolHours = (($item->special_ot_hours ?? 0) + ($item->sunday_hours ?? 0) + (($item->holiday_days ?? 0) * $standardHoursPerDay));
+                $sunSplHolPay = (($item->special_ot_pay ?? 0) + ($item->sunday_pay ?? 0) + ($item->holiday_pay ?? 0));
                 @endphp
                 {{-- Add header before each new page of data --}}
                 @if(in_array($index, $pageBreakIndices))
@@ -788,10 +790,10 @@ $resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress :
                 return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
                 });
                 $pageSunSplHolHours = $pageItems->sum(function($entry) {
-                return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+                return (($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0) + (($entry->holiday_days ?? 0) * (float) config('payroll.standard_hours_per_day', 8)));
                 });
                 $pageSunSplHolPay = $pageItems->sum(function($entry) {
-                return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
+                return (($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0) + ($entry->holiday_pay ?? 0));
                 });
                 @endphp
                 <tr>
@@ -943,10 +945,10 @@ $resolvedCompanyAddress = $headerCompanyAddress !== '' ? $headerCompanyAddress :
             return ($entry->effective_rate ?? 0) * ($entry->days_worked ?? 0);
             });
             $totalSunSplHolHours = $finalPageItems->sum(function($entry) {
-            return ($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0);
+            return (($entry->special_ot_hours ?? 0) + ($entry->sunday_hours ?? 0) + (($entry->holiday_days ?? 0) * (float) config('payroll.standard_hours_per_day', 8)));
             });
             $totalSunSplHolPay = $finalPageItems->sum(function($entry) {
-            return ($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0);
+            return (($entry->special_ot_pay ?? 0) + ($entry->sunday_pay ?? 0) + ($entry->holiday_pay ?? 0));
             });
             @endphp
             <tr>
