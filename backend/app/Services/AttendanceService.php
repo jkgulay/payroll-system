@@ -69,8 +69,16 @@ class AttendanceService
             throw new \Exception("Employee not found: {$record['employee_number']}");
         }
 
-        $attendanceDate = Carbon::parse($record['date'])->format('Y-m-d');
         $timestamp = Carbon::parse($record['timestamp']);
+        $attendanceDateCarbon = Carbon::parse($record['date']);
+        $overnightCarryEnabled = (bool) config('payroll.attendance.overnight_carry_enabled', true);
+        $overnightCarryCutoffHour = (int) config('payroll.attendance.overnight_carry_cutoff_hour', 5);
+        $punchMinutes = ($timestamp->hour * 60) + $timestamp->minute;
+        $cutoffMinutes = $overnightCarryCutoffHour * 60;
+        if ($overnightCarryEnabled && $punchMinutes <= $cutoffMinutes) {
+            $attendanceDateCarbon->subDay();
+        }
+        $attendanceDate = $attendanceDateCarbon->format('Y-m-d');
 
         // Find existing attendance record
         $attendance = Attendance::where('employee_id', $employee->id)
@@ -135,7 +143,11 @@ class AttendanceService
 
         // Get employee's schedule to determine if punch is during regular shift or OT
         $schedule = $this->getScheduleForEmployee($attendance->employee, $timestamp);
+        $scheduledTimeIn = Carbon::parse($dateString . ' ' . $schedule['standard_time_in']);
         $scheduledTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
+        if ($scheduledTimeOut->lte($scheduledTimeIn)) {
+            $scheduledTimeOut->addDay();
+        }
 
         // 1. First punch = time_in
         if (!$attendance->time_in) {
@@ -145,9 +157,10 @@ class AttendanceService
         elseif (!$attendance->time_out) {
             $timeIn = Carbon::parse($dateString . ' ' . $attendance->time_in);
             $hoursAfterTimeIn = $timeIn->diffInHours($timestamp);
+            $isNextDayPunch = $timestamp->toDateString() !== $timeIn->toDateString();
 
             // Break detection: 3-6 hours after time_in AND before scheduled time out
-            if ($hoursAfterTimeIn >= 3 && $hoursAfterTimeIn <= 6 && $timestamp->lte($scheduledTimeOut)) {
+            if (!$isNextDayPunch && $hoursAfterTimeIn >= 3 && $hoursAfterTimeIn <= 6 && $timestamp->lte($scheduledTimeOut)) {
                 if (!$attendance->break_start) {
                     $attendance->break_start = $timeString;
                 } elseif (!$attendance->break_end) {
