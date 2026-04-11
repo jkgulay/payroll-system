@@ -200,25 +200,31 @@
                   <v-list-item-title>View Details</v-list-item-title>
                 </v-list-item>
                 <v-list-item
-                  v-if="item.status === 'draft'"
+                  :disabled="item.status !== 'draft'"
                   @click="editPayroll(item)"
                 >
                   <template v-slot:prepend>
-                    <v-icon size="small" color="warning">mdi-pencil</v-icon>
+                    <v-icon
+                      size="small"
+                      :color="item.status === 'draft' ? 'warning' : 'grey'"
+                    >mdi-pencil</v-icon>
                   </template>
                   <v-list-item-title>Edit</v-list-item-title>
                 </v-list-item>
                 <v-divider></v-divider>
                 <v-list-item
-                  v-if="item.status === 'draft'"
+                  :disabled="item.status !== 'draft'"
                   @click="confirmDelete(item)"
                 >
                   <template v-slot:prepend>
-                    <v-icon size="small" color="error">mdi-delete</v-icon>
+                    <v-icon
+                      size="small"
+                      :color="item.status === 'draft' ? 'error' : 'grey'"
+                    >mdi-delete</v-icon>
                   </template>
-                  <v-list-item-title class="text-error"
-                    >Delete</v-list-item-title
-                  >
+                  <v-list-item-title
+                    :class="{ 'text-error': item.status === 'draft' }"
+                  >Delete</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
@@ -560,77 +566,63 @@
                 </div>
 
                 <p class="panel-intro mt-3 mb-3">
-                  Build your overtime set quickly, then inspect or edit daily OT
-                  details for selected employees.
+                  Employees are loaded automatically from your payroll period
+                  and scope. Select only who should be included in overtime
+                  processing.
                 </p>
 
-                <div class="ot-toolbar mb-3">
-                  <div class="ot-toolbar-primary">
-                    <v-btn
-                      color="#ED985F"
-                      variant="tonal"
-                      prepend-icon="mdi-refresh"
-                      :loading="overtimeCandidatesLoading"
-                      @click="loadOvertimeCandidates"
-                      class="step-action-btn"
+                <div class="ot-summary mb-3">
+                  <v-chip size="small" color="info" variant="tonal">
+                    <template v-if="overtimeCandidatesLoading"
+                      >Loading employees...</template
                     >
-                      Load Overtime Candidates
-                    </v-btn>
-                    <v-chip
-                      v-if="overtimeCandidatesLoaded"
-                      size="small"
-                      color="info"
-                      variant="tonal"
+                    <template v-else
+                      >{{ overtimeCandidates.length }} employee(s) found</template
                     >
-                      {{ overtimeCandidates.length }} employee(s) found
-                    </v-chip>
-                    <v-chip
-                      v-if="overtimeCandidatesLoaded"
-                      size="small"
-                      color="success"
-                      variant="tonal"
-                    >
-                      {{ formData.overtime_employee_ids?.length || 0 }} selected
-                    </v-chip>
-                  </div>
-
-                  <div class="ot-toolbar-secondary">
-                    <v-btn
-                      variant="outlined"
-                      color="#ED985F"
-                      prepend-icon="mdi-checkbox-marked-circle-outline"
-                      :disabled="!overtimeCandidatesLoaded"
-                      @click="selectEmployeesWithOvertimeRequest"
-                      class="step-action-btn"
-                    >
-                      Add All With OT Request
-                    </v-btn>
-                    <v-btn
-                      variant="outlined"
-                      color="#ED985F"
-                      prepend-icon="mdi-select-all"
-                      :disabled="!overtimeCandidatesLoaded"
-                      @click="selectAllOvertimeCandidates"
-                      class="step-action-btn"
-                    >
-                      Select All
-                    </v-btn>
-                    <v-btn
-                      v-if="overtimeCandidatesLoaded"
-                      variant="text"
-                      color="grey"
-                      prepend-icon="mdi-close-circle-outline"
-                      @click="clearOvertimeSelection"
-                      class="step-action-btn"
-                    >
-                      Clear Selected
-                    </v-btn>
-                  </div>
+                  </v-chip>
+                  <v-chip size="small" color="success" variant="tonal">
+                    {{ formData.overtime_employee_ids?.length || 0 }} selected
+                  </v-chip>
                 </div>
+
+                <div class="ot-actions mb-3">
+                  <v-btn
+                    variant="outlined"
+                    color="#ED985F"
+                    prepend-icon="mdi-checkbox-marked-circle-outline"
+                    :disabled="
+                      !overtimeCandidatesLoaded || overtimeCandidates.length === 0
+                    "
+                    @click="selectEmployeesWithOvertimeRequest"
+                    class="step-action-btn"
+                  >
+                    Add All With OT Request
+                  </v-btn>
+                  <v-btn
+                    v-if="formData.overtime_employee_ids?.length"
+                    variant="text"
+                    color="grey"
+                    prepend-icon="mdi-close-circle-outline"
+                    @click="clearOvertimeSelection"
+                    class="step-action-btn"
+                  >
+                    Clear Selected
+                  </v-btn>
+                </div>
+
+                <v-progress-linear
+                  v-if="overtimeCandidatesLoading"
+                  color="#ED985F"
+                  indeterminate
+                  rounded
+                  height="3"
+                  class="mb-3"
+                ></v-progress-linear>
 
                 <v-autocomplete
                   v-model="formData.overtime_employee_ids"
                   :items="overtimeCandidates"
+                  :loading="overtimeCandidatesLoading"
                   item-title="display_name"
                   item-value="id"
                   label="Include Overtime For (Optional)"
@@ -641,7 +633,7 @@
                   variant="outlined"
                   density="compact"
                   :menu-props="{ maxHeight: 340 }"
-                  :disabled="!overtimeCandidatesLoaded"
+                  :disabled="!overtimeCandidatesLoaded && !overtimeCandidatesLoading"
                   class="mb-2"
                 >
                   <template v-slot:selection="{ item, index }">
@@ -677,6 +669,13 @@
                     </v-list-item>
                   </template>
                 </v-autocomplete>
+
+                <p
+                  v-if="overtimeCandidatesLoaded && overtimeCandidates.length === 0"
+                  class="text-caption text-medium-emphasis mb-2"
+                >
+                  No employees matched the current payroll scope and period.
+                </p>
 
                 <div class="day-view-toolbar mt-3 mb-2">
                   <v-select
@@ -839,6 +838,7 @@
                       prepend-inner-icon="mdi-account-search"
                       variant="outlined"
                       density="compact"
+                      :custom-filter="customPayrollPunchEmployeeFilter"
                       clearable
                     >
                       <template v-slot:item="{ props, item }">
@@ -1537,6 +1537,7 @@ const employeeAttendanceLoading = ref(false);
 const attendanceRowSaving = ref({});
 const payrollPunchLoading = ref(false);
 const payrollPunchRecords = ref([]);
+const payrollPunchEmployeeOptions = ref([]);
 const payrollPunchFilters = ref({
   date: "",
   employee_id: null,
@@ -1685,6 +1686,28 @@ const payrollPunchFieldMap = [
 ];
 
 const payrollPunchEmployees = computed(() => {
+  if (Array.isArray(payrollPunchEmployeeOptions.value)) {
+    const fromApi = payrollPunchEmployeeOptions.value
+      .filter((employee) => employee && employee.id)
+      .map((employee) => ({
+        id: employee.id,
+        full_name:
+          employee.full_name ||
+          `${employee.first_name || ""} ${employee.last_name || ""}`.trim(),
+        employee_number: employee.employee_number,
+      }));
+
+    if (fromApi.length > 0) {
+      return fromApi.sort((a, b) =>
+        String(a.employee_number || "").localeCompare(
+          String(b.employee_number || ""),
+          undefined,
+          { numeric: true },
+        ),
+      );
+    }
+  }
+
   const sourceEmployees = Array.isArray(payrollPunchRecords.value)
     ? payrollPunchRecords.value
         .map((record) => record.employee)
@@ -1712,6 +1735,16 @@ const payrollPunchEmployees = computed(() => {
     ),
   );
 });
+
+const customPayrollPunchEmployeeFilter = (itemTitle, queryText, item) => {
+  if (!queryText) return true;
+
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.full_name?.toLowerCase() || "";
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || "";
+
+  return fullName.includes(search) || employeeNumber.includes(search);
+};
 
 const payrollPunchDayViewRows = computed(() => {
   return payrollPunchRecords.value.map((record) => {
@@ -1840,6 +1873,20 @@ function shouldAutoLoadPayrollPunchReview() {
   );
 }
 
+function shouldAutoLoadOvertimeCandidates() {
+  return (
+    dialog.value &&
+    currentStep.value === 2 &&
+    !!formData.value.period_start &&
+    !!formData.value.period_end
+  );
+}
+
+const queueOvertimeCandidatesAutoLoad = useDebouncedFn(() => {
+  if (!shouldAutoLoadOvertimeCandidates()) return;
+  loadOvertimeCandidates();
+}, 300);
+
 const queuePayrollPunchAutoLoad = useDebouncedFn(() => {
   if (!shouldAutoLoadPayrollPunchReview()) return;
   loadPayrollPunchReview();
@@ -1855,6 +1902,25 @@ watch(
     if (shouldLoadEmployeeOptions()) {
       loadEmployeeOptions();
     }
+  },
+);
+
+watch(
+  [
+    () => dialog.value,
+    () => currentStep.value,
+    () => formData.value.period_start,
+    () => formData.value.period_end,
+    () => formData.value.payroll_scope,
+    () => formData.value.individual_target,
+    () => formData.value.included_position,
+    () => formData.value.included_employee_id,
+    () => formData.value.has_attendance,
+    () => JSON.stringify(formData.value.excluded_positions || []),
+  ],
+  () => {
+    if (!shouldAutoLoadOvertimeCandidates()) return;
+    queueOvertimeCandidatesAutoLoad();
   },
 );
 
@@ -1929,6 +1995,7 @@ function openCreateDialog() {
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
   payrollPunchRecords.value = [];
+  payrollPunchEmployeeOptions.value = [];
   payrollPunchFilters.value = {
     date: "",
     employee_id: null,
@@ -1939,6 +2006,11 @@ function openCreateDialog() {
 }
 
 function editPayroll(item) {
+  if (item.status !== "draft") {
+    toast.info("Only draft payrolls can be edited");
+    return;
+  }
+
   editMode.value = true;
   currentStep.value = 1;
   selectedPayroll.value = item;
@@ -1976,6 +2048,7 @@ function editPayroll(item) {
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
   payrollPunchRecords.value = [];
+  payrollPunchEmployeeOptions.value = [];
   payrollPunchFilters.value = {
     date: item.period_start || "",
     employee_id: null,
@@ -1994,6 +2067,7 @@ function closeDialog() {
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
   payrollPunchRecords.value = [];
+  payrollPunchEmployeeOptions.value = [];
   payrollPunchFilters.value = {
     date: "",
     employee_id: null,
@@ -2058,6 +2132,7 @@ async function goNextStep() {
       if (!payrollPunchFilters.value.date && formData.value.period_start) {
         payrollPunchFilters.value.date = formData.value.period_start;
       }
+      queueOvertimeCandidatesAutoLoad();
       queuePayrollPunchAutoLoad();
     }
   }
@@ -2093,9 +2168,10 @@ function payrollScopePayload() {
 
 async function loadOvertimeCandidates() {
   if (!formData.value.period_start || !formData.value.period_end) {
-    toast.error("Please set payroll period start and end dates first");
     return;
   }
+
+  const previousPreviewEmployeeId = overtimePreviewEmployeeId.value;
 
   overtimeCandidatesLoading.value = true;
   try {
@@ -2116,9 +2192,20 @@ async function loadOvertimeCandidates() {
       formData.value.overtime_employee_ids || []
     ).filter((id) => validIds.has(id));
 
+    const selectedIds = new Set(formData.value.overtime_employee_ids || []);
+    const canKeepPreview =
+      previousPreviewEmployeeId &&
+      selectedIds.has(previousPreviewEmployeeId) &&
+      validIds.has(previousPreviewEmployeeId);
+
     overtimeCandidatesLoaded.value = true;
-    selectedEmployeeAttendance.value = [];
-    overtimePreviewEmployeeId.value = null;
+    overtimePreviewEmployeeId.value = canKeepPreview
+      ? previousPreviewEmployeeId
+      : null;
+
+    if (!canKeepPreview) {
+      selectedEmployeeAttendance.value = [];
+    }
   } catch (error) {
     toast.error(
       error.response?.data?.message || "Failed to load overtime candidates",
@@ -2132,14 +2219,6 @@ function clearOvertimeSelection() {
   formData.value.overtime_employee_ids = [];
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
-}
-
-function selectAllOvertimeCandidates() {
-  if (!overtimeCandidatesLoaded.value) return;
-
-  formData.value.overtime_employee_ids = overtimeCandidates.value
-    .map((candidate) => candidate.id)
-    .filter((id) => id !== null && id !== undefined);
 }
 
 function selectEmployeesWithOvertimeRequest() {
@@ -2183,10 +2262,17 @@ async function loadPayrollPunchReview() {
 
     const response = await api.post("/payrolls/punch-review", payload);
     payrollPunchRecords.value = response.data?.attendance || [];
+    payrollPunchEmployeeOptions.value = (response.data?.employees || []).map(
+      (employee) => ({
+        id: employee.id,
+        full_name: employee.full_name,
+        employee_number: employee.employee_number,
+      }),
+    );
 
     if (payrollPunchFilters.value.employee_id) {
       const validEmployeeIds = new Set(
-        (response.data?.employees || []).map((employee) => employee.id),
+        payrollPunchEmployees.value.map((employee) => employee.id),
       );
       if (!validEmployeeIds.has(payrollPunchFilters.value.employee_id)) {
         payrollPunchFilters.value.employee_id = null;
@@ -2433,6 +2519,11 @@ function viewPayroll(item) {
 }
 
 function confirmDelete(item) {
+  if (item.status !== "draft") {
+    toast.info("Only draft payrolls can be deleted");
+    return;
+  }
+
   selectedPayroll.value = item;
   deleteDialog.value = true;
 }
@@ -2630,16 +2721,14 @@ async function saveSignatureSettings() {
   max-width: 100%;
 }
 
-.ot-toolbar {
+.ot-summary {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.ot-toolbar-primary,
-.ot-toolbar-secondary {
+.ot-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3140,17 +3229,11 @@ async function saveSignatureSettings() {
     flex: 1 1 auto;
   }
 
-  .ot-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .ot-toolbar-primary,
-  .ot-toolbar-secondary {
+  .ot-actions {
     width: 100%;
   }
 
-  .ot-toolbar-secondary :deep(.v-btn) {
+  .ot-actions :deep(.v-btn) {
     flex: 1 1 calc(50% - 8px);
   }
 
