@@ -52,7 +52,13 @@ return [
         // If enabled, punches at or before the cutoff time are attached to the
         // previous attendance date so records like 20:14 -> 01:00 stay together.
         'overnight_carry_enabled' => env('PAYROLL_OVERNIGHT_CARRY_ENABLED', true),
+        // Restrict carry-over to employees whose configured schedule crosses midnight.
+        'overnight_carry_require_overnight_schedule' => env('PAYROLL_OVERNIGHT_CARRY_REQUIRE_OVERNIGHT_SCHEDULE', true),
         'overnight_carry_cutoff_hour' => env('PAYROLL_OVERNIGHT_CARRY_CUTOFF_HOUR', 6),
+
+        // Ignore noisy placeholder punches that some device exports inject at exactly 00:00.
+        // Real punches such as 00:03 are retained.
+        'ignore_exact_midnight_placeholder' => env('PAYROLL_IGNORE_EXACT_MIDNIGHT_PLACEHOLDER', true),
     ],
 
     /*
