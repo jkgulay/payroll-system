@@ -672,10 +672,16 @@ class PayrollController extends Controller
                 'updated_at',
             ]);
 
-        $employees = $attendance
-            ->pluck('employee')
-            ->filter()
-            ->unique('id')
+        // Return all employees included in the payroll scope (not only those with attendance rows)
+        // so the employee filter can always search the full included set.
+        $employees = Employee::query()
+            ->whereIn('id', $employeeIds)
+            ->get([
+                'id',
+                'employee_number',
+                'first_name',
+                'last_name',
+            ])
             ->map(function ($employee) {
                 return [
                     'id' => $employee->id,

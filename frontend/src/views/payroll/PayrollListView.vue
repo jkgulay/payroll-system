@@ -838,6 +838,7 @@
                       prepend-inner-icon="mdi-account-search"
                       variant="outlined"
                       density="compact"
+                      :custom-filter="customPayrollPunchEmployeeFilter"
                       clearable
                     >
                       <template v-slot:item="{ props, item }">
@@ -1536,6 +1537,7 @@ const employeeAttendanceLoading = ref(false);
 const attendanceRowSaving = ref({});
 const payrollPunchLoading = ref(false);
 const payrollPunchRecords = ref([]);
+const payrollPunchEmployeeOptions = ref([]);
 const payrollPunchFilters = ref({
   date: "",
   employee_id: null,
@@ -1684,6 +1686,28 @@ const payrollPunchFieldMap = [
 ];
 
 const payrollPunchEmployees = computed(() => {
+  if (Array.isArray(payrollPunchEmployeeOptions.value)) {
+    const fromApi = payrollPunchEmployeeOptions.value
+      .filter((employee) => employee && employee.id)
+      .map((employee) => ({
+        id: employee.id,
+        full_name:
+          employee.full_name ||
+          `${employee.first_name || ""} ${employee.last_name || ""}`.trim(),
+        employee_number: employee.employee_number,
+      }));
+
+    if (fromApi.length > 0) {
+      return fromApi.sort((a, b) =>
+        String(a.employee_number || "").localeCompare(
+          String(b.employee_number || ""),
+          undefined,
+          { numeric: true },
+        ),
+      );
+    }
+  }
+
   const sourceEmployees = Array.isArray(payrollPunchRecords.value)
     ? payrollPunchRecords.value
         .map((record) => record.employee)
@@ -1711,6 +1735,16 @@ const payrollPunchEmployees = computed(() => {
     ),
   );
 });
+
+const customPayrollPunchEmployeeFilter = (itemTitle, queryText, item) => {
+  if (!queryText) return true;
+
+  const search = queryText.toLowerCase();
+  const fullName = item.raw.full_name?.toLowerCase() || "";
+  const employeeNumber = item.raw.employee_number?.toLowerCase() || "";
+
+  return fullName.includes(search) || employeeNumber.includes(search);
+};
 
 const payrollPunchDayViewRows = computed(() => {
   return payrollPunchRecords.value.map((record) => {
@@ -1961,6 +1995,7 @@ function openCreateDialog() {
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
   payrollPunchRecords.value = [];
+  payrollPunchEmployeeOptions.value = [];
   payrollPunchFilters.value = {
     date: "",
     employee_id: null,
@@ -2013,6 +2048,7 @@ function editPayroll(item) {
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
   payrollPunchRecords.value = [];
+  payrollPunchEmployeeOptions.value = [];
   payrollPunchFilters.value = {
     date: item.period_start || "",
     employee_id: null,
@@ -2031,6 +2067,7 @@ function closeDialog() {
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
   payrollPunchRecords.value = [];
+  payrollPunchEmployeeOptions.value = [];
   payrollPunchFilters.value = {
     date: "",
     employee_id: null,
@@ -2225,10 +2262,17 @@ async function loadPayrollPunchReview() {
 
     const response = await api.post("/payrolls/punch-review", payload);
     payrollPunchRecords.value = response.data?.attendance || [];
+    payrollPunchEmployeeOptions.value = (response.data?.employees || []).map(
+      (employee) => ({
+        id: employee.id,
+        full_name: employee.full_name,
+        employee_number: employee.employee_number,
+      }),
+    );
 
     if (payrollPunchFilters.value.employee_id) {
       const validEmployeeIds = new Set(
-        (response.data?.employees || []).map((employee) => employee.id),
+        payrollPunchEmployees.value.map((employee) => employee.id),
       );
       if (!validEmployeeIds.has(payrollPunchFilters.value.employee_id)) {
         payrollPunchFilters.value.employee_id = null;
