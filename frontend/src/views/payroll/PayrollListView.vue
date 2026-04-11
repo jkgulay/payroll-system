@@ -566,77 +566,63 @@
                 </div>
 
                 <p class="panel-intro mt-3 mb-3">
-                  Build your overtime set quickly, then inspect or edit daily OT
-                  details for selected employees.
+                  Employees are loaded automatically from your payroll period
+                  and scope. Select only who should be included in overtime
+                  processing.
                 </p>
 
-                <div class="ot-toolbar mb-3">
-                  <div class="ot-toolbar-primary">
-                    <v-btn
-                      color="#ED985F"
-                      variant="tonal"
-                      prepend-icon="mdi-refresh"
-                      :loading="overtimeCandidatesLoading"
-                      @click="loadOvertimeCandidates"
-                      class="step-action-btn"
+                <div class="ot-summary mb-3">
+                  <v-chip size="small" color="info" variant="tonal">
+                    <template v-if="overtimeCandidatesLoading"
+                      >Loading employees...</template
                     >
-                      Load Overtime Candidates
-                    </v-btn>
-                    <v-chip
-                      v-if="overtimeCandidatesLoaded"
-                      size="small"
-                      color="info"
-                      variant="tonal"
+                    <template v-else
+                      >{{ overtimeCandidates.length }} employee(s) found</template
                     >
-                      {{ overtimeCandidates.length }} employee(s) found
-                    </v-chip>
-                    <v-chip
-                      v-if="overtimeCandidatesLoaded"
-                      size="small"
-                      color="success"
-                      variant="tonal"
-                    >
-                      {{ formData.overtime_employee_ids?.length || 0 }} selected
-                    </v-chip>
-                  </div>
-
-                  <div class="ot-toolbar-secondary">
-                    <v-btn
-                      variant="outlined"
-                      color="#ED985F"
-                      prepend-icon="mdi-checkbox-marked-circle-outline"
-                      :disabled="!overtimeCandidatesLoaded"
-                      @click="selectEmployeesWithOvertimeRequest"
-                      class="step-action-btn"
-                    >
-                      Add All With OT Request
-                    </v-btn>
-                    <v-btn
-                      variant="outlined"
-                      color="#ED985F"
-                      prepend-icon="mdi-select-all"
-                      :disabled="!overtimeCandidatesLoaded"
-                      @click="selectAllOvertimeCandidates"
-                      class="step-action-btn"
-                    >
-                      Select All
-                    </v-btn>
-                    <v-btn
-                      v-if="overtimeCandidatesLoaded"
-                      variant="text"
-                      color="grey"
-                      prepend-icon="mdi-close-circle-outline"
-                      @click="clearOvertimeSelection"
-                      class="step-action-btn"
-                    >
-                      Clear Selected
-                    </v-btn>
-                  </div>
+                  </v-chip>
+                  <v-chip size="small" color="success" variant="tonal">
+                    {{ formData.overtime_employee_ids?.length || 0 }} selected
+                  </v-chip>
                 </div>
+
+                <div class="ot-actions mb-3">
+                  <v-btn
+                    variant="outlined"
+                    color="#ED985F"
+                    prepend-icon="mdi-checkbox-marked-circle-outline"
+                    :disabled="
+                      !overtimeCandidatesLoaded || overtimeCandidates.length === 0
+                    "
+                    @click="selectEmployeesWithOvertimeRequest"
+                    class="step-action-btn"
+                  >
+                    Add All With OT Request
+                  </v-btn>
+                  <v-btn
+                    v-if="formData.overtime_employee_ids?.length"
+                    variant="text"
+                    color="grey"
+                    prepend-icon="mdi-close-circle-outline"
+                    @click="clearOvertimeSelection"
+                    class="step-action-btn"
+                  >
+                    Clear Selected
+                  </v-btn>
+                </div>
+
+                <v-progress-linear
+                  v-if="overtimeCandidatesLoading"
+                  color="#ED985F"
+                  indeterminate
+                  rounded
+                  height="3"
+                  class="mb-3"
+                ></v-progress-linear>
 
                 <v-autocomplete
                   v-model="formData.overtime_employee_ids"
                   :items="overtimeCandidates"
+                  :loading="overtimeCandidatesLoading"
                   item-title="display_name"
                   item-value="id"
                   label="Include Overtime For (Optional)"
@@ -647,7 +633,7 @@
                   variant="outlined"
                   density="compact"
                   :menu-props="{ maxHeight: 340 }"
-                  :disabled="!overtimeCandidatesLoaded"
+                  :disabled="!overtimeCandidatesLoaded && !overtimeCandidatesLoading"
                   class="mb-2"
                 >
                   <template v-slot:selection="{ item, index }">
@@ -683,6 +669,13 @@
                     </v-list-item>
                   </template>
                 </v-autocomplete>
+
+                <p
+                  v-if="overtimeCandidatesLoaded && overtimeCandidates.length === 0"
+                  class="text-caption text-medium-emphasis mb-2"
+                >
+                  No employees matched the current payroll scope and period.
+                </p>
 
                 <div class="day-view-toolbar mt-3 mb-2">
                   <v-select
@@ -1846,6 +1839,20 @@ function shouldAutoLoadPayrollPunchReview() {
   );
 }
 
+function shouldAutoLoadOvertimeCandidates() {
+  return (
+    dialog.value &&
+    currentStep.value === 2 &&
+    !!formData.value.period_start &&
+    !!formData.value.period_end
+  );
+}
+
+const queueOvertimeCandidatesAutoLoad = useDebouncedFn(() => {
+  if (!shouldAutoLoadOvertimeCandidates()) return;
+  loadOvertimeCandidates();
+}, 300);
+
 const queuePayrollPunchAutoLoad = useDebouncedFn(() => {
   if (!shouldAutoLoadPayrollPunchReview()) return;
   loadPayrollPunchReview();
@@ -1861,6 +1868,25 @@ watch(
     if (shouldLoadEmployeeOptions()) {
       loadEmployeeOptions();
     }
+  },
+);
+
+watch(
+  [
+    () => dialog.value,
+    () => currentStep.value,
+    () => formData.value.period_start,
+    () => formData.value.period_end,
+    () => formData.value.payroll_scope,
+    () => formData.value.individual_target,
+    () => formData.value.included_position,
+    () => formData.value.included_employee_id,
+    () => formData.value.has_attendance,
+    () => JSON.stringify(formData.value.excluded_positions || []),
+  ],
+  () => {
+    if (!shouldAutoLoadOvertimeCandidates()) return;
+    queueOvertimeCandidatesAutoLoad();
   },
 );
 
@@ -2069,6 +2095,7 @@ async function goNextStep() {
       if (!payrollPunchFilters.value.date && formData.value.period_start) {
         payrollPunchFilters.value.date = formData.value.period_start;
       }
+      queueOvertimeCandidatesAutoLoad();
       queuePayrollPunchAutoLoad();
     }
   }
@@ -2104,9 +2131,10 @@ function payrollScopePayload() {
 
 async function loadOvertimeCandidates() {
   if (!formData.value.period_start || !formData.value.period_end) {
-    toast.error("Please set payroll period start and end dates first");
     return;
   }
+
+  const previousPreviewEmployeeId = overtimePreviewEmployeeId.value;
 
   overtimeCandidatesLoading.value = true;
   try {
@@ -2127,9 +2155,20 @@ async function loadOvertimeCandidates() {
       formData.value.overtime_employee_ids || []
     ).filter((id) => validIds.has(id));
 
+    const selectedIds = new Set(formData.value.overtime_employee_ids || []);
+    const canKeepPreview =
+      previousPreviewEmployeeId &&
+      selectedIds.has(previousPreviewEmployeeId) &&
+      validIds.has(previousPreviewEmployeeId);
+
     overtimeCandidatesLoaded.value = true;
-    selectedEmployeeAttendance.value = [];
-    overtimePreviewEmployeeId.value = null;
+    overtimePreviewEmployeeId.value = canKeepPreview
+      ? previousPreviewEmployeeId
+      : null;
+
+    if (!canKeepPreview) {
+      selectedEmployeeAttendance.value = [];
+    }
   } catch (error) {
     toast.error(
       error.response?.data?.message || "Failed to load overtime candidates",
@@ -2143,14 +2182,6 @@ function clearOvertimeSelection() {
   formData.value.overtime_employee_ids = [];
   overtimePreviewEmployeeId.value = null;
   selectedEmployeeAttendance.value = [];
-}
-
-function selectAllOvertimeCandidates() {
-  if (!overtimeCandidatesLoaded.value) return;
-
-  formData.value.overtime_employee_ids = overtimeCandidates.value
-    .map((candidate) => candidate.id)
-    .filter((id) => id !== null && id !== undefined);
 }
 
 function selectEmployeesWithOvertimeRequest() {
@@ -2646,16 +2677,14 @@ async function saveSignatureSettings() {
   max-width: 100%;
 }
 
-.ot-toolbar {
+.ot-summary {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.ot-toolbar-primary,
-.ot-toolbar-secondary {
+.ot-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3156,17 +3185,11 @@ async function saveSignatureSettings() {
     flex: 1 1 auto;
   }
 
-  .ot-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .ot-toolbar-primary,
-  .ot-toolbar-secondary {
+  .ot-actions {
     width: 100%;
   }
 
-  .ot-toolbar-secondary :deep(.v-btn) {
+  .ot-actions :deep(.v-btn) {
     flex: 1 1 calc(50% - 8px);
   }
 
