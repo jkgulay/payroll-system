@@ -72,10 +72,13 @@ class AttendanceService
         $timestamp = Carbon::parse($record['timestamp']);
         $attendanceDateCarbon = Carbon::parse($record['date']);
         $overnightCarryEnabled = (bool) config('payroll.attendance.overnight_carry_enabled', true);
+        $overnightCarryRequiresOvernightSchedule = (bool) config('payroll.attendance.overnight_carry_require_overnight_schedule', true);
         $overnightCarryCutoffHour = (int) config('payroll.attendance.overnight_carry_cutoff_hour', 5);
+        $scheduleForCarry = $this->getScheduleForEmployee($employee, $attendanceDateCarbon);
+        $canCarryForEmployee = !$overnightCarryRequiresOvernightSchedule || $this->isOvernightSchedule($scheduleForCarry);
         $punchMinutes = ($timestamp->hour * 60) + $timestamp->minute;
         $cutoffMinutes = $overnightCarryCutoffHour * 60;
-        if ($overnightCarryEnabled && $punchMinutes <= $cutoffMinutes) {
+        if ($overnightCarryEnabled && $canCarryForEmployee && $punchMinutes <= $cutoffMinutes) {
             $attendanceDateCarbon->subDay();
         }
         $attendanceDate = $attendanceDateCarbon->format('Y-m-d');
@@ -91,7 +94,12 @@ class AttendanceService
                 'employee_id' => $employee->id,
                 'attendance_date' => $attendanceDate,
                 'time_in' => $timestamp->format('H:i:s'),
-                'status' => 'present',
+                'status' => 'incomplete',
+                'regular_hours' => 0,
+                'overtime_hours' => 0,
+                'undertime_hours' => 0,
+                'late_hours' => 0,
+                'night_differential_hours' => 0,
                 'is_manual_entry' => false,
                 'approval_status' => 'approved',
                 'is_approved' => true,
@@ -99,20 +107,9 @@ class AttendanceService
             return ['action' => 'created', 'attendance' => $attendance];
         }
 
-        // Deduplicate punches within a 5-minute window to prevent rapid re-punches
-        // from incorrectly setting time_out too early. Only applied to new punches
-        // passed individually from BiometricService (one punch per call in live-fetch).
-        $existingTimes = [];
-        $dateString = $attendanceDate;  // attendanceDate is already 'Y-m-d' string from parse->format
-        if ($attendance->time_in)   $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->time_in);
-        if ($attendance->time_out)  $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->time_out);
-        if ($attendance->ot_time_in)  $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->ot_time_in);
-        if ($attendance->ot_time_out) $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->ot_time_out);
-        if ($attendance->ot_time_in_2)  $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->ot_time_in_2);
-        if ($attendance->ot_time_out_2) $existingTimes[] = Carbon::parse($dateString . ' ' . $attendance->ot_time_out_2);
-
+        // Deduplicate punches using a chronological timeline that handles overnight spans.
+        $existingTimes = $this->buildChronologicalPunchTimeline($attendance, $attendanceDate);
         if (!empty($existingTimes)) {
-            usort($existingTimes, fn($a, $b) => $a->timestamp - $b->timestamp);
             $lastPunch = $existingTimes[count($existingTimes) - 1];
             $diff = $timestamp->diffInMinutes($lastPunch);
             if ($diff <= 5) {
@@ -249,6 +246,51 @@ class AttendanceService
                 ? (int) $project->grace_period_minutes
                 : $defaultGrace,
         ];
+    }
+
+    private function isOvernightSchedule(array $schedule): bool
+    {
+        $timeIn = Carbon::createFromFormat('H:i', substr((string) ($schedule['standard_time_in'] ?? '07:30'), 0, 5));
+        $timeOut = Carbon::createFromFormat('H:i', substr((string) ($schedule['standard_time_out'] ?? '17:00'), 0, 5));
+
+        return $timeOut->lte($timeIn);
+    }
+
+    /**
+     * Build a chronological timeline from stored punch fields.
+     * Handles overnight sequences so dedupe compares against the true latest punch.
+     */
+    private function buildChronologicalPunchTimeline(Attendance $attendance, string $attendanceDate): array
+    {
+        $timeline = [];
+        $last = null;
+        $fields = [
+            'time_in',
+            'break_start',
+            'break_end',
+            'time_out',
+            'ot_time_in',
+            'ot_time_out',
+            'ot_time_in_2',
+            'ot_time_out_2',
+        ];
+
+        foreach ($fields as $field) {
+            $value = $attendance->{$field};
+            if (!$value) {
+                continue;
+            }
+
+            $point = Carbon::parse($attendanceDate . ' ' . $value);
+            while ($last && $point->lt($last)) {
+                $point->addDay();
+            }
+
+            $timeline[] = $point;
+            $last = $point;
+        }
+
+        return $timeline;
     }
 
     /**

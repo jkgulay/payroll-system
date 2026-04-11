@@ -37,7 +37,27 @@ class PunchRecordImportService
         $skipped  = 0;
         $errors   = [];
         $overnightCarryEnabled = (bool) config('payroll.attendance.overnight_carry_enabled', true);
+        $overnightCarryRequiresOvernightSchedule = (bool) config('payroll.attendance.overnight_carry_require_overnight_schedule', true);
         $overnightCarryCutoffHour = (int) config('payroll.attendance.overnight_carry_cutoff_hour', 5);
+
+        $staffCodesForCarry = collect($punchData)
+            ->map(fn($row) => trim((string) ($row['Staff Code'] ?? '')))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $overnightByStaffCode = [];
+        if (!empty($staffCodesForCarry)) {
+            $employeesForCarry = Employee::whereIn('employee_number', $staffCodesForCarry)
+                ->with('project')
+                ->get()
+                ->keyBy('employee_number');
+
+            foreach ($employeesForCarry as $empNum => $emp) {
+                $scheduleForCarry = $this->getScheduleForEmployee($emp, null);
+                $overnightByStaffCode[$empNum] = $this->isOvernightSchedule($scheduleForCarry);
+            }
+        }
 
         if (empty($punchData)) {
             return ['imported' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'error_details' => []];
@@ -96,7 +116,9 @@ class PunchRecordImportService
             $isCarriedToPreviousDate = false;
             $punchMinutes = ($punchDt->hour * 60) + $punchDt->minute;
             $cutoffMinutes = $overnightCarryCutoffHour * 60;
-            if ($overnightCarryEnabled && $punchMinutes <= $cutoffMinutes) {
+            $canCarryForEmployee = !$overnightCarryRequiresOvernightSchedule
+                || ($overnightByStaffCode[$staffCode] ?? false);
+            if ($overnightCarryEnabled && $canCarryForEmployee && $punchMinutes <= $cutoffMinutes) {
                 $effectivePunchDt->subDay();
                 $isCarriedToPreviousDate = true;
             }
@@ -450,7 +472,8 @@ class PunchRecordImportService
             if (preg_match('/^(\d{1,2}):(\d{2})$/', $line, $matches)) {
                 $hour = (int)$matches[1];
                 $minute = (int)$matches[2];
-                if ($hour == 0 && $minute <= 5) {
+                $ignoreExactMidnightPlaceholder = (bool) config('payroll.attendance.ignore_exact_midnight_placeholder', true);
+                if ($ignoreExactMidnightPlaceholder && $hour === 0 && $minute === 0) {
                     continue;
                 }
                 $timestamp = Carbon::create($attendanceDate->year, $attendanceDate->month, $attendanceDate->day, $hour, $minute);
@@ -699,6 +722,14 @@ class PunchRecordImportService
                 ? (int) $project->grace_period_minutes
                 : $defaultGrace,
         ];
+    }
+
+    private function isOvernightSchedule(array $schedule): bool
+    {
+        $timeIn = Carbon::createFromFormat('H:i', substr((string) ($schedule['standard_time_in'] ?? '07:30'), 0, 5));
+        $timeOut = Carbon::createFromFormat('H:i', substr((string) ($schedule['standard_time_out'] ?? '17:00'), 0, 5));
+
+        return $timeOut->lte($timeIn);
     }
 
     /**
