@@ -200,25 +200,31 @@
                   <v-list-item-title>View Details</v-list-item-title>
                 </v-list-item>
                 <v-list-item
-                  v-if="item.status === 'draft'"
+                  :disabled="item.status !== 'draft'"
                   @click="editPayroll(item)"
                 >
                   <template v-slot:prepend>
-                    <v-icon size="small" color="warning">mdi-pencil</v-icon>
+                    <v-icon
+                      size="small"
+                      :color="item.status === 'draft' ? 'warning' : 'grey'"
+                    >mdi-pencil</v-icon>
                   </template>
                   <v-list-item-title>Edit</v-list-item-title>
                 </v-list-item>
                 <v-divider></v-divider>
                 <v-list-item
-                  v-if="item.status === 'draft'"
+                  :disabled="item.status !== 'draft'"
                   @click="confirmDelete(item)"
                 >
                   <template v-slot:prepend>
-                    <v-icon size="small" color="error">mdi-delete</v-icon>
+                    <v-icon
+                      size="small"
+                      :color="item.status === 'draft' ? 'error' : 'grey'"
+                    >mdi-delete</v-icon>
                   </template>
-                  <v-list-item-title class="text-error"
-                    >Delete</v-list-item-title
-                  >
+                  <v-list-item-title
+                    :class="{ 'text-error': item.status === 'draft' }"
+                  >Delete</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
@@ -1939,6 +1945,11 @@ function openCreateDialog() {
 }
 
 function editPayroll(item) {
+  if (item.status !== "draft") {
+    toast.info("Only draft payrolls can be edited");
+    return;
+  }
+
   editMode.value = true;
   currentStep.value = 1;
   selectedPayroll.value = item;
@@ -2433,6 +2444,11 @@ function viewPayroll(item) {
 }
 
 function confirmDelete(item) {
+  if (item.status !== "draft") {
+    toast.info("Only draft payrolls can be deleted");
+    return;
+  }
+
   selectedPayroll.value = item;
   deleteDialog.value = true;
 }
