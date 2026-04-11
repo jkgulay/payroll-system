@@ -440,9 +440,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import attendanceService from "@/services/attendanceService";
 import { useAuthStore } from "@/stores/auth";
+import { onAttendanceUpdate } from "@/stores/attendance";
 import { useToast } from "vue-toastification";
 
 const emit = defineEmits(["edit-attendance"]);
@@ -643,6 +644,8 @@ const getIssueIcon = (issue) => {
   return "mdi-alert-circle";
 };
 
+let unsubscribeAttendance = null;
+
 // Auto-fetch when date or filter type changes
 watch([selectedDate, filterType], () => {
   if (selectedDate.value) {
@@ -653,6 +656,19 @@ watch([selectedDate, filterType], () => {
 onMounted(() => {
   loadMissingAttendance();
   loadMyRequests();
+
+  // Keep missing attendance tab in sync after manual create/update actions.
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    if (selectedDate.value) {
+      loadMissingAttendance();
+    }
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 </script>
 
