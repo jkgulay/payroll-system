@@ -520,6 +520,13 @@ class DeductionController extends Controller
      */
     public function refundCashBond(Request $request, EmployeeDeduction $deduction)
     {
+        $user = auth()->user();
+        if ($user->role === 'employee' && (int) $deduction->employee_id !== (int) $user->employee_id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
         if ($deduction->deduction_type !== 'cash_bond') {
             return response()->json([
                 'message' => 'This deduction is not a cash bond'
@@ -582,6 +589,184 @@ class DeductionController extends Controller
             DB::rollBack();
             return response()->json([
                 'message' => 'Failed to refund cash bond',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all employee savings deductions (cooperative type)
+     */
+    public function getEmployeeSavings(Request $request)
+    {
+        $query = EmployeeDeduction::with(['employee', 'createdBy', 'approvedBy'])
+            ->where('deduction_type', 'cooperative');
+
+        if ($request->has('employee_id')) {
+            $query->where('employee_id', $request->employee_id);
+        }
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        } else {
+            $query->whereIn('status', ['active', 'completed']);
+        }
+
+        if (auth()->user()->role === 'employee') {
+            $query->where('employee_id', auth()->user()->employee_id);
+        }
+
+        return response()->json($query->latest()->paginate(15));
+    }
+
+    /**
+     * Create an employee savings deduction (cooperative type)
+     */
+    public function createEmployeeSavings(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'total_amount' => 'required|numeric|min:1',
+            'amount_per_cutoff' => 'required|numeric|min:1',
+            'installments' => 'nullable|integer|min:1',
+            'start_date' => 'required|date',
+            'description' => 'nullable|string|max:500',
+            'reference_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        if (!isset($validated['installments'])) {
+            $validated['installments'] = ceil($validated['total_amount'] / $validated['amount_per_cutoff']);
+        }
+
+        if (empty($validated['reference_number'])) {
+            $validated['reference_number'] = 'ES-' . date('Y') . '-' . strtoupper(uniqid());
+        }
+
+        $installmentsInMonths = ceil($validated['installments'] / 2);
+        $endDate = Carbon::parse($validated['start_date'])
+            ->addMonths($installmentsInMonths)
+            ->toDateString();
+
+        $deductionData = array_merge($validated, [
+            'deduction_type' => 'cooperative',
+            'deduction_name' => 'Employee Savings',
+            'end_date' => $endDate,
+            'balance' => $validated['total_amount'],
+            'installments_paid' => 0,
+            'status' => 'active',
+            'created_by' => auth()->id(),
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $employeeSavings = EmployeeDeduction::create($deductionData);
+            $employeeSavings->load('employee');
+
+            AuditLog::create([
+                'module' => 'deductions',
+                'action' => 'create',
+                'description' => "Employee savings created for employee: {$employeeSavings->employee->full_name} - P" . number_format($validated['total_amount'], 2),
+                'user_id' => auth()->id(),
+                'record_id' => $employeeSavings->id,
+                'old_values' => null,
+                'new_values' => json_encode($deductionData),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Employee savings created successfully',
+                'data' => $employeeSavings->load(['employee', 'createdBy', 'approvedBy'])
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to create employee savings',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Withdraw from employee savings balance
+     */
+    public function withdrawEmployeeSavings(Request $request, EmployeeDeduction $deduction)
+    {
+        $user = auth()->user();
+        if ($user->role === 'employee' && (int) $deduction->employee_id !== (int) $user->employee_id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        if ($deduction->deduction_type !== 'cooperative') {
+            return response()->json([
+                'message' => 'This deduction is not an employee savings record'
+            ], 422);
+        }
+
+        if ($deduction->status === 'completed') {
+            return response()->json([
+                'message' => 'This employee savings record is already completed'
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'withdraw_amount' => 'required|numeric|min:0.01',
+            'withdraw_date' => 'required|date',
+            'withdraw_reason' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $oldBalance = $deduction->balance;
+            if ((float) $validated['withdraw_amount'] > (float) $oldBalance) {
+                return response()->json([
+                    'message' => 'Withdraw amount cannot exceed current savings balance'
+                ], 422);
+            }
+
+            $newBalance = max(0, (float) $oldBalance - (float) $validated['withdraw_amount']);
+            $newStatus = $newBalance <= 0 ? 'completed' : 'active';
+
+            $deduction->update([
+                'balance' => $newBalance,
+                'status' => $newStatus,
+                'notes' => ($deduction->notes ? $deduction->notes . "\n\n" : '') .
+                    "Withdrawn on " . Carbon::parse($validated['withdraw_date'])->format('Y-m-d') .
+                    ": P" . number_format($validated['withdraw_amount'], 2) .
+                    ($validated['withdraw_reason'] ? " - {$validated['withdraw_reason']}" : ''),
+            ]);
+
+            $deduction->load('employee');
+
+            AuditLog::create([
+                'module' => 'deductions',
+                'action' => 'withdraw',
+                'description' => "Employee savings withdrawn for {$deduction->employee->full_name}: P" . number_format($validated['withdraw_amount'], 2),
+                'user_id' => auth()->id(),
+                'record_id' => $deduction->id,
+                'old_values' => json_encode(['balance' => $oldBalance, 'status' => 'active']),
+                'new_values' => json_encode(['balance' => $newBalance, 'status' => $newStatus]),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Employee savings withdrawal processed successfully',
+                'data' => $deduction->fresh()->load('employee')
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to process employee savings withdrawal',
                 'error' => $e->getMessage()
             ], 500);
         }

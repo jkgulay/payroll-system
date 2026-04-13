@@ -53,7 +53,7 @@
               </button>
               <button
                 class="action-btn action-btn-primary"
-                @click="showExportDialog = true"
+                @click="openExportDialog"
               >
                 <v-icon size="20">mdi-download</v-icon>
                 <span>Download Register</span>
@@ -533,7 +533,6 @@
               class="mt-3"
             ></v-select>
           </div>
-
         </v-card-text>
 
         <v-divider></v-divider>
@@ -597,7 +596,7 @@ const payroll = ref(null);
 const showExportDialog = ref(false);
 const downloadingRegister = ref(false);
 const exportFilter = ref({
-  format: "pdf", // pdf, payslips, by_device_pdf
+  format: "by_device_pdf", // pdf, payslips, by_device_pdf
   paper_size: "long_bond", // long_bond, a4 (for payslips)
 });
 const paperSizeOptions = [
@@ -696,6 +695,12 @@ function customFilter(value, query, item) {
 onMounted(() => {
   fetchPayroll();
 });
+
+function openExportDialog() {
+  // Always default to by-device split export when opening the register dialog.
+  exportFilter.value.format = "by_device_pdf";
+  showExportDialog.value = true;
+}
 
 async function fetchPayroll() {
   loading.value = true;

@@ -58,6 +58,8 @@ class PayrollController extends Controller
             'has_attendance' => 'nullable|boolean',
             'excluded_positions' => 'nullable|array',
             'excluded_positions.*' => 'string',
+            'excluded_employee_ids' => 'nullable|array',
+            'excluded_employee_ids.*' => 'integer|exists:employees,id',
         ]);
 
         $periodStart = $validated['period_start'];
@@ -68,6 +70,7 @@ class PayrollController extends Controller
         $includedEmployeeId = $validated['included_employee_id'] ?? null;
         $hasAttendanceFilter = $validated['has_attendance'] ?? false;
         $excludedPositions = $validated['excluded_positions'] ?? [];
+        $excludedEmployeeIds = $this->normalizeEmployeeIds($validated['excluded_employee_ids'] ?? []);
 
         if ($payrollScope === 'individual') {
             if (empty($individualTarget)) {
@@ -148,6 +151,10 @@ class PayrollController extends Controller
             });
         }
 
+        if (!empty($excludedEmployeeIds)) {
+            $employeeQuery->whereNotIn('id', $excludedEmployeeIds);
+        }
+
         // Candidate employees that this payroll scope/filter can include.
         // Do not require complete attendance here; we need to detect incomplete
         // punches for this full candidate set.
@@ -221,6 +228,7 @@ class PayrollController extends Controller
             }
 
             return [
+                'employee_id' => $record->employee_id,
                 'employee_number' => $record->employee->employee_number,
                 'employee_name' => $record->employee->first_name . ' ' . $record->employee->last_name,
                 'attendance_date' => Carbon::parse($record->attendance_date)->format('M d, Y'),
@@ -265,11 +273,14 @@ class PayrollController extends Controller
             'has_attendance' => 'nullable|boolean',
             'excluded_positions' => 'nullable|array',
             'excluded_positions.*' => 'string',
+            'excluded_employee_ids' => 'nullable|array',
+            'excluded_employee_ids.*' => 'integer|exists:employees,id',
             'overtime_employee_ids' => 'nullable|array',
             'overtime_employee_ids.*' => 'integer|exists:employees,id',
         ]);
 
         $overtimeEmployeeIds = $this->normalizeEmployeeIds($validated['overtime_employee_ids'] ?? []);
+        $excludedEmployeeIds = $this->normalizeEmployeeIds($validated['excluded_employee_ids'] ?? []);
 
         // Always run attendance completeness validation before payroll creation.
         $validationRequest = new Request([
@@ -281,6 +292,7 @@ class PayrollController extends Controller
             'included_employee_id' => $validated['included_employee_id'] ?? null,
             'has_attendance' => $validated['has_attendance'] ?? false,
             'excluded_positions' => $validated['excluded_positions'] ?? [],
+            'excluded_employee_ids' => $excludedEmployeeIds,
         ]);
 
         $validationResponse = $this->validatePayrollCreation($validationRequest);
@@ -324,6 +336,7 @@ class PayrollController extends Controller
             // Generate payroll items for all active employees
             $filters = array_merge($scopePayload, [
                 'overtime_employee_ids' => $overtimeEmployeeIds,
+                'excluded_employee_ids' => $excludedEmployeeIds,
             ]);
             $this->generatePayrollItems($payroll, $filters);
 
@@ -1893,6 +1906,8 @@ class PayrollController extends Controller
             ? (int) $payload['included_employee_id']
             : null;
 
+        $excludedEmployeeIds = $this->normalizeEmployeeIds($payload['excluded_employee_ids'] ?? []);
+
         $excludedPositions = collect($payload['excluded_positions'] ?? [])
             ->filter(fn($position) => is_string($position) && trim($position) !== '')
             ->map(fn($position) => trim((string) $position))
@@ -1907,6 +1922,7 @@ class PayrollController extends Controller
             'included_employee_id' => $includedEmployeeId,
             'has_attendance' => (bool) ($payload['has_attendance'] ?? false),
             'excluded_positions' => $excludedPositions,
+            'excluded_employee_ids' => $excludedEmployeeIds,
         ];
 
         if ($scope !== 'individual') {
@@ -1948,6 +1964,7 @@ class PayrollController extends Controller
             'included_employee_id' => $payroll->included_employee_id,
             'has_attendance' => (bool) ($payroll->has_attendance ?? false),
             'excluded_positions' => is_array($excludedPositions) ? $excludedPositions : [],
+            'excluded_employee_ids' => [],
         ]);
     }
 
@@ -1996,6 +2013,10 @@ class PayrollController extends Controller
             });
         }
 
+        if (!empty($normalizedFilters['excluded_employee_ids'])) {
+            $query->whereNotIn('id', $normalizedFilters['excluded_employee_ids']);
+        }
+
         return $query;
     }
 
@@ -2018,6 +2039,7 @@ class PayrollController extends Controller
                 'payroll_scope' => 'all',
                 'has_attendance' => false,
                 'excluded_positions' => [],
+                'excluded_employee_ids' => [],
             ])
                 ->orderBy('employee_number')
                 ->pluck('id')

@@ -291,7 +291,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Cash Bond specific routes
     Route::get('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'getCashBonds']);
     Route::post('/cash-bonds', [App\Http\Controllers\Api\DeductionController::class, 'createCashBond'])->middleware('role:admin,payrollist');
-    Route::post('/deductions/{deduction}/refund-cash-bond', [App\Http\Controllers\Api\DeductionController::class, 'refundCashBond'])->middleware('role:admin,payrollist');
+    Route::post('/deductions/{deduction}/refund-cash-bond', [App\Http\Controllers\Api\DeductionController::class, 'refundCashBond'])->middleware('role:admin,payrollist,employee');
+
+    // Employee Savings specific routes
+    Route::get('/employee-savings', [App\Http\Controllers\Api\DeductionController::class, 'getEmployeeSavings']);
+    Route::post('/employee-savings', [App\Http\Controllers\Api\DeductionController::class, 'createEmployeeSavings'])->middleware('role:admin,payrollist');
+    Route::post('/deductions/{deduction}/withdraw-employee-savings', [App\Http\Controllers\Api\DeductionController::class, 'withdrawEmployeeSavings'])->middleware('role:admin,payrollist,employee');
 
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 
