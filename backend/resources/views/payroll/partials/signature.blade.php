@@ -39,6 +39,7 @@
                 </td>
                 <td>
                     <div class="signature-name">{{ $companyInfo->sig_approved_by_2 ?? '' }}</div>
+                    <div class="signature-position">{{ $companyInfo->sig_approved_by_position_2 ?? '' }}</div>
                 </td>
             </tr>
         </tbody>

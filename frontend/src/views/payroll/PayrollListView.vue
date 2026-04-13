@@ -1489,6 +1489,59 @@
                 hide-details="auto"
               />
             </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_approved_by_position_2"
+                label="Approved By (2nd) — Position / Title"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-4" />
+
+          <div class="text-subtitle-2 font-weight-bold mb-2">
+            Row 3 - Payslip Signatories
+          </div>
+          <v-row dense>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_payslip_prepared_by"
+                label="Prepared By (Payslip)"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_payslip_checked_by"
+                label="Checked By (Payslip)"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_payslip_recommended_by"
+                label="Recommended By (Payslip)"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                v-model="signatureForm.sig_payslip_approved_by"
+                label="Approved By (Payslip)"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+              />
+            </v-col>
           </v-row>
         </v-card-text>
         <v-divider />
@@ -1554,6 +1607,11 @@ const signatureForm = ref({
   sig_checked_by_2: "",
   sig_recommended_by_2: "",
   sig_approved_by_2: "",
+  sig_approved_by_position_2: "",
+  sig_payslip_prepared_by: "",
+  sig_payslip_checked_by: "",
+  sig_payslip_recommended_by: "",
+  sig_payslip_approved_by: "",
 });
 
 const formData = ref({
@@ -2709,6 +2767,11 @@ async function openSignatureSettings() {
       sig_checked_by_2: data.sig_checked_by_2 || "",
       sig_recommended_by_2: data.sig_recommended_by_2 || "",
       sig_approved_by_2: data.sig_approved_by_2 || "",
+      sig_approved_by_position_2: data.sig_approved_by_position_2 || "",
+      sig_payslip_prepared_by: data.sig_payslip_prepared_by || "",
+      sig_payslip_checked_by: data.sig_payslip_checked_by || "",
+      sig_payslip_recommended_by: data.sig_payslip_recommended_by || "",
+      sig_payslip_approved_by: data.sig_payslip_approved_by || "",
     };
   } catch {
     toast.error("Failed to load signature settings");

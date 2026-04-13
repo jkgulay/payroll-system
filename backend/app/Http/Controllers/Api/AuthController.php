@@ -92,7 +92,11 @@ class AuthController extends Controller
         // Fetch only the display name when an employee link exists.
         $fullName = $user->name;
         if ($user->employee_id) {
-            $employeeName = Employee::where('id', $user->employee_id)->value('full_name');
+            $employeeName = Employee::query()
+                ->select(['id', 'first_name', 'middle_name', 'last_name', 'suffix'])
+                ->where('id', $user->employee_id)
+                ->first()
+                ?->full_name;
             if ($employeeName) {
                 $fullName = $employeeName;
             }

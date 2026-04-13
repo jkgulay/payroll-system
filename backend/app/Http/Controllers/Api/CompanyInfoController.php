@@ -57,6 +57,11 @@ class CompanyInfoController extends Controller
             'sig_checked_by_2' => 'nullable|string|max:255',
             'sig_recommended_by_2' => 'nullable|string|max:255',
             'sig_approved_by_2' => 'nullable|string|max:255',
+            'sig_approved_by_position_2' => 'nullable|string|max:255',
+            'sig_payslip_prepared_by' => 'nullable|string|max:255',
+            'sig_payslip_checked_by' => 'nullable|string|max:255',
+            'sig_payslip_recommended_by' => 'nullable|string|max:255',
+            'sig_payslip_approved_by' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {

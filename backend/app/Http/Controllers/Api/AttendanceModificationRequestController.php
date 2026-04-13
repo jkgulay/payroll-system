@@ -24,6 +24,7 @@ class AttendanceModificationRequestController extends Controller
         'cash-bonds',
         'employee-savings',
         'salary-adjustments',
+        'payroll-item-adjustments',
     ];
 
     private const DAILY_SCOPED_MODULES = [
@@ -35,6 +36,7 @@ class AttendanceModificationRequestController extends Controller
         'cash-bonds',
         'employee-savings',
         'salary-adjustments',
+        'payroll-item-adjustments',
     ];
 
     private function isDailyScopedModule(string $module): bool
@@ -209,6 +211,7 @@ class AttendanceModificationRequestController extends Controller
                 'cash-bonds' => 'cash bonds',
                 'employee-savings' => 'employee savings',
                 'salary-adjustments' => 'salary adjustments',
+                'payroll-item-adjustments' => 'payroll item adjustments',
                 'attendance-settings' => 'attendance settings',
             ];
 

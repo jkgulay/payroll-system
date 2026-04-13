@@ -456,7 +456,7 @@ const canApprove = (item) => {
 };
 
 const canDelete = (item) => {
-  return canEditRole.value && item.approval_status !== "approved";
+  return canEditRole.value;
 };
 
 let unsubscribeAttendance = null;

@@ -51,8 +51,9 @@
           >
             <v-alert-title>Request Pending Approval</v-alert-title>
             <p class="mb-0 mt-1">
-              Your request to modify attendance for <strong>{{ formatDate(selectedDate) }}</strong> is pending admin approval.
-              You will be able to modify records once approved.
+              Your request to modify attendance for
+              <strong>{{ formatDate(selectedDate) }}</strong> is pending admin
+              approval. You will be able to modify records once approved.
             </p>
           </v-alert>
 
@@ -67,7 +68,8 @@
           >
             <v-alert-title>Request Rejected</v-alert-title>
             <p class="mb-1 mt-1">
-              Your request to modify attendance for <strong>{{ formatDate(selectedDate) }}</strong> was rejected.
+              Your request to modify attendance for
+              <strong>{{ formatDate(selectedDate) }}</strong> was rejected.
             </p>
             <p v-if="accessMessage" class="mb-2 text-caption">
               <strong>Reason:</strong> {{ accessMessage }}
@@ -94,8 +96,10 @@
           >
             <v-alert-title>Approval Required</v-alert-title>
             <p class="mb-2 mt-1">
-              You must request approval from an administrator before you can modify missing attendance records
-              for <strong>{{ formatDate(selectedDate) }}</strong>.
+              You must request approval from an administrator before you can
+              modify missing attendance records for
+              <strong>{{ formatDate(selectedDate) }}</strong
+              >.
             </p>
             <v-btn
               size="small"
@@ -118,7 +122,9 @@
             density="compact"
             closable
           >
-            Access granted — you can modify attendance records for <strong>{{ formatDate(selectedDate) }}</strong>.
+            Access granted — you can modify attendance records for
+            <strong>{{ formatDate(selectedDate) }}</strong
+            >.
           </v-alert>
         </v-col>
       </v-row>
@@ -131,7 +137,12 @@
               <v-expansion-panel-title>
                 <v-icon size="20" class="mr-2">mdi-history</v-icon>
                 My Modification Requests
-                <v-chip size="x-small" class="ml-2" color="primary" variant="tonal">
+                <v-chip
+                  size="x-small"
+                  class="ml-2"
+                  color="primary"
+                  variant="tonal"
+                >
                   {{ myRequests.length }}
                 </v-chip>
               </v-expansion-panel-title>
@@ -159,8 +170,8 @@
                           {{ req.status }}
                         </v-chip>
                       </td>
-                      <td>{{ req.reviewer?.name || '—' }}</td>
-                      <td>{{ req.review_notes || '—' }}</td>
+                      <td>{{ req.reviewer?.name || "—" }}</td>
+                      <td>{{ req.review_notes || "—" }}</td>
                     </tr>
                   </tbody>
                 </v-table>
@@ -355,19 +366,41 @@
       </template>
 
       <template v-slot:item.actions="{ item }">
-        <v-btn
-          icon="mdi-pencil"
-          size="small"
-          variant="text"
-          color="primary"
-          @click="
-            $emit('edit-attendance', {
-              attendance: item.attendance,
-              date: selectedDate,
-              employee_id: item.employee_id,
-            })
-          "
-        ></v-btn>
+        <v-menu location="bottom end">
+          <template v-slot:activator="{ props }">
+            <v-btn
+              v-bind="props"
+              icon="mdi-dots-vertical"
+              size="small"
+              variant="text"
+            ></v-btn>
+          </template>
+          <v-list density="compact">
+            <v-list-item
+              @click="
+                $emit('edit-attendance', {
+                  attendance: item.attendance,
+                  date: selectedDate,
+                  employee_id: item.employee_id,
+                })
+              "
+            >
+              <template v-slot:prepend>
+                <v-icon size="18">mdi-pencil</v-icon>
+              </template>
+              <v-list-item-title>Edit</v-list-item-title>
+            </v-list-item>
+            <v-list-item
+              v-if="canDeleteAttendance(item)"
+              @click="$emit('delete', item.attendance)"
+            >
+              <template v-slot:prepend>
+                <v-icon size="18" color="error">mdi-delete</v-icon>
+              </template>
+              <v-list-item-title>Delete</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </template>
 
       <template v-slot:no-data>
@@ -393,22 +426,24 @@
     <v-dialog v-model="showRequestDialog" max-width="500" persistent>
       <v-card rounded="lg">
         <v-card-title class="d-flex align-center pa-4">
-          <v-icon color="warning" class="mr-2">mdi-lock-open-variant-outline</v-icon>
+          <v-icon color="warning" class="mr-2"
+            >mdi-lock-open-variant-outline</v-icon
+          >
           Request Attendance Modification Access
         </v-card-title>
         <v-divider></v-divider>
         <v-card-text class="pa-4">
           <p class="text-body-2 mb-4">
             You are requesting access to modify missing attendance records for
-            <strong>{{ formatDate(selectedDate) }}</strong>.
-            Please provide a reason for this request.
+            <strong>{{ formatDate(selectedDate) }}</strong
+            >. Please provide a reason for this request.
           </p>
           <v-textarea
             v-model="requestReason"
             label="Reason for Request"
             variant="outlined"
             rows="3"
-            :rules="[v => !!v || 'Reason is required']"
+            :rules="[(v) => !!v || 'Reason is required']"
             counter="500"
             maxlength="500"
             placeholder="e.g., Need to update missing time-out records for employees who forgot to punch out"
@@ -419,7 +454,10 @@
           <v-spacer></v-spacer>
           <v-btn
             variant="text"
-            @click="showRequestDialog = false; requestReason = ''"
+            @click="
+              showRequestDialog = false;
+              requestReason = '';
+            "
           >
             Cancel
           </v-btn>
@@ -446,7 +484,7 @@ import { useAuthStore } from "@/stores/auth";
 import { onAttendanceUpdate } from "@/stores/attendance";
 import { useToast } from "vue-toastification";
 
-const emit = defineEmits(["edit-attendance"]);
+const emit = defineEmits(["edit-attendance", "delete"]);
 const toast = useToast();
 const authStore = useAuthStore();
 
@@ -467,12 +505,22 @@ const submittingRequest = ref(false);
 const myRequests = ref([]);
 
 const isAdminOrHr = computed(() =>
-  ["admin", "hr"].includes(authStore.userRole)
+  ["admin", "hr"].includes(authStore.userRole),
 );
 
-const hasAccess = computed(() =>
-  isAdminOrHr.value || accessStatus.value === "approved"
+const hasAccess = computed(
+  () => isAdminOrHr.value || accessStatus.value === "approved",
 );
+
+const canDeleteRole = computed(() =>
+  ["admin", "hr", "payrollist"].includes(authStore.userRole),
+);
+
+const canDeleteAttendance = (item) => {
+  if (!canDeleteRole.value) return false;
+  if (!item?.attendance?.id) return false;
+  return true;
+};
 
 const filterOptions = [
   { title: "All Issues", value: "all" },
@@ -528,7 +576,9 @@ const checkAccess = async () => {
 
   checkingAccess.value = true;
   try {
-    const response = await attendanceService.checkModificationAccess(selectedDate.value);
+    const response = await attendanceService.checkModificationAccess(
+      selectedDate.value,
+    );
     accessStatus.value = response.status;
     accessMessage.value = response.message || "";
   } catch {
@@ -645,6 +695,7 @@ const getIssueIcon = (issue) => {
 };
 
 let unsubscribeAttendance = null;
+let onAttendanceChanged = null;
 
 // Auto-fetch when date or filter type changes
 watch([selectedDate, filterType], () => {
@@ -663,11 +714,21 @@ onMounted(() => {
       loadMissingAttendance();
     }
   });
+
+  onAttendanceChanged = () => {
+    if (selectedDate.value) {
+      loadMissingAttendance();
+    }
+  };
+  window.addEventListener("attendance-data-changed", onAttendanceChanged);
 });
 
 onUnmounted(() => {
   if (unsubscribeAttendance) {
     unsubscribeAttendance();
+  }
+  if (onAttendanceChanged) {
+    window.removeEventListener("attendance-data-changed", onAttendanceChanged);
   }
 });
 </script>

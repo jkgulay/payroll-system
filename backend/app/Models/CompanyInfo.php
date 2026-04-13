@@ -39,5 +39,10 @@ class CompanyInfo extends Model
         'sig_checked_by_2',
         'sig_recommended_by_2',
         'sig_approved_by_2',
+        'sig_approved_by_position_2',
+        'sig_payslip_prepared_by',
+        'sig_payslip_checked_by',
+        'sig_payslip_recommended_by',
+        'sig_payslip_approved_by',
     ];
 }

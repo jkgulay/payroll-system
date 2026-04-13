@@ -31,8 +31,9 @@ class AttendanceController extends Controller
         $this->biometricService = $biometricService;
         $this->punchRecordImportService = $punchRecordImportService;
 
-        // Manual entry and editing: admin and hr only (store/destroy), payrollist can update
-        $this->middleware('role:admin,hr')->only(['store', 'destroy', 'markAbsent']);
+        // Manual entry: admin/hr only; delete and update: admin/hr/payrollist
+        $this->middleware('role:admin,hr')->only(['store', 'markAbsent']);
+        $this->middleware('role:admin,hr,payrollist')->only(['destroy']);
         $this->middleware('role:admin,hr,payrollist')->only(['update']);
         $this->middleware('role:admin')->only(['recalculateDateRange']);
 
@@ -1119,7 +1120,6 @@ class AttendanceController extends Controller
                 ) {
                     $issues[] = 'Missing OT time out';
                 }
-
             }
 
             // If there are any issues, add to missing records

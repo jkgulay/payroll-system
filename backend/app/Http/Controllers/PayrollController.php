@@ -14,6 +14,7 @@ use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\CompanyInfo;
 use App\Models\DeviceProfile;
+use App\Models\AttendanceModificationRequest;
 use App\Services\PayrollService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class PayrollController extends Controller
 {
+    private const PAYROLL_ITEM_EDIT_MODULE = 'payroll-item-adjustments';
+
     protected $payrollService;
 
     public function __construct(PayrollService $payrollService)
@@ -421,6 +424,7 @@ class PayrollController extends Controller
                     'sunday_hours',
                     'sunday_pay',
                     'salary_adjustment',
+                    'other_allowances',
                     'allowances_breakdown',
                     'gross_pay',
                     'undertime_hours',
@@ -456,6 +460,58 @@ class PayrollController extends Controller
             'items.employee.positionRate:id,position_name,daily_rate',
         ])
             ->findOrFail($id);
+
+        $itemIds = collect($payroll->items)
+            ->pluck('id')
+            ->filter()
+            ->map(fn($value) => (int) $value)
+            ->values();
+
+        $editedItemIds = [];
+        if ($itemIds->isNotEmpty()) {
+            $editedItemIds = AuditLog::query()
+                ->where('module', 'payroll')
+                ->where('action', 'update_payroll_item')
+                ->where('model_type', PayrollItem::class)
+                ->whereIn('model_id', $itemIds)
+                ->pluck('model_id')
+                ->map(fn($value) => (int) $value)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $deviceMetaMap = DeviceProfile::query()
+            ->get(['device_name', 'designation', 'location'])
+            ->mapWithKeys(function ($profile) {
+                $key = strtolower(trim((string) $profile->device_name));
+                return [
+                    $key => [
+                        'designation' => $profile->designation,
+                        'location' => $profile->location,
+                    ],
+                ];
+            })
+            ->all();
+
+        $deviceGroupedItems = $this->buildDeviceGroups($payroll)
+            ->map(function ($items, $deviceName) use ($deviceMetaMap) {
+                $metaKey = strtolower(trim((string) $deviceName));
+                $meta = $deviceMetaMap[$metaKey] ?? ['designation' => null, 'location' => null];
+
+                return [
+                    'device_name' => $deviceName,
+                    'designation' => $meta['designation'] ?? null,
+                    'location' => $meta['location'] ?? null,
+                    'items' => $items->values()->map(function ($item) {
+                        return $item->toArray();
+                    })->values(),
+                ];
+            })
+            ->values();
+
+        $payroll->setAttribute('device_grouped_items', $deviceGroupedItems);
+        $payroll->setAttribute('edited_item_ids', $editedItemIds);
 
         return response()->json($payroll);
     }
@@ -985,6 +1041,208 @@ class PayrollController extends Controller
         }
     }
 
+    public function updateItem(Request $request, Payroll $payroll, PayrollItem $item)
+    {
+        $user = $request->user();
+
+        if ((int) $item->payroll_id !== (int) $payroll->id) {
+            return response()->json([
+                'message' => 'Payroll item does not belong to the selected payroll.',
+            ], 422);
+        }
+
+        if ($payroll->status !== 'draft') {
+            return response()->json([
+                'message' => 'Cannot modify items in finalized or paid payroll.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'rate' => 'sometimes|numeric|min:0',
+            'days_worked' => 'sometimes|numeric|min:0',
+            'regular_ot_hours' => 'sometimes|numeric|min:0',
+            'regular_ot_pay' => 'sometimes|numeric|min:0',
+            'special_ot_hours' => 'sometimes|numeric|min:0',
+            'special_ot_pay' => 'sometimes|numeric|min:0',
+            'sunday_hours' => 'sometimes|numeric|min:0',
+            'sunday_pay' => 'sometimes|numeric|min:0',
+            'holiday_days' => 'sometimes|numeric|min:0',
+            'holiday_pay' => 'sometimes|numeric|min:0',
+            'salary_adjustment' => 'sometimes|numeric',
+            'other_allowances' => 'sometimes|numeric',
+            'undertime_deduction' => 'sometimes|numeric|min:0',
+            'sss' => 'sometimes|numeric|min:0',
+            'philhealth' => 'sometimes|numeric|min:0',
+            'pagibig' => 'sometimes|numeric|min:0',
+            'withholding_tax' => 'sometimes|numeric|min:0',
+            'employee_savings' => 'sometimes|numeric|min:0',
+            'cash_advance' => 'sometimes|numeric|min:0',
+            'loans' => 'sometimes|numeric|min:0',
+            'employee_deductions' => 'sometimes|numeric|min:0',
+            'other_deductions' => 'sometimes|numeric|min:0',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $editReason = trim((string) ($validated['reason'] ?? ''));
+        unset($validated['reason']);
+
+        $editAccessRequest = null;
+        if ($user && $user->role === 'payrollist') {
+            $editAccessRequest = AttendanceModificationRequest::query()
+                ->where('requested_by', $user->id)
+                ->where('module', self::PAYROLL_ITEM_EDIT_MODULE)
+                ->where('status', 'approved')
+                ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])
+                ->latest('id')
+                ->first();
+
+            if (!$editAccessRequest) {
+                return response()->json([
+                    'message' => 'Access request required before editing payroll item details.',
+                ], 403);
+            }
+
+            if ($editReason === '') {
+                return response()->json([
+                    'message' => 'Edit reason is required for payroll item adjustments.',
+                ], 422);
+            }
+        }
+
+        if (empty($validated)) {
+            return response()->json([
+                'message' => 'No editable fields were provided.',
+            ], 422);
+        }
+
+        $oldValues = $item->only([
+            'rate',
+            'days_worked',
+            'regular_days',
+            'basic_pay',
+            'regular_ot_hours',
+            'regular_ot_pay',
+            'special_ot_hours',
+            'special_ot_pay',
+            'sunday_hours',
+            'sunday_pay',
+            'holiday_days',
+            'holiday_pay',
+            'salary_adjustment',
+            'other_allowances',
+            'undertime_deduction',
+            'sss',
+            'philhealth',
+            'pagibig',
+            'withholding_tax',
+            'employee_savings',
+            'cash_advance',
+            'loans',
+            'employee_deductions',
+            'other_deductions',
+            'gross_pay',
+            'total_deductions',
+            'net_pay',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            foreach ($validated as $key => $value) {
+                $item->{$key} = round((float) $value, 2);
+            }
+
+            $item->days_worked = round((float) $item->days_worked, 2);
+            $item->regular_days = $item->days_worked;
+            $item->basic_pay = round((float) $item->rate * (float) $item->regular_days, 2);
+
+            $grossPay =
+                (float) $item->basic_pay +
+                (float) $item->holiday_pay +
+                (float) $item->regular_ot_pay +
+                (float) $item->special_ot_pay +
+                (float) $item->sunday_pay +
+                (float) $item->other_allowances +
+                (float) $item->salary_adjustment;
+
+            $totalDeductions =
+                (float) $item->sss +
+                (float) $item->philhealth +
+                (float) $item->pagibig +
+                (float) $item->loans +
+                (float) $item->withholding_tax +
+                (float) $item->employee_savings +
+                (float) $item->cash_advance +
+                (float) $item->employee_deductions +
+                (float) $item->other_deductions +
+                (float) $item->undertime_deduction;
+
+            $item->gross_pay = round($grossPay, 2);
+            $item->total_deductions = round($totalDeductions, 2);
+            $item->net_pay = round($item->gross_pay - $item->total_deductions, 2);
+            $item->save();
+
+            $this->refreshPayrollTotals($payroll);
+
+            $item->loadMissing('employee:id,employee_number,first_name,middle_name,last_name,suffix');
+            $employeeName = $item->employee?->full_name
+                ?? trim(implode(' ', array_filter([
+                    $item->employee?->first_name,
+                    $item->employee?->middle_name,
+                    $item->employee?->last_name,
+                    $item->employee?->suffix,
+                ])));
+            $employeeLabel = $item->employee?->employee_number
+                ? "{$item->employee->employee_number} ({$employeeName})"
+                : ($employeeName !== '' ? $employeeName : "employee ID {$item->employee_id}");
+
+            $description = "Updated payroll item for {$employeeLabel} in payroll '{$payroll->period_name}'";
+            if ($editReason !== '') {
+                $description .= ". Reason: {$editReason}";
+            }
+            if ($editAccessRequest) {
+                $description .= " (Access request #{$editAccessRequest->id})";
+            }
+
+            $newValues = $item->fresh()->only(array_keys($oldValues));
+            $newValues['edit_reason'] = $editReason !== '' ? $editReason : null;
+            $newValues['access_request_id'] = $editAccessRequest?->id;
+            $newValues['edited_by_role'] = $user?->role;
+
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'payroll',
+                'action' => 'update_payroll_item',
+                'model_type' => PayrollItem::class,
+                'model_id' => $item->id,
+                'description' => $description,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'old_values' => $oldValues,
+                'new_values' => $newValues,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Payroll item updated successfully.',
+                'item' => $item->fresh(),
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Error updating payroll item: ' . $e->getMessage(), [
+                'payroll_id' => $payroll->id,
+                'payroll_item_id' => $item->id,
+                'exception' => get_class($e),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to update payroll item.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function destroy(Payroll $payroll)
     {
         if ($payroll->status !== 'draft') {
@@ -1127,6 +1385,21 @@ class PayrollController extends Controller
                 'message' => 'Failed to reprocess payroll: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function refreshPayrollTotals(Payroll $payroll): void
+    {
+        $totals = PayrollItem::where('payroll_id', $payroll->id)
+            ->selectRaw('COALESCE(SUM(gross_pay), 0) as total_gross')
+            ->selectRaw('COALESCE(SUM(total_deductions), 0) as total_deductions')
+            ->selectRaw('COALESCE(SUM(net_pay), 0) as total_net')
+            ->first();
+
+        $payroll->update([
+            'total_gross' => round((float) ($totals->total_gross ?? 0), 2),
+            'total_deductions' => round((float) ($totals->total_deductions ?? 0), 2),
+            'total_net' => round((float) ($totals->total_net ?? 0), 2),
+        ]);
     }
 
     public function downloadPayslip($payrollId, $employeeId)
@@ -1329,6 +1602,7 @@ class PayrollController extends Controller
             'employee_ids' => 'nullable|array',
             'employee_ids.*' => 'integer|exists:employees,id',
             'format' => 'nullable|in:pdf,by_device_pdf',
+            'device_name' => 'nullable|string|max:255',
         ]);
 
         // Default to PDF if format not specified
@@ -1408,7 +1682,7 @@ class PayrollController extends Controller
 
         // Handle different export formats
         if ($format === 'by_device_pdf') {
-            return $this->exportRegisterByDevicePdf($payroll, $filenameBase);
+            return $this->exportRegisterByDevicePdf($payroll, $filenameBase, $validated['device_name'] ?? null);
         } else {
             // Default PDF export
             return $this->exportRegisterToPdf($payroll, $validated, $filenameBase);
@@ -1502,7 +1776,7 @@ class PayrollController extends Controller
         }
     }
 
-    private function exportRegisterByDevicePdf(Payroll $payroll, string $filenameBase)
+    private function exportRegisterByDevicePdf(Payroll $payroll, string $filenameBase, ?string $deviceName = null)
     {
         // Allow more memory for large multi-device PDFs (overrides the 1024M set upstream)
         ini_set('memory_limit', '2048M');
@@ -1513,8 +1787,32 @@ class PayrollController extends Controller
             // section header per device.
             $groupedItems = $this->buildDeviceGroups($payroll);
 
+            $selectedDeviceName = null;
+            if (!empty($deviceName)) {
+                $requestedDevice = strtolower(trim((string) $deviceName));
+                $matchedDevice = $groupedItems->keys()->first(function ($name) use ($requestedDevice) {
+                    return strtolower(trim((string) $name)) === $requestedDevice;
+                });
+
+                if ($matchedDevice === null) {
+                    return response()->json([
+                        'message' => "No payroll records found for device '{$deviceName}'.",
+                    ], 422);
+                }
+
+                $selectedDeviceName = (string) $matchedDevice;
+                $groupedItems = collect([
+                    $selectedDeviceName => $groupedItems->get($selectedDeviceName),
+                ]);
+
+                $safeDeviceName = trim((string) preg_replace('/[^A-Za-z0-9]+/', '_', $selectedDeviceName), '_');
+                if ($safeDeviceName !== '') {
+                    $filenameBase .= '_' . strtolower($safeDeviceName);
+                }
+            }
+
             $companyInfo = CompanyInfo::first();
-            $filterInfo  = null;
+            $filterInfo  = $selectedDeviceName ? 'Device: ' . $selectedDeviceName : null;
             $filterType  = 'device';
             $deviceMetaMap = DeviceProfile::query()
                 ->get(['device_name', 'designation', 'location'])

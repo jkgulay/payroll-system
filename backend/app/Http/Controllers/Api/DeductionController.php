@@ -533,14 +533,8 @@ class DeductionController extends Controller
             ], 422);
         }
 
-        if ($deduction->status === 'completed') {
-            return response()->json([
-                'message' => 'This cash bond has already been refunded or completed'
-            ], 422);
-        }
-
         $validated = $request->validate([
-            'refund_amount' => 'required|numeric|min:0',
+            'refund_amount' => 'required|numeric|min:0.01',
             'refund_date' => 'required|date',
             'refund_reason' => 'nullable|string|max:500',
         ]);
@@ -548,13 +542,22 @@ class DeductionController extends Controller
         DB::beginTransaction();
         try {
             $oldBalance = $deduction->balance;
-            if ((float) $validated['refund_amount'] > (float) $oldBalance) {
+            $oldStatus = $deduction->status;
+            $contributedAmount = max(0, (float) $deduction->total_amount - (float) $oldBalance);
+
+            if ($contributedAmount <= 0) {
                 return response()->json([
-                    'message' => 'Refund amount cannot exceed current cash bond balance'
+                    'message' => 'No contributed amount is available for refund yet'
                 ], 422);
             }
 
-            $newBalance = max(0, (float) $oldBalance - (float) $validated['refund_amount']);
+            if ((float) $validated['refund_amount'] > $contributedAmount) {
+                return response()->json([
+                    'message' => 'Refund amount cannot exceed contributed cash bond amount'
+                ], 422);
+            }
+
+            $newBalance = min((float) $deduction->total_amount, (float) $oldBalance + (float) $validated['refund_amount']);
             $newStatus = $newBalance <= 0 ? 'completed' : 'active';
 
             $deduction->update([
@@ -573,7 +576,7 @@ class DeductionController extends Controller
                 'description' => "Cash Bond refunded for {$deduction->employee->full_name}: ₱" . number_format($validated['refund_amount'], 2),
                 'user_id' => auth()->id(),
                 'record_id' => $deduction->id,
-                'old_values' => json_encode(['balance' => $oldBalance, 'status' => 'active']),
+                'old_values' => json_encode(['balance' => $oldBalance, 'status' => $oldStatus]),
                 'new_values' => json_encode(['balance' => $newBalance, 'status' => $newStatus]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
@@ -710,12 +713,6 @@ class DeductionController extends Controller
             ], 422);
         }
 
-        if ($deduction->status === 'completed') {
-            return response()->json([
-                'message' => 'This employee savings record is already completed'
-            ], 422);
-        }
-
         $validated = $request->validate([
             'withdraw_amount' => 'required|numeric|min:0.01',
             'withdraw_date' => 'required|date',
@@ -725,13 +722,22 @@ class DeductionController extends Controller
         DB::beginTransaction();
         try {
             $oldBalance = $deduction->balance;
-            if ((float) $validated['withdraw_amount'] > (float) $oldBalance) {
+            $oldStatus = $deduction->status;
+            $contributedAmount = max(0, (float) $deduction->total_amount - (float) $oldBalance);
+
+            if ($contributedAmount <= 0) {
                 return response()->json([
-                    'message' => 'Withdraw amount cannot exceed current savings balance'
+                    'message' => 'No contributed amount is available for withdrawal yet'
                 ], 422);
             }
 
-            $newBalance = max(0, (float) $oldBalance - (float) $validated['withdraw_amount']);
+            if ((float) $validated['withdraw_amount'] > $contributedAmount) {
+                return response()->json([
+                    'message' => 'Withdraw amount cannot exceed contributed savings amount'
+                ], 422);
+            }
+
+            $newBalance = min((float) $deduction->total_amount, (float) $oldBalance + (float) $validated['withdraw_amount']);
             $newStatus = $newBalance <= 0 ? 'completed' : 'active';
 
             $deduction->update([
@@ -751,7 +757,7 @@ class DeductionController extends Controller
                 'description' => "Employee savings withdrawn for {$deduction->employee->full_name}: P" . number_format($validated['withdraw_amount'], 2),
                 'user_id' => auth()->id(),
                 'record_id' => $deduction->id,
-                'old_values' => json_encode(['balance' => $oldBalance, 'status' => 'active']),
+                'old_values' => json_encode(['balance' => $oldBalance, 'status' => $oldStatus]),
                 'new_values' => json_encode(['balance' => $newBalance, 'status' => $newStatus]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
