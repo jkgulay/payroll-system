@@ -368,6 +368,7 @@ const ALL_MODULES = [
   "thirteenth-month-pay",
   "loans",
   "cash-bonds",
+  "employee-savings",
   "salary-adjustments",
 ];
 
@@ -380,6 +381,7 @@ const moduleLabels = {
   "thirteenth-month-pay": "13th Month Pay",
   loans: "Loans",
   "cash-bonds": "Cash Bonds",
+  "employee-savings": "Employee Savings",
   "salary-adjustments": "Salary Adjustments",
 };
 
@@ -392,6 +394,7 @@ const moduleColors = {
   "thirteenth-month-pay": "purple",
   loans: "teal",
   "cash-bonds": "indigo",
+  "employee-savings": "pink",
   "salary-adjustments": "cyan",
 };
 
@@ -418,6 +421,11 @@ const tabItems = [
   },
   { key: "loans", label: "Loans", icon: "mdi-cash-multiple" },
   { key: "cash-bonds", label: "Cash Bonds", icon: "mdi-certificate-outline" },
+  {
+    key: "employee-savings",
+    label: "Employee Savings",
+    icon: "mdi-piggy-bank-outline",
+  },
   { key: "salary-adjustments", label: "Salary Adj.", icon: "mdi-cash-edit" },
 ];
 
@@ -455,6 +463,7 @@ const pendingCounts = ref({
   "thirteenth-month-pay": 0,
   loans: 0,
   "cash-bonds": 0,
+  "employee-savings": 0,
   "salary-adjustments": 0,
 });
 
@@ -622,6 +631,7 @@ const loadRequests = async () => {
       "thirteenth-month-pay": 0,
       loans: 0,
       "cash-bonds": 0,
+      "employee-savings": 0,
       "salary-adjustments": 0,
     };
 

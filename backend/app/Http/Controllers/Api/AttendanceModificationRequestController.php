@@ -22,6 +22,7 @@ class AttendanceModificationRequestController extends Controller
         'thirteenth-month-pay',
         'loans',
         'cash-bonds',
+        'employee-savings',
         'salary-adjustments',
     ];
 
@@ -32,6 +33,7 @@ class AttendanceModificationRequestController extends Controller
         'thirteenth-month-pay',
         'loans',
         'cash-bonds',
+        'employee-savings',
         'salary-adjustments',
     ];
 
@@ -205,6 +207,7 @@ class AttendanceModificationRequestController extends Controller
                 'thirteenth-month-pay' => '13th month pay',
                 'loans' => 'loans',
                 'cash-bonds' => 'cash bonds',
+                'employee-savings' => 'employee savings',
                 'salary-adjustments' => 'salary adjustments',
                 'attendance-settings' => 'attendance settings',
             ];

@@ -7,9 +7,9 @@
           <v-icon icon="mdi-cash-lock" size="24" color="white"></v-icon>
         </div>
         <div class="page-header-content">
-          <h1 class="page-title">Cash Bond Management</h1>
+          <h1 class="page-title">Employee Savings Management</h1>
           <p class="page-subtitle">
-            Track and manage employee cash bonds and refunds
+            Track and manage employee savings contributions and withdrawals
           </p>
         </div>
         <button
@@ -18,7 +18,7 @@
           @click="openAddDialog"
         >
           <v-icon size="20">mdi-cash-plus</v-icon>
-          <span>Add Cash Bond</span>
+          <span>Add Employee Savings</span>
         </button>
       </div>
 
@@ -35,7 +35,7 @@
           <v-alert-title>Access Required</v-alert-title>
           <p class="mt-1">
             You need to request access from an administrator before you can
-            manage cash bonds.
+            manage employee savings.
           </p>
           <v-btn
             color="primary"
@@ -57,7 +57,7 @@
           <v-alert-title>Pending Approval</v-alert-title>
           <p class="mt-1">
             Your access request is pending admin approval. You will be able to
-            manage cash bonds once approved.
+            manage employee savings once approved.
           </p>
         </v-alert>
         <v-alert
@@ -122,13 +122,13 @@
             <v-card-title class="d-flex align-center pa-4"
               ><v-icon color="primary" class="mr-2"
                 >mdi-lock-open-variant</v-icon
-              >Request Cash Bonds Access</v-card-title
+              >Request Employee Savings Access</v-card-title
             >
             <v-divider></v-divider>
             <v-card-text class="pa-4">
               <p class="text-body-2 mb-4">
-                Please provide a reason for needing access to the Cash Bonds
-                module.
+                Please provide a reason for needing access to the Employee
+                Savings module.
               </p>
               <v-textarea
                 v-model="accessRequestReason"
@@ -173,7 +173,7 @@
               <v-icon size="20">mdi-lock-check</v-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Active Bonds</div>
+              <div class="stat-label">Active Savings</div>
               <div class="stat-value">{{ summary.active_count || 0 }}</div>
               <div class="stat-sublabel">
                 ₱{{ formatNumber(summary.active_total || 0) }}
@@ -198,7 +198,7 @@
               <v-icon size="20">mdi-check-circle</v-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Completed Bonds</div>
+              <div class="stat-label">Completed Savings</div>
               <div class="stat-value">{{ summary.completed_count || 0 }}</div>
               <div class="stat-sublabel">
                 ₱{{ formatNumber(summary.completed_total || 0) }}
@@ -211,7 +211,7 @@
               <v-icon size="20">mdi-cash-check</v-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Total Collected</div>
+              <div class="stat-label">Total Deducted</div>
               <div class="stat-value info-text">
                 ₱{{ formatNumber(summary.total_collected || 0) }}
               </div>
@@ -233,7 +233,7 @@
                 density="comfortable"
                 clearable
                 hide-details
-                @update:model-value="fetchCashBonds"
+                @update:model-value="fetchSavingsRecords"
               ></v-autocomplete>
             </v-col>
             <v-col cols="12" :md="userRole === 'employee' ? 6 : 4">
@@ -245,7 +245,7 @@
                 density="comfortable"
                 clearable
                 hide-details
-                @update:model-value="fetchCashBonds"
+                @update:model-value="fetchSavingsRecords"
               ></v-select>
             </v-col>
             <v-col cols="auto" class="d-flex align-center">
@@ -272,10 +272,10 @@
           </v-row>
         </div>
 
-        <!-- Cash Bonds Table -->
+        <!-- Employee Savings Table -->
         <v-data-table
           :headers="headers"
-          :items="cashBonds"
+          :items="savingsRecords"
           :loading="loading"
           :items-per-page="15"
           class="modern-table"
@@ -376,11 +376,11 @@
                 </v-list-item>
                 <v-list-item
                   v-if="item.status === 'active'"
-                  @click="openRefundDialog(item)"
+                  @click="openWithdrawDialog(item)"
                 >
                   <v-list-item-title>
-                    <v-icon size="small" class="mr-2">mdi-cash-refund</v-icon>
-                    Refund/Return
+                    <v-icon size="small" class="mr-2">mdi-cash-withdraw</v-icon>
+                    Withdraw
                   </v-list-item-title>
                 </v-list-item>
                 <v-list-item
@@ -414,9 +414,9 @@
           <template v-slot:no-data>
             <div class="text-center py-8">
               <v-icon size="64" color="grey">mdi-cash-lock</v-icon>
-              <p class="text-h6 mt-4">No cash bonds found</p>
+              <p class="text-h6 mt-4">No employee savings found</p>
               <p class="text-body-2 text-medium-emphasis">
-                No cash bond records match your current filters.
+                No employee savings records match your current filters.
               </p>
               <v-btn
                 class="mt-3"
@@ -433,7 +433,7 @@
       </template>
     </div>
 
-    <!-- Add/Edit Cash Bond Dialog -->
+    <!-- Add/Edit Employee Savings Dialog -->
     <v-dialog v-model="dialog" max-width="900px" persistent scrollable>
       <v-card class="modern-dialog cashbond-dialog">
         <v-card-title class="dialog-header">
@@ -444,13 +444,13 @@
           </div>
           <div>
             <div class="dialog-title">
-              {{ editMode ? "Edit Cash Bond" : "Add Cash Bond" }}
+              {{ editMode ? "Edit Employee Savings" : "Add Employee Savings" }}
             </div>
             <div class="dialog-subtitle">
               {{
                 editMode
-                  ? "Update cash bond details"
-                  : "Create new cash bond for employee"
+                  ? "Update employee savings details"
+                  : "Create new employee savings for employee"
               }}
             </div>
           </div>
@@ -460,9 +460,9 @@
         <v-card-text
           class="dialog-content cashbond-dialog-content"
           style="max-height: 70vh"
-          @keydown.capture="handleCashBondFormKeydown"
+          @keydown.capture="handleSavingsFormKeydown"
         >
-          <v-form ref="bondFormRef" v-model="formValid">
+          <v-form ref="savingsFormRef" v-model="formValid">
             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
               <template v-slot:prepend>
                 <v-icon icon="mdi-information"></v-icon>
@@ -477,7 +477,7 @@
                   <div class="section-icon">
                     <v-icon size="18">mdi-account-cash</v-icon>
                   </div>
-                  <h3 class="section-title">Bond Information</h3>
+                  <h3 class="section-title">Savings Information</h3>
                 </div>
               </v-col>
 
@@ -621,7 +621,7 @@
               >
                 <v-alert type="info" variant="tonal" density="compact">
                   <strong>{{ affectedEmployeesCount }}</strong> active
-                  employee(s) will receive this cash bond.
+                  employee(s) will receive this savings deduction.
                 </v-alert>
               </v-col>
 
@@ -645,7 +645,7 @@
                 <v-text-field
                   v-model.number="form.total_amount"
                   type="number"
-                  label="Total Cash Bond Amount *"
+                  label="Total Employee Savings Amount *"
                   prefix="₱"
                   placeholder="0.00"
                   variant="outlined"
@@ -735,7 +735,7 @@
                 <v-textarea
                   v-model="form.description"
                   label="Description"
-                  placeholder="Reason for cash bond"
+                  placeholder="Reason for employee savings"
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-text-box"
@@ -774,7 +774,7 @@
           <v-btn
             color="#ED985F"
             variant="flat"
-            @click="saveCashBond"
+            @click="saveSavingsRecord"
             :disabled="!formValid || saving"
           >
             <v-progress-circular
@@ -793,8 +793,8 @@
                   ? "Updating..."
                   : "Creating..."
                 : editMode
-                  ? "Update Cash Bond"
-                  : "Create Cash Bond"
+                  ? "Update Employee Savings"
+                  : "Create Employee Savings"
             }}
           </v-btn>
         </v-card-actions>
@@ -802,46 +802,46 @@
     </v-dialog>
 
     <!-- Refund Dialog -->
-    <v-dialog v-model="refundDialog" max-width="500px" persistent>
+    <v-dialog v-model="withdrawDialog" max-width="500px" persistent>
       <v-card>
         <v-card-title class="bg-success">
-          <span class="text-h6">Refund/Return Cash Bond</span>
+          <span class="text-h6">Withdraw Employee Savings</span>
         </v-card-title>
         <v-card-text class="pt-4">
           <v-alert type="info" variant="tonal" class="mb-4">
             <div class="text-caption">
-              Employee: <strong>{{ refundForm.employee_name }}</strong>
+              Employee: <strong>{{ withdrawForm.employee_name }}</strong>
             </div>
             <div class="text-caption">
-              Total Bond:
-              <strong>₱{{ formatNumber(refundForm.total_amount) }}</strong>
+              Total Savings:
+              <strong>₱{{ formatNumber(withdrawForm.total_amount) }}</strong>
             </div>
             <div class="text-caption">
               Already Deducted:
-              <strong>₱{{ formatNumber(refundForm.amount_paid) }}</strong>
+              <strong>₱{{ formatNumber(withdrawForm.amount_paid) }}</strong>
             </div>
             <div class="text-caption">
               Current Balance:
-              <strong>₱{{ formatNumber(refundForm.current_balance) }}</strong>
+              <strong>₱{{ formatNumber(withdrawForm.current_balance) }}</strong>
             </div>
           </v-alert>
 
-          <v-form ref="refundFormRef" v-model="refundFormValid">
+          <v-form ref="withdrawFormRef" v-model="withdrawFormValid">
             <v-text-field
-              v-model="refundForm.refund_amount"
-              label="Refund Amount *"
+              v-model="withdrawForm.withdraw_amount"
+              label="Withdraw Amount *"
               variant="outlined"
               type="number"
               prefix="₱"
-              :rules="[rules.required, rules.positiveNumber, rules.maxRefund]"
+              :rules="[rules.required, rules.positiveNumber, rules.maxWithdraw]"
               class="mb-2"
-              hint="Amount to return to employee (usually the remaining balance)"
+              hint="Amount to release from employee savings"
               persistent-hint
             ></v-text-field>
 
             <v-text-field
-              v-model="refundForm.refund_date"
-              label="Refund Date *"
+              v-model="withdrawForm.withdraw_date"
+              label="Withdraw Date *"
               variant="outlined"
               type="date"
               :rules="[rules.required]"
@@ -849,25 +849,25 @@
             ></v-text-field>
 
             <v-textarea
-              v-model="refundForm.refund_reason"
-              label="Refund Reason"
+              v-model="withdrawForm.withdraw_reason"
+              label="Withdraw Reason"
               variant="outlined"
               rows="2"
-              placeholder="e.g., Employee resignation, Contract completion"
+              placeholder="e.g., Emergency withdrawal, savings release"
               class="mb-2"
             ></v-textarea>
           </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeRefundDialog">Cancel</v-btn>
+          <v-btn variant="text" @click="closeWithdrawDialog">Cancel</v-btn>
           <v-btn
             color="success"
-            :loading="refunding"
-            :disabled="!refundFormValid"
-            @click="processRefund"
+            :loading="withdrawing"
+            :disabled="!withdrawFormValid"
+            @click="processWithdrawal"
           >
-            Process Refund
+            Process Withdrawal
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -875,9 +875,9 @@
 
     <!-- Details Dialog -->
     <v-dialog v-model="detailsDialog" max-width="700px">
-      <v-card v-if="selectedBond">
+      <v-card v-if="selectedSavings">
         <v-card-title class="bg-primary">
-          <span class="text-h6">Cash Bond Details</span>
+          <span class="text-h6">Employee Savings Details</span>
         </v-card-title>
         <v-card-text class="pt-4">
           <v-row>
@@ -885,10 +885,10 @@
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Employee</div>
                 <div class="font-weight-medium">
-                  {{ selectedBond.employee?.full_name }}
+                  {{ selectedSavings.employee?.full_name }}
                 </div>
                 <div class="text-caption">
-                  {{ selectedBond.employee?.employee_number }}
+                  {{ selectedSavings.employee?.employee_number }}
                 </div>
               </div>
             </v-col>
@@ -896,11 +896,11 @@
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Status</div>
                 <v-chip
-                  :color="getStatusColor(selectedBond.status)"
+                  :color="getStatusColor(selectedSavings.status)"
                   size="small"
                   class="mt-1"
                 >
-                  {{ formatStatus(selectedBond.status) }}
+                  {{ formatStatus(selectedSavings.status) }}
                 </v-chip>
               </div>
             </v-col>
@@ -910,7 +910,7 @@
                   Total Amount
                 </div>
                 <div class="text-h6 text-primary">
-                  ₱{{ formatNumber(selectedBond.total_amount) }}
+                  ₱{{ formatNumber(selectedSavings.total_amount) }}
                 </div>
               </div>
             </v-col>
@@ -920,7 +920,7 @@
                   Amount per Cutoff
                 </div>
                 <div class="text-h6">
-                  ₱{{ formatNumber(selectedBond.amount_per_cutoff) }}
+                  ₱{{ formatNumber(selectedSavings.amount_per_cutoff) }}
                 </div>
               </div>
             </v-col>
@@ -930,10 +930,12 @@
                 <div
                   class="text-h6"
                   :class="
-                    selectedBond.balance > 0 ? 'text-warning' : 'text-success'
+                    selectedSavings.balance > 0
+                      ? 'text-warning'
+                      : 'text-success'
                   "
                 >
-                  ₱{{ formatNumber(selectedBond.balance) }}
+                  ₱{{ formatNumber(selectedSavings.balance) }}
                 </div>
               </div>
             </v-col>
@@ -942,9 +944,9 @@
                 <div class="text-caption text-medium-emphasis">Progress</div>
                 <div>
                   <v-progress-linear
-                    :model-value="getProgress(selectedBond)"
+                    :model-value="getProgress(selectedSavings)"
                     :color="
-                      selectedBond.status === 'completed'
+                      selectedSavings.status === 'completed'
                         ? 'success'
                         : 'primary'
                     "
@@ -954,13 +956,13 @@
                   >
                     <template v-slot:default>
                       <span class="text-caption"
-                        >{{ Math.round(getProgress(selectedBond)) }}%</span
+                        >{{ Math.round(getProgress(selectedSavings)) }}%</span
                       >
                     </template>
                   </v-progress-linear>
                   <div class="text-caption">
-                    {{ selectedBond.installments_paid }} of
-                    {{ selectedBond.installments }} installments paid
+                    {{ selectedSavings.installments_paid }} of
+                    {{ selectedSavings.installments }} installments paid
                   </div>
                 </div>
               </div>
@@ -968,34 +970,34 @@
             <v-col cols="12" md="6">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Start Date</div>
-                <div>{{ formatDate(selectedBond.start_date) }}</div>
+                <div>{{ formatDate(selectedSavings.start_date) }}</div>
               </div>
             </v-col>
             <v-col cols="12" md="6">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">End Date</div>
-                <div>{{ formatDate(selectedBond.end_date) }}</div>
+                <div>{{ formatDate(selectedSavings.end_date) }}</div>
               </div>
             </v-col>
-            <v-col cols="12" v-if="selectedBond.reference_number">
+            <v-col cols="12" v-if="selectedSavings.reference_number">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">
                   Reference Number
                 </div>
-                <div>{{ selectedBond.reference_number }}</div>
+                <div>{{ selectedSavings.reference_number }}</div>
               </div>
             </v-col>
-            <v-col cols="12" v-if="selectedBond.description">
+            <v-col cols="12" v-if="selectedSavings.description">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Description</div>
-                <div>{{ selectedBond.description }}</div>
+                <div>{{ selectedSavings.description }}</div>
               </div>
             </v-col>
-            <v-col cols="12" v-if="selectedBond.notes">
+            <v-col cols="12" v-if="selectedSavings.notes">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Notes</div>
                 <div class="text-caption" style="white-space: pre-wrap">
-                  {{ selectedBond.notes }}
+                  {{ selectedSavings.notes }}
                 </div>
               </div>
             </v-col>
@@ -1057,7 +1059,7 @@ const getAccessRequestStatusColor = (status) =>
 const checkModuleAccess = async () => {
   if (isAdminOrHr.value || userRole.value === "employee") return;
   try {
-    const response = await moduleAccessService.checkAccess("cash-bonds");
+    const response = await moduleAccessService.checkAccess("employee-savings");
     accessStatus.value = response.status;
     accessMessage.value = response.message || "";
   } catch {
@@ -1068,7 +1070,7 @@ const checkModuleAccess = async () => {
 const loadMyAccessRequests = async () => {
   if (isAdminOrHr.value || userRole.value === "employee") return;
   try {
-    const response = await moduleAccessService.getRequests("cash-bonds");
+    const response = await moduleAccessService.getRequests("employee-savings");
     myAccessRequests.value = response.data || [];
   } catch {
     myAccessRequests.value = [];
@@ -1079,7 +1081,7 @@ const submitAccessRequest = async () => {
   if (!accessRequestReason.value) return;
   submittingAccessRequest.value = true;
   try {
-    await moduleAccessService.submitRequest("cash-bonds", {
+    await moduleAccessService.submitRequest("employee-savings", {
       reason: accessRequestReason.value,
     });
     accessRequestDialog.value = false;
@@ -1097,7 +1099,7 @@ const submitAccessRequest = async () => {
 };
 
 // Data
-const cashBonds = ref([]);
+const savingsRecords = ref([]);
 const employees = ref([]);
 const departments = ref([]);
 const positions = ref([]);
@@ -1106,17 +1108,17 @@ const loadingEmployees = ref(false);
 const loadingDepartments = ref(false);
 const loadingPositions = ref(false);
 const dialog = ref(false);
-const refundDialog = ref(false);
+const withdrawDialog = ref(false);
 const detailsDialog = ref(false);
 const editMode = ref(false);
 const selectionMode = ref("individual");
 const affectedEmployeesCount = ref(0);
-const bondFormRef = ref(null);
+const savingsFormRef = ref(null);
 const formValid = ref(false);
-const refundFormValid = ref(false);
+const withdrawFormValid = ref(false);
 const saving = ref(false);
-const refunding = ref(false);
-const selectedBond = ref(null);
+const withdrawing = ref(false);
+const selectedSavings = ref(null);
 
 const snackbar = ref(false);
 const snackbarMessage = ref("");
@@ -1153,13 +1155,13 @@ const activeFilterCount = computed(() => {
     .length;
 });
 
-const { handleKeydown: handleCashBondFormKeydown } = useKeyboardFirstFlow({
+const { handleKeydown: handleSavingsFormKeydown } = useKeyboardFirstFlow({
   onEscape: () => {
     if (!saving.value) closeDialog();
   },
   onSubmitLast: () => {
     if (!saving.value && formValid.value) {
-      saveCashBond();
+      saveSavingsRecord();
     }
   },
 });
@@ -1180,15 +1182,15 @@ const form = ref({
   notes: "",
 });
 
-const refundForm = ref({
+const withdrawForm = ref({
   deduction_id: null,
   employee_name: "",
   total_amount: 0,
   amount_paid: 0,
   current_balance: 0,
-  refund_amount: 0,
-  refund_date: new Date().toISOString().substr(0, 10),
-  refund_reason: "",
+  withdraw_amount: 0,
+  withdraw_date: new Date().toISOString().substr(0, 10),
+  withdraw_reason: "",
 });
 
 // Validation rules
@@ -1198,9 +1200,9 @@ const rules = {
     (Array.isArray(value) && value.length > 0) ||
     "Please select at least one employee",
   positiveNumber: (value) => value > 0 || "Must be greater than 0",
-  maxRefund: (value) =>
-    value <= refundForm.value.current_balance ||
-    "Cannot exceed current balance",
+  maxWithdraw: (value) =>
+    value <= withdrawForm.value.current_balance ||
+    "Cannot exceed available savings balance",
 };
 
 watch(selectionMode, () => {
@@ -1247,7 +1249,7 @@ const customEmployeeFilter = (itemTitle, queryText, item) => {
 };
 
 // Methods
-const fetchCashBonds = async () => {
+const fetchSavingsRecords = async () => {
   loading.value = true;
   try {
     const params = {};
@@ -1255,11 +1257,11 @@ const fetchCashBonds = async () => {
       params.employee_id = filters.value.employee_id;
     if (filters.value.status) params.status = filters.value.status;
 
-    const response = await api.get("/cash-bonds", { params });
-    cashBonds.value = response.data.data;
+    const response = await api.get("/employee-savings", { params });
+    savingsRecords.value = response.data.data;
     calculateSummary();
   } catch (error) {
-    showSnackbar("Failed to fetch cash bonds: " + error.message, "error");
+    showSnackbar("Failed to fetch employee savings: " + error.message, "error");
   } finally {
     loading.value = false;
   }
@@ -1343,8 +1345,10 @@ const runWhenIdle = (callback) => {
 };
 
 const calculateSummary = () => {
-  const active = cashBonds.value.filter((b) => b.status === "active");
-  const completed = cashBonds.value.filter((b) => b.status === "completed");
+  const active = savingsRecords.value.filter((b) => b.status === "active");
+  const completed = savingsRecords.value.filter(
+    (b) => b.status === "completed",
+  );
 
   summary.value = {
     active_count: active.length,
@@ -1361,7 +1365,7 @@ const calculateSummary = () => {
       (sum, b) => sum + parseFloat(b.total_amount),
       0,
     ),
-    total_collected: cashBonds.value.reduce(
+    total_collected: savingsRecords.value.reduce(
       (sum, b) => sum + (parseFloat(b.total_amount) - parseFloat(b.balance)),
       0,
     ),
@@ -1385,7 +1389,7 @@ const openAddDialog = () => {
   dialog.value = true;
   // Reset form validation after dialog opens
   setTimeout(() => {
-    bondFormRef.value?.resetValidation();
+    savingsFormRef.value?.resetValidation();
   }, 100);
 };
 
@@ -1406,41 +1410,41 @@ const openEditDialog = (bond) => {
   dialog.value = true;
   // Reset form validation after dialog opens
   setTimeout(() => {
-    bondFormRef.value?.resetValidation();
+    savingsFormRef.value?.resetValidation();
   }, 100);
 };
 
-const openRefundDialog = (bond) => {
-  Object.assign(refundForm.value, {
+const openWithdrawDialog = (bond) => {
+  Object.assign(withdrawForm.value, {
     deduction_id: bond.id,
     employee_name: bond.employee.full_name,
     total_amount: bond.total_amount,
     amount_paid: bond.total_amount - bond.balance,
     current_balance: bond.balance,
-    refund_amount: bond.balance,
-    refund_date: new Date().toISOString().substr(0, 10),
-    refund_reason: "",
+    withdraw_amount: bond.balance,
+    withdraw_date: new Date().toISOString().substr(0, 10),
+    withdraw_reason: "",
   });
-  refundDialog.value = true;
+  withdrawDialog.value = true;
 };
 
 const closeDialog = () => {
   dialog.value = false;
-  bondFormRef.value?.reset();
+  savingsFormRef.value?.reset();
   resetForm();
 };
 
-const closeRefundDialog = () => {
-  refundDialog.value = false;
-  Object.assign(refundForm.value, {
+const closeWithdrawDialog = () => {
+  withdrawDialog.value = false;
+  Object.assign(withdrawForm.value, {
     deduction_id: null,
     employee_name: "",
     total_amount: 0,
     amount_paid: 0,
     current_balance: 0,
-    refund_amount: 0,
-    refund_date: new Date().toISOString().substr(0, 10),
-    refund_reason: "",
+    withdraw_amount: 0,
+    withdraw_date: new Date().toISOString().substr(0, 10),
+    withdraw_reason: "",
   });
 };
 
@@ -1461,9 +1465,9 @@ const resetForm = () => {
   });
 };
 
-const saveCashBond = async () => {
+const saveSavingsRecord = async () => {
   // Validate form before submission
-  const { valid } = await bondFormRef.value?.validate();
+  const { valid } = await savingsFormRef.value?.validate();
   if (!valid) {
     showSnackbar("Please fill in all required fields correctly", "error");
     return;
@@ -1508,11 +1512,11 @@ const saveCashBond = async () => {
 
     if (editMode.value) {
       await api.put(`/deductions/${form.value.id}`, payload);
-      showSnackbar("Cash bond updated successfully", "success");
+      showSnackbar("Employee savings updated successfully", "success");
     } else {
       if (selectionMode.value === "individual") {
-        await api.post("/cash-bonds", payload);
-        showSnackbar("Cash bond created successfully", "success");
+        await api.post("/employee-savings", payload);
+        showSnackbar("Employee savings created successfully", "success");
       } else {
         const bulkPayload = {
           selection_mode: selectionMode.value,
@@ -1528,8 +1532,8 @@ const saveCashBond = async () => {
             selectionMode.value === "position"
               ? form.value.position
               : undefined,
-          deduction_type: "cash_bond",
-          deduction_name: "Cash Bond",
+          deduction_type: "cooperative",
+          deduction_name: "Employee Savings",
           total_amount: form.value.total_amount,
           amount_per_cutoff: form.value.amount_per_cutoff,
           installments: form.value.installments,
@@ -1541,14 +1545,17 @@ const saveCashBond = async () => {
 
         const response = await api.post("/deductions/bulk", bulkPayload);
         const count = response.data?.data?.count || 0;
-        showSnackbar(`Cash bond created for ${count} employee(s)`, "success");
+        showSnackbar(
+          `Employee savings created for ${count} employee(s)`,
+          "success",
+        );
       }
     }
     closeDialog();
-    fetchCashBonds();
+    fetchSavingsRecords();
   } catch (error) {
     showSnackbar(
-      "Failed to save cash bond: " +
+      "Failed to save employee savings: " +
         (error.response?.data?.message || error.message),
       "error",
     );
@@ -1557,49 +1564,52 @@ const saveCashBond = async () => {
   }
 };
 
-const processRefund = async () => {
-  refunding.value = true;
+const processWithdrawal = async () => {
+  withdrawing.value = true;
   try {
     await api.post(
-      `/deductions/${refundForm.value.deduction_id}/refund-cash-bond`,
+      `/deductions/${withdrawForm.value.deduction_id}/withdraw-employee-savings`,
       {
-        refund_amount: refundForm.value.refund_amount,
-        refund_date: refundForm.value.refund_date,
-        refund_reason: refundForm.value.refund_reason,
+        withdraw_amount: withdrawForm.value.withdraw_amount,
+        withdraw_date: withdrawForm.value.withdraw_date,
+        withdraw_reason: withdrawForm.value.withdraw_reason,
       },
     );
-    showSnackbar("Cash bond refunded successfully", "success");
-    closeRefundDialog();
-    fetchCashBonds();
+    showSnackbar(
+      "Employee savings withdrawal processed successfully",
+      "success",
+    );
+    closeWithdrawDialog();
+    fetchSavingsRecords();
   } catch (error) {
     showSnackbar(
-      "Failed to refund cash bond: " +
+      "Failed to withdraw employee savings: " +
         (error.response?.data?.message || error.message),
       "error",
     );
   } finally {
-    refunding.value = false;
+    withdrawing.value = false;
   }
 };
 
 const viewDetails = (bond) => {
-  selectedBond.value = bond;
+  selectedSavings.value = bond;
   detailsDialog.value = true;
 };
 
 const confirmDelete = async (bond) => {
   if (
     await confirmDialog(
-      `Are you sure you want to delete this cash bond for ${bond.employee.full_name}?`,
+      `Are you sure you want to delete this employee savings for ${bond.employee.full_name}?`,
     )
   ) {
     try {
       await api.delete(`/deductions/${bond.id}`);
-      showSnackbar("Cash bond deleted successfully", "success");
-      fetchCashBonds();
+      showSnackbar("Employee savings record deleted successfully", "success");
+      fetchSavingsRecords();
     } catch (error) {
       showSnackbar(
-        "Failed to delete cash bond: " +
+        "Failed to delete employee savings: " +
           (error.response?.data?.message || error.message),
         "error",
       );
@@ -1612,7 +1622,7 @@ const clearFilters = () => {
     employee_id: null,
     status: null,
   };
-  fetchCashBonds();
+  fetchSavingsRecords();
 };
 
 const getProgress = (bond) => {
@@ -1651,7 +1661,7 @@ onMounted(async () => {
   await checkModuleAccess();
   loadMyAccessRequests();
   if (hasAccess.value) {
-    fetchCashBonds();
+    fetchSavingsRecords();
     if (userRole.value !== "employee") {
       runWhenIdle(() => {
         ensureEmployeesLoaded();

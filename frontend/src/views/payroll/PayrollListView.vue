@@ -207,7 +207,8 @@
                     <v-icon
                       size="small"
                       :color="item.status === 'draft' ? 'warning' : 'grey'"
-                    >mdi-pencil</v-icon>
+                      >mdi-pencil</v-icon
+                    >
                   </template>
                   <v-list-item-title>Edit</v-list-item-title>
                 </v-list-item>
@@ -220,11 +221,13 @@
                     <v-icon
                       size="small"
                       :color="item.status === 'draft' ? 'error' : 'grey'"
-                    >mdi-delete</v-icon>
+                      >mdi-delete</v-icon
+                    >
                   </template>
                   <v-list-item-title
                     :class="{ 'text-error': item.status === 'draft' }"
-                  >Delete</v-list-item-title>
+                    >Delete</v-list-item-title
+                  >
                 </v-list-item>
               </v-list>
             </v-menu>
@@ -577,7 +580,8 @@
                       >Loading employees...</template
                     >
                     <template v-else
-                      >{{ overtimeCandidates.length }} employee(s) found</template
+                      >{{ overtimeCandidates.length }} employee(s)
+                      found</template
                     >
                   </v-chip>
                   <v-chip size="small" color="success" variant="tonal">
@@ -591,7 +595,8 @@
                     color="#ED985F"
                     prepend-icon="mdi-checkbox-marked-circle-outline"
                     :disabled="
-                      !overtimeCandidatesLoaded || overtimeCandidates.length === 0
+                      !overtimeCandidatesLoaded ||
+                      overtimeCandidates.length === 0
                     "
                     @click="selectEmployeesWithOvertimeRequest"
                     class="step-action-btn"
@@ -633,7 +638,9 @@
                   variant="outlined"
                   density="compact"
                   :menu-props="{ maxHeight: 340 }"
-                  :disabled="!overtimeCandidatesLoaded && !overtimeCandidatesLoading"
+                  :disabled="
+                    !overtimeCandidatesLoaded && !overtimeCandidatesLoading
+                  "
                   class="mb-2"
                 >
                   <template v-slot:selection="{ item, index }">
@@ -671,7 +678,9 @@
                 </v-autocomplete>
 
                 <p
-                  v-if="overtimeCandidatesLoaded && overtimeCandidates.length === 0"
+                  v-if="
+                    overtimeCandidatesLoaded && overtimeCandidates.length === 0
+                  "
                   class="text-caption text-medium-emphasis mb-2"
                 >
                   No employees matched the current payroll scope and period.
@@ -1261,6 +1270,12 @@
             <v-table density="compact">
               <thead>
                 <tr>
+                  <th class="text-center" style="width: 80px">
+                    <v-checkbox-btn
+                      :model-value="allIncompleteEmployeesSelected"
+                      @update:model-value="toggleSelectAllIncompleteEmployees"
+                    />
+                  </th>
                   <th>Employee</th>
                   <th>Date</th>
                   <th>Issues</th>
@@ -1268,6 +1283,22 @@
               </thead>
               <tbody>
                 <tr v-for="(record, index) in incompleteRecords" :key="index">
+                  <td class="text-center">
+                    <v-checkbox-btn
+                      :model-value="
+                        selectedIncompleteEmployeeIds.includes(
+                          Number(record.employee_id),
+                        )
+                      "
+                      @update:model-value="
+                        (checked) =>
+                          toggleIncompleteEmployeeExclusion(
+                            record.employee_id,
+                            checked,
+                          )
+                      "
+                    />
+                  </td>
                   <td>
                     <div class="employee-info">
                       <div class="font-weight-medium">
@@ -1304,6 +1335,14 @@
               first by going to Attendance Management → Missing Attendance tab.
             </div>
           </v-alert>
+
+          <div class="text-caption text-medium-emphasis mt-3">
+            Excluding
+            <strong>{{ selectedIncompleteEmployeeIds.length }}</strong>
+            of
+            <strong>{{ uniqueIncompleteEmployeeIds.length }}</strong>
+            employee(s) from this payroll run.
+          </div>
         </v-card-text>
 
         <v-divider></v-divider>
@@ -1325,6 +1364,15 @@
           >
             <v-icon size="18" class="mr-1">mdi-clock-alert-outline</v-icon>
             Fix Attendance
+          </v-btn>
+          <v-btn
+            color="#ED985F"
+            variant="flat"
+            @click="createPayrollWithExcludedEmployees"
+            :disabled="saving || selectedIncompleteEmployeeIds.length === 0"
+          >
+            <v-icon size="18" class="mr-1">mdi-account-off-outline</v-icon>
+            Exclude Selected & Create Payroll
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -1485,6 +1533,7 @@ const dialog = ref(false);
 const deleteDialog = ref(false);
 const validationWarningDialog = ref(false);
 const incompleteRecords = ref([]);
+const selectedIncompleteEmployeeIds = ref([]);
 const editMode = ref(false);
 const valid = ref(false);
 const form = ref(null);
@@ -1585,6 +1634,23 @@ const selectedContributionCount = computed(() => {
 
 const isSaveDisabled = computed(() => {
   return saving.value;
+});
+
+const uniqueIncompleteEmployeeIds = computed(() => {
+  return Array.from(
+    new Set(
+      (incompleteRecords.value || [])
+        .map((record) => Number(record.employee_id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  );
+});
+
+const allIncompleteEmployeesSelected = computed(() => {
+  if (uniqueIncompleteEmployeeIds.value.length === 0) return false;
+
+  const selected = new Set(selectedIncompleteEmployeeIds.value || []);
+  return uniqueIncompleteEmployeeIds.value.every((id) => selected.has(id));
 });
 
 const headers = [
@@ -2002,6 +2068,7 @@ function openCreateDialog() {
   };
   payrollPunchSelectedAttendance.value = null;
   payrollPunchPrefilledDate.value = null;
+  selectedIncompleteEmployeeIds.value = [];
   dialog.value = true;
 }
 
@@ -2055,6 +2122,7 @@ function editPayroll(item) {
   };
   payrollPunchSelectedAttendance.value = null;
   payrollPunchPrefilledDate.value = null;
+  selectedIncompleteEmployeeIds.value = [];
   dialog.value = true;
 }
 
@@ -2075,6 +2143,7 @@ function closeDialog() {
   payrollPunchEditDialog.value = false;
   payrollPunchSelectedAttendance.value = null;
   payrollPunchPrefilledDate.value = null;
+  selectedIncompleteEmployeeIds.value = [];
 }
 
 function validateStepOne() {
@@ -2367,15 +2436,19 @@ async function saveAttendanceRow(row) {
   };
 
   try {
-    const response = await api.put(`/attendance/${row.id}`, {
-      time_in: toApiTime(row.time_in_input),
-      time_out: toApiTime(row.time_out_input),
-      ot_time_in: toApiTime(row.ot_time_in_input),
-      ot_time_out: toApiTime(row.ot_time_out_input),
-      notes: "Updated during payroll overtime setup",
-    }, {
-      skipToast: true,
-    });
+    const response = await api.put(
+      `/attendance/${row.id}`,
+      {
+        time_in: toApiTime(row.time_in_input),
+        time_out: toApiTime(row.time_out_input),
+        ot_time_in: toApiTime(row.ot_time_in_input),
+        ot_time_out: toApiTime(row.ot_time_out_input),
+        notes: "Updated during payroll overtime setup",
+      },
+      {
+        skipToast: true,
+      },
+    );
 
     const updated = response.data?.attendance;
     if (updated) {
@@ -2434,6 +2507,14 @@ async function savePayroll() {
   }
 
   // Prepare payload - simplified for all employees only
+  const excludedEmployeeIds = Array.from(
+    new Set(
+      (selectedIncompleteEmployeeIds.value || [])
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  );
+
   const payload = {
     period_name: formData.value.period_name,
     period_start: formData.value.period_start,
@@ -2441,6 +2522,7 @@ async function savePayroll() {
     payment_date: formData.value.payment_date,
     notes: formData.value.notes,
     ...payrollScopePayload(),
+    excluded_employee_ids: excludedEmployeeIds,
     deduct_sss: formData.value.deduct_sss,
     deduct_philhealth: formData.value.deduct_philhealth,
     deduct_pagibig: formData.value.deduct_pagibig,
@@ -2461,11 +2543,19 @@ async function savePayroll() {
         period_start: formData.value.period_start,
         period_end: formData.value.period_end,
         ...payrollScopePayload(),
+        excluded_employee_ids: excludedEmployeeIds,
       });
     } catch (error) {
       saving.value = false;
       if (error.response?.status === 422) {
         incompleteRecords.value = error.response.data.incomplete_records || [];
+        selectedIncompleteEmployeeIds.value = Array.from(
+          new Set(
+            incompleteRecords.value
+              .map((record) => Number(record.employee_id))
+              .filter((id) => Number.isInteger(id) && id > 0),
+          ),
+        );
         validationWarningDialog.value = true;
         return;
       } else {
@@ -2548,12 +2638,49 @@ async function deletePayroll() {
 function closeValidationWarning() {
   validationWarningDialog.value = false;
   incompleteRecords.value = [];
+  selectedIncompleteEmployeeIds.value = [];
 }
 
 function goToMissingAttendance() {
   validationWarningDialog.value = false;
+  selectedIncompleteEmployeeIds.value = [];
   dialog.value = false;
   router.push("/attendance?tab=missing");
+}
+
+function toggleIncompleteEmployeeExclusion(employeeId, checked) {
+  const id = Number(employeeId);
+  if (!Number.isInteger(id) || id <= 0) return;
+
+  const selected = new Set(selectedIncompleteEmployeeIds.value || []);
+  if (checked) {
+    selected.add(id);
+  } else {
+    selected.delete(id);
+  }
+
+  selectedIncompleteEmployeeIds.value = Array.from(selected);
+}
+
+function toggleSelectAllIncompleteEmployees(checked) {
+  if (checked) {
+    selectedIncompleteEmployeeIds.value = [
+      ...uniqueIncompleteEmployeeIds.value,
+    ];
+    return;
+  }
+
+  selectedIncompleteEmployeeIds.value = [];
+}
+
+async function createPayrollWithExcludedEmployees() {
+  if ((selectedIncompleteEmployeeIds.value || []).length === 0) {
+    toast.error("Select at least one employee to exclude");
+    return;
+  }
+
+  validationWarningDialog.value = false;
+  await savePayroll();
 }
 
 function getStatusColor(status) {

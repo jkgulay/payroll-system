@@ -316,6 +316,7 @@ const ALL_REQUEST_MODULES = [
   "thirteenth-month-pay",
   "loans",
   "cash-bonds",
+  "employee-savings",
   "salary-adjustments",
 ];
 
@@ -557,6 +558,13 @@ const menuItems = computed(() => {
           icon: "mdi-cash-lock",
           value: "cash-bonds",
           to: "/cash-bonds",
+        },
+        {
+          title: "Employee Savings",
+          icon: "mdi-piggy-bank-outline",
+          value: "employee-savings",
+          to: "/employee-savings",
+          roles: ["admin"],
         },
         {
           title: "Salary Adjustments",
@@ -839,6 +847,13 @@ const menuSections = computed(() => {
           roles: ["admin", "payrollist"],
         },
         {
+          title: "Employee Savings",
+          icon: "mdi-piggy-bank-outline",
+          value: "employee-savings",
+          to: "/employee-savings",
+          roles: ["admin", "payrollist"],
+        },
+        {
           title: "Salary Adjustments",
           icon: "mdi-cash-sync",
           value: "salary-adjustments",
@@ -881,6 +896,20 @@ const menuSections = computed(() => {
       value: "my-loans",
       to: "/my-loans",
       roles: ["employee", "payrollist"],
+    },
+    {
+      title: "My Cash Bonds",
+      icon: "mdi-cash-lock",
+      value: "my-cash-bonds",
+      to: "/cash-bonds",
+      roles: ["employee"],
+    },
+    {
+      title: "My Employee Savings",
+      icon: "mdi-piggy-bank-outline",
+      value: "my-employee-savings",
+      to: "/employee-savings",
+      roles: ["employee"],
     },
     {
       title: "My Resignation",

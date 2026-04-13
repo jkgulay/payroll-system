@@ -248,7 +248,19 @@ const router = createRouter({
             ),
           meta: {
             title: "Cash Bond Management",
-            roles: ["admin", "hr", "payrollist"],
+            roles: ["admin", "hr", "payrollist", "employee"],
+          },
+        },
+        {
+          path: "employee-savings",
+          name: "employee-savings",
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/EmployeeSavingsView.vue"
+            ),
+          meta: {
+            title: "Employee Savings Management",
+            roles: ["admin", "payrollist", "employee"],
           },
         },
         {
