@@ -52,6 +52,22 @@
                 <span>Finalize Payroll</span>
               </button>
               <button
+                v-if="payroll?.status === 'draft'"
+                class="action-btn action-btn-reprocess"
+                @click="reprocessPayroll"
+                :disabled="reprocessing || finalizing"
+              >
+                <v-progress-circular
+                  v-if="reprocessing"
+                  indeterminate
+                  size="16"
+                  width="2"
+                  class="mr-2"
+                ></v-progress-circular>
+                <v-icon v-else size="20">mdi-refresh</v-icon>
+                <span>Reprocess Payroll</span>
+              </button>
+              <button
                 class="action-btn action-btn-primary"
                 @click="openExportDialog"
               >
@@ -182,7 +198,8 @@
           class="mt-3"
         >
           Device split is based on attendance device hours in this payroll
-          period, matching the by-device register logic.
+          period. Values shown per row are prorated device shares of the
+          employee total.
         </v-alert>
 
         <div class="table-section">
@@ -198,8 +215,17 @@
                 <div class="font-weight-medium">
                   {{ item._rowNo }}. {{ getEmployeeName(item) }}
                 </div>
-                <div class="text-caption text-medium-emphasis">
-                  {{ item.employee?.employee_number }}
+                <div class="text-caption text-medium-emphasis name-meta">
+                  <span>{{ item.employee?.employee_number }}</span>
+                  <v-chip
+                    v-if="isItemEdited(item)"
+                    size="x-small"
+                    color="#ED985F"
+                    variant="tonal"
+                    class="edited-chip"
+                  >
+                    Edited
+                  </v-chip>
                 </div>
               </div>
             </template>
@@ -267,7 +293,13 @@
 
             <template v-slot:item.allowance="{ item }">
               <div class="text-right">
-                {{ displayMoney(item.other_allowances, true) }}
+                <div>{{ displayMoney(item.other_allowances, true) }}</div>
+                <div
+                  v-if="shouldShowAllowanceTotal(item)"
+                  class="text-caption text-medium-emphasis split-total-note"
+                >
+                  Total: {{ displayMoney(getSourceAllowance(item), true) }}
+                </div>
               </div>
             </template>
 
@@ -390,20 +422,371 @@
 
             <!-- Actions -->
             <template v-slot:item.actions="{ item }">
-              <v-btn
-                icon="mdi-download"
-                size="small"
-                variant="text"
-                color="#ED985F"
-                @click="downloadPayslip(item)"
-                title="Download Payslip"
-              >
-              </v-btn>
+              <v-menu location="bottom end" offset="6">
+                <template v-slot:activator="{ props }">
+                  <v-btn
+                    v-bind="props"
+                    icon="mdi-dots-vertical"
+                    size="small"
+                    variant="text"
+                    class="row-action-btn"
+                    title="Row Actions"
+                  ></v-btn>
+                </template>
+
+                <v-list density="compact" class="row-actions-menu">
+                  <v-list-item
+                    prepend-icon="mdi-pencil-outline"
+                    title="Edit Adjustments"
+                    :disabled="!canEditPayrollItems"
+                    @click="openEditItemDialog(item)"
+                  ></v-list-item>
+                  <v-list-item
+                    prepend-icon="mdi-download"
+                    title="Download Payslip"
+                    @click="downloadPayslip(item)"
+                  ></v-list-item>
+                  <div v-if="!canEditPayrollItems" class="menu-hint">
+                    Editing is available only for draft payroll.
+                  </div>
+                </v-list>
+              </v-menu>
             </template>
           </v-data-table>
         </div>
       </div>
     </div>
+
+    <!-- Edit Payroll Item Dialog -->
+    <v-dialog
+      v-model="showEditItemDialog"
+      max-width="820px"
+      persistent
+      scrollable
+    >
+      <v-card class="export-dialog">
+        <div class="export-dialog-header">
+          <div class="export-header-icon">
+            <v-icon size="22">mdi-pencil-outline</v-icon>
+          </div>
+          <div class="export-header-text">
+            <h2 class="export-header-title">Edit Payroll Item</h2>
+            <p class="export-header-subtitle">
+              {{ getEmployeeName(editingItem) || "Employee" }}
+              <span v-if="editingItem?.employee?.employee_number">
+                &middot; {{ editingItem.employee.employee_number }}
+              </span>
+            </p>
+          </div>
+          <button class="export-close-btn" @click="closeEditItemDialog">
+            <v-icon size="20">mdi-close</v-icon>
+          </button>
+        </div>
+
+        <v-divider></v-divider>
+
+        <v-card-text class="export-dialog-body">
+          <div class="export-section">
+            <div class="export-section-label">
+              <v-icon size="16" class="mr-2" color="#64748b"
+                >mdi-tune-vertical</v-icon
+              >
+              Edit Register Fields Before Export
+            </div>
+
+            <v-alert
+              v-if="editFromDeviceView"
+              type="info"
+              variant="tonal"
+              density="comfortable"
+              class="mb-3"
+            >
+              You are editing the employee total row from a split-by-device
+              view. Split rows update proportionally after saving. Government
+              and deduction fields are hidden here to avoid double counting.
+            </v-alert>
+
+            <div class="edit-grid">
+              <v-text-field
+                v-model.number="editItemForm.rate"
+                label="Rate"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.days_worked"
+                label="No. of Days"
+                type="number"
+                min="0"
+                step="0.5"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.regular_ot_hours"
+                label="OT Hrs"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.regular_ot_pay"
+                label="Reg OT"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.special_ot_hours"
+                label="Special OT Hrs"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.sunday_hours"
+                label="Sunday Hrs"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.holiday_days"
+                label="Holiday Days"
+                type="number"
+                min="0"
+                step="0.5"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.special_ot_pay"
+                label="Special OT Pay"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.sunday_pay"
+                label="Sunday Pay"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.holiday_pay"
+                label="Holiday Pay"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.salary_adjustment"
+                label="Adj. Prev Salary"
+                type="number"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-model.number="editItemForm.other_allowances"
+                label="Allowance"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-if="!isSplitFieldLocked('employee_savings')"
+                v-model.number="editItemForm.employee_savings"
+                label="Emp Savings"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-if="!isSplitFieldLocked('loans')"
+                v-model.number="editItemForm.loans"
+                label="Loans"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-if="!isSplitFieldLocked('undertime_deduction')"
+                v-model.number="editItemForm.undertime_deduction"
+                label="UT"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-if="!isSplitFieldLocked('deductions')"
+                v-model.number="editItemForm.deductions"
+                label="Deductions"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-if="!isSplitFieldLocked('cash_advance')"
+                v-model.number="editItemForm.cash_advance"
+                label="Cash Adv"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-if="!isSplitFieldLocked('sss')"
+                v-model.number="editItemForm.sss"
+                label="SSS"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-if="!isSplitFieldLocked('philhealth')"
+                v-model.number="editItemForm.philhealth"
+                label="PHIC"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+              <v-text-field
+                v-if="!isSplitFieldLocked('pagibig')"
+                v-model.number="editItemForm.pagibig"
+                label="HDMF"
+                type="number"
+                min="0"
+                step="0.01"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              ></v-text-field>
+            </div>
+
+            <div class="edit-note">
+              SH HRS is composed of Special OT Hrs + Sunday Hrs + (Holiday Days
+              x 8).
+            </div>
+
+            <div class="edit-summary-cards">
+              <div class="edit-summary-card">
+                <div class="edit-summary-label">Amount</div>
+                <div class="edit-summary-value">
+                  {{ displayMoney(editItemComputed.amount) }}
+                </div>
+              </div>
+              <div class="edit-summary-card">
+                <div class="edit-summary-label">Gross Pay</div>
+                <div class="edit-summary-value">
+                  {{ displayMoney(editItemComputed.grossPay) }}
+                </div>
+              </div>
+              <div class="edit-summary-card">
+                <div class="edit-summary-label">Total Deductions</div>
+                <div class="edit-summary-value">
+                  {{ displayMoney(editItemComputed.totalDeductions) }}
+                </div>
+              </div>
+              <div class="edit-summary-card net">
+                <div class="edit-summary-label">Net Pay</div>
+                <div class="edit-summary-value">
+                  {{ displayMoney(editItemComputed.netPay) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <div class="export-dialog-footer">
+          <div class="export-summary">
+            <v-icon size="14" class="mr-1" color="#94a3b8"
+              >mdi-information-outline</v-icon
+            >
+            <span>
+              Changes update payroll totals and will reflect in exports.
+            </span>
+          </div>
+          <div class="export-actions">
+            <button
+              class="dialog-btn dialog-btn-cancel"
+              @click="closeEditItemDialog"
+            >
+              Cancel
+            </button>
+            <button
+              class="export-download-btn"
+              :disabled="savingItemAdjustments"
+              @click="saveItemAdjustments"
+            >
+              <v-progress-circular
+                v-if="savingItemAdjustments"
+                indeterminate
+                size="18"
+                width="2"
+                class="mr-2"
+              ></v-progress-circular>
+              <v-icon v-else size="18" class="mr-2">mdi-content-save</v-icon>
+              Save Adjustments
+            </button>
+          </div>
+        </div>
+      </v-card>
+    </v-dialog>
 
     <!-- Export Payroll Dialog -->
     <v-dialog
@@ -450,7 +833,10 @@
               <div
                 class="format-card"
                 :class="{ active: exportFilter.format === 'pdf' }"
-                @click="exportFilter.format = 'pdf'"
+                @click="
+                  ((exportFilter.format = 'pdf'),
+                  (exportFilter.device_name = null))
+                "
               >
                 <div class="format-card-icon pdf">
                   <v-icon size="22">mdi-file-pdf-box</v-icon>
@@ -471,7 +857,10 @@
               <div
                 class="format-card"
                 :class="{ active: exportFilter.format === 'payslips' }"
-                @click="exportFilter.format = 'payslips'"
+                @click="
+                  ((exportFilter.format = 'payslips'),
+                  (exportFilter.device_name = null))
+                "
               >
                 <div class="format-card-icon payslips">
                   <v-icon size="22">mdi-file-document-multiple</v-icon>
@@ -520,6 +909,19 @@
               prepend-inner-icon="mdi-file-document"
               variant="outlined"
               density="comfortable"
+              hide-details
+              class="mt-3"
+            ></v-select>
+
+            <v-select
+              v-if="exportFilter.format === 'by_device_pdf'"
+              v-model="exportFilter.device_name"
+              :items="availableDevices"
+              label="Device (Optional)"
+              prepend-inner-icon="mdi-devices"
+              variant="outlined"
+              density="comfortable"
+              clearable
               hide-details
               class="mt-3"
             ></v-select>
@@ -581,15 +983,76 @@ const { confirm: confirmDialog } = useConfirmDialog();
 
 const loading = ref(false);
 const finalizing = ref(false);
+const reprocessing = ref(false);
 const search = ref("");
 const viewMode = ref("employee");
 const deviceFilter = ref(null);
 const payroll = ref(null);
 const showExportDialog = ref(false);
 const downloadingRegister = ref(false);
+const showEditItemDialog = ref(false);
+const savingItemAdjustments = ref(false);
+const editingItem = ref(null);
+const editFromDeviceView = ref(false);
+const editedItemIds = ref([]);
+const editItemForm = ref({
+  rate: 0,
+  days_worked: 0,
+  regular_ot_hours: 0,
+  regular_ot_pay: 0,
+  special_ot_hours: 0,
+  special_ot_pay: 0,
+  sunday_hours: 0,
+  sunday_pay: 0,
+  holiday_days: 0,
+  holiday_pay: 0,
+  salary_adjustment: 0,
+  other_allowances: 0,
+  sss: 0,
+  philhealth: 0,
+  pagibig: 0,
+  deductions: 0,
+  cash_advance: 0,
+  employee_savings: 0,
+  loans: 0,
+  undertime_deduction: 0,
+});
+const editableItemFields = [
+  "rate",
+  "days_worked",
+  "regular_ot_hours",
+  "regular_ot_pay",
+  "special_ot_hours",
+  "special_ot_pay",
+  "sunday_hours",
+  "sunday_pay",
+  "holiday_days",
+  "holiday_pay",
+  "salary_adjustment",
+  "other_allowances",
+  "sss",
+  "philhealth",
+  "pagibig",
+  "deductions",
+  "cash_advance",
+  "employee_savings",
+  "loans",
+  "undertime_deduction",
+];
+const splitViewLockedFields = [
+  "sss",
+  "philhealth",
+  "pagibig",
+  "deductions",
+  "cash_advance",
+  "employee_savings",
+  "loans",
+  "undertime_deduction",
+];
 const exportFilter = ref({
   format: "by_device_pdf", // pdf, payslips, by_device_pdf
   paper_size: "long_bond", // long_bond, a4 (for payslips)
+  device_name: null,
 });
 const paperSizeOptions = [
   { title: "8.5 x 13 (Long Bond)", value: "long_bond" },
@@ -600,6 +1063,8 @@ const viewModeOptions = [
   { title: "Employee Totals", value: "employee" },
   { title: "Split By Device", value: "device" },
 ];
+
+const canEditPayrollItems = computed(() => payroll.value?.status === "draft");
 
 const availableDevices = computed(() => {
   const names = (payroll.value?.device_grouped_items || [])
@@ -631,6 +1096,12 @@ const exportFormatLabel = computed(() => {
 // Summary text for the footer
 const exportSummaryText = computed(() => {
   const totalEmployees = payroll.value?.items?.length || 0;
+  if (
+    exportFilter.value.format === "by_device_pdf" &&
+    exportFilter.value.device_name
+  ) {
+    return `Device: ${exportFilter.value.device_name} · ${exportFormatLabel.value} format`;
+  }
   return `All ${totalEmployees} employees · ${exportFormatLabel.value} format`;
 });
 
@@ -668,7 +1139,9 @@ const sourcePreviewItems = computed(() => {
 const previewItems = computed(() => {
   if (!sourcePreviewItems.value.length) return [];
 
-  const searchTerm = (search.value || "").trim().toLowerCase();
+  const rawSearchTerm = (search.value || "").trim();
+  const normalizedSearchTerm = normalizeSearchText(rawSearchTerm);
+  const compactSearchTerm = normalizedSearchTerm.replace(/\s+/g, "");
 
   const filtered = sourcePreviewItems.value.filter((item) => {
     if (viewMode.value === "device" && deviceFilter.value) {
@@ -677,24 +1150,53 @@ const previewItems = computed(() => {
       }
     }
 
-    if (!searchTerm) {
+    if (!rawSearchTerm) {
+      return true;
+    }
+
+    if (!normalizedSearchTerm) {
       return true;
     }
 
     const employee = item?.employee || {};
-    const firstName = (employee.first_name || "").toLowerCase();
-    const middleName = (employee.middle_name || "").toLowerCase();
-    const lastName = (employee.last_name || "").toLowerCase();
-    const fullName = `${firstName} ${middleName} ${lastName}`.trim();
-    const employeeNumber = (employee.employee_number || "").toLowerCase();
+    const firstName = employee.first_name || "";
+    const middleName = employee.middle_name || "";
+    const lastName = employee.last_name || "";
+    const employeeNumber = employee.employee_number || "";
+    const fullName = [firstName, middleName, lastName]
+      .filter(Boolean)
+      .join(" ");
+    const storedFullName = employee.full_name || "";
+    const middleInitial = middleName.trim().charAt(0);
+    const fullNameWithInitial = [firstName, middleInitial, lastName]
+      .filter(Boolean)
+      .join(" ");
+    const fullNameWithInitialDot = middleInitial
+      ? `${firstName} ${middleInitial}. ${lastName}`
+      : "";
 
-    return (
-      firstName.includes(searchTerm) ||
-      middleName.includes(searchTerm) ||
-      lastName.includes(searchTerm) ||
-      fullName.includes(searchTerm) ||
-      employeeNumber.includes(searchTerm)
-    );
+    const candidates = [
+      firstName,
+      middleName,
+      lastName,
+      fullName,
+      storedFullName,
+      fullNameWithInitial,
+      fullNameWithInitialDot,
+      employeeNumber,
+    ];
+
+    return candidates.some((value) => {
+      const normalizedValue = normalizeSearchText(value);
+      if (!normalizedValue) {
+        return false;
+      }
+
+      return (
+        normalizedValue.includes(normalizedSearchTerm) ||
+        normalizedValue.replace(/\s+/g, "").includes(compactSearchTerm)
+      );
+    });
   });
 
   return filtered.map((item, index) => ({
@@ -726,6 +1228,49 @@ const previewTotals = computed(() => {
     philhealth: sum((item) => item.philhealth),
     pagibig: sum((item) => item.pagibig),
     netPay: sum((item) => item.net_pay),
+  };
+});
+
+const editItemComputed = computed(() => {
+  const item = editingItem.value;
+  if (!item) {
+    return {
+      amount: 0,
+      grossPay: 0,
+      totalDeductions: 0,
+      netPay: 0,
+    };
+  }
+
+  const amount =
+    toNumber(editItemForm.value.rate) *
+    toNumber(editItemForm.value.days_worked);
+
+  const grossPay =
+    amount +
+    toNumber(editItemForm.value.holiday_pay) +
+    toNumber(editItemForm.value.regular_ot_pay) +
+    toNumber(editItemForm.value.special_ot_pay) +
+    toNumber(editItemForm.value.sunday_pay) +
+    toNumber(editItemForm.value.other_allowances) +
+    toNumber(editItemForm.value.salary_adjustment);
+
+  const totalDeductions =
+    toNumber(editItemForm.value.sss) +
+    toNumber(editItemForm.value.philhealth) +
+    toNumber(editItemForm.value.pagibig) +
+    toNumber(item.withholding_tax) +
+    toNumber(editItemForm.value.loans) +
+    toNumber(editItemForm.value.employee_savings) +
+    toNumber(editItemForm.value.cash_advance) +
+    toNumber(editItemForm.value.deductions) +
+    toNumber(editItemForm.value.undertime_deduction);
+
+  return {
+    amount,
+    grossPay,
+    totalDeductions,
+    netPay: grossPay - totalDeductions,
   };
 });
 
@@ -773,6 +1318,14 @@ function handleViewModeChange(nextMode) {
 function toNumber(value) {
   const num = Number(value);
   return Number.isFinite(num) ? num : 0;
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function getEmployeeName(item) {
@@ -843,6 +1396,149 @@ function getCombinedDeductions(item) {
   return toNumber(item?.employee_deductions) + toNumber(item?.other_deductions);
 }
 
+function isItemEdited(item) {
+  return editedItemIds.value.includes(Number(item?.id));
+}
+
+function getSourcePayrollItem(item) {
+  return (
+    payroll.value?.items?.find(
+      (source) => Number(source?.id) === Number(item?.id),
+    ) || item
+  );
+}
+
+function getSourceAllowance(item) {
+  return toNumber(getSourcePayrollItem(item)?.other_allowances);
+}
+
+function shouldShowAllowanceTotal(item) {
+  if (viewMode.value !== "device") {
+    return false;
+  }
+
+  const splitAllowance = toNumber(item?.other_allowances);
+  const totalAllowance = getSourceAllowance(item);
+  return Math.abs(splitAllowance - totalAllowance) > 0.009;
+}
+
+function isSplitFieldLocked(field) {
+  return editFromDeviceView.value && splitViewLockedFields.includes(field);
+}
+
+function getEditableItemFields(item) {
+  return {
+    rate: toNumber(item?.rate) || toNumber(item?.effective_rate),
+    days_worked: toNumber(item?.days_worked),
+    regular_ot_hours: toNumber(item?.regular_ot_hours),
+    regular_ot_pay: toNumber(item?.regular_ot_pay),
+    special_ot_hours: toNumber(item?.special_ot_hours),
+    special_ot_pay: toNumber(item?.special_ot_pay),
+    sunday_hours: toNumber(item?.sunday_hours),
+    sunday_pay: toNumber(item?.sunday_pay),
+    holiday_days: toNumber(item?.holiday_days),
+    holiday_pay: toNumber(item?.holiday_pay),
+    salary_adjustment: toNumber(item?.salary_adjustment),
+    other_allowances: toNumber(item?.other_allowances),
+    sss: toNumber(item?.sss),
+    philhealth: toNumber(item?.philhealth),
+    pagibig: toNumber(item?.pagibig),
+    deductions:
+      toNumber(item?.employee_deductions) + toNumber(item?.other_deductions),
+    cash_advance: toNumber(item?.cash_advance),
+    employee_savings: toNumber(item?.employee_savings),
+    loans: toNumber(item?.loans),
+    undertime_deduction: toNumber(item?.undertime_deduction),
+  };
+}
+
+function openEditItemDialog(item) {
+  if (!canEditPayrollItems.value) {
+    toast.info("Only draft payrolls can be edited.");
+    return;
+  }
+
+  if (!item?.id) {
+    toast.error("Unable to edit this payroll item.");
+    return;
+  }
+
+  const sourceItem = getSourcePayrollItem(item);
+
+  editFromDeviceView.value = viewMode.value === "device";
+  editingItem.value = { ...sourceItem };
+  editItemForm.value = getEditableItemFields(sourceItem);
+  showEditItemDialog.value = true;
+}
+
+function closeEditItemDialog() {
+  showEditItemDialog.value = false;
+  editingItem.value = null;
+  editFromDeviceView.value = false;
+  editItemForm.value = getEditableItemFields(null);
+}
+
+function buildEditItemPayload() {
+  const payload = editableItemFields.reduce((acc, key) => {
+    if (key !== "deductions" && !isSplitFieldLocked(key)) {
+      acc[key] = toNumber(editItemForm.value[key]);
+    }
+    return acc;
+  }, {});
+
+  if (!isSplitFieldLocked("deductions")) {
+    const combinedDeductions = toNumber(editItemForm.value.deductions);
+    const originalOtherDeductions = toNumber(
+      editingItem.value?.other_deductions,
+    );
+    const nextOtherDeductions = Math.min(
+      originalOtherDeductions,
+      combinedDeductions,
+    );
+
+    payload.other_deductions = nextOtherDeductions;
+    payload.employee_deductions = combinedDeductions - nextOtherDeductions;
+  }
+
+  return payload;
+}
+
+async function saveItemAdjustments() {
+  if (!editingItem.value?.id || !payroll.value?.id) {
+    toast.error("Unable to save adjustments.");
+    return;
+  }
+
+  if (!canEditPayrollItems.value) {
+    toast.error("This payroll is no longer editable.");
+    return;
+  }
+
+  savingItemAdjustments.value = true;
+  try {
+    const savedItemId = Number(editingItem.value.id);
+
+    await api.put(
+      `/payrolls/${payroll.value.id}/items/${editingItem.value.id}`,
+      buildEditItemPayload(),
+    );
+
+    if (!editedItemIds.value.includes(savedItemId)) {
+      editedItemIds.value = [...editedItemIds.value, savedItemId];
+    }
+
+    toast.success("Payroll item updated successfully");
+    closeEditItemDialog();
+    await fetchPayroll();
+  } catch (error) {
+    toast.error(
+      error?.response?.data?.message || "Failed to update payroll item",
+    );
+  } finally {
+    savingItemAdjustments.value = false;
+  }
+}
+
 onMounted(() => {
   fetchPayroll();
 });
@@ -850,6 +1546,7 @@ onMounted(() => {
 function openExportDialog() {
   // Always default to by-device split export when opening the register dialog.
   exportFilter.value.format = "by_device_pdf";
+  exportFilter.value.device_name = null;
   showExportDialog.value = true;
 }
 
@@ -889,6 +1586,30 @@ async function finalizePayroll() {
   }
 }
 
+async function reprocessPayroll() {
+  if (
+    !(await confirmDialog(
+      "Reprocess this draft payroll? This recalculates payroll from attendance/source data and may overwrite manual item edits.",
+    ))
+  ) {
+    return;
+  }
+
+  reprocessing.value = true;
+  try {
+    await api.post(`/payrolls/${payroll.value.id}/reprocess`);
+    editedItemIds.value = [];
+    toast.success("Payroll reprocessed successfully");
+    await fetchPayroll();
+  } catch (error) {
+    toast.error(
+      error?.response?.data?.message || "Failed to reprocess payroll",
+    );
+  } finally {
+    reprocessing.value = false;
+  }
+}
+
 async function downloadRegister() {
   if (downloadingRegister.value) return;
   downloadingRegister.value = true;
@@ -903,6 +1624,12 @@ async function downloadRegister() {
     // Only add format for register export (payslips is always PDF)
     if (!isPayslips) {
       params.format = exportFilter.value.format;
+      if (
+        exportFilter.value.format === "by_device_pdf" &&
+        exportFilter.value.device_name
+      ) {
+        params.device_name = exportFilter.value.device_name;
+      }
     } else {
       params.paper_size = exportFilter.value.paper_size;
     }
@@ -1184,6 +1911,17 @@ function getStatusIcon(status) {
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
+.action-btn-reprocess {
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.3);
+}
+
+.action-btn-reprocess:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.4);
+}
+
 /* Stats Grid */
 .stats-grid {
   display: grid;
@@ -1444,6 +2182,86 @@ function getStatusIcon(status) {
   font-size: 12px;
 }
 
+.row-action-btn {
+  color: #64748b;
+}
+
+.row-action-btn:hover {
+  color: #001f3d;
+  background: rgba(0, 31, 61, 0.06);
+}
+
+.row-actions-menu {
+  min-width: 220px;
+}
+
+.menu-hint {
+  padding: 4px 16px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #94a3b8;
+}
+
+.name-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edited-chip {
+  font-weight: 600;
+}
+
+.split-total-note {
+  white-space: nowrap;
+}
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.edit-note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.edit-summary-cards {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edit-summary-card {
+  background: #f8fafc;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.edit-summary-card.net {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.edit-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.edit-summary-value {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #001f3d;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .header-main {
@@ -1512,6 +2330,11 @@ function getStatusIcon(status) {
 
   .register-preview :deep(table) {
     min-width: 1220px;
+  }
+
+  .edit-grid,
+  .edit-summary-cards {
+    grid-template-columns: 1fr;
   }
 
   .action-btn {

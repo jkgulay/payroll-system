@@ -275,6 +275,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/payrolls/overtime/employee/{employee}/attendance', [App\Http\Controllers\PayrollController::class, 'overtimeEmployeeAttendance'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/finalize', [App\Http\Controllers\PayrollController::class, 'finalize'])->middleware('role:admin,payrollist');
     Route::post('/payrolls/{payroll}/reprocess', [App\Http\Controllers\PayrollController::class, 'reprocess'])->middleware('role:admin,payrollist');
+    Route::put('/payrolls/{payroll}/items/{item}', [App\Http\Controllers\PayrollController::class, 'updateItem'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/download-register', [App\Http\Controllers\PayrollController::class, 'downloadRegister'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/download-payslips', [App\Http\Controllers\PayrollController::class, 'downloadPayslips'])->middleware('role:admin,payrollist');
     Route::get('/payrolls/{payroll}/employees/{employee}/download-payslip', [App\Http\Controllers\PayrollController::class, 'downloadPayslip'])->middleware('role:admin,payrollist,employee');
