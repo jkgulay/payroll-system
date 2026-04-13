@@ -186,7 +186,7 @@
               <v-icon size="20">mdi-alert-circle</v-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Outstanding Balance</div>
+              <div class="stat-label">Remaining Target</div>
               <div class="stat-value warning-text">
                 ₱{{ formatNumber(summary.outstanding_balance || 0) }}
               </div>
@@ -315,7 +315,9 @@
                 ₱{{ formatNumber(item.balance) }}
               </span>
               <div class="text-caption text-medium-emphasis">
-                Paid: ₱{{ formatNumber(item.total_amount - item.balance) }}
+                Contributed: ₱{{
+                  formatNumber(item.total_amount - item.balance)
+                }}
               </div>
             </div>
           </template>
@@ -375,7 +377,11 @@
                   </v-list-item-title>
                 </v-list-item>
                 <v-list-item
-                  v-if="item.status === 'active'"
+                  v-if="
+                    (item.status === 'active' || item.status === 'completed') &&
+                    Number(item.total_amount || 0) - Number(item.balance || 0) >
+                      0
+                  "
                   @click="openWithdrawDialog(item)"
                 >
                   <v-list-item-title>
@@ -821,7 +827,7 @@
               <strong>₱{{ formatNumber(withdrawForm.amount_paid) }}</strong>
             </div>
             <div class="text-caption">
-              Current Balance:
+              Available to Withdraw:
               <strong>₱{{ formatNumber(withdrawForm.current_balance) }}</strong>
             </div>
           </v-alert>
@@ -835,7 +841,7 @@
               prefix="₱"
               :rules="[rules.required, rules.positiveNumber, rules.maxWithdraw]"
               class="mb-2"
-              hint="Amount to release from employee savings"
+              hint="Can only withdraw from already deducted contributions"
               persistent-hint
             ></v-text-field>
 
@@ -926,7 +932,9 @@
             </v-col>
             <v-col cols="12" md="6">
               <div class="mb-3">
-                <div class="text-caption text-medium-emphasis">Balance</div>
+                <div class="text-caption text-medium-emphasis">
+                  Remaining Target
+                </div>
                 <div
                   class="text-h6"
                   :class="
@@ -1202,7 +1210,7 @@ const rules = {
   positiveNumber: (value) => value > 0 || "Must be greater than 0",
   maxWithdraw: (value) =>
     value <= withdrawForm.value.current_balance ||
-    "Cannot exceed available savings balance",
+    "Cannot exceed contributed amount",
 };
 
 watch(selectionMode, () => {
@@ -1219,7 +1227,7 @@ const headers = computed(() => {
     { title: "Employee", key: "employee", sortable: true },
     { title: "Total Amount", key: "total_amount", sortable: true },
     { title: "Per Cutoff", key: "amount_per_cutoff", sortable: true },
-    { title: "Balance", key: "balance", sortable: true },
+    { title: "Remaining Target", key: "balance", sortable: true },
     { title: "Progress", key: "progress", sortable: false },
     { title: "Dates", key: "dates", sortable: false },
     { title: "Status", key: "status", sortable: true },
@@ -1415,13 +1423,17 @@ const openEditDialog = (bond) => {
 };
 
 const openWithdrawDialog = (bond) => {
+  const totalAmount = parseFloat(bond.total_amount) || 0;
+  const remainingBalance = parseFloat(bond.balance) || 0;
+  const contributedAmount = Math.max(0, totalAmount - remainingBalance);
+
   Object.assign(withdrawForm.value, {
     deduction_id: bond.id,
     employee_name: bond.employee.full_name,
-    total_amount: bond.total_amount,
-    amount_paid: bond.total_amount - bond.balance,
-    current_balance: bond.balance,
-    withdraw_amount: bond.balance,
+    total_amount: totalAmount,
+    amount_paid: contributedAmount,
+    current_balance: contributedAmount,
+    withdraw_amount: contributedAmount,
     withdraw_date: new Date().toISOString().substr(0, 10),
     withdraw_reason: "",
   });
