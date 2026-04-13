@@ -230,17 +230,46 @@
 
 <body class="{{ $isA4ScaledLayout ? 'a4-scaled-layout' : '' }}">
     @php
-    $items = $payroll->items;
+    $resolveProjectName = function ($item) {
+    $employee = $item->employee;
+    $projectName = trim((string) ($employee?->project?->name ?? $employee?->department ?? ''));
+
+    return $projectName !== '' ? $projectName : 'Unassigned Project';
+    };
+
+    // Keep pages grouped by project so each 4-slot sheet contains employees
+    // from the same project as much as possible.
+    $items = $payroll->items
+    ->sortBy(function ($item) use ($resolveProjectName) {
+    $project = strtolower($resolveProjectName($item));
+    $employeeNumber = strtolower((string) ($item->employee?->employee_number ?? ''));
+    $employeeName = strtolower(trim((string) ($item->employee?->full_name ?? '')));
+
+    return $project . '|' . $employeeNumber . '|' . $employeeName;
+    })
+    ->values();
+
+    // Keep project ordering, but continue filling each 4-slot page without
+    // forcing a page break when project changes.
     $chunks = $items->chunk(4);
+
     $periodStart = \Carbon\Carbon::parse($payroll->period_start)->format('F d');
     $periodEnd = \Carbon\Carbon::parse($payroll->period_end)->format('M d, Y');
     $periodDisplay = $periodStart . ' - ' . $periodEnd;
 
     // Signature names from company info or defaults
-    $preparedBy = $companyInfo->sig_prepared_by ?? 'MERCIEL LAVASAN';
-    $checkedBy = $companyInfo->sig_checked_by ?? 'SAIRAH JENITA';
-    $recommendedBy = $companyInfo->sig_recommended_by ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA';
-    $approvedBy = $companyInfo->sig_approved_by ?? 'ENGR. OSTRIC R. RIVERA JR.';
+    $preparedBy = $companyInfo->sig_payslip_prepared_by
+    ?? $companyInfo->sig_prepared_by
+    ?? 'MERCIEL LAVASAN';
+    $checkedBy = $companyInfo->sig_payslip_checked_by
+    ?? $companyInfo->sig_checked_by
+    ?? 'SAIRAH JENITA';
+    $recommendedBy = $companyInfo->sig_payslip_recommended_by
+    ?? $companyInfo->sig_recommended_by
+    ?? 'ENGR. FRANCIS GIOVANNI C. RIVERA';
+    $approvedBy = $companyInfo->sig_payslip_approved_by
+    ?? $companyInfo->sig_approved_by
+    ?? 'ENGR. OSTRIC R. RIVERA JR.';
     @endphp
 
     @foreach($chunks as $chunkIndex => $chunk)
