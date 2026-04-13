@@ -157,8 +157,15 @@
             <v-icon size="18">mdi-filter-remove</v-icon>
             <span>Clear</span>
           </button>
-          <v-chip v-if="hasActiveFilters" size="small" color="info" variant="tonal">
-            {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+          <v-chip
+            v-if="hasActiveFilters"
+            size="small"
+            color="info"
+            variant="tonal"
+          >
+            {{ activeFilterCount }} active filter{{
+              activeFilterCount > 1 ? "s" : ""
+            }}
           </v-chip>
         </div>
       </div>
@@ -237,8 +244,31 @@
 
         <!-- Description Column -->
         <template v-slot:item.description="{ item }">
-          <div class="text-body-2" style="max-width: 400px">
-            {{ item.description || "No description" }}
+          <div class="audit-description-cell" style="max-width: 420px">
+            <div class="text-body-2 audit-description-text">
+              {{ item.description || "No description" }}
+            </div>
+            <div
+              v-if="getLogReason(item) || getLogAccessRequestId(item)"
+              class="audit-description-meta"
+            >
+              <v-chip
+                v-if="getLogReason(item)"
+                size="x-small"
+                color="warning"
+                variant="tonal"
+              >
+                Reason: {{ getLogReason(item) }}
+              </v-chip>
+              <v-chip
+                v-if="getLogAccessRequestId(item)"
+                size="x-small"
+                color="info"
+                variant="tonal"
+              >
+                Access Request #{{ getLogAccessRequestId(item) }}
+              </v-chip>
+            </div>
           </div>
         </template>
 
@@ -499,14 +529,54 @@ const filteredLogs = computed(() => {
   if (!filters.value.search) return auditLogs.value;
 
   const search = filters.value.search.toLowerCase();
-  return auditLogs.value.filter(
-    (log) =>
+  return auditLogs.value.filter((log) => {
+    const reason = getLogReason(log).toLowerCase();
+    const accessRequestId = getLogAccessRequestId(log).toLowerCase();
+
+    return (
       log.description?.toLowerCase().includes(search) ||
       log.user?.name?.toLowerCase().includes(search) ||
       log.module?.toLowerCase().includes(search) ||
-      log.action?.toLowerCase().includes(search),
-  );
+      log.action?.toLowerCase().includes(search) ||
+      reason.includes(search) ||
+      accessRequestId.includes(search)
+    );
+  });
 });
+
+function parseLogNewValues(log) {
+  const values = log?.new_values;
+
+  if (values && typeof values === "object" && !Array.isArray(values)) {
+    return values;
+  }
+
+  if (typeof values === "string") {
+    try {
+      const parsed = JSON.parse(values);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+}
+
+function getLogReason(log) {
+  const value = parseLogNewValues(log).edit_reason;
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getLogAccessRequestId(log) {
+  const value = parseLogNewValues(log).access_request_id;
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  return String(value);
+}
 
 const hasActiveFilters = computed(() => {
   return (
@@ -1003,6 +1073,22 @@ onMounted(() => {
   color: #ed985f;
   font-size: 13px;
   font-weight: 600;
+}
+
+.audit-description-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.audit-description-text {
+  line-height: 1.4;
+}
+
+.audit-description-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 // Dialog

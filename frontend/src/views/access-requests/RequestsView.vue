@@ -370,6 +370,7 @@ const ALL_MODULES = [
   "cash-bonds",
   "employee-savings",
   "salary-adjustments",
+  "payroll-item-adjustments",
 ];
 
 const moduleLabels = {
@@ -383,6 +384,7 @@ const moduleLabels = {
   "cash-bonds": "Cash Bonds",
   "employee-savings": "Employee Savings",
   "salary-adjustments": "Salary Adjustments",
+  "payroll-item-adjustments": "Payroll Item Adjustments",
 };
 
 const moduleColors = {
@@ -396,6 +398,7 @@ const moduleColors = {
   "cash-bonds": "indigo",
   "employee-savings": "pink",
   "salary-adjustments": "cyan",
+  "payroll-item-adjustments": "amber",
 };
 
 const tabItems = [
@@ -427,6 +430,11 @@ const tabItems = [
     icon: "mdi-piggy-bank-outline",
   },
   { key: "salary-adjustments", label: "Salary Adj.", icon: "mdi-cash-edit" },
+  {
+    key: "payroll-item-adjustments",
+    label: "Payroll Item Adj.",
+    icon: "mdi-file-edit-outline",
+  },
 ];
 
 const primaryTabKeys = [
@@ -465,6 +473,7 @@ const pendingCounts = ref({
   "cash-bonds": 0,
   "employee-savings": 0,
   "salary-adjustments": 0,
+  "payroll-item-adjustments": 0,
 });
 
 const statusOptions = [
@@ -633,6 +642,7 @@ const loadRequests = async () => {
       "cash-bonds": 0,
       "employee-savings": 0,
       "salary-adjustments": 0,
+      "payroll-item-adjustments": 0,
     };
 
     requests.value.forEach((r) => {

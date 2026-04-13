@@ -202,6 +202,45 @@
           employee total.
         </v-alert>
 
+        <v-alert
+          v-if="
+            isPayrollist &&
+            !hasPayrollItemEditAccess &&
+            payrollEditAccessStatus !== 'admin'
+          "
+          :type="
+            payrollEditAccessStatus === 'pending'
+              ? 'warning'
+              : payrollEditAccessStatus === 'rejected'
+                ? 'error'
+                : 'info'
+          "
+          variant="tonal"
+          density="comfortable"
+          class="mt-3"
+        >
+          <div>
+            <strong>Payroll Item Edit Access</strong>
+          </div>
+          <div class="mt-1">
+            {{
+              payrollEditAccessMessage ||
+              "You need admin approval before editing payroll item details."
+            }}
+          </div>
+          <v-btn
+            v-if="payrollEditAccessStatus !== 'pending'"
+            class="mt-3"
+            color="primary"
+            variant="flat"
+            prepend-icon="mdi-send"
+            :loading="submittingPayrollEditAccessRequest"
+            @click="showPayrollEditAccessRequestDialog = true"
+          >
+            Request Access
+          </v-btn>
+        </v-alert>
+
         <div class="table-section">
           <v-data-table
             :headers="headers"
@@ -721,6 +760,18 @@
               x 8).
             </div>
 
+            <v-textarea
+              v-if="isPayrollist"
+              v-model="payrollEditReason"
+              label="Edit Reason (Required)"
+              placeholder="Explain why this payroll item adjustment is needed"
+              variant="outlined"
+              density="comfortable"
+              rows="2"
+              class="mt-3"
+              :disabled="savingItemAdjustments"
+            ></v-textarea>
+
             <div class="edit-summary-cards">
               <div class="edit-summary-card">
                 <div class="edit-summary-label">Amount</div>
@@ -770,7 +821,10 @@
             </button>
             <button
               class="export-download-btn"
-              :disabled="savingItemAdjustments"
+              :disabled="
+                savingItemAdjustments ||
+                (isPayrollist && !payrollEditReason.trim())
+              "
               @click="saveItemAdjustments"
             >
               <v-progress-circular
@@ -782,6 +836,99 @@
               ></v-progress-circular>
               <v-icon v-else size="18" class="mr-2">mdi-content-save</v-icon>
               Save Adjustments
+            </button>
+          </div>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      v-model="showPayrollEditAccessRequestDialog"
+      max-width="560px"
+      persistent
+    >
+      <v-card class="export-dialog">
+        <div class="export-dialog-header">
+          <div class="export-header-icon">
+            <v-icon size="22">mdi-lock-open-variant-outline</v-icon>
+          </div>
+          <div class="export-header-text">
+            <h2 class="export-header-title">Request Payroll Edit Access</h2>
+            <p class="export-header-subtitle">
+              Submit a request for admin approval before editing payroll items.
+            </p>
+          </div>
+          <button
+            class="export-close-btn"
+            :disabled="submittingPayrollEditAccessRequest"
+            @click="showPayrollEditAccessRequestDialog = false"
+          >
+            <v-icon size="20">mdi-close</v-icon>
+          </button>
+        </div>
+
+        <v-divider></v-divider>
+
+        <v-card-text class="export-dialog-body">
+          <v-alert
+            v-if="
+              payrollEditAccessStatus === 'rejected' && payrollEditAccessMessage
+            "
+            type="error"
+            variant="tonal"
+            density="comfortable"
+            class="mb-3"
+          >
+            {{ payrollEditAccessMessage }}
+          </v-alert>
+
+          <v-textarea
+            v-model="payrollEditAccessReason"
+            label="Reason"
+            placeholder="State why payroll item adjustments are needed"
+            variant="outlined"
+            rows="3"
+            auto-grow
+          ></v-textarea>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <div class="export-dialog-footer">
+          <div class="export-summary">
+            <v-icon size="14" class="mr-1" color="#94a3b8"
+              >mdi-information-outline</v-icon
+            >
+            <span
+              >Admins can review and approve requests in the Access Requests
+              page.</span
+            >
+          </div>
+          <div class="export-actions">
+            <button
+              class="dialog-btn dialog-btn-cancel"
+              :disabled="submittingPayrollEditAccessRequest"
+              @click="showPayrollEditAccessRequestDialog = false"
+            >
+              Cancel
+            </button>
+            <button
+              class="export-download-btn"
+              :disabled="
+                submittingPayrollEditAccessRequest ||
+                !payrollEditAccessReason.trim()
+              "
+              @click="submitPayrollItemEditAccessRequest"
+            >
+              <v-progress-circular
+                v-if="submittingPayrollEditAccessRequest"
+                indeterminate
+                size="18"
+                width="2"
+                class="mr-2"
+              ></v-progress-circular>
+              <v-icon v-else size="18" class="mr-2">mdi-send</v-icon>
+              Submit Request
             </button>
           </div>
         </div>
@@ -975,11 +1122,16 @@ import { useToast } from "vue-toastification";
 import api from "@/services/api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
+import { useAuthStore } from "@/stores/auth";
+import moduleAccessService from "@/services/moduleAccessService";
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const { confirm: confirmDialog } = useConfirmDialog();
+const authStore = useAuthStore();
+
+const PAYROLL_ITEM_EDIT_MODULE = "payroll-item-adjustments";
 
 const loading = ref(false);
 const finalizing = ref(false);
@@ -1017,6 +1169,13 @@ const editItemForm = ref({
   loans: 0,
   undertime_deduction: 0,
 });
+const payrollEditReason = ref("");
+const showPayrollEditAccessRequestDialog = ref(false);
+const payrollEditAccessReason = ref("");
+const submittingPayrollEditAccessRequest = ref(false);
+const checkingPayrollEditAccess = ref(false);
+const payrollEditAccessStatus = ref("none");
+const payrollEditAccessMessage = ref("");
 const editableItemFields = [
   "rate",
   "days_worked",
@@ -1065,6 +1224,12 @@ const viewModeOptions = [
 ];
 
 const canEditPayrollItems = computed(() => payroll.value?.status === "draft");
+const isPayrollist = computed(() => authStore.userRole === "payrollist");
+const hasPayrollItemEditAccess = computed(
+  () =>
+    !isPayrollist.value ||
+    ["approved", "admin"].includes(payrollEditAccessStatus.value),
+);
 
 const availableDevices = computed(() => {
   const names = (payroll.value?.device_grouped_items || [])
@@ -1082,6 +1247,57 @@ const availableDevices = computed(() => {
     });
   });
 });
+
+async function checkPayrollItemEditAccess() {
+  if (!isPayrollist.value) {
+    payrollEditAccessStatus.value = "admin";
+    payrollEditAccessMessage.value = "";
+    return true;
+  }
+
+  checkingPayrollEditAccess.value = true;
+  try {
+    const response = await moduleAccessService.checkAccess(
+      PAYROLL_ITEM_EDIT_MODULE,
+    );
+    payrollEditAccessStatus.value = response.status || "none";
+    payrollEditAccessMessage.value = response.message || "";
+    return Boolean(response.has_access);
+  } catch {
+    payrollEditAccessStatus.value = "none";
+    payrollEditAccessMessage.value =
+      "Unable to verify payroll edit access right now.";
+    return false;
+  } finally {
+    checkingPayrollEditAccess.value = false;
+  }
+}
+
+async function submitPayrollItemEditAccessRequest() {
+  const reason = (payrollEditAccessReason.value || "").trim();
+  if (!reason) {
+    toast.error("Reason is required.");
+    return;
+  }
+
+  submittingPayrollEditAccessRequest.value = true;
+  try {
+    await moduleAccessService.submitRequest(PAYROLL_ITEM_EDIT_MODULE, {
+      reason,
+    });
+    toast.success("Access request submitted successfully.");
+    showPayrollEditAccessRequestDialog.value = false;
+    payrollEditAccessReason.value = "";
+    payrollEditAccessStatus.value = "pending";
+    payrollEditAccessMessage.value = "Your request is pending admin approval.";
+  } catch (error) {
+    toast.error(
+      error?.response?.data?.message || "Failed to submit access request.",
+    );
+  } finally {
+    submittingPayrollEditAccessRequest.value = false;
+  }
+}
 
 // Format label for the download button
 const exportFormatLabel = computed(() => {
@@ -1452,10 +1668,25 @@ function getEditableItemFields(item) {
   };
 }
 
-function openEditItemDialog(item) {
+async function openEditItemDialog(item) {
   if (!canEditPayrollItems.value) {
     toast.info("Only draft payrolls can be edited.");
     return;
+  }
+
+  if (isPayrollist.value) {
+    const hasAccess = await checkPayrollItemEditAccess();
+    if (!hasAccess) {
+      if (payrollEditAccessStatus.value === "pending") {
+        toast.info(
+          payrollEditAccessMessage.value ||
+            "Your payroll edit request is pending admin approval.",
+        );
+      } else {
+        showPayrollEditAccessRequestDialog.value = true;
+      }
+      return;
+    }
   }
 
   if (!item?.id) {
@@ -1468,6 +1699,7 @@ function openEditItemDialog(item) {
   editFromDeviceView.value = viewMode.value === "device";
   editingItem.value = { ...sourceItem };
   editItemForm.value = getEditableItemFields(sourceItem);
+  payrollEditReason.value = "";
   showEditItemDialog.value = true;
 }
 
@@ -1475,6 +1707,7 @@ function closeEditItemDialog() {
   showEditItemDialog.value = false;
   editingItem.value = null;
   editFromDeviceView.value = false;
+  payrollEditReason.value = "";
   editItemForm.value = getEditableItemFields(null);
 }
 
@@ -1514,13 +1747,34 @@ async function saveItemAdjustments() {
     return;
   }
 
+  if (isPayrollist.value) {
+    const hasAccess = await checkPayrollItemEditAccess();
+    if (!hasAccess) {
+      toast.error(
+        payrollEditAccessMessage.value ||
+          "Access request approval is required before editing payroll items.",
+      );
+      return;
+    }
+
+    if (!payrollEditReason.value.trim()) {
+      toast.error("Edit reason is required before saving adjustments.");
+      return;
+    }
+  }
+
   savingItemAdjustments.value = true;
   try {
     const savedItemId = Number(editingItem.value.id);
+    const payload = buildEditItemPayload();
+
+    if (isPayrollist.value) {
+      payload.reason = payrollEditReason.value.trim();
+    }
 
     await api.put(
       `/payrolls/${payroll.value.id}/items/${editingItem.value.id}`,
-      buildEditItemPayload(),
+      payload,
     );
 
     if (!editedItemIds.value.includes(savedItemId)) {
@@ -1541,6 +1795,7 @@ async function saveItemAdjustments() {
 
 onMounted(() => {
   fetchPayroll();
+  checkPayrollItemEditAccess();
 });
 
 function openExportDialog() {
@@ -1556,6 +1811,13 @@ async function fetchPayroll() {
     const response = await api.get(`/payrolls/${route.params.id}`, {
       cacheTTL: 15000,
     });
+    const editedIds = Array.isArray(response.data?.edited_item_ids)
+      ? response.data.edited_item_ids
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value))
+      : [];
+
+    editedItemIds.value = [...new Set(editedIds)];
     payroll.value = response.data;
   } catch (error) {
     toast.error("Failed to load payroll details");

@@ -14,6 +14,7 @@ use App\Models\EmployeeDeduction;
 use App\Models\SalaryAdjustment;
 use App\Models\CompanyInfo;
 use App\Models\DeviceProfile;
+use App\Models\AttendanceModificationRequest;
 use App\Services\PayrollService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class PayrollController extends Controller
 {
+    private const PAYROLL_ITEM_EDIT_MODULE = 'payroll-item-adjustments';
+
     protected $payrollService;
 
     public function __construct(PayrollService $payrollService)
@@ -458,6 +461,26 @@ class PayrollController extends Controller
         ])
             ->findOrFail($id);
 
+        $itemIds = collect($payroll->items)
+            ->pluck('id')
+            ->filter()
+            ->map(fn($value) => (int) $value)
+            ->values();
+
+        $editedItemIds = [];
+        if ($itemIds->isNotEmpty()) {
+            $editedItemIds = AuditLog::query()
+                ->where('module', 'payroll')
+                ->where('action', 'update_payroll_item')
+                ->where('model_type', PayrollItem::class)
+                ->whereIn('model_id', $itemIds)
+                ->pluck('model_id')
+                ->map(fn($value) => (int) $value)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
         $deviceMetaMap = DeviceProfile::query()
             ->get(['device_name', 'designation', 'location'])
             ->mapWithKeys(function ($profile) {
@@ -488,6 +511,7 @@ class PayrollController extends Controller
             ->values();
 
         $payroll->setAttribute('device_grouped_items', $deviceGroupedItems);
+        $payroll->setAttribute('edited_item_ids', $editedItemIds);
 
         return response()->json($payroll);
     }
@@ -1019,6 +1043,8 @@ class PayrollController extends Controller
 
     public function updateItem(Request $request, Payroll $payroll, PayrollItem $item)
     {
+        $user = $request->user();
+
         if ((int) $item->payroll_id !== (int) $payroll->id) {
             return response()->json([
                 'message' => 'Payroll item does not belong to the selected payroll.',
@@ -1054,7 +1080,34 @@ class PayrollController extends Controller
             'loans' => 'sometimes|numeric|min:0',
             'employee_deductions' => 'sometimes|numeric|min:0',
             'other_deductions' => 'sometimes|numeric|min:0',
+            'reason' => 'nullable|string|max:500',
         ]);
+
+        $editReason = trim((string) ($validated['reason'] ?? ''));
+        unset($validated['reason']);
+
+        $editAccessRequest = null;
+        if ($user && $user->role === 'payrollist') {
+            $editAccessRequest = AttendanceModificationRequest::query()
+                ->where('requested_by', $user->id)
+                ->where('module', self::PAYROLL_ITEM_EDIT_MODULE)
+                ->where('status', 'approved')
+                ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])
+                ->latest('id')
+                ->first();
+
+            if (!$editAccessRequest) {
+                return response()->json([
+                    'message' => 'Access request required before editing payroll item details.',
+                ], 403);
+            }
+
+            if ($editReason === '') {
+                return response()->json([
+                    'message' => 'Edit reason is required for payroll item adjustments.',
+                ], 422);
+            }
+        }
 
         if (empty($validated)) {
             return response()->json([
@@ -1130,15 +1183,42 @@ class PayrollController extends Controller
 
             $this->refreshPayrollTotals($payroll);
 
+            $item->loadMissing('employee:id,employee_number,first_name,middle_name,last_name,suffix');
+            $employeeName = $item->employee?->full_name
+                ?? trim(implode(' ', array_filter([
+                    $item->employee?->first_name,
+                    $item->employee?->middle_name,
+                    $item->employee?->last_name,
+                    $item->employee?->suffix,
+                ])));
+            $employeeLabel = $item->employee?->employee_number
+                ? "{$item->employee->employee_number} ({$employeeName})"
+                : ($employeeName !== '' ? $employeeName : "employee ID {$item->employee_id}");
+
+            $description = "Updated payroll item for {$employeeLabel} in payroll '{$payroll->period_name}'";
+            if ($editReason !== '') {
+                $description .= ". Reason: {$editReason}";
+            }
+            if ($editAccessRequest) {
+                $description .= " (Access request #{$editAccessRequest->id})";
+            }
+
+            $newValues = $item->fresh()->only(array_keys($oldValues));
+            $newValues['edit_reason'] = $editReason !== '' ? $editReason : null;
+            $newValues['access_request_id'] = $editAccessRequest?->id;
+            $newValues['edited_by_role'] = $user?->role;
+
             AuditLog::create([
                 'user_id' => auth()->id(),
                 'module' => 'payroll',
                 'action' => 'update_payroll_item',
-                'description' => "Updated payroll item for employee ID {$item->employee_id} in payroll '{$payroll->period_name}'",
+                'model_type' => PayrollItem::class,
+                'model_id' => $item->id,
+                'description' => $description,
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
                 'old_values' => $oldValues,
-                'new_values' => $item->fresh()->only(array_keys($oldValues)),
+                'new_values' => $newValues,
             ]);
 
             DB::commit();
