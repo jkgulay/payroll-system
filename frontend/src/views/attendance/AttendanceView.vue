@@ -129,10 +129,12 @@
         <!-- Missing Attendance -->
         <v-window-item value="missing">
           <div class="tab-content">
-            <MissingAttendance @edit-attendance="openEditDialog" />
+            <MissingAttendance
+              @edit-attendance="openEditDialog"
+              @delete="deleteAttendance"
+            />
           </div>
         </v-window-item>
-
 
         <!-- Device Management -->
         <v-window-item value="device" v-if="canManualEntry">
