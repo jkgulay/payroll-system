@@ -183,10 +183,10 @@ class AttendanceController extends Controller
             }
 
             if (!empty($validated['updated_at']) && $lockedAttendance->updated_at) {
-                $requestUpdatedAt = Carbon::parse($validated['updated_at'])->toDateTimeString();
-                $currentUpdatedAt = $lockedAttendance->updated_at->toDateTimeString();
+                $requestUpdatedAtTs = Carbon::parse($validated['updated_at'])->getTimestamp();
+                $currentUpdatedAtTs = $lockedAttendance->updated_at->getTimestamp();
 
-                if ($requestUpdatedAt !== $currentUpdatedAt) {
+                if ($requestUpdatedAtTs !== $currentUpdatedAtTs) {
                     DB::rollBack();
                     return response()->json([
                         'message' => 'Attendance was updated by another user. Please reload and try again.',
@@ -1119,6 +1119,7 @@ class AttendanceController extends Controller
                 ) {
                     $issues[] = 'Missing OT time out';
                 }
+
             }
 
             // If there are any issues, add to missing records

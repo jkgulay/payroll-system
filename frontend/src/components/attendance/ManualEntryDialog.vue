@@ -380,7 +380,9 @@ const save = async () => {
     }
 
     if (props.attendance) {
-      await attendanceStore.updateAttendance(props.attendance.id, data);
+      await attendanceStore.updateAttendance(props.attendance.id, data, {
+        skipToast: true,
+      });
       toast.success("Attendance updated successfully");
     } else {
       await attendanceStore.createAttendance(data);
@@ -405,7 +407,9 @@ const save = async () => {
 
       if (confirmed) {
         try {
-          await attendanceStore.updateAttendance(existingRecord.id, data);
+          await attendanceStore.updateAttendance(existingRecord.id, data, {
+            skipToast: true,
+          });
           toast.success("Attendance updated successfully");
           emit("saved");
         } catch (updateError) {

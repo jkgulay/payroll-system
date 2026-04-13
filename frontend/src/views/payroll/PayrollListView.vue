@@ -2373,6 +2373,8 @@ async function saveAttendanceRow(row) {
       ot_time_in: toApiTime(row.ot_time_in_input),
       ot_time_out: toApiTime(row.ot_time_out_input),
       notes: "Updated during payroll overtime setup",
+    }, {
+      skipToast: true,
     });
 
     const updated = response.data?.attendance;

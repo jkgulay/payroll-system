@@ -61,10 +61,10 @@ export const useAttendanceStore = defineStore("attendance", () => {
     }
   }
 
-  async function updateAttendance(id, data) {
+  async function updateAttendance(id, data, config = {}) {
     loading.value = true;
     try {
-      const response = await api.put(`/attendance/${id}`, data);
+      const response = await api.put(`/attendance/${id}`, data, config);
       const attendancePayload = response.data?.attendance || response.data;
       const index = attendances.value.findIndex((a) => a.id === id);
       if (index !== -1) {
