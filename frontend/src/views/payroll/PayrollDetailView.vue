@@ -137,10 +137,24 @@
           </div>
           <div class="header-right">
             <v-select
-              v-model="positionFilter"
-              :items="availablePositions"
-              label="Filter by Position"
-              prepend-inner-icon="mdi-briefcase"
+              v-model="viewMode"
+              :items="viewModeOptions"
+              item-title="title"
+              item-value="value"
+              label="View"
+              prepend-inner-icon="mdi-view-dashboard-outline"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+              style="min-width: 220px"
+              @update:model-value="handleViewModeChange"
+            ></v-select>
+            <v-select
+              v-if="viewMode === 'device'"
+              v-model="deviceFilter"
+              :items="availableDevices"
+              label="Filter by Device"
+              prepend-inner-icon="mdi-devices"
               variant="outlined"
               density="comfortable"
               clearable
@@ -160,20 +174,29 @@
           </div>
         </div>
 
+        <v-alert
+          v-if="viewMode === 'device'"
+          type="info"
+          variant="tonal"
+          density="comfortable"
+          class="mt-3"
+        >
+          Device split is based on attendance device hours in this payroll
+          period, matching the by-device register logic.
+        </v-alert>
+
         <div class="table-section">
           <v-data-table
             :headers="headers"
-            :items="filteredItems"
-            :search="search"
-            :custom-filter="customFilter"
-            :items-per-page="15"
-            class="modern-table"
+            :items="previewItems"
+            :items-per-page="10"
+            density="compact"
+            class="modern-table register-preview"
           >
-            <!-- Employee -->
-            <template v-slot:item.employee="{ item }">
+            <template v-slot:item.name="{ item }">
               <div>
                 <div class="font-weight-medium">
-                  {{ item.employee?.first_name }} {{ item.employee?.last_name }}
+                  {{ item._rowNo }}. {{ getEmployeeName(item) }}
                 </div>
                 <div class="text-caption text-medium-emphasis">
                   {{ item.employee?.employee_number }}
@@ -181,220 +204,188 @@
               </div>
             </template>
 
-            <!-- Rate & Days -->
-            <template v-slot:item.rate_days="{ item }">
+            <template v-slot:item.device="{ item }">
               <div>
-                <div>
-                  ₱{{ formatCurrency(item.effective_rate || item.rate || 0) }}
+                <div class="font-weight-medium">
+                  {{ item._deviceName || "Unassigned" }}
                 </div>
-                <div class="text-caption">
-                  <span v-if="item.regular_days > 0 || item.holiday_days > 0">
-                    {{ item.regular_days }} reg
-                    <span v-if="item.holiday_days > 0">
-                      + {{ item.holiday_days }} hol</span
-                    >
-                  </span>
-                  <span v-else>{{ item.days_worked }} days</span>
+                <div
+                  v-if="item._deviceDesignation || item._deviceLocation"
+                  class="text-caption text-medium-emphasis"
+                >
+                  {{ item._deviceDesignation || "N/A" }} &middot;
+                  {{ item._deviceLocation || "N/A" }}
                 </div>
               </div>
             </template>
 
-            <!-- Amount (Basic Pay) -->
+            <template v-slot:item.rate="{ item }">
+              <div class="text-right">
+                {{ displayMoney(item.effective_rate || item.rate) }}
+              </div>
+            </template>
+
+            <template v-slot:item.no_of_days="{ item }">
+              <div class="text-center">{{ displayDays(item.days_worked) }}</div>
+            </template>
+
             <template v-slot:item.amount="{ item }">
               <div class="text-right">
-                <div>₱{{ formatCurrency(item.basic_pay || 0) }}</div>
-                <div
-                  v-if="item.holiday_pay > 0"
-                  class="text-caption text-success"
-                >
-                  +₱{{ formatCurrency(item.holiday_pay) }} hol
-                </div>
+                {{ displayMoney(getRegisterAmount(item)) }}
               </div>
             </template>
 
-            <!-- Overtime -->
-            <template v-slot:item.overtime="{ item }">
-              <div>
-                <div v-if="item.regular_ot_hours > 0" class="text-caption">
-                  Reg: {{ item.regular_ot_hours }}h — ₱{{
-                    formatCurrency(item.regular_ot_pay)
-                  }}
-                </div>
-                <div
-                  v-if="!(item.regular_ot_hours > 0)"
-                  class="text-caption text-medium-emphasis"
-                >
-                  -
-                </div>
-              </div>
-            </template>
-
-            <!-- Sunday / Special Holiday -->
-            <template v-slot:item.sun_spl_hol="{ item }">
-              <div>
-                <div
-                  v-if="
-                    (item.sunday_hours || 0) + (item.special_ot_hours || 0) > 0
-                  "
-                  class="text-caption text-orange"
-                >
-                  {{ (item.sunday_hours || 0) + (item.special_ot_hours || 0) }}h
-                  — ₱{{
-                    formatCurrency(
-                      (item.sunday_pay || 0) + (item.special_ot_pay || 0),
-                    )
-                  }}
-                </div>
-                <div v-else class="text-caption text-medium-emphasis">-</div>
-              </div>
-            </template>
-
-            <!-- Undertime -->
-            <template v-slot:item.undertime="{ item }">
+            <template v-slot:item.ot_hrs="{ item }">
               <div class="text-center">
-                <div
-                  v-if="item.undertime_hours > 0"
-                  class="text-caption text-warning"
-                >
-                  {{ formatUndertime(item.undertime_hours) }}
-                </div>
-                <div
-                  v-if="item.undertime_deduction > 0"
-                  class="text-caption text-warning"
-                >
-                  -₱{{ formatCurrency(item.undertime_deduction) }}
-                </div>
-                <div
-                  v-if="
-                    !(item.undertime_hours > 0) &&
-                    !(item.undertime_deduction > 0)
-                  "
-                  class="text-caption text-medium-emphasis"
-                >
-                  -
-                </div>
+                {{ displayHours(item.regular_ot_hours, true) }}
               </div>
             </template>
 
-            <!-- Gross Pay -->
-            <template v-slot:item.gross_pay="{ item }">
+            <template v-slot:item.reg_ot="{ item }">
               <div class="text-right">
-                <div class="font-weight-bold" style="color: #ed985f">
-                  ₱{{ formatCurrency(item.gross_pay) }}
-                </div>
-                <div
-                  v-if="item.salary_adjustment > 0"
-                  class="text-caption text-info"
-                >
-                  +₱{{ formatCurrency(item.salary_adjustment) }} adj
-                </div>
-                <div
-                  v-else-if="item.salary_adjustment < 0"
-                  class="text-caption text-error"
-                >
-                  -₱{{ formatCurrency(Math.abs(item.salary_adjustment)) }} adj
-                </div>
-                <template
-                  v-if="
-                    item.allowances_breakdown &&
-                    item.allowances_breakdown.length > 0
-                  "
-                >
-                  <div
-                    v-for="(a, idx) in item.allowances_breakdown"
-                    :key="idx"
-                    class="text-caption text-success"
-                  >
-                    +₱{{ formatCurrency(a.amount) }}
-                    {{ a.label || a.name || a.type }}
-                  </div>
-                </template>
+                {{ displayMoney(item.regular_ot_pay, true) }}
               </div>
             </template>
 
-            <!-- Deductions -->
+            <template v-slot:item.sun_hol_hrs="{ item }">
+              <div class="text-center">
+                {{ displayHours(getSunSplHolHours(item), true) }}
+              </div>
+            </template>
+
+            <template v-slot:item.sun_hol_pay="{ item }">
+              <div class="text-right">
+                {{ displayMoney(getSunSplHolPay(item), true) }}
+              </div>
+            </template>
+
+            <template v-slot:item.adj_prev_salary="{ item }">
+              <div class="text-right">
+                {{ displayMoney(item.salary_adjustment, true) }}
+              </div>
+            </template>
+
+            <template v-slot:item.allowance="{ item }">
+              <div class="text-right">
+                {{ displayMoney(item.other_allowances, true) }}
+              </div>
+            </template>
+
+            <template v-slot:item.gross_amount="{ item }">
+              <div class="text-right font-weight-bold">
+                {{ displayMoney(item.gross_pay) }}
+              </div>
+            </template>
+
+            <template v-slot:item.employee_savings="{ item }">
+              <div class="text-right">
+                {{ displayMoney(item.employee_savings, true) }}
+              </div>
+            </template>
+
+            <template v-slot:item.loans="{ item }">
+              <div class="text-right">{{ displayMoney(item.loans, true) }}</div>
+            </template>
+
+            <template v-slot:item.ut="{ item }">
+              <div class="text-right">
+                {{ displayMoney(item.undertime_deduction, true) }}
+              </div>
+            </template>
+
             <template v-slot:item.deductions="{ item }">
-              <div class="text-caption">
-                <div v-if="item.employee?.has_sss">
-                  <v-icon size="12" color="primary" class="mr-1"
-                    >mdi-check-circle</v-icon
-                  >
-                  SSS: ₱{{ formatCurrency(item.sss) }}
-                </div>
-                <div v-else class="text-medium-emphasis">
-                  <v-icon size="12" class="mr-1"
-                    >mdi-minus-circle-outline</v-icon
-                  >
-                  SSS: N/A
-                </div>
-                <div v-if="item.employee?.has_philhealth">
-                  <v-icon size="12" color="success" class="mr-1"
-                    >mdi-check-circle</v-icon
-                  >
-                  PhilHealth: ₱{{ formatCurrency(item.philhealth) }}
-                </div>
-                <div v-else class="text-medium-emphasis">
-                  <v-icon size="12" class="mr-1"
-                    >mdi-minus-circle-outline</v-icon
-                  >
-                  PhilHealth: N/A
-                </div>
-                <div v-if="item.employee?.has_pagibig">
-                  <v-icon size="12" color="orange" class="mr-1"
-                    >mdi-check-circle</v-icon
-                  >
-                  Pag-IBIG: ₱{{ formatCurrency(item.pagibig) }}
-                </div>
-                <div v-else class="text-medium-emphasis">
-                  <v-icon size="12" class="mr-1"
-                    >mdi-minus-circle-outline</v-icon
-                  >
-                  Pag-IBIG: N/A
-                </div>
-                <div v-if="item.undertime_deduction > 0">
-                  <v-icon size="12" color="warning" class="mr-1"
-                    >mdi-clock-minus-outline</v-icon
-                  >
-                  Undertime: ₱{{ formatCurrency(item.undertime_deduction) }}
-                </div>
-                <div v-if="item.loans > 0">
-                  <v-icon size="12" color="red" class="mr-1"
-                    >mdi-bank-outline</v-icon
-                  >
-                  Loans: ₱{{ formatCurrency(item.loans) }}
-                </div>
-                <div v-if="item.cash_advance > 0">
-                  <v-icon size="12" color="deep-orange" class="mr-1"
-                    >mdi-cash-fast</v-icon
-                  >
-                  Cash Advance: ₱{{ formatCurrency(item.cash_advance) }}
-                </div>
-                <div v-if="item.employee_savings > 0">
-                  <v-icon size="12" color="teal" class="mr-1"
-                    >mdi-piggy-bank-outline</v-icon
-                  >
-                  Savings: ₱{{ formatCurrency(item.employee_savings) }}
-                </div>
-                <div v-if="item.withholding_tax > 0">
-                  <v-icon size="12" color="purple" class="mr-1"
-                    >mdi-file-document-outline</v-icon
-                  >
-                  Tax: ₱{{ formatCurrency(item.withholding_tax) }}
-                </div>
-                <div v-if="item.employee_deductions > 0" class="text-warning">
-                  Other: ₱{{ formatCurrency(item.employee_deductions) }}
-                </div>
-                <div v-if="item.other_deductions > 0" class="text-warning">
-                  Misc: ₱{{ formatCurrency(item.other_deductions) }}
-                </div>
+              <div class="text-right">
+                {{ displayMoney(getCombinedDeductions(item), true) }}
               </div>
             </template>
 
-            <!-- Net Pay -->
-            <template v-slot:item.net_pay="{ item }">
-              <div class="text-right font-weight-bold" style="color: #10b981">
-                ₱{{ formatCurrency(item.net_pay) }}
+            <template v-slot:item.cash_advance="{ item }">
+              <div class="text-right">
+                {{ displayMoney(item.cash_advance, true) }}
               </div>
+            </template>
+
+            <template v-slot:item.sss="{ item }">
+              <div class="text-right">{{ displayMoney(item.sss, true) }}</div>
+            </template>
+
+            <template v-slot:item.phic="{ item }">
+              <div class="text-right">
+                {{ displayMoney(item.philhealth, true) }}
+              </div>
+            </template>
+
+            <template v-slot:item.hdmf="{ item }">
+              <div class="text-right">
+                {{ displayMoney(item.pagibig, true) }}
+              </div>
+            </template>
+
+            <template v-slot:item.net_amount="{ item }">
+              <div class="text-right font-weight-bold" style="color: #10b981">
+                {{ displayMoney(item.net_pay) }}
+              </div>
+            </template>
+
+            <template v-slot:body.append>
+              <tr class="register-total-row">
+                <td class="text-left font-weight-bold">T O T A L</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.amount) }}
+                </td>
+                <td class="text-center font-weight-bold">
+                  {{ displayHours(previewTotals.regularOtHours, false) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.regularOtPay) }}
+                </td>
+                <td class="text-center font-weight-bold">
+                  {{ displayHours(previewTotals.sunSplHolHours, false) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.sunSplHolPay) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.salaryAdjustment) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.allowances) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.grossPay) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.employeeSavings) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.loans) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.undertime, true) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.deductions) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.cashAdvance) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.sss) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.philhealth) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.pagibig) }}
+                </td>
+                <td class="text-right font-weight-bold">
+                  {{ displayMoney(previewTotals.netPay) }}
+                </td>
+                <td></td>
+              </tr>
             </template>
 
             <!-- Actions -->
@@ -591,7 +582,8 @@ const { confirm: confirmDialog } = useConfirmDialog();
 const loading = ref(false);
 const finalizing = ref(false);
 const search = ref("");
-const positionFilter = ref(null);
+const viewMode = ref("employee");
+const deviceFilter = ref(null);
 const payroll = ref(null);
 const showExportDialog = ref(false);
 const downloadingRegister = ref(false);
@@ -603,21 +595,27 @@ const paperSizeOptions = [
   { title: "8.5 x 13 (Long Bond)", value: "long_bond" },
   { title: "A4", value: "a4" },
 ];
+const STANDARD_HOURS_PER_DAY = 8;
+const viewModeOptions = [
+  { title: "Employee Totals", value: "employee" },
+  { title: "Split By Device", value: "device" },
+];
 
-const availablePositions = computed(() => {
-  if (!payroll.value?.items) return [];
+const availableDevices = computed(() => {
+  const names = (payroll.value?.device_grouped_items || [])
+    .map((group) => group?.device_name)
+    .filter(Boolean);
 
-  const positions = new Set();
-  payroll.value.items.forEach((item) => {
-    const positionName =
-      item.employee?.positionRate?.position_name ||
-      item.employee?.position?.position_name;
-    if (positionName) {
-      positions.add(positionName);
-    }
+  return names.sort((a, b) => {
+    const aIsUnassigned = String(a).toLowerCase() === "unassigned";
+    const bIsUnassigned = String(b).toLowerCase() === "unassigned";
+    if (aIsUnassigned && !bIsUnassigned) return 1;
+    if (!aIsUnassigned && bIsUnassigned) return -1;
+    return String(a).localeCompare(String(b), undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
   });
-
-  return Array.from(positions).sort();
 });
 
 // Format label for the download button
@@ -636,60 +634,213 @@ const exportSummaryText = computed(() => {
   return `All ${totalEmployees} employees · ${exportFormatLabel.value} format`;
 });
 
-// Filter items by position
-const filteredItems = computed(() => {
-  if (!payroll.value?.items) return [];
+const splitByDeviceItems = computed(() => {
+  const groups = payroll.value?.device_grouped_items || [];
 
-  if (!positionFilter.value) {
-    return payroll.value.items;
-  }
+  return groups.flatMap((group) => {
+    const deviceName = group?.device_name || "Unassigned";
+    const designation = group?.designation || null;
+    const location = group?.location || null;
+    const items = Array.isArray(group?.items) ? group.items : [];
 
-  return payroll.value.items.filter((item) => {
-    const positionName =
-      item.employee?.positionRate?.position_name ||
-      item.employee?.position?.position_name;
-    return positionName === positionFilter.value;
+    return items.map((item) => ({
+      ...item,
+      _deviceName: deviceName,
+      _deviceDesignation: designation,
+      _deviceLocation: location,
+    }));
   });
 });
 
+const sourcePreviewItems = computed(() => {
+  if (viewMode.value === "device" && splitByDeviceItems.value.length > 0) {
+    return splitByDeviceItems.value;
+  }
+
+  return (payroll.value?.items || []).map((item) => ({
+    ...item,
+    _deviceName: "All Devices",
+    _deviceDesignation: null,
+    _deviceLocation: null,
+  }));
+});
+
+const previewItems = computed(() => {
+  if (!sourcePreviewItems.value.length) return [];
+
+  const searchTerm = (search.value || "").trim().toLowerCase();
+
+  const filtered = sourcePreviewItems.value.filter((item) => {
+    if (viewMode.value === "device" && deviceFilter.value) {
+      if (String(item._deviceName || "") !== String(deviceFilter.value)) {
+        return false;
+      }
+    }
+
+    if (!searchTerm) {
+      return true;
+    }
+
+    const employee = item?.employee || {};
+    const firstName = (employee.first_name || "").toLowerCase();
+    const middleName = (employee.middle_name || "").toLowerCase();
+    const lastName = (employee.last_name || "").toLowerCase();
+    const fullName = `${firstName} ${middleName} ${lastName}`.trim();
+    const employeeNumber = (employee.employee_number || "").toLowerCase();
+
+    return (
+      firstName.includes(searchTerm) ||
+      middleName.includes(searchTerm) ||
+      lastName.includes(searchTerm) ||
+      fullName.includes(searchTerm) ||
+      employeeNumber.includes(searchTerm)
+    );
+  });
+
+  return filtered.map((item, index) => ({
+    ...item,
+    _rowNo: index + 1,
+  }));
+});
+
+const previewTotals = computed(() => {
+  const items = previewItems.value;
+  const sum = (extractor) =>
+    items.reduce((total, item) => total + toNumber(extractor(item)), 0);
+
+  return {
+    amount: sum((item) => getRegisterAmount(item)),
+    regularOtHours: sum((item) => item.regular_ot_hours),
+    regularOtPay: sum((item) => item.regular_ot_pay),
+    sunSplHolHours: sum((item) => getSunSplHolHours(item)),
+    sunSplHolPay: sum((item) => getSunSplHolPay(item)),
+    salaryAdjustment: sum((item) => item.salary_adjustment),
+    allowances: sum((item) => item.other_allowances),
+    grossPay: sum((item) => item.gross_pay),
+    employeeSavings: sum((item) => item.employee_savings),
+    loans: sum((item) => item.loans),
+    undertime: sum((item) => item.undertime_deduction),
+    deductions: sum((item) => getCombinedDeductions(item)),
+    cashAdvance: sum((item) => item.cash_advance),
+    sss: sum((item) => item.sss),
+    philhealth: sum((item) => item.philhealth),
+    pagibig: sum((item) => item.pagibig),
+    netPay: sum((item) => item.net_pay),
+  };
+});
+
 const headers = [
-  { title: "Employee", key: "employee", sortable: true },
-  { title: "Rate & Days", key: "rate_days", sortable: false },
-  { title: "Basic Pay", key: "amount", sortable: true, align: "end" },
-  { title: "Overtime", key: "overtime", sortable: false },
-  { title: "Sun/Spl. Hol.", key: "sun_spl_hol", sortable: false },
-  { title: "UT", key: "undertime", sortable: false },
-  { title: "Gross Pay", key: "gross_pay", sortable: true, align: "end" },
-  { title: "Deductions", key: "deductions", sortable: false },
-  { title: "Net Pay", key: "net_pay", sortable: true, align: "end" },
+  { title: "NAME", key: "name", sortable: false },
+  { title: "DEVICE", key: "device", sortable: false },
+  { title: "RATE", key: "rate", sortable: false, align: "end" },
+  { title: "NO. OF DAYS", key: "no_of_days", sortable: false, align: "center" },
+  { title: "AMOUNT", key: "amount", sortable: false, align: "end" },
+  { title: "OT HRS", key: "ot_hrs", sortable: false, align: "center" },
+  { title: "REG OT", key: "reg_ot", sortable: false, align: "end" },
+  { title: "SH HRS", key: "sun_hol_hrs", sortable: false, align: "center" },
+  { title: "SUN/SPL HOL", key: "sun_hol_pay", sortable: false, align: "end" },
+  {
+    title: "ADJ. PREV SAL",
+    key: "adj_prev_salary",
+    sortable: false,
+    align: "end",
+  },
+  { title: "ALLOWANCE", key: "allowance", sortable: false, align: "end" },
+  { title: "GROSS AMOUNT", key: "gross_amount", sortable: false, align: "end" },
+  {
+    title: "EMP SAVINGS",
+    key: "employee_savings",
+    sortable: false,
+    align: "end",
+  },
+  { title: "LOANS", key: "loans", sortable: false, align: "end" },
+  { title: "UT", key: "ut", sortable: false, align: "end" },
+  { title: "DEDUCTIONS", key: "deductions", sortable: false, align: "end" },
+  { title: "CASH ADV", key: "cash_advance", sortable: false, align: "end" },
+  { title: "SSS", key: "sss", sortable: false, align: "end" },
+  { title: "PHIC", key: "phic", sortable: false, align: "end" },
+  { title: "HDMF", key: "hdmf", sortable: false, align: "end" },
+  { title: "NET AMOUNT", key: "net_amount", sortable: false, align: "end" },
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
-// Custom filter function to search employee names properly
-function customFilter(value, query, item) {
-  if (!query) return true;
+function handleViewModeChange(nextMode) {
+  if (nextMode !== "device") {
+    deviceFilter.value = null;
+  }
+}
 
-  const searchTerm = query.toLowerCase();
+function toNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
 
-  // Handle both item.raw (Vuetify 3 internal structure) and direct item
-  const employee = item?.raw?.employee || item?.employee;
+function getEmployeeName(item) {
+  const fullName = item?.employee?.full_name;
+  if (fullName) {
+    return fullName;
+  }
 
-  if (!employee) return false;
+  return [item?.employee?.first_name, item?.employee?.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
 
-  // Search in first name, last name, middle name, full name, and employee number
-  const firstName = (employee.first_name || "").toLowerCase();
-  const middleName = (employee.middle_name || "").toLowerCase();
-  const lastName = (employee.last_name || "").toLowerCase();
-  const fullName = `${firstName} ${middleName} ${lastName}`.trim();
-  const employeeNumber = (employee.employee_number || "").toLowerCase();
+function displayDays(value) {
+  const num = toNumber(value);
+  if (!num) {
+    return "0";
+  }
+  return num
+    .toFixed(2)
+    .replace(/\.00$/, "")
+    .replace(/(\.\d*[1-9])0+$/, "$1");
+}
 
+function displayHours(value, blankIfZero = true) {
+  const num = toNumber(value);
+  if (blankIfZero && !num) {
+    return "";
+  }
+  return num
+    .toFixed(2)
+    .replace(/\.00$/, "")
+    .replace(/(\.\d*[1-9])0+$/, "$1");
+}
+
+function displayMoney(value, blankIfZero = false) {
+  const num = toNumber(value);
+  if (blankIfZero && !num) {
+    return "";
+  }
+  return formatCurrency(num);
+}
+
+function getRegisterAmount(item) {
   return (
-    firstName.includes(searchTerm) ||
-    lastName.includes(searchTerm) ||
-    middleName.includes(searchTerm) ||
-    fullName.includes(searchTerm) ||
-    employeeNumber.includes(searchTerm)
+    toNumber(item?.effective_rate ?? item?.rate) * toNumber(item?.days_worked)
   );
+}
+
+function getSunSplHolHours(item) {
+  return (
+    toNumber(item?.special_ot_hours) +
+    toNumber(item?.sunday_hours) +
+    toNumber(item?.holiday_days) * STANDARD_HOURS_PER_DAY
+  );
+}
+
+function getSunSplHolPay(item) {
+  return (
+    toNumber(item?.special_ot_pay) +
+    toNumber(item?.sunday_pay) +
+    toNumber(item?.holiday_pay)
+  );
+}
+
+function getCombinedDeductions(item) {
+  return toNumber(item?.employee_deductions) + toNumber(item?.other_deductions);
 }
 
 onMounted(() => {
@@ -873,20 +1024,6 @@ function getStatusIcon(status) {
 }
 
 // formatDate, formatCurrency imported from @/utils/formatters
-
-function formatUndertime(hours) {
-  if (!hours || hours <= 0) return "";
-  const h = Math.floor(hours);
-  const m = Math.round((hours - h) * 60);
-  if (h > 0 && m > 0) {
-    return `${h}h ${m}m`;
-  } else if (h > 0) {
-    return `${h}h`;
-  } else if (m > 0) {
-    return `${m}m`;
-  }
-  return "";
-}
 </script>
 
 <style scoped>
@@ -1231,11 +1368,18 @@ function formatUndertime(hours) {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.header-right > * {
+  flex: 1 1 220px;
+  min-width: 0;
 }
 
 .table-section {
   overflow-x: auto;
   padding-top: 10px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modern-table {
@@ -1259,11 +1403,68 @@ function formatUndertime(hours) {
   background: #f8f9fa !important;
 }
 
+.register-preview :deep(table) {
+  min-width: 1780px;
+  table-layout: auto;
+}
+
+.register-preview :deep(th),
+.register-preview :deep(td) {
+  padding: 6px 8px !important;
+  font-size: 11.5px !important;
+}
+
+.register-preview :deep(th) {
+  white-space: normal;
+  line-height: 1.15;
+}
+
+.register-preview :deep(td) {
+  white-space: nowrap;
+}
+
+.register-preview :deep(th:first-child),
+.register-preview :deep(td:first-child) {
+  min-width: 200px;
+}
+
+.register-preview :deep(th:nth-child(2)),
+.register-preview :deep(td:nth-child(2)) {
+  min-width: 160px;
+}
+
+.register-preview :deep(th:last-child),
+.register-preview :deep(td:last-child) {
+  min-width: 72px;
+}
+
+.register-total-row td {
+  background: #fff7ee !important;
+  border-top: 2px solid rgba(237, 152, 95, 0.35) !important;
+  font-size: 12px;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .header-main {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .header-right {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .header-right > * {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .register-preview :deep(table) {
+    min-width: 1500px;
   }
 
   .action-buttons {
@@ -1295,15 +1496,22 @@ function formatUndertime(hours) {
   }
 
   .header-right {
+    display: grid;
+    grid-template-columns: 1fr;
     width: 100%;
   }
 
-  .header-right .v-text-field {
-    max-width: 100% !important;
+  .header-right > * {
+    min-width: 0 !important;
+    width: 100%;
   }
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .register-preview :deep(table) {
+    min-width: 1220px;
   }
 
   .action-btn {

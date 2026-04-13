@@ -421,6 +421,7 @@ class PayrollController extends Controller
                     'sunday_hours',
                     'sunday_pay',
                     'salary_adjustment',
+                    'other_allowances',
                     'allowances_breakdown',
                     'gross_pay',
                     'undertime_hours',
@@ -456,6 +457,37 @@ class PayrollController extends Controller
             'items.employee.positionRate:id,position_name,daily_rate',
         ])
             ->findOrFail($id);
+
+        $deviceMetaMap = DeviceProfile::query()
+            ->get(['device_name', 'designation', 'location'])
+            ->mapWithKeys(function ($profile) {
+                $key = strtolower(trim((string) $profile->device_name));
+                return [
+                    $key => [
+                        'designation' => $profile->designation,
+                        'location' => $profile->location,
+                    ],
+                ];
+            })
+            ->all();
+
+        $deviceGroupedItems = $this->buildDeviceGroups($payroll)
+            ->map(function ($items, $deviceName) use ($deviceMetaMap) {
+                $metaKey = strtolower(trim((string) $deviceName));
+                $meta = $deviceMetaMap[$metaKey] ?? ['designation' => null, 'location' => null];
+
+                return [
+                    'device_name' => $deviceName,
+                    'designation' => $meta['designation'] ?? null,
+                    'location' => $meta['location'] ?? null,
+                    'items' => $items->values()->map(function ($item) {
+                        return $item->toArray();
+                    })->values(),
+                ];
+            })
+            ->values();
+
+        $payroll->setAttribute('device_grouped_items', $deviceGroupedItems);
 
         return response()->json($payroll);
     }
