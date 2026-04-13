@@ -173,12 +173,7 @@ class PayrollService
                         ->where('status', '!=', 'absent')
                         ->where('approval_status', 'approved')
                         ->whereNotNull('time_in')
-                        ->where(function ($sub) {
-                            // Keep behavior aligned with create flow: half-day entries
-                            // may legitimately have no time_out but still count.
-                            $sub->whereNotNull('time_out')
-                                ->orWhere('status', 'half_day');
-                        })
+                        ->whereNotNull('time_out')
                         ->select(
                             'id',
                             'employee_id',

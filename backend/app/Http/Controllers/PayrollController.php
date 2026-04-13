@@ -96,15 +96,24 @@ class PayrollController extends Controller
         $employeeQuery = Employee::query();
 
         if ($hasAttendanceFilter) {
-            // Only check employees who have at least one attendance record
+            // Include employees with at least one payable OR explicitly incomplete attendance record.
+            // This keeps Missing Attendance validation consistent with payroll processing scope.
             $employeeQuery->whereHas('attendances', function ($q) use ($periodStart, $periodEnd) {
                 $q->whereBetween('attendance_date', [$periodStart, $periodEnd])
-                    ->where('status', '!=', 'absent')
-                    ->where('approval_status', 'approved')
-                    ->whereNotNull('time_in')
-                    ->where(function ($sub) {
-                        $sub->whereNotNull('time_out')
-                            ->orWhere('status', 'half_day');
+                    ->where(function ($att) {
+                        $att->where(function ($incomplete) {
+                            $incomplete->where('status', 'incomplete')
+                                ->where(function ($approval) {
+                                    $approval->whereNull('approval_status')
+                                        ->orWhere('approval_status', '!=', 'rejected');
+                                });
+                        })
+                            ->orWhere(function ($payable) {
+                                $payable->where('status', '!=', 'absent')
+                                    ->where('approval_status', 'approved')
+                                    ->whereNotNull('time_in')
+                                    ->whereNotNull('time_out');
+                            });
                     });
             });
         } else {
@@ -149,6 +158,10 @@ class PayrollController extends Controller
         // The status='incomplete' means no time_out was recorded (already diagnosed by punch import).
         $incompleteRecords = Attendance::whereBetween('attendance_date', [$periodStart, $periodEnd])
             ->whereIn('employee_id', $employeeIds)
+            ->where(function ($approvalScope) {
+                $approvalScope->whereNull('approval_status')
+                    ->orWhere('approval_status', '!=', 'rejected');
+            })
             ->where(function ($q) {
                 // Records already marked incomplete (no time_out) — show regardless of other fields
                 $q->where('status', 'incomplete')
@@ -465,10 +478,7 @@ class PayrollController extends Controller
                     ->where('status', '!=', 'absent')
                     ->where('approval_status', 'approved')
                     ->whereNotNull('time_in')
-                    ->where(function ($sub) {
-                        $sub->whereNotNull('time_out')
-                            ->orWhere('status', 'half_day');
-                    });
+                    ->whereNotNull('time_out');
             });
         }
 
@@ -505,10 +515,7 @@ class PayrollController extends Controller
             ->where('status', '!=', 'absent')
             ->where('approval_status', 'approved')
             ->whereNotNull('time_in')
-            ->where(function ($query) {
-                $query->whereNotNull('time_out')
-                    ->orWhere('status', 'half_day');
-            })
+            ->whereNotNull('time_out')
             ->get([
                 'id',
                 'employee_id',
@@ -585,10 +592,7 @@ class PayrollController extends Controller
                     ->where('status', '!=', 'absent')
                     ->where('approval_status', 'approved')
                     ->whereNotNull('time_in')
-                    ->where(function ($sub) {
-                        $sub->whereNotNull('time_out')
-                            ->orWhere('status', 'half_day');
-                    });
+                    ->whereNotNull('time_out');
             });
         }
 
@@ -1570,10 +1574,7 @@ class PayrollController extends Controller
             ->where('status', '!=', 'absent')
             ->where('approval_status', 'approved')
             ->whereNotNull('time_in')
-            ->where(function ($sub) {
-                $sub->whereNotNull('time_out')
-                    ->orWhere('status', 'half_day');
-            })
+            ->whereNotNull('time_out')
             ->select(['employee_id', 'device_name', 'device_hours', 'regular_hours'])
             ->get();
 
@@ -1695,12 +1696,7 @@ class PayrollController extends Controller
                     ->where('status', '!=', 'absent')
                     ->where('approval_status', 'approved')
                     ->whereNotNull('time_in')
-                    ->where(function ($sub) {
-                        // Include records with time_out OR half-day records
-                        // (half-day entries may lack time_out but have valid regular_hours)
-                        $sub->whereNotNull('time_out')
-                            ->orWhere('status', 'half_day');
-                    });
+                    ->whereNotNull('time_out');
             },
             'allowances' => function ($q) use ($payroll) {
                 $q->where('is_active', true)
@@ -1975,10 +1971,7 @@ class PayrollController extends Controller
                     ->where('status', '!=', 'absent')
                     ->where('approval_status', 'approved')
                     ->whereNotNull('time_in')
-                    ->where(function ($sub) {
-                        $sub->whereNotNull('time_out')
-                            ->orWhere('status', 'half_day');
-                    });
+                    ->whereNotNull('time_out');
             });
         }
 

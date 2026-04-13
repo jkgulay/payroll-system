@@ -36,6 +36,28 @@ class PunchRecordImportService
         $updated  = 0;
         $skipped  = 0;
         $errors   = [];
+        $overnightCarryEnabled = (bool) config('payroll.attendance.overnight_carry_enabled', true);
+        $overnightCarryRequiresOvernightSchedule = (bool) config('payroll.attendance.overnight_carry_require_overnight_schedule', true);
+        $overnightCarryCutoffHour = (int) config('payroll.attendance.overnight_carry_cutoff_hour', 5);
+
+        $staffCodesForCarry = collect($punchData)
+            ->map(fn($row) => trim((string) ($row['Staff Code'] ?? '')))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $overnightByStaffCode = [];
+        if (!empty($staffCodesForCarry)) {
+            $employeesForCarry = Employee::whereIn('employee_number', $staffCodesForCarry)
+                ->with('project')
+                ->get()
+                ->keyBy('employee_number');
+
+            foreach ($employeesForCarry as $empNum => $emp) {
+                $scheduleForCarry = $this->getScheduleForEmployee($emp, null);
+                $overnightByStaffCode[$empNum] = $this->isOvernightSchedule($scheduleForCarry);
+            }
+        }
 
         if (empty($punchData)) {
             return ['imported' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'error_details' => []];
@@ -90,10 +112,29 @@ class PunchRecordImportService
                 continue;
             }
 
-            $dateKey = $punchDt->format('Y-m-d');
-            $timeKey = $punchDt->format('H:i');
+            $effectivePunchDt = $punchDt->copy();
+            $isCarriedToPreviousDate = false;
+            $punchMinutes = ($punchDt->hour * 60) + $punchDt->minute;
+            $cutoffMinutes = $overnightCarryCutoffHour * 60;
+            $canCarryForEmployee = !$overnightCarryRequiresOvernightSchedule
+                || ($overnightByStaffCode[$staffCode] ?? false);
+            if ($overnightCarryEnabled && $canCarryForEmployee && $punchMinutes <= $cutoffMinutes) {
+                $effectivePunchDt->subDay();
+                $isCarriedToPreviousDate = true;
+            }
 
-            $grouped[$staffCode][$dateKey][] = $timeKey;
+            $dateKey = $effectivePunchDt->format('Y-m-d');
+            $timeKey = $punchDt->format('H:i');
+            $sortMinutes = ($punchDt->hour * 60) + $punchDt->minute;
+            if ($isCarriedToPreviousDate) {
+                // Keep early-morning carried punches after prior-evening punches.
+                $sortMinutes += 24 * 60;
+            }
+
+            $grouped[$staffCode][$dateKey][] = [
+                'time' => $timeKey,
+                'sort' => $sortMinutes,
+            ];
 
             // Track date range
             if ($dateRange['min'] === null || $dateKey < $dateRange['min']) {
@@ -188,10 +229,11 @@ class PunchRecordImportService
             ];
             $empId = $employee->id;
 
-            foreach ($dates as $dateStr => $times) {
+            foreach ($dates as $dateStr => $timeEntriesForDate) {
                 $currentTask++;
-                // Sort times chronologically before passing to processPunchRecord
-                sort($times);
+                // Sort using computed minute-order that supports overnight carry-over.
+                usort($timeEntriesForDate, fn($a, $b) => $a['sort'] <=> $b['sort']);
+                $times = array_map(fn($entry) => $entry['time'], $timeEntriesForDate);
                 $attendanceDate = Carbon::parse($dateStr);
                 // processPunchRecord expects newline-separated HH:MM strings
                 $timeEntries = implode("\n", $times);
@@ -322,16 +364,19 @@ class PunchRecordImportService
                 // Morning: time_in → break_start
                 $mStart = Carbon::parse($dateStr . ' ' . $attendance->time_in);
                 $mEnd   = Carbon::parse($dateStr . ' ' . $attendance->break_start);
+                if ($mEnd->lt($mStart)) $mEnd->addDay();
                 $addHours($findDevice($attendance->time_in), $mStart->diffInMinutes($mEnd) / 60);
 
                 // Afternoon: break_end → time_out
                 $aStart = Carbon::parse($dateStr . ' ' . $attendance->break_end);
                 $aEnd   = Carbon::parse($dateStr . ' ' . $attendance->time_out);
+                if ($aEnd->lt($aStart)) $aEnd->addDay();
                 $addHours($findDevice($attendance->break_end), $aStart->diffInMinutes($aEnd) / 60);
             } else {
                 // No break: time_in → time_out
                 $start = Carbon::parse($dateStr . ' ' . $attendance->time_in);
                 $end   = Carbon::parse($dateStr . ' ' . $attendance->time_out);
+                if ($end->lt($start)) $end->addDay();
                 $addHours($findDevice($attendance->time_in), $start->diffInMinutes($end) / 60);
             }
         } elseif ($attendance->time_in && !$attendance->time_out) {
@@ -402,7 +447,7 @@ class PunchRecordImportService
      *
      * @param Employee $employee Pre-loaded employee model
      * @param Carbon $attendanceDate The date for this attendance record
-     * @param string $timeEntries Newline-separated time strings (already sorted, deduplicated)
+     * @param string $timeEntries Newline-separated HH:MM time strings in punch order
      * @param string|null $deviceName Device name for this employee+date
      * @param array $punchDeviceMap Punch-to-device mapping
      * @param Attendance|null $existingAtt Pre-loaded existing attendance (or null)
@@ -418,18 +463,25 @@ class PunchRecordImportService
         ?Attendance $existingAtt,
         array $schedule
     ): array {
-        // Parse time entries
+        // Parse time entries while preserving punch order and carrying midnight rollovers.
         $times = [];
+        $previousTimestamp = null;
         $lines = preg_split('/[\r\n]+/', trim($timeEntries));
         foreach ($lines as $line) {
             $line = trim($line);
             if (preg_match('/^(\d{1,2}):(\d{2})$/', $line, $matches)) {
                 $hour = (int)$matches[1];
                 $minute = (int)$matches[2];
-                if ($hour == 0 && $minute <= 5) {
+                $ignoreExactMidnightPlaceholder = (bool) config('payroll.attendance.ignore_exact_midnight_placeholder', true);
+                if ($ignoreExactMidnightPlaceholder && $hour === 0 && $minute === 0) {
                     continue;
                 }
-                $times[] = Carbon::create($attendanceDate->year, $attendanceDate->month, $attendanceDate->day, $hour, $minute);
+                $timestamp = Carbon::create($attendanceDate->year, $attendanceDate->month, $attendanceDate->day, $hour, $minute);
+                if ($previousTimestamp && $timestamp->lt($previousTimestamp)) {
+                    $timestamp->addDay();
+                }
+                $times[] = $timestamp;
+                $previousTimestamp = $timestamp;
             }
         }
 
@@ -481,7 +533,11 @@ class PunchRecordImportService
             $attendance->status = 'present';
         }
 
+        $scheduledTimeIn = Carbon::parse($dateStr . ' ' . $schedule['standard_time_in']);
         $scheduledTimeOut = Carbon::parse($dateStr . ' ' . $schedule['standard_time_out']);
+        if ($scheduledTimeOut->lte($scheduledTimeIn)) {
+            $scheduledTimeOut->addDay();
+        }
         $breakMinHours = (int) config('payroll.attendance.break_detection_min_hours', 3);
         $breakMaxHours = (int) config('payroll.attendance.break_detection_max_hours', 6);
         $smartDetectionMinutes = (int) config('payroll.attendance.smart_detection_window_minutes', 120);
@@ -666,6 +722,14 @@ class PunchRecordImportService
                 ? (int) $project->grace_period_minutes
                 : $defaultGrace,
         ];
+    }
+
+    private function isOvernightSchedule(array $schedule): bool
+    {
+        $timeIn = Carbon::createFromFormat('H:i', substr((string) ($schedule['standard_time_in'] ?? '07:30'), 0, 5));
+        $timeOut = Carbon::createFromFormat('H:i', substr((string) ($schedule['standard_time_out'] ?? '17:00'), 0, 5));
+
+        return $timeOut->lte($timeIn);
     }
 
     /**
