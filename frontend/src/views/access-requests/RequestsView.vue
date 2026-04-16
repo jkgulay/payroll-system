@@ -171,10 +171,6 @@
             </v-chip>
           </template>
 
-          <template v-slot:item.date="{ item }">
-            {{ formatDate(item.date) }}
-          </template>
-
           <template v-slot:item.reason="{ item }">
             <div class="reason-text" :title="item.reason || '-'">
               {{ item.reason || "-" }}
@@ -197,27 +193,40 @@
           </template>
 
           <template v-slot:item.actions="{ item }">
-            <div v-if="item.status === 'pending'" class="d-flex gap-1">
+            <div
+              v-if="item.status === 'pending'"
+              class="actions-cell pending-actions"
+            >
               <v-btn
-                icon="mdi-check"
                 size="small"
-                variant="text"
+                variant="tonal"
                 color="success"
+                prepend-icon="mdi-check"
                 :disabled="processing"
                 @click="openApproveDialog(item)"
-              ></v-btn>
+              >
+                Approve
+              </v-btn>
               <v-btn
-                icon="mdi-close"
                 size="small"
-                variant="text"
+                variant="tonal"
                 color="error"
+                prepend-icon="mdi-close"
                 :disabled="processing"
                 @click="openRejectDialog(item)"
-              ></v-btn>
+              >
+                Reject
+              </v-btn>
             </div>
-            <span v-else class="text-caption text-medium-emphasis">
-              {{ item.reviewed_at ? formatDateTime(item.reviewed_at) : "" }}
-            </span>
+            <div v-else class="actions-cell reviewed-actions">
+              <div v-if="item.reviewed_at" class="reviewed-at">
+                <v-icon size="14">mdi-clock-outline</v-icon>
+                <span>{{ formatDateTime(item.reviewed_at) }}</span>
+              </div>
+              <span v-else class="text-caption text-medium-emphasis"
+                >No further action</span
+              >
+            </div>
           </template>
 
           <template v-slot:no-data>
@@ -508,12 +517,11 @@ const overflowPendingTotal = computed(() =>
 
 const baseHeaders = [
   { title: "Requested By", key: "requester", sortable: true },
-  { title: "Date", key: "date", sortable: true },
   { title: "Reason", key: "reason", sortable: false },
   { title: "Status", key: "status", sortable: true },
   { title: "Submitted", key: "created_at", sortable: true },
   { title: "Reviewed By", key: "reviewer", sortable: false },
-  { title: "Actions", key: "actions", sortable: false, align: "center" },
+  { title: "Actions", key: "actions", sortable: false, align: "start" },
 ];
 
 const headers = computed(() => {
@@ -873,6 +881,32 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.pending-actions {
+  flex-wrap: wrap;
+}
+
+.reviewed-actions {
+  color: rgba(0, 31, 61, 0.72);
+  font-size: 12px;
+}
+
+.reviewed-at {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(0, 31, 61, 0.05);
+  font-weight: 600;
+}
+
 :deep(.requests-data-table thead th) {
   color: #001f3d;
   font-size: 14px;
@@ -913,6 +947,10 @@ onMounted(() => {
 
   .reason-text {
     max-width: 180px;
+  }
+
+  .pending-actions {
+    gap: 6px;
   }
 }
 

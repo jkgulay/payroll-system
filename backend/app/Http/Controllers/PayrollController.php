@@ -1425,7 +1425,7 @@ class PayrollController extends Controller
 
         $item = PayrollItem::where('payroll_id', $payrollId)
             ->where('employee_id', $employeeId)
-            ->with('employee.positionRate')
+            ->with(['employee.positionRate', 'employee.project'])
             ->first();
 
         if (!$item) {
@@ -1454,18 +1454,23 @@ class PayrollController extends Controller
         }
 
         try {
-            $pdf = Pdf::loadView('payroll.payslip', [
+            // Use single-slip layout that keeps compact export data/signatory logic
+            // while rendering one larger payslip per page.
+            $pdf = Pdf::loadView('payroll.payslip-single', [
                 'payroll' => $payroll,
                 'item' => $item,
-                'employee' => $item->employee,
                 'companyInfo' => $companyInfo,
                 'pageSizeCss' => $pageSizeCss,
                 'pageScale' => $pageScale,
                 'pageMarginCss' => $pageMarginCss,
                 'pageWidthPercent' => $pageWidthPercent,
+            ])->setOptions([
+                'isHtml5ParserEnabled'    => false,
+                'isRemoteEnabled'         => false,
+                'isFontSubsettingEnabled' => false,
             ])->setPaper($isA4 ? 'A4' : [0, 0, 612, 936], 'portrait');
 
-            return $pdf->download("payslip_{$item->employee->employee_number}_{$payroll->period_name}.pdf");
+            return $pdf->download("payslip_{$item->employee->employee_number}_{$payroll->payroll_number}.pdf");
         } catch (\Throwable $e) {
             Log::error('Payslip PDF Error: ' . $e->getMessage(), [
                 'payroll_id' => $payrollId,
