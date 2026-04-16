@@ -43,7 +43,10 @@
           icon="mdi-lock-outline"
         >
           <v-alert-title>Access Required</v-alert-title>
-          <p class="mt-1">You need to request access from an administrator before you can manage deductions.</p>
+          <p class="mt-1">
+            You need to request access from an administrator before you can
+            manage deductions.
+          </p>
           <v-btn
             color="primary"
             variant="flat"
@@ -65,7 +68,10 @@
           icon="mdi-clock-outline"
         >
           <v-alert-title>Pending Approval</v-alert-title>
-          <p class="mt-1">Your access request is pending admin approval. You will be able to manage deductions once approved.</p>
+          <p class="mt-1">
+            Your access request is pending admin approval. You will be able to
+            manage deductions once approved.
+          </p>
         </v-alert>
 
         <!-- Rejected -->
@@ -106,17 +112,29 @@
                 >
                   <template v-slot:prepend>
                     <v-icon :color="getRequestStatusColor(req.status)">
-                      {{ req.status === 'pending' ? 'mdi-clock-outline' : req.status === 'approved' ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                      {{
+                        req.status === "pending"
+                          ? "mdi-clock-outline"
+                          : req.status === "approved"
+                            ? "mdi-check-circle"
+                            : "mdi-close-circle"
+                      }}
                     </v-icon>
                   </template>
                   <template v-slot:append>
-                    <v-chip :color="getRequestStatusColor(req.status)" size="x-small" variant="flat">
+                    <v-chip
+                      :color="getRequestStatusColor(req.status)"
+                      size="x-small"
+                      variant="flat"
+                    >
                       {{ req.status }}
                     </v-chip>
                   </template>
                 </v-list-item>
               </v-list>
-              <p v-else class="text-center text-medium-emphasis py-4">No requests yet.</p>
+              <p v-else class="text-center text-medium-emphasis py-4">
+                No requests yet.
+              </p>
             </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>
@@ -125,27 +143,36 @@
         <v-dialog v-model="requestDialog" max-width="500" persistent>
           <v-card rounded="lg">
             <v-card-title class="d-flex align-center pa-4">
-              <v-icon color="primary" class="mr-2">mdi-lock-open-variant</v-icon>
+              <v-icon color="primary" class="mr-2"
+                >mdi-lock-open-variant</v-icon
+              >
               Request Deductions Access
             </v-card-title>
             <v-divider></v-divider>
             <v-card-text class="pa-4">
               <p class="text-body-2 mb-4">
-                Please provide a reason for needing access to the Deductions module.
+                Please provide a reason for needing access to the Deductions
+                module.
               </p>
               <v-textarea
                 v-model="requestReason"
                 label="Reason"
                 variant="outlined"
                 rows="3"
-                :rules="[v => !!v || 'Reason is required']"
+                :rules="[(v) => !!v || 'Reason is required']"
                 placeholder="Explain why you need access to manage deductions"
               ></v-textarea>
             </v-card-text>
             <v-divider></v-divider>
             <v-card-actions class="pa-4">
               <v-spacer></v-spacer>
-              <v-btn variant="text" @click="requestDialog = false; requestReason = ''">
+              <v-btn
+                variant="text"
+                @click="
+                  requestDialog = false;
+                  requestReason = '';
+                "
+              >
                 Cancel
               </v-btn>
               <v-btn
@@ -165,207 +192,217 @@
 
       <!-- Main Content (only when access granted) -->
       <template v-if="hasAccess">
-      <!-- Filters -->
-      <div class="filters-section">
-        <v-row>
-          <v-col cols="12" md="3">
-            <v-text-field
-              v-model="filters.search"
-              prepend-inner-icon="mdi-magnify"
-              label="Search employee..."
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="debouncedSearch"
-            ></v-text-field>
-          </v-col>
-          <v-col cols="12" md="3" v-if="userRole !== 'employee'">
-            <v-select
-              v-model="filters.department"
-              :items="departments"
-              item-title="title"
-              item-value="value"
-              label="Filter by Project"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="fetchDeductions"
-            ></v-select>
-          </v-col>
-          <v-col cols="12" md="3" v-if="userRole !== 'employee'">
-            <v-select
-              v-model="filters.position"
-              :items="positions"
-              item-title="title"
-              item-value="value"
-              label="Filter by Position"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="fetchDeductions"
-            ></v-select>
-          </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
-            <v-select
-              v-model="filters.deduction_type"
-              :items="filterDeductionTypes"
-              label="Filter by Type"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="fetchDeductions"
-            ></v-select>
-          </v-col>
-          <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
-            <v-select
-              v-model="filters.status"
-              :items="statusOptions"
-              label="Filter by Status"
-              variant="outlined"
-              density="comfortable"
-              clearable
-              hide-details
-              @update:model-value="fetchDeductions"
-            ></v-select>
-          </v-col>
-          <v-col cols="auto" class="d-flex align-center">
-            <v-btn
-              color="error"
-              variant="tonal"
-              icon="mdi-filter-remove"
-              @click="clearFilters"
-              :disabled="!hasActiveFilters"
-              title="Clear Filters"
-            ></v-btn>
-          </v-col>
-          <v-col cols="auto" class="d-flex align-center" v-if="hasActiveFilters">
-            <v-chip size="small" color="info" variant="tonal">
-              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
-            </v-chip>
-          </v-col>
-        </v-row>
-      </div>
-
-      <!-- Deductions Table -->
-      <v-data-table
-        :headers="headers"
-        :items="filteredDeductions"
-        :loading="loading"
-        :items-per-page="15"
-        class="modern-table"
-      >
-        <template v-slot:item.employee="{ item }">
-          <div>
-            <div class="font-weight-medium">{{ item.employee?.full_name }}</div>
-            <div class="text-caption text-medium-emphasis">
-              {{ item.employee?.employee_number }}
-            </div>
-          </div>
-        </template>
-
-        <template v-slot:item.deduction_type="{ item }">
-          <v-chip
-            :color="getDeductionTypeColor(item.deduction_type)"
-            size="small"
-            variant="tonal"
-          >
-            {{ formatDeductionType(item.deduction_type) }}
-          </v-chip>
-        </template>
-
-        <template v-slot:item.total_amount="{ item }">
-          <span class="font-weight-medium"
-            >₱{{ formatNumber(item.total_amount) }}</span
-          >
-        </template>
-
-        <template v-slot:item.amount_per_cutoff="{ item }">
-          <span class="font-weight-medium"
-            >₱{{ formatNumber(item.amount_per_cutoff) }}</span
-          >
-        </template>
-
-        <template v-slot:item.balance="{ item }">
-          <span
-            :class="
-              item.balance > 0 ? 'text-error font-weight-bold' : 'text-success'
-            "
-          >
-            ₱{{ formatNumber(item.balance) }}
-          </span>
-        </template>
-
-        <template v-slot:item.progress="{ item }">
-          <div class="d-flex align-center">
-            <v-progress-linear
-              :model-value="getProgress(item)"
-              :color="item.status === 'completed' ? 'success' : 'primary'"
-              height="8"
-              rounded
-              class="mr-2"
-              style="min-width: 80px"
-            ></v-progress-linear>
-            <span class="text-caption"
-              >{{ item.installments_paid }}/{{ item.installments }}</span
+        <!-- Filters -->
+        <div class="filters-section">
+          <v-row>
+            <v-col cols="12" md="3">
+              <v-text-field
+                v-model="filters.search"
+                prepend-inner-icon="mdi-magnify"
+                label="Search employee..."
+                variant="outlined"
+                density="comfortable"
+                clearable
+                hide-details
+                @update:model-value="debouncedSearch"
+              ></v-text-field>
+            </v-col>
+            <v-col cols="12" md="3" v-if="userRole !== 'employee'">
+              <v-select
+                v-model="filters.department"
+                :items="departments"
+                item-title="title"
+                item-value="value"
+                label="Filter by Project"
+                variant="outlined"
+                density="comfortable"
+                clearable
+                hide-details
+                @update:model-value="fetchDeductions"
+              ></v-select>
+            </v-col>
+            <v-col cols="12" md="3" v-if="userRole !== 'employee'">
+              <v-select
+                v-model="filters.position"
+                :items="positions"
+                item-title="title"
+                item-value="value"
+                label="Filter by Position"
+                variant="outlined"
+                density="comfortable"
+                clearable
+                hide-details
+                @update:model-value="fetchDeductions"
+              ></v-select>
+            </v-col>
+            <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
+              <v-select
+                v-model="filters.deduction_type"
+                :items="filterDeductionTypes"
+                label="Filter by Type"
+                variant="outlined"
+                density="comfortable"
+                clearable
+                hide-details
+                @update:model-value="fetchDeductions"
+              ></v-select>
+            </v-col>
+            <v-col cols="12" :md="userRole === 'employee' ? 3 : 2">
+              <v-select
+                v-model="filters.status"
+                :items="statusOptions"
+                label="Filter by Status"
+                variant="outlined"
+                density="comfortable"
+                clearable
+                hide-details
+                @update:model-value="fetchDeductions"
+              ></v-select>
+            </v-col>
+            <v-col cols="auto" class="d-flex align-center">
+              <v-btn
+                color="error"
+                variant="tonal"
+                icon="mdi-filter-remove"
+                @click="clearFilters"
+                :disabled="!hasActiveFilters"
+                title="Clear Filters"
+              ></v-btn>
+            </v-col>
+            <v-col
+              cols="auto"
+              class="d-flex align-center"
+              v-if="hasActiveFilters"
             >
-          </div>
-        </template>
+              <v-chip size="small" color="info" variant="tonal">
+                {{ activeFilterCount }} active filter{{
+                  activeFilterCount > 1 ? "s" : ""
+                }}
+              </v-chip>
+            </v-col>
+          </v-row>
+        </div>
 
-        <template v-slot:item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.status)"
-            size="small"
-            variant="flat"
-          >
-            {{ formatStatus(item.status) }}
-          </v-chip>
-        </template>
+        <!-- Deductions Table -->
+        <v-data-table
+          :headers="headers"
+          :items="filteredDeductions"
+          :loading="loading"
+          :items-per-page="15"
+          class="modern-table"
+        >
+          <template v-slot:item.employee="{ item }">
+            <div>
+              <div class="font-weight-medium">
+                {{ item.employee?.full_name }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {{ item.employee?.employee_number }}
+              </div>
+            </div>
+          </template>
 
-        <template v-slot:item.actions="{ item }">
-          <v-btn
-            v-if="userRole !== 'employee' && item.status === 'active'"
-            icon="mdi-pencil"
-            size="small"
-            variant="text"
-            @click="openEditDialog(item)"
-          ></v-btn>
-          <v-btn
-            v-if="
-              userRole !== 'employee' &&
-              (item.installments_paid === 0 || item.status === 'cancelled')
-            "
-            icon="mdi-delete"
-            size="small"
-            variant="text"
-            color="error"
-            @click="confirmDelete(item)"
-          ></v-btn>
-          <v-btn
-            icon="mdi-eye"
-            size="small"
-            variant="text"
-            color="info"
-            @click="viewDetails(item)"
-          ></v-btn>
-        </template>
+          <template v-slot:item.deduction_type="{ item }">
+            <v-chip
+              :color="getDeductionTypeColor(item.deduction_type)"
+              size="small"
+              variant="tonal"
+            >
+              {{ formatDeductionType(item.deduction_type) }}
+            </v-chip>
+          </template>
 
-        <template v-slot:no-data>
-          <div class="text-center py-8">
-            <v-icon size="64" color="grey">mdi-wallet-minus-outline</v-icon>
-            <p class="text-h6 mt-4">No deductions found</p>
-            <p class="text-body-2 text-medium-emphasis">
-              {{
-                activeTab === "government"
-                  ? "No government deductions"
-                  : activeTab === "company"
-                    ? "No company deductions"
-                    : "No deductions available"
-              }}
-            </p>
+          <template v-slot:item.total_amount="{ item }">
+            <span class="font-weight-medium"
+              >₱{{ formatNumber(item.total_amount) }}</span
+            >
+          </template>
+
+          <template v-slot:item.amount_per_cutoff="{ item }">
+            <span class="font-weight-medium"
+              >₱{{ formatNumber(item.amount_per_cutoff) }}</span
+            >
+          </template>
+
+          <template v-slot:item.balance="{ item }">
+            <span
+              :class="
+                item.balance > 0
+                  ? 'text-error font-weight-bold'
+                  : 'text-success'
+              "
+            >
+              ₱{{ formatNumber(item.balance) }}
+            </span>
+          </template>
+
+          <template v-slot:item.progress="{ item }">
+            <div class="d-flex align-center">
+              <v-progress-linear
+                :model-value="getProgress(item)"
+                :color="item.status === 'completed' ? 'success' : 'primary'"
+                height="8"
+                rounded
+                class="mr-2"
+                style="min-width: 80px"
+              ></v-progress-linear>
+              <span class="text-caption"
+                >{{ item.installments_paid }}/{{ item.installments }}</span
+              >
+            </div>
+          </template>
+
+          <template v-slot:item.status="{ item }">
+            <v-chip
+              :color="getStatusColor(item.status)"
+              size="small"
+              variant="flat"
+            >
+              {{ formatStatus(item.status) }}
+            </v-chip>
+          </template>
+
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              v-if="userRole !== 'employee' && item.status === 'active'"
+              icon="mdi-pencil"
+              size="small"
+              variant="text"
+              @click="openEditDialog(item)"
+            ></v-btn>
+            <v-btn
+              v-if="
+                userRole !== 'employee' &&
+                (item.installments_paid === 0 || item.status === 'cancelled')
+              "
+              icon="mdi-delete"
+              size="small"
+              variant="text"
+              color="error"
+              @click="confirmDelete(item)"
+            ></v-btn>
+            <v-btn
+              icon="mdi-eye"
+              size="small"
+              variant="text"
+              color="info"
+              @click="viewDetails(item)"
+            ></v-btn>
+          </template>
+
+          <template v-slot:no-data>
+            <div class="text-center py-8">
+              <v-icon size="64" color="grey">mdi-wallet-minus-outline</v-icon>
+              <p class="text-h6 mt-4">No deductions found</p>
+              <p class="text-body-2 text-medium-emphasis">
+                {{
+                  activeTab === "government"
+                    ? "No government deductions"
+                    : activeTab === "company"
+                      ? "No company deductions"
+                      : "No deductions available"
+                }}
+              </p>
               <v-btn
                 class="mt-3"
                 variant="outlined"
@@ -375,10 +412,10 @@
               >
                 Clear filters
               </v-btn>
-          </div>
-        </template>
-      </v-data-table>
-    </template>
+            </div>
+          </template>
+        </v-data-table>
+      </template>
     </div>
 
     <!-- Add/Edit Dialog - Modern UI -->
@@ -775,8 +812,85 @@
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-currency-php"
+                  :loading="cashAdvanceAvailabilityLoading"
                   :rules="[rules.required, rules.positive]"
                 ></v-text-field>
+
+                <v-alert
+                  v-if="showCashAdvanceAvailability"
+                  class="mt-2"
+                  density="compact"
+                  variant="tonal"
+                  :type="hasCashAdvanceLimitWarning ? 'warning' : 'info'"
+                  :icon="
+                    hasCashAdvanceLimitWarning
+                      ? 'mdi-alert'
+                      : 'mdi-wallet-outline'
+                  "
+                >
+                  <div
+                    class="d-flex align-center justify-space-between flex-wrap ga-2"
+                  >
+                    <span class="text-caption"
+                      >Available Balance (Estimated)</span
+                    >
+                    <strong
+                      >₱{{ formatNumber(cashAdvanceAvailableBalance) }}</strong
+                    >
+                  </div>
+                  <div class="text-caption mt-1">
+                    Based on approved attendance from
+                    <strong>{{ cashAdvanceStartDateLabel }}</strong>
+                    to
+                    <strong>{{ cashAdvanceAsOfDateLabel }}</strong>
+                    <span v-if="cashAdvanceLastPayrollLabel">
+                      (last payroll ended {{ cashAdvanceLastPayrollLabel }})
+                    </span>
+                  </div>
+                  <div
+                    v-if="
+                      cashAdvanceAvailability.active_cash_advance_balance > 0
+                    "
+                    class="text-caption mt-1"
+                  >
+                    Current active cash advance balance: ₱{{
+                      formatNumber(
+                        cashAdvanceAvailability.active_cash_advance_balance,
+                      )
+                    }}. Suggested additional cap: ₱{{
+                      formatNumber(cashAdvanceAvailability.recommended_limit)
+                    }}.
+                  </div>
+                  <div
+                    v-if="hasCashAdvanceLimitWarning"
+                    class="text-caption mt-1 font-weight-medium"
+                  >
+                    Entered amount is above the estimated available balance.
+                  </div>
+                </v-alert>
+
+                <v-alert
+                  v-else-if="showCashAdvanceAvailabilityError"
+                  class="mt-2"
+                  density="compact"
+                  variant="tonal"
+                  type="warning"
+                  icon="mdi-alert-circle-outline"
+                >
+                  {{ cashAdvanceAvailabilityError }}
+                </v-alert>
+
+                <v-alert
+                  v-else-if="showCashAdvanceSelectionHint"
+                  class="mt-2"
+                  density="compact"
+                  variant="tonal"
+                  type="info"
+                  icon="mdi-information-outline"
+                >
+                  Available balance preview is shown for individual employee
+                  selection.
+                </v-alert>
               </v-col>
 
               <!-- Amount per Cutoff -->
@@ -1105,11 +1219,7 @@
 
         <v-card-actions class="dialog-actions deductions-dialog-actions">
           <v-spacer></v-spacer>
-          <v-btn
-            variant="outlined"
-            color="grey"
-            @click="detailsDialog = false"
-          >
+          <v-btn variant="outlined" color="grey" @click="detailsDialog = false">
             Close
           </v-btn>
         </v-card-actions>
@@ -1136,38 +1246,44 @@ const authStore = useAuthStore();
 
 // User role
 const userRole = computed(() => authStore.user?.role);
-const isAdminOrHr = computed(() => ['admin', 'hr'].includes(userRole.value));
+const isAdminOrHr = computed(() => ["admin", "hr"].includes(userRole.value));
 
 // Access control
-const accessStatus = ref('none');
-const accessMessage = ref('');
+const accessStatus = ref("none");
+const accessMessage = ref("");
 const requestDialog = ref(false);
-const requestReason = ref('');
+const requestReason = ref("");
 const submittingRequest = ref(false);
 const myRequests = ref([]);
 const requestsPanel = ref(null);
-const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin' || userRole.value === 'employee');
+const hasAccess = computed(
+  () =>
+    isAdminOrHr.value ||
+    accessStatus.value === "approved" ||
+    accessStatus.value === "admin" ||
+    userRole.value === "employee",
+);
 
 const getRequestStatusColor = (status) => {
-  const colors = { pending: 'warning', approved: 'success', rejected: 'error' };
-  return colors[status] || 'grey';
+  const colors = { pending: "warning", approved: "success", rejected: "error" };
+  return colors[status] || "grey";
 };
 
 const checkDeductionAccess = async () => {
-  if (isAdminOrHr.value || userRole.value === 'employee') return;
+  if (isAdminOrHr.value || userRole.value === "employee") return;
   try {
-    const response = await moduleAccessService.checkAccess('deductions');
+    const response = await moduleAccessService.checkAccess("deductions");
     accessStatus.value = response.status;
-    accessMessage.value = response.message || '';
+    accessMessage.value = response.message || "";
   } catch {
-    accessStatus.value = 'none';
+    accessStatus.value = "none";
   }
 };
 
 const loadMyRequests = async () => {
-  if (isAdminOrHr.value || userRole.value === 'employee') return;
+  if (isAdminOrHr.value || userRole.value === "employee") return;
   try {
-    const response = await moduleAccessService.getRequests('deductions');
+    const response = await moduleAccessService.getRequests("deductions");
     myRequests.value = response.data || [];
   } catch {
     myRequests.value = [];
@@ -1178,14 +1294,16 @@ const submitAccessRequest = async () => {
   if (!requestReason.value) return;
   submittingRequest.value = true;
   try {
-    await moduleAccessService.submitRequest('deductions', { reason: requestReason.value });
-    toast.success('Access request submitted successfully');
+    await moduleAccessService.submitRequest("deductions", {
+      reason: requestReason.value,
+    });
+    toast.success("Access request submitted successfully");
     requestDialog.value = false;
-    requestReason.value = '';
-    accessStatus.value = 'pending';
+    requestReason.value = "";
+    accessStatus.value = "pending";
     await loadMyRequests();
   } catch (error) {
-    const msg = error.response?.data?.message || 'Failed to submit request';
+    const msg = error.response?.data?.message || "Failed to submit request";
     toast.error(msg);
   } finally {
     submittingRequest.value = false;
@@ -1214,6 +1332,9 @@ const selectionMode = ref("individual");
 const affectedEmployeesCount = ref(0);
 const deductionStep = ref(1);
 const deductionStepItems = ["Employee & Type", "Amount & Schedule"];
+const cashAdvanceAvailability = ref(null);
+const cashAdvanceAvailabilityLoading = ref(false);
+const cashAdvanceAvailabilityError = ref("");
 
 // Filters
 const filters = ref({
@@ -1283,6 +1404,68 @@ const canSaveDeduction = computed(() => {
     Number(formData.value.installments) > 0 &&
     !!formData.value.start_date
   );
+});
+
+const isCashAdvanceType = computed(
+  () => formData.value.deduction_type === "cash_advance",
+);
+
+const isIndividualCashAdvanceContext = computed(() => {
+  if (!dialog.value || !isCashAdvanceType.value) return false;
+  if (editMode.value) return true;
+  return selectionMode.value === "individual";
+});
+
+const shouldFetchCashAdvanceAvailability = computed(() => {
+  return isIndividualCashAdvanceContext.value && !!formData.value.employee_id;
+});
+
+const showCashAdvanceAvailability = computed(() => {
+  return (
+    shouldFetchCashAdvanceAvailability.value && !!cashAdvanceAvailability.value
+  );
+});
+
+const showCashAdvanceAvailabilityError = computed(() => {
+  return (
+    shouldFetchCashAdvanceAvailability.value &&
+    !!cashAdvanceAvailabilityError.value
+  );
+});
+
+const showCashAdvanceSelectionHint = computed(() => {
+  return (
+    dialog.value &&
+    isCashAdvanceType.value &&
+    !editMode.value &&
+    selectionMode.value !== "individual"
+  );
+});
+
+const cashAdvanceAvailableBalance = computed(() => {
+  return Number(cashAdvanceAvailability.value?.available_balance || 0);
+});
+
+const hasCashAdvanceLimitWarning = computed(() => {
+  if (!showCashAdvanceAvailability.value) return false;
+  return (
+    Number(formData.value.total_amount || 0) > cashAdvanceAvailableBalance.value
+  );
+});
+
+const cashAdvanceStartDateLabel = computed(() => {
+  const date = cashAdvanceAvailability.value?.start_date;
+  return date ? formatDate(date) : "N/A";
+});
+
+const cashAdvanceAsOfDateLabel = computed(() => {
+  const date = cashAdvanceAvailability.value?.as_of_date;
+  return date ? formatDate(date) : "N/A";
+});
+
+const cashAdvanceLastPayrollLabel = computed(() => {
+  const date = cashAdvanceAvailability.value?.last_payroll?.period_end;
+  return date ? formatDate(date) : "";
 });
 
 const { handleKeydown: handleDeductionFormKeydown } = useKeyboardFirstFlow({
@@ -1405,6 +1588,59 @@ watch(selectionMode, (newMode) => {
   formData.value.department = null;
   formData.value.position = null;
 });
+
+const resetCashAdvanceAvailability = () => {
+  cashAdvanceAvailability.value = null;
+  cashAdvanceAvailabilityLoading.value = false;
+  cashAdvanceAvailabilityError.value = "";
+};
+
+const fetchCashAdvanceAvailability = async () => {
+  if (!shouldFetchCashAdvanceAvailability.value) {
+    resetCashAdvanceAvailability();
+    return;
+  }
+
+  cashAdvanceAvailabilityLoading.value = true;
+  cashAdvanceAvailabilityError.value = "";
+
+  try {
+    const response = await deductionService.getCashAdvanceAvailability(
+      formData.value.employee_id,
+    );
+    cashAdvanceAvailability.value = response.data;
+  } catch (error) {
+    cashAdvanceAvailability.value = null;
+    cashAdvanceAvailabilityError.value =
+      error.response?.data?.message ||
+      "Unable to load available balance estimate";
+  } finally {
+    cashAdvanceAvailabilityLoading.value = false;
+  }
+};
+
+watch(
+  () => [
+    dialog.value,
+    editMode.value,
+    selectionMode.value,
+    formData.value.deduction_type,
+    formData.value.employee_id,
+  ],
+  () => {
+    if (!dialog.value || !isCashAdvanceType.value) {
+      resetCashAdvanceAvailability();
+      return;
+    }
+
+    if (!isIndividualCashAdvanceContext.value) {
+      resetCashAdvanceAvailability();
+      return;
+    }
+
+    fetchCashAdvanceAvailability();
+  },
+);
 
 // Watch total_amount and installments to auto-calculate amount_per_cutoff
 watch(
@@ -1571,6 +1807,7 @@ const openAddDialog = () => {
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
+  resetCashAdvanceAvailability();
   dialog.value = true;
 };
 
@@ -1594,6 +1831,7 @@ const openEditDialog = (deduction) => {
     description: deduction.description,
     reference_number: deduction.reference_number,
   };
+  resetCashAdvanceAvailability();
   dialog.value = true;
 };
 
@@ -1604,6 +1842,7 @@ const closeDialog = () => {
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
+  resetCashAdvanceAvailability();
   if (form.value) form.value.resetValidation();
 };
 
@@ -1779,8 +2018,11 @@ const getStatusColor = (status) => {
 };
 
 const getProgress = (deduction) => {
-  if (deduction.installments === 0) return 0;
-  return (deduction.installments_paid / deduction.installments) * 100;
+  const installments = Number(deduction.installments) || 0;
+  const installmentsPaid = Number(deduction.installments_paid) || 0;
+
+  if (installments <= 0) return 0;
+  return Math.min(100, Math.max(0, (installmentsPaid / installments) * 100));
 };
 
 // Lifecycle

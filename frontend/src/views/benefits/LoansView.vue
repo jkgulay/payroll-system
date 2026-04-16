@@ -24,47 +24,140 @@
 
       <!-- Access Gate for Payrollist -->
       <template v-if="!isAdminOrHr && !hasAccess">
-        <v-alert v-if="accessStatus === 'none'" type="info" variant="tonal" prominent class="ma-4" icon="mdi-lock-outline">
+        <v-alert
+          v-if="accessStatus === 'none'"
+          type="info"
+          variant="tonal"
+          prominent
+          class="ma-4"
+          icon="mdi-lock-outline"
+        >
           <v-alert-title>Access Required</v-alert-title>
-          <p class="mt-1">You need to request access from an administrator before you can manage loans.</p>
-          <v-btn color="primary" variant="flat" class="mt-3" prepend-icon="mdi-send" @click="accessRequestDialog = true">Request Access</v-btn>
+          <p class="mt-1">
+            You need to request access from an administrator before you can
+            manage loans.
+          </p>
+          <v-btn
+            color="primary"
+            variant="flat"
+            class="mt-3"
+            prepend-icon="mdi-send"
+            @click="accessRequestDialog = true"
+            >Request Access</v-btn
+          >
         </v-alert>
-        <v-alert v-else-if="accessStatus === 'pending'" type="warning" variant="tonal" prominent class="ma-4" icon="mdi-clock-outline">
+        <v-alert
+          v-else-if="accessStatus === 'pending'"
+          type="warning"
+          variant="tonal"
+          prominent
+          class="ma-4"
+          icon="mdi-clock-outline"
+        >
           <v-alert-title>Pending Approval</v-alert-title>
-          <p class="mt-1">Your access request is pending admin approval. You will be able to manage loans once approved.</p>
+          <p class="mt-1">
+            Your access request is pending admin approval. You will be able to
+            manage loans once approved.
+          </p>
         </v-alert>
-        <v-alert v-else-if="accessStatus === 'rejected'" type="error" variant="tonal" prominent class="ma-4" icon="mdi-close-circle-outline">
+        <v-alert
+          v-else-if="accessStatus === 'rejected'"
+          type="error"
+          variant="tonal"
+          prominent
+          class="ma-4"
+          icon="mdi-close-circle-outline"
+        >
           <v-alert-title>Request Rejected</v-alert-title>
           <p class="mt-1">{{ accessMessage }}</p>
-          <v-btn color="primary" variant="flat" class="mt-3" prepend-icon="mdi-send" @click="accessRequestDialog = true">Submit New Request</v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            class="mt-3"
+            prepend-icon="mdi-send"
+            @click="accessRequestDialog = true"
+            >Submit New Request</v-btn
+          >
         </v-alert>
         <v-expansion-panels v-model="accessRequestsPanel" class="mx-4 mb-4">
           <v-expansion-panel>
-            <v-expansion-panel-title><v-icon class="mr-2">mdi-history</v-icon>My Access Requests</v-expansion-panel-title>
+            <v-expansion-panel-title
+              ><v-icon class="mr-2">mdi-history</v-icon>My Access
+              Requests</v-expansion-panel-title
+            >
             <v-expansion-panel-text>
               <v-list v-if="myAccessRequests.length > 0" density="compact">
-                <v-list-item v-for="req in myAccessRequests" :key="req.id" :subtitle="req.reason">
-                  <template v-slot:prepend><v-icon :color="getAccessRequestStatusColor(req.status)">{{ req.status === 'pending' ? 'mdi-clock-outline' : req.status === 'approved' ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon></template>
-                  <template v-slot:append><v-chip :color="getAccessRequestStatusColor(req.status)" size="x-small" variant="flat">{{ req.status }}</v-chip></template>
+                <v-list-item
+                  v-for="req in myAccessRequests"
+                  :key="req.id"
+                  :subtitle="req.reason"
+                >
+                  <template v-slot:prepend
+                    ><v-icon :color="getAccessRequestStatusColor(req.status)">{{
+                      req.status === "pending"
+                        ? "mdi-clock-outline"
+                        : req.status === "approved"
+                          ? "mdi-check-circle"
+                          : "mdi-close-circle"
+                    }}</v-icon></template
+                  >
+                  <template v-slot:append
+                    ><v-chip
+                      :color="getAccessRequestStatusColor(req.status)"
+                      size="x-small"
+                      variant="flat"
+                      >{{ req.status }}</v-chip
+                    ></template
+                  >
                 </v-list-item>
               </v-list>
-              <p v-else class="text-center text-medium-emphasis py-4">No requests yet.</p>
+              <p v-else class="text-center text-medium-emphasis py-4">
+                No requests yet.
+              </p>
             </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>
         <v-dialog v-model="accessRequestDialog" max-width="500" persistent>
           <v-card rounded="lg">
-            <v-card-title class="d-flex align-center pa-4"><v-icon color="primary" class="mr-2">mdi-lock-open-variant</v-icon>Request Loans Access</v-card-title>
+            <v-card-title class="d-flex align-center pa-4"
+              ><v-icon color="primary" class="mr-2"
+                >mdi-lock-open-variant</v-icon
+              >Request Loans Access</v-card-title
+            >
             <v-divider></v-divider>
             <v-card-text class="pa-4">
-              <p class="text-body-2 mb-4">Please provide a reason for needing access to the Loans module.</p>
-              <v-textarea v-model="accessRequestReason" label="Reason" variant="outlined" rows="3" :rules="[v => !!v || 'Reason is required']" placeholder="Explain why you need access"></v-textarea>
+              <p class="text-body-2 mb-4">
+                Please provide a reason for needing access to the Loans module.
+              </p>
+              <v-textarea
+                v-model="accessRequestReason"
+                label="Reason"
+                variant="outlined"
+                rows="3"
+                :rules="[(v) => !!v || 'Reason is required']"
+                placeholder="Explain why you need access"
+              ></v-textarea>
             </v-card-text>
             <v-divider></v-divider>
             <v-card-actions class="pa-4">
               <v-spacer></v-spacer>
-              <v-btn variant="text" @click="accessRequestDialog = false; accessRequestReason = ''">Cancel</v-btn>
-              <v-btn color="primary" variant="flat" :loading="submittingAccessRequest" :disabled="!accessRequestReason" prepend-icon="mdi-send" @click="submitAccessRequest">Submit Request</v-btn>
+              <v-btn
+                variant="text"
+                @click="
+                  accessRequestDialog = false;
+                  accessRequestReason = '';
+                "
+                >Cancel</v-btn
+              >
+              <v-btn
+                color="primary"
+                variant="flat"
+                :loading="submittingAccessRequest"
+                :disabled="!accessRequestReason"
+                prepend-icon="mdi-send"
+                @click="submitAccessRequest"
+                >Submit Request</v-btn
+              >
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -72,311 +165,312 @@
 
       <!-- Main Content -->
       <template v-if="hasAccess">
-
-      <!-- Stats Cards -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon total">
-            <v-icon size="20">mdi-hand-coin</v-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-label">Total Loans</div>
-            <div class="stat-value">{{ loans.length }}</div>
-          </div>
-        </div>
-        <div class="stat-card" v-if="userRole !== 'employee'">
-          <div class="stat-icon pending">
-            <v-icon size="20">mdi-clock-alert</v-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-label">Pending</div>
-            <div class="stat-value">{{ pendingCount }}</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon active">
-            <v-icon size="20">mdi-check-circle</v-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-label">Active</div>
-            <div class="stat-value">{{ activeCount }}</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon balance">
-            <v-icon size="20">mdi-cash-multiple</v-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-label">Total Balance</div>
-            <div class="stat-value">₱{{ formatNumber(totalBalance) }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pending Approval Alert (Admin Only) -->
-      <v-alert
-        v-if="userRole === 'admin' && pendingCount > 0"
-        type="info"
-        variant="tonal"
-        density="compact"
-        class="mb-4"
-      >
-        <div class="d-flex align-center justify-space-between">
-          <div>
-            <strong
-              >{{ pendingCount }} Loan{{ pendingCount > 1 ? "s" : "" }} Pending
-              Approval</strong
-            >
-          </div>
-          <v-btn
-            color="primary"
-            size="small"
-            variant="tonal"
-            @click="showPendingOnly"
-          >
-            View Pending
-          </v-btn>
-        </div>
-      </v-alert>
-
-      <!-- Filters -->
-      <div class="filters-section">
-        <div class="filter-group">
-          <v-autocomplete
-            v-if="userRole !== 'employee'"
-            v-model="filters.employee_id"
-            :items="employees"
-            item-title="full_name"
-            item-value="id"
-            label="Filter by Employee"
-            variant="outlined"
-            density="compact"
-            clearable
-            hide-details
-            prepend-inner-icon="mdi-account-search"
-            @update:model-value="fetchLoans"
-            style="min-width: 250px"
-          ></v-autocomplete>
-          <v-select
-            v-model="filters.loan_type"
-            :items="loanTypes"
-            label="Filter by Type"
-            variant="outlined"
-            density="compact"
-            clearable
-            hide-details
-            prepend-inner-icon="mdi-cash"
-            @update:model-value="fetchLoans"
-            style="min-width: 200px"
-          ></v-select>
-          <v-select
-            v-model="filters.status"
-            :items="statusOptions"
-            label="Filter by Status"
-            variant="outlined"
-            density="compact"
-            clearable
-            hide-details
-            prepend-inner-icon="mdi-filter"
-            @update:model-value="fetchLoans"
-            style="min-width: 200px"
-          ></v-select>
-          <v-btn
-            color="error"
-            variant="tonal"
-            icon="mdi-filter-remove"
-            @click="clearFilters"
-            :disabled="!hasActiveFilters"
-            title="Clear Filters"
-            size="small"
-          ></v-btn>
-          <v-chip
-            v-if="hasActiveFilters"
-            size="small"
-            color="info"
-            variant="tonal"
-          >
-            {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
-          </v-chip>
-        </div>
-      </div>
-
-      <!-- Loans Table -->
-      <v-data-table
-        :headers="headers"
-        :items="loans"
-        :loading="loading"
-        :items-per-page="15"
-        class="modern-table"
-      >
-        <template v-slot:item.employee="{ item }">
-          <div>
-            <div class="font-weight-medium">{{ item.employee?.full_name }}</div>
-            <div class="text-caption text-medium-emphasis">
-              {{ item.employee?.employee_number }}
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon total">
+              <v-icon size="20">mdi-hand-coin</v-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Total Loans</div>
+              <div class="stat-value">{{ loans.length }}</div>
             </div>
           </div>
-        </template>
-
-        <template v-slot:item.loan_number="{ item }">
-          <span class="font-weight-medium">{{ item.loan_number }}</span>
-        </template>
-
-        <template v-slot:item.loan_type="{ item }">
-          <v-chip
-            :color="getLoanTypeColor(item.loan_type)"
-            size="small"
-            variant="tonal"
-          >
-            {{ formatLoanType(item.loan_type) }}
-          </v-chip>
-        </template>
-
-        <template v-slot:item.principal_amount="{ item }">
-          <span class="font-weight-medium"
-            >₱{{ formatNumber(item.principal_amount) }}</span
-          >
-        </template>
-
-        <template v-slot:item.total_amount="{ item }">
-          <span class="font-weight-medium"
-            >₱{{ formatNumber(item.total_amount) }}</span
-          >
-        </template>
-
-        <template v-slot:item.balance="{ item }">
-          <span
-            :class="
-              item.balance > 0 ? 'text-error font-weight-bold' : 'text-success'
-            "
-          >
-            ₱{{ formatNumber(item.balance) }}
-          </span>
-        </template>
-
-        <template v-slot:item.progress="{ item }">
-          <div style="min-width: 120px">
-            <v-progress-linear
-              :model-value="(item.amount_paid / item.total_amount) * 100 || 0"
-              :color="
-                (item.amount_paid / item.total_amount) * 100 >= 100
-                  ? 'success'
-                  : (item.amount_paid / item.total_amount) * 100 >= 50
-                    ? 'primary'
-                    : 'warning'
-              "
-              height="8"
-              rounded
-            ></v-progress-linear>
-            <div class="text-caption text-center mt-1">
-              {{
-                Math.round((item.amount_paid / item.total_amount) * 100) || 0
-              }}%
+          <div class="stat-card" v-if="userRole !== 'employee'">
+            <div class="stat-icon pending">
+              <v-icon size="20">mdi-clock-alert</v-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Pending</div>
+              <div class="stat-value">{{ pendingCount }}</div>
             </div>
           </div>
-        </template>
+          <div class="stat-card">
+            <div class="stat-icon active">
+              <v-icon size="20">mdi-check-circle</v-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Active</div>
+              <div class="stat-value">{{ activeCount }}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon balance">
+              <v-icon size="20">mdi-cash-multiple</v-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">Total Balance</div>
+              <div class="stat-value">₱{{ formatNumber(totalBalance) }}</div>
+            </div>
+          </div>
+        </div>
 
-        <template v-slot:item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.status)"
-            size="small"
-            variant="flat"
-          >
-            {{ formatStatus(item.status) }}
-          </v-chip>
-        </template>
-
-        <template v-slot:item.actions="{ item }">
-          <v-menu>
-            <template v-slot:activator="{ props }">
-              <v-btn
-                icon="mdi-dots-vertical"
-                size="small"
-                variant="text"
-                v-bind="props"
-              ></v-btn>
-            </template>
-            <v-list density="compact">
-              <!-- View Details -->
-              <v-list-item @click="viewDetails(item)">
-                <template v-slot:prepend>
-                  <v-icon color="info">mdi-eye</v-icon>
-                </template>
-                <v-list-item-title>View Details</v-list-item-title>
-              </v-list-item>
-
-              <!-- Admin Actions - Approve/Reject -->
-              <template
-                v-if="userRole === 'admin' && item.status === 'pending'"
+        <!-- Pending Approval Alert (Admin Only) -->
+        <v-alert
+          v-if="userRole === 'admin' && pendingCount > 0"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          <div class="d-flex align-center justify-space-between">
+            <div>
+              <strong
+                >{{ pendingCount }} Loan{{
+                  pendingCount > 1 ? "s" : ""
+                }}
+                Pending Approval</strong
               >
-                <v-list-item @click="openApproveDialog(item)">
-                  <template v-slot:prepend>
-                    <v-icon color="success">mdi-check</v-icon>
-                  </template>
-                  <v-list-item-title>Approve</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="openRejectDialog(item)">
-                  <template v-slot:prepend>
-                    <v-icon color="error">mdi-close</v-icon>
-                  </template>
-                  <v-list-item-title>Reject</v-list-item-title>
-                </v-list-item>
-              </template>
-
-              <!-- Edit Action -->
-              <v-list-item
-                v-if="
-                  userRole !== 'employee' &&
-                  ['pending', 'approved'].includes(item.status)
-                "
-                @click="openEditDialog(item)"
-              >
-                <template v-slot:prepend>
-                  <v-icon>mdi-pencil</v-icon>
-                </template>
-                <v-list-item-title>Edit</v-list-item-title>
-              </v-list-item>
-
-              <!-- Delete Action -->
-              <v-list-item
-                v-if="
-                  userRole !== 'employee' &&
-                  ['pending', 'rejected'].includes(item.status)
-                "
-                @click="confirmDelete(item)"
-              >
-                <template v-slot:prepend>
-                  <v-icon color="error">mdi-delete</v-icon>
-                </template>
-                <v-list-item-title class="text-error">Delete</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-        </template>
-
-        <template v-slot:no-data>
-          <div class="text-center py-8">
-            <v-icon size="64" color="grey">mdi-hand-coin-outline</v-icon>
-            <p class="text-h6 mt-4">No loans found</p>
-            <p class="text-body-2 text-medium-emphasis">
-              {{
-                userRole === "employee"
-                  ? "Request a loan to get started"
-                  : "Add a loan to get started"
-              }}
-            </p>
+            </div>
             <v-btn
-              class="mt-3"
-              variant="outlined"
               color="primary"
-              @click="clearFilters"
-              :disabled="!hasActiveFilters"
+              size="small"
+              variant="tonal"
+              @click="showPendingOnly"
             >
-              Clear filters
+              View Pending
             </v-btn>
           </div>
-        </template>
-      </v-data-table>
+        </v-alert>
+
+        <!-- Filters -->
+        <div class="filters-section">
+          <div class="filter-group">
+            <v-autocomplete
+              v-if="userRole !== 'employee'"
+              v-model="filters.employee_id"
+              :items="employees"
+              item-title="full_name"
+              item-value="id"
+              label="Filter by Employee"
+              variant="outlined"
+              density="compact"
+              clearable
+              hide-details
+              prepend-inner-icon="mdi-account-search"
+              @update:model-value="fetchLoans"
+              style="min-width: 250px"
+            ></v-autocomplete>
+            <v-select
+              v-model="filters.loan_type"
+              :items="loanTypes"
+              label="Filter by Type"
+              variant="outlined"
+              density="compact"
+              clearable
+              hide-details
+              prepend-inner-icon="mdi-cash"
+              @update:model-value="fetchLoans"
+              style="min-width: 200px"
+            ></v-select>
+            <v-select
+              v-model="filters.status"
+              :items="statusOptions"
+              label="Filter by Status"
+              variant="outlined"
+              density="compact"
+              clearable
+              hide-details
+              prepend-inner-icon="mdi-filter"
+              @update:model-value="fetchLoans"
+              style="min-width: 200px"
+            ></v-select>
+            <v-btn
+              color="error"
+              variant="tonal"
+              icon="mdi-filter-remove"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+              title="Clear Filters"
+              size="small"
+            ></v-btn>
+            <v-chip
+              v-if="hasActiveFilters"
+              size="small"
+              color="info"
+              variant="tonal"
+            >
+              {{ activeFilterCount }} active filter{{
+                activeFilterCount > 1 ? "s" : ""
+              }}
+            </v-chip>
+          </div>
+        </div>
+
+        <!-- Loans Table -->
+        <v-data-table
+          :headers="headers"
+          :items="loans"
+          :loading="loading"
+          :items-per-page="15"
+          class="modern-table"
+        >
+          <template v-slot:item.employee="{ item }">
+            <div>
+              <div class="font-weight-medium">
+                {{ item.employee?.full_name }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {{ item.employee?.employee_number }}
+              </div>
+            </div>
+          </template>
+
+          <template v-slot:item.loan_number="{ item }">
+            <span class="font-weight-medium">{{ item.loan_number }}</span>
+          </template>
+
+          <template v-slot:item.loan_type="{ item }">
+            <v-chip
+              :color="getLoanTypeColor(item.loan_type)"
+              size="small"
+              variant="tonal"
+            >
+              {{ formatLoanType(item.loan_type) }}
+            </v-chip>
+          </template>
+
+          <template v-slot:item.principal_amount="{ item }">
+            <span class="font-weight-medium"
+              >₱{{ formatNumber(item.principal_amount) }}</span
+            >
+          </template>
+
+          <template v-slot:item.total_amount="{ item }">
+            <span class="font-weight-medium"
+              >₱{{ formatNumber(item.total_amount) }}</span
+            >
+          </template>
+
+          <template v-slot:item.balance="{ item }">
+            <span
+              :class="
+                item.balance > 0
+                  ? 'text-error font-weight-bold'
+                  : 'text-success'
+              "
+            >
+              ₱{{ formatNumber(item.balance) }}
+            </span>
+          </template>
+
+          <template v-slot:item.progress="{ item }">
+            <div style="min-width: 120px">
+              <v-progress-linear
+                :model-value="getLoanProgress(item)"
+                :color="getLoanProgressColor(item)"
+                height="8"
+                rounded
+              ></v-progress-linear>
+              <div class="text-caption text-center mt-1">
+                {{ getLoanProgress(item) }}%
+              </div>
+            </div>
+          </template>
+
+          <template v-slot:item.status="{ item }">
+            <v-chip
+              :color="getStatusColor(item.status)"
+              size="small"
+              variant="flat"
+            >
+              {{ formatStatus(item.status) }}
+            </v-chip>
+          </template>
+
+          <template v-slot:item.actions="{ item }">
+            <v-menu>
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  icon="mdi-dots-vertical"
+                  size="small"
+                  variant="text"
+                  v-bind="props"
+                ></v-btn>
+              </template>
+              <v-list density="compact">
+                <!-- View Details -->
+                <v-list-item @click="viewDetails(item)">
+                  <template v-slot:prepend>
+                    <v-icon color="info">mdi-eye</v-icon>
+                  </template>
+                  <v-list-item-title>View Details</v-list-item-title>
+                </v-list-item>
+
+                <!-- Admin Actions - Approve/Reject -->
+                <template
+                  v-if="userRole === 'admin' && item.status === 'pending'"
+                >
+                  <v-list-item @click="openApproveDialog(item)">
+                    <template v-slot:prepend>
+                      <v-icon color="success">mdi-check</v-icon>
+                    </template>
+                    <v-list-item-title>Approve</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="openRejectDialog(item)">
+                    <template v-slot:prepend>
+                      <v-icon color="error">mdi-close</v-icon>
+                    </template>
+                    <v-list-item-title>Reject</v-list-item-title>
+                  </v-list-item>
+                </template>
+
+                <!-- Edit Action -->
+                <v-list-item
+                  v-if="
+                    userRole !== 'employee' &&
+                    ['pending', 'approved'].includes(item.status)
+                  "
+                  @click="openEditDialog(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon>mdi-pencil</v-icon>
+                  </template>
+                  <v-list-item-title>Edit</v-list-item-title>
+                </v-list-item>
+
+                <!-- Delete Action -->
+                <v-list-item
+                  v-if="
+                    userRole !== 'employee' &&
+                    ['pending', 'rejected'].includes(item.status)
+                  "
+                  @click="confirmDelete(item)"
+                >
+                  <template v-slot:prepend>
+                    <v-icon color="error">mdi-delete</v-icon>
+                  </template>
+                  <v-list-item-title class="text-error"
+                    >Delete</v-list-item-title
+                  >
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </template>
+
+          <template v-slot:no-data>
+            <div class="text-center py-8">
+              <v-icon size="64" color="grey">mdi-hand-coin-outline</v-icon>
+              <p class="text-h6 mt-4">No loans found</p>
+              <p class="text-body-2 text-medium-emphasis">
+                {{
+                  userRole === "employee"
+                    ? "Request a loan to get started"
+                    : "Add a loan to get started"
+                }}
+              </p>
+              <v-btn
+                class="mt-3"
+                variant="outlined"
+                color="primary"
+                @click="clearFilters"
+                :disabled="!hasActiveFilters"
+              >
+                Clear filters
+              </v-btn>
+            </div>
+          </template>
+        </v-data-table>
       </template>
     </div>
 
@@ -918,25 +1012,12 @@
                     >Amount Paid</span
                   >
                   <span class="text-h6 font-weight-bold" style="color: #2e7d32">
-                    ₱{{ formatNumber(selectedLoan.amount_paid) }}
+                    ₱{{ formatNumber(getLoanPaidAmount(selectedLoan)) }}
                   </span>
                 </div>
                 <v-progress-linear
-                  :model-value="
-                    (selectedLoan.amount_paid / selectedLoan.total_amount) *
-                      100 || 0
-                  "
-                  :color="
-                    (selectedLoan.amount_paid / selectedLoan.total_amount) *
-                      100 >=
-                    100
-                      ? 'success'
-                      : (selectedLoan.amount_paid / selectedLoan.total_amount) *
-                            100 >=
-                          50
-                        ? 'primary'
-                        : 'warning'
-                  "
+                  :model-value="getLoanProgress(selectedLoan)"
+                  :color="getLoanProgressColor(selectedLoan)"
                   height="20"
                   rounded
                   striped
@@ -1004,7 +1085,7 @@
               <div class="detail-card">
                 <div class="detail-label">Loans Paid</div>
                 <div class="detail-value success">
-                  ₱{{ formatNumber(selectedLoan.amount_paid) }}
+                  ₱{{ formatNumber(getLoanPaidAmount(selectedLoan)) }}
                 </div>
               </div>
             </v-col>
@@ -1098,50 +1179,67 @@ import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 const toast = useToast();
 const route = useRoute();
 const authStore = useAuthStore();
-const isAdminOrHr = computed(() => ['admin', 'hr'].includes(authStore.user?.role));
+const isAdminOrHr = computed(() =>
+  ["admin", "hr"].includes(authStore.user?.role),
+);
 
 // Access control
-const accessStatus = ref('none');
-const accessMessage = ref('');
+const accessStatus = ref("none");
+const accessMessage = ref("");
 const accessRequestDialog = ref(false);
-const accessRequestReason = ref('');
+const accessRequestReason = ref("");
 const submittingAccessRequest = ref(false);
 const myAccessRequests = ref([]);
 const accessRequestsPanel = ref(null);
-const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin');
+const hasAccess = computed(
+  () =>
+    isAdminOrHr.value ||
+    accessStatus.value === "approved" ||
+    accessStatus.value === "admin",
+);
 
-const getAccessRequestStatusColor = (status) => ({ pending: 'warning', approved: 'success', rejected: 'error' }[status] || 'grey');
+const getAccessRequestStatusColor = (status) =>
+  ({ pending: "warning", approved: "success", rejected: "error" })[status] ||
+  "grey";
 
 const checkModuleAccess = async () => {
   if (isAdminOrHr.value) return;
   try {
-    const response = await moduleAccessService.checkAccess('loans');
+    const response = await moduleAccessService.checkAccess("loans");
     accessStatus.value = response.status;
-    accessMessage.value = response.message || '';
-  } catch { accessStatus.value = 'none'; }
+    accessMessage.value = response.message || "";
+  } catch {
+    accessStatus.value = "none";
+  }
 };
 
 const loadMyAccessRequests = async () => {
   if (isAdminOrHr.value) return;
   try {
-    const response = await moduleAccessService.getRequests('loans');
+    const response = await moduleAccessService.getRequests("loans");
     myAccessRequests.value = response.data || [];
-  } catch { myAccessRequests.value = []; }
+  } catch {
+    myAccessRequests.value = [];
+  }
 };
 
 const submitAccessRequest = async () => {
   if (!accessRequestReason.value) return;
   submittingAccessRequest.value = true;
   try {
-    await moduleAccessService.submitRequest('loans', { reason: accessRequestReason.value });
-    toast.success('Access request submitted successfully');
+    await moduleAccessService.submitRequest("loans", {
+      reason: accessRequestReason.value,
+    });
+    toast.success("Access request submitted successfully");
     accessRequestDialog.value = false;
-    accessRequestReason.value = '';
-    accessStatus.value = 'pending';
+    accessRequestReason.value = "";
+    accessStatus.value = "pending";
     await loadMyAccessRequests();
   } catch (error) {
-    toast.error(error.response?.data?.message || 'Failed to submit request');
-  } finally { submittingAccessRequest.value = false; }
+    toast.error(error.response?.data?.message || "Failed to submit request");
+  } finally {
+    submittingAccessRequest.value = false;
+  }
 };
 
 // User role
@@ -1258,8 +1356,11 @@ const hasActiveFilters = computed(() => {
 });
 
 const activeFilterCount = computed(() => {
-  return [filters.value.employee_id, filters.value.loan_type, filters.value.status]
-    .filter(Boolean).length;
+  return [
+    filters.value.employee_id,
+    filters.value.loan_type,
+    filters.value.status,
+  ].filter(Boolean).length;
 });
 
 const { handleKeydown: handleLoanFormKeydown } = useKeyboardFirstFlow({
@@ -1277,7 +1378,6 @@ const { handleKeydown: handleLoanFormKeydown } = useKeyboardFirstFlow({
 const loanTypes = [
   { title: "Company Loan", value: "company" },
   { title: "Emergency Loan", value: "emergency" },
-  { title: "Salary Advance", value: "salary_advance" },
   { title: "Other", value: "other" },
 ];
 
@@ -1443,7 +1543,6 @@ const onLoanTypeChange = () => {
   const defaultRates = {
     company: 8.0,
     emergency: 5.0,
-    salary_advance: 0.0,
     other: 6.0,
   };
   formData.value.interest_rate = defaultRates[formData.value.loan_type] || 0;
@@ -1562,13 +1661,44 @@ const clearFilters = () => {
 };
 
 // Formatters
+const getLoanPaidAmount = (loan) => {
+  if (!loan) return 0;
+
+  const total = parseFloat(loan.total_amount) || 0;
+  const balance = parseFloat(loan.balance) || 0;
+
+  if (total <= 0) {
+    return Math.max(0, parseFloat(loan.amount_paid) || 0);
+  }
+
+  return Math.min(total, Math.max(0, total - balance));
+};
+
+const getLoanProgress = (loan) => {
+  if (!loan) return 0;
+
+  const total = parseFloat(loan.total_amount) || 0;
+  if (total <= 0) return 0;
+
+  return Math.min(
+    100,
+    Math.max(0, Math.round((getLoanPaidAmount(loan) / total) * 100)),
+  );
+};
+
+const getLoanProgressColor = (loan) => {
+  const progress = getLoanProgress(loan);
+  if (progress >= 100) return "success";
+  if (progress >= 50) return "primary";
+  return "warning";
+};
+
 const formatLoanType = (type) => {
   const types = {
     sss: "SSS Loan",
     pag_ibig: "Pag-IBIG Loan",
     company: "Company Loan",
     emergency: "Emergency Loan",
-    salary_advance: "Salary Advance",
     other: "Other",
   };
   return types[type] || type;
@@ -1586,7 +1716,6 @@ const getLoanTypeColor = (type) => {
   const colors = {
     company: "purple",
     emergency: "orange",
-    salary_advance: "cyan",
     other: "grey",
   };
   return colors[type] || "grey";

@@ -282,37 +282,15 @@
     $grossAmount = $item->gross_pay ?? 0;
 
     $cashAdvance = $item->cash_advance ?? 0;
+    $employeeSavings = $item->employee_savings ?? 0;
+    $loanDeductions = $item->loans ?? 0;
+    $combinedDeductions = ($item->employee_deductions ?? 0) + ($item->other_deductions ?? 0);
     $undertime = $item->undertime_deduction ?? 0;
     $sssPrem = $item->sss ?? 0;
     $phicPrem = $item->philhealth ?? 0;
     $hdmfPrem = $item->pagibig ?? 0;
     $totalDeductions = $item->total_deductions ?? 0;
     $netAmount = $item->net_pay ?? 0;
-
-    $ppeBoots = 0;
-    $cashBond = 0;
-    $sssLoan = 0;
-    $hdmfLoan = 0;
-    $otherDeduction = 0;
-
-    if (!empty($item->deductions_breakdown) && is_array($item->deductions_breakdown)) {
-    foreach ($item->deductions_breakdown as $deduction) {
-    $deductionName = strtolower($deduction['name'] ?? $deduction['type'] ?? '');
-    $deductionAmount = $deduction['amount'] ?? 0;
-
-    if (str_contains($deductionName, 'ppe') || str_contains($deductionName, 'safety') || str_contains($deductionName, 'boots')) {
-    $ppeBoots += $deductionAmount;
-    } elseif (str_contains($deductionName, 'cash bond')) {
-    $cashBond += $deductionAmount;
-    } elseif (str_contains($deductionName, 'sss loan')) {
-    $sssLoan += $deductionAmount;
-    } elseif (str_contains($deductionName, 'hdmf loan') || str_contains($deductionName, 'pag-ibig loan') || str_contains($deductionName, 'pagibig loan')) {
-    $hdmfLoan += $deductionAmount;
-    } else {
-    $otherDeduction += $deductionAmount;
-    }
-    }
-    }
     @endphp
 
     <div class="page-wrapper">
@@ -402,20 +380,24 @@
                             </thead>
                             <tbody>
                                 <tr>
+                                    <td>Employee Savings</td>
+                                    <td class="text-right">{{ $employeeSavings > 0 ? number_format($employeeSavings, 2) : '-' }}</td>
+                                </tr>
+                                <tr>
                                     <td>Cash Advance</td>
                                     <td class="text-right">{{ $cashAdvance > 0 ? number_format($cashAdvance, 2) : '-' }}</td>
                                 </tr>
                                 <tr>
-                                    <td>PPE/Safety Boots</td>
-                                    <td class="text-right">{{ $ppeBoots > 0 ? number_format($ppeBoots, 2) : '-' }}</td>
+                                    <td>Loans</td>
+                                    <td class="text-right">{{ $loanDeductions > 0 ? number_format($loanDeductions, 2) : '-' }}</td>
                                 </tr>
                                 <tr>
                                     <td>Undertime</td>
                                     <td class="text-right">{{ $undertime > 0 ? number_format($undertime, 2) : '-' }}</td>
                                 </tr>
                                 <tr>
-                                    <td>Cash Bond</td>
-                                    <td class="text-right">{{ $cashBond > 0 ? number_format($cashBond, 2) : '-' }}</td>
+                                    <td>Deductions</td>
+                                    <td class="text-right">{{ $combinedDeductions > 0 ? number_format($combinedDeductions, 2) : '-' }}</td>
                                 </tr>
                                 <tr>
                                     <td>SSS Prem.</td>
@@ -428,18 +410,6 @@
                                 <tr>
                                     <td>HDMF Prem.</td>
                                     <td class="text-right">{{ $hdmfPrem > 0 ? number_format($hdmfPrem, 2) : '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <td>SSS Loan</td>
-                                    <td class="text-right">{{ $sssLoan > 0 ? number_format($sssLoan, 2) : '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <td>HDMF Loan</td>
-                                    <td class="text-right">{{ $hdmfLoan > 0 ? number_format($hdmfLoan, 2) : '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <td>Other Deductions</td>
-                                    <td class="text-right">{{ $otherDeduction > 0 ? number_format($otherDeduction, 2) : '-' }}</td>
                                 </tr>
                                 <tr class="total-row">
                                     <td>Total Deductions</td>

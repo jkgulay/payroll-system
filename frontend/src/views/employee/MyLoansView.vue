@@ -99,8 +99,15 @@
           >
             Clear
           </v-btn>
-          <v-chip v-if="hasActiveFilters" size="small" color="info" variant="tonal">
-            {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+          <v-chip
+            v-if="hasActiveFilters"
+            size="small"
+            color="info"
+            variant="tonal"
+          >
+            {{ activeFilterCount }} active filter{{
+              activeFilterCount > 1 ? "s" : ""
+            }}
           </v-chip>
         </div>
       </div>
@@ -215,7 +222,11 @@
         </v-card-title>
         <v-divider></v-divider>
 
-        <v-card-text class="dialog-content" style="max-height: 70vh" @keydown.capture="handleMyLoanRequestKeydown">
+        <v-card-text
+          class="dialog-content"
+          style="max-height: 70vh"
+          @keydown.capture="handleMyLoanRequestKeydown"
+        >
           <v-form ref="requestFormRef" v-model="formValid">
             <v-row>
               <v-col cols="12">
@@ -547,7 +558,6 @@ const headers = [
 
 const loanTypes = [
   { title: "Company Loan", value: "company" },
-  { title: "Salary Advance", value: "salary_advance" },
   { title: "Emergency Loan", value: "emergency" },
   { title: "Other", value: "other" },
 ];
@@ -579,8 +589,7 @@ const hasActiveFilters = computed(() => {
 });
 
 const activeFilterCount = computed(() => {
-  return [filters.value.loan_type, filters.value.status].filter(Boolean)
-    .length;
+  return [filters.value.loan_type, filters.value.status].filter(Boolean).length;
 });
 
 const { handleKeydown: handleMyLoanRequestKeydown } = useKeyboardFirstFlow({
@@ -606,7 +615,6 @@ const onLoanTypeChange = () => {
   const defaultRates = {
     company: 8.0,
     emergency: 5.0,
-    salary_advance: 0.0,
     other: 6.0,
   };
   requestForm.value.interest_rate =
@@ -734,7 +742,6 @@ const formatLoanType = (type) => {
     sss: "SSS Loan",
     pag_ibig: "Pag-IBIG Loan",
     company: "Company Loan",
-    salary_advance: "Salary Advance",
     emergency: "Emergency Loan",
     other: "Other",
   };
@@ -750,7 +757,6 @@ const getLoanTypeColor = (type) => {
     sss: "blue",
     pag_ibig: "green",
     company: "purple",
-    salary_advance: "orange",
     emergency: "red",
     other: "grey",
   };

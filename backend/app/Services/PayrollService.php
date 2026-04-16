@@ -727,8 +727,8 @@ class PayrollService
         // 2nd cutoff = period ending on 16th or later of the month
         $isSecondCutoff = !$isSemiMonthly || $periodEnd->day >= 16;
 
-        // OPTIMIZATION: Use preloaded loans
-        $activeLoans = $employee->loans;
+        // OPTIMIZATION: Use preloaded loans when enabled for this payroll
+        $activeLoans = ($payroll->deduct_loans ?? true) ? $employee->loans : collect();
 
         $loanDeduction = 0;
         foreach ($activeLoans as $loan) {
@@ -762,8 +762,8 @@ class PayrollService
         // Cash advance (displayed separately in payroll register)
         $cashAdvance = 0;
 
-        // OPTIMIZATION: Use preloaded deductions
-        $activeDeductions = $employee->deductions;
+        // OPTIMIZATION: Use preloaded deductions when enabled for this payroll
+        $activeDeductions = ($payroll->deduct_employee_deductions ?? true) ? $employee->deductions : collect();
 
         // Government deductions must come from GovernmentRate settings and
         // employee contribution toggles only, never from manual deductions.
@@ -776,6 +776,8 @@ class PayrollService
         $employeeDeductions = 0;
         $otherDeductions = 0;
         $deductionsBreakdown = [];
+        $deductionRows = [];
+        $scheduledCashAdvance = 0;
 
         foreach ($activeDeductions as $deduction) {
             if (in_array($deduction->deduction_type, $governmentManagedDeductionTypes, true)) {
@@ -787,10 +789,20 @@ class PayrollService
                 $amountPerCutoff = $deduction->total_amount / $deduction->installments;
             }
 
-            $deductionAmount = min($amountPerCutoff, $deduction->balance);
+            $deductionAmount = min((float) $amountPerCutoff, (float) $deduction->balance);
+            if ($deductionAmount <= 0) {
+                continue;
+            }
+
+            $deductionRows[] = [
+                'id' => $deduction->id,
+                'type' => $deduction->deduction_type,
+                'name' => $deduction->deduction_name,
+                'amount' => $deductionAmount,
+            ];
 
             if ($deduction->deduction_type === 'cash_advance') {
-                $cashAdvance += $deductionAmount;
+                $scheduledCashAdvance += $deductionAmount;
             } elseif (in_array($deduction->deduction_type, $employeeSavingsTypes, true)) {
                 $employeeSavings += $deductionAmount;
             } elseif (in_array($deduction->deduction_type, $otherDeductionTypes)) {
@@ -798,13 +810,35 @@ class PayrollService
             } else {
                 $employeeDeductions += $deductionAmount;
             }
+        }
 
-            // Store breakdown by deduction type and name
+        // Keep cash advance deductions from consuming more than available earnings.
+        // This still respects each deduction balance, but avoids over-deducting take-home pay.
+        $nonCashDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
+            $withholdingTax + $employeeSavings + $employeeDeductions +
+            $otherDeductions + $undertimeDeduction;
+
+        $maxCashAdvanceByPay = max($grossPay - $nonCashDeductions, 0);
+        $cashAdvance = min($scheduledCashAdvance, $maxCashAdvanceByPay);
+
+        $remainingCashAdvance = $cashAdvance;
+        foreach ($deductionRows as $row) {
+            $appliedAmount = $row['amount'];
+
+            if ($row['type'] === 'cash_advance') {
+                $appliedAmount = min($appliedAmount, $remainingCashAdvance);
+                $remainingCashAdvance -= $appliedAmount;
+            }
+
+            if ($appliedAmount <= 0) {
+                continue;
+            }
+
             $deductionsBreakdown[] = [
-                'id' => $deduction->id,
-                'type' => $deduction->deduction_type,
-                'name' => $deduction->deduction_name,
-                'amount' => $deductionAmount,
+                'id' => $row['id'],
+                'type' => $row['type'],
+                'name' => $row['name'],
+                'amount' => $appliedAmount,
             ];
         }
 

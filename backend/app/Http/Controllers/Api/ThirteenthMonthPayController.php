@@ -359,7 +359,7 @@ class ThirteenthMonthPayController extends Controller
 
             // Get C/A Balance from active loans
             $caBalance = EmployeeLoan::where('employee_id', $employeeId)
-                ->whereIn('loan_type', ['salary_advance', 'cash_advance'])
+                ->where('loan_type', 'cash_advance')
                 ->where('status', 'active')
                 ->sum('balance');
 

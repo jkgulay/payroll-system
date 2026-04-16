@@ -272,6 +272,9 @@ class PayrollController extends Controller
             'deduct_sss' => 'nullable|boolean',
             'deduct_philhealth' => 'nullable|boolean',
             'deduct_pagibig' => 'nullable|boolean',
+            // Loan and manual deduction flags
+            'deduct_loans' => 'nullable|boolean',
+            'deduct_employee_deductions' => 'nullable|boolean',
             // Only employees with attendance
             'has_attendance' => 'nullable|boolean',
             'excluded_positions' => 'nullable|array',
@@ -325,6 +328,8 @@ class PayrollController extends Controller
                 'deduct_sss' => $validated['deduct_sss'] ?? true,
                 'deduct_philhealth' => $validated['deduct_philhealth'] ?? true,
                 'deduct_pagibig' => $validated['deduct_pagibig'] ?? true,
+                'deduct_loans' => $validated['deduct_loans'] ?? true,
+                'deduct_employee_deductions' => $validated['deduct_employee_deductions'] ?? true,
                 'overtime_employee_ids' => !empty($overtimeEmployeeIds) ? $overtimeEmployeeIds : null,
             ]);
 
@@ -877,6 +882,8 @@ class PayrollController extends Controller
             'deduct_sss' => 'sometimes|boolean',
             'deduct_philhealth' => 'sometimes|boolean',
             'deduct_pagibig' => 'sometimes|boolean',
+            'deduct_loans' => 'sometimes|boolean',
+            'deduct_employee_deductions' => 'sometimes|boolean',
             'overtime_employee_ids' => 'nullable|array',
             'overtime_employee_ids.*' => 'integer|exists:employees,id',
         ]);
@@ -951,6 +958,8 @@ class PayrollController extends Controller
             'deduct_sss',
             'deduct_philhealth',
             'deduct_pagibig',
+            'deduct_loans',
+            'deduct_employee_deductions',
             'payroll_scope',
             'individual_target',
             'included_position',
@@ -2407,7 +2416,7 @@ class PayrollController extends Controller
                 continue;
             }
 
-            if (in_array($field, ['deduct_sss', 'deduct_philhealth', 'deduct_pagibig', 'has_attendance'], true)) {
+            if (in_array($field, ['deduct_sss', 'deduct_philhealth', 'deduct_pagibig', 'deduct_loans', 'deduct_employee_deductions', 'has_attendance'], true)) {
                 if ((bool) $currentValue !== (bool) $newValue) {
                     return true;
                 }
@@ -2469,8 +2478,27 @@ class PayrollController extends Controller
      */
     private function recordDeductionInstallments(Payroll $payroll, Employee $employee, ?PayrollItem $payrollItem = null)
     {
+        if (($payroll->deduct_employee_deductions ?? true) !== true) {
+            return;
+        }
+
         // Government deductions are computed from GovernmentRate settings, not manual deduction rows.
         $governmentManagedDeductionTypes = ['sss', 'philhealth', 'pagibig', 'tax'];
+
+        $payrollItemDeductionAmounts = [];
+        if ($payrollItem && is_array($payrollItem->deductions_breakdown)) {
+            foreach ($payrollItem->deductions_breakdown as $entry) {
+                $deductionId = (int) ($entry['id'] ?? 0);
+                $amount = (float) ($entry['amount'] ?? 0);
+
+                if ($deductionId <= 0 || $amount <= 0) {
+                    continue;
+                }
+
+                $payrollItemDeductionAmounts[$deductionId] =
+                    ($payrollItemDeductionAmounts[$deductionId] ?? 0) + $amount;
+            }
+        }
 
         // Get active deductions for this employee in this payroll period
         $activeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
@@ -2487,26 +2515,67 @@ class PayrollController extends Controller
                 continue;
             }
 
-            // Calculate payment amount (use amount_per_cutoff, but not more than balance)
-            $amountPerCutoff = $deduction->amount_per_cutoff;
-            if (!$amountPerCutoff && $deduction->installments > 0) {
-                $amountPerCutoff = $deduction->total_amount / $deduction->installments;
+            $paymentAmount = 0;
+
+            // When a payroll item is available, post exactly what was deducted in that item.
+            if ($payrollItem && isset($payrollItemDeductionAmounts[(int) $deduction->id])) {
+                $paymentAmount = min(
+                    (float) $payrollItemDeductionAmounts[(int) $deduction->id],
+                    (float) $deduction->balance
+                );
+            } elseif ($payrollItem) {
+                // No deduction applied for this row in the payroll item; skip side effects.
+                continue;
+            } else {
+                // Fallback for legacy flows without payroll item context.
+                $amountPerCutoff = $deduction->amount_per_cutoff;
+                if (!$amountPerCutoff && $deduction->installments > 0) {
+                    $amountPerCutoff = $deduction->total_amount / $deduction->installments;
+                }
+                $paymentAmount = min((float) $amountPerCutoff, (float) $deduction->balance);
             }
-            $paymentAmount = min($amountPerCutoff, $deduction->balance);
 
             if ($paymentAmount > 0) {
-                $newBalance = $deduction->balance - $paymentAmount;
-                $newInstallmentsPaid = $deduction->installments_paid + 1;
+                $amountPerCutoff = (float) ($deduction->amount_per_cutoff ?? 0);
+                if ($amountPerCutoff <= 0 && (int) $deduction->installments > 0) {
+                    $amountPerCutoff = (float) $deduction->total_amount / max((int) $deduction->installments, 1);
+                }
+
+                $newBalance = max((float) $deduction->balance - $paymentAmount, 0);
+                $newInstallmentsPaid = (int) $deduction->installments_paid + 1;
+
+                $currentInstallments = max((int) ($deduction->installments ?? 0), $newInstallmentsPaid, 1);
+                $newInstallments = $currentInstallments;
+
+                if ($newBalance > 0 && $amountPerCutoff > 0) {
+                    $remainingInstallmentsNeeded = (int) ceil($newBalance / $amountPerCutoff);
+                    $newInstallments = max($newInstallments, $newInstallmentsPaid + $remainingInstallmentsNeeded);
+                }
 
                 $updateData = [
                     'installments_paid' => $newInstallmentsPaid,
                     'balance' => $newBalance,
+                    'installments' => $newInstallments,
+                    'status' => $newBalance <= 0 ? 'completed' : 'active',
                 ];
 
-                // Mark as completed if balance is zero or all installments paid
-                if ($newBalance <= 0 || $newInstallmentsPaid >= $deduction->installments) {
-                    $updateData['status'] = 'completed';
+                // Keep completed state strictly tied to zero balance.
+                if ($newBalance <= 0) {
                     $updateData['balance'] = 0; // Ensure balance is exactly zero
+                }
+
+                // If installments were auto-extended, keep end_date aligned so future payrolls still pick this deduction.
+                if (
+                    $newInstallments > (int) ($deduction->installments ?? 0)
+                    && !empty($deduction->start_date)
+                ) {
+                    $extendedEndDate = Carbon::parse($deduction->start_date)
+                        ->addMonths((int) ceil($newInstallments / 2))
+                        ->toDateString();
+
+                    if (empty($deduction->end_date) || Carbon::parse($extendedEndDate)->gt(Carbon::parse($deduction->end_date))) {
+                        $updateData['end_date'] = $extendedEndDate;
+                    }
                 }
 
                 $deduction->update($updateData);
@@ -2537,6 +2606,15 @@ class PayrollController extends Controller
      */
     private function recordLoanPayments(Payroll $payroll, Employee $employee, PayrollItem $payrollItem)
     {
+        if (($payroll->deduct_loans ?? true) !== true) {
+            return;
+        }
+
+        // No loan deduction applied in the payroll item; skip loan side effects.
+        if ((float) ($payrollItem->loans ?? 0) <= 0) {
+            return;
+        }
+
         // Determine if this is semi-monthly payroll (typically 15 days or less)
         $periodStart = \Carbon\Carbon::parse($payroll->period_start);
         $periodEnd = \Carbon\Carbon::parse($payroll->period_end);
@@ -2675,6 +2753,15 @@ class PayrollController extends Controller
 
             // Remove payment records for this payroll after reversal
             LoanPayment::where('payroll_id', $payroll->id)->delete();
+            return;
+        }
+
+        // Legacy heuristic fallback should only run if this payroll actually had loan deductions.
+        $hasLegacyLoanDeductions = PayrollItem::where('payroll_id', $payroll->id)
+            ->where('loans', '>', 0)
+            ->exists();
+
+        if (!$hasLegacyLoanDeductions) {
             return;
         }
 
@@ -2824,26 +2911,48 @@ class PayrollController extends Controller
                 ->get();
 
             if ($deductionPayments->isNotEmpty()) {
-                foreach ($deductionPayments as $payment) {
-                    $deduction = EmployeeDeduction::find($payment->employee_deduction_id);
+                $paymentsByDeduction = $deductionPayments->groupBy('employee_deduction_id');
+
+                foreach ($paymentsByDeduction as $deductionId => $payments) {
+                    $deduction = EmployeeDeduction::find($deductionId);
                     if (!$deduction) {
                         continue;
                     }
 
-                    $newInstallmentsPaid = max(0, (int) $deduction->installments_paid - 1);
-                    $newBalance = min(
-                        (float) $deduction->total_amount,
-                        (float) $deduction->balance + (float) $payment->amount
+                    $latestRemainingPayment = DeductionPayment::where('employee_deduction_id', $deduction->id)
+                        ->where('payroll_id', '!=', $payroll->id)
+                        ->orderByDesc('installment_number')
+                        ->orderByDesc('id')
+                        ->first();
+
+                    if ($latestRemainingPayment) {
+                        $restoredInstallmentsPaid = max(0, (int) $latestRemainingPayment->installment_number);
+                        $restoredBalance = min(
+                            (float) $deduction->total_amount,
+                            max(0, (float) $latestRemainingPayment->balance_after_payment)
+                        );
+                    } else {
+                        // Safety fallback when historical rows are incomplete.
+                        $restoredInstallmentsPaid = max(0, (int) $deduction->installments_paid - (int) $payments->count());
+                        $restoredBalance = min(
+                            (float) $deduction->total_amount,
+                            max(0, (float) $deduction->balance + (float) $payments->sum('amount'))
+                        );
+                    }
+
+                    $schedule = $this->calculateDeductionRollbackSchedule(
+                        $deduction,
+                        $restoredInstallmentsPaid,
+                        $restoredBalance
                     );
 
                     $updateData = [
-                        'installments_paid' => $newInstallmentsPaid,
-                        'balance' => $newBalance,
+                        'installments_paid' => $restoredInstallmentsPaid,
+                        'balance' => $restoredBalance <= 0 ? 0 : $restoredBalance,
+                        'installments' => $schedule['installments'],
+                        'end_date' => $schedule['end_date'],
+                        'status' => $restoredBalance <= 0 ? 'completed' : 'active',
                     ];
-
-                    if ($deduction->status === 'completed' && $newBalance > 0) {
-                        $updateData['status'] = 'active';
-                    }
 
                     $deduction->update($updateData);
                 }
@@ -2892,24 +3001,43 @@ class PayrollController extends Controller
                     continue;
                 }
 
-                $newInstallmentsPaid = max(0, (int) $deduction->installments_paid - (int) $adjustment['installments']);
-                $newBalance = min(
+                $restoredInstallmentsPaid = max(0, (int) $deduction->installments_paid - (int) $adjustment['installments']);
+                $restoredBalance = min(
                     (float) $deduction->total_amount,
                     (float) $deduction->balance + (float) $adjustment['amount']
                 );
 
-                $updateData = [
-                    'installments_paid' => $newInstallmentsPaid,
-                    'balance' => $newBalance,
-                ];
+                $schedule = $this->calculateDeductionRollbackSchedule(
+                    $deduction,
+                    $restoredInstallmentsPaid,
+                    $restoredBalance
+                );
 
-                if ($deduction->status === 'completed' && $newBalance > 0) {
-                    $updateData['status'] = 'active';
-                }
+                $updateData = [
+                    'installments_paid' => $restoredInstallmentsPaid,
+                    'balance' => $restoredBalance <= 0 ? 0 : $restoredBalance,
+                    'installments' => $schedule['installments'],
+                    'end_date' => $schedule['end_date'],
+                    'status' => $restoredBalance <= 0 ? 'completed' : 'active',
+                ];
 
                 $deduction->update($updateData);
             }
 
+            return;
+        }
+
+        // Legacy heuristic fallback should only run if this payroll actually had manual deduction amounts.
+        $hasLegacyManualDeductionAmounts = PayrollItem::where('payroll_id', $payroll->id)
+            ->where(function ($query) {
+                $query->where('employee_deductions', '>', 0)
+                    ->orWhere('cash_advance', '>', 0)
+                    ->orWhere('employee_savings', '>', 0)
+                    ->orWhere('other_deductions', '>', 0);
+            })
+            ->exists();
+
+        if (!$hasLegacyManualDeductionAmounts) {
             return;
         }
 
@@ -2936,22 +3064,131 @@ class PayrollController extends Controller
                 $paymentAmount = min($amountPerCutoff, $deduction->total_amount - $deduction->balance);
 
                 if ($paymentAmount > 0 && $deduction->installments_paid > 0) {
-                    $newInstallmentsPaid = max(0, $deduction->installments_paid - 1);
-                    $newBalance = $deduction->balance + $paymentAmount;
+                    $restoredInstallmentsPaid = max(0, (int) $deduction->installments_paid - 1);
+                    $restoredBalance = min((float) $deduction->balance + (float) $paymentAmount, (float) $deduction->total_amount);
+
+                    $schedule = $this->calculateDeductionRollbackSchedule(
+                        $deduction,
+                        $restoredInstallmentsPaid,
+                        $restoredBalance
+                    );
 
                     $updateData = [
-                        'installments_paid' => $newInstallmentsPaid,
-                        'balance' => min($newBalance, $deduction->total_amount),
+                        'installments_paid' => $restoredInstallmentsPaid,
+                        'balance' => $restoredBalance <= 0 ? 0 : $restoredBalance,
+                        'installments' => $schedule['installments'],
+                        'end_date' => $schedule['end_date'],
+                        'status' => $restoredBalance <= 0 ? 'completed' : 'active',
                     ];
-
-                    // If deduction was marked as completed, revert to active
-                    if ($deduction->status === 'completed' && $newBalance > 0) {
-                        $updateData['status'] = 'active';
-                    }
 
                     $deduction->update($updateData);
                 }
             }
         }
+    }
+
+    /**
+     * Compute a consistent installments/end_date rollback target for a deduction.
+     */
+    private function calculateDeductionRollbackSchedule(
+        EmployeeDeduction $deduction,
+        int $restoredInstallmentsPaid,
+        float $restoredBalance
+    ): array {
+        $currentInstallments = max(
+            (int) ($deduction->installments ?? 0),
+            (int) ($deduction->installments_paid ?? 0),
+            1
+        );
+
+        $amountPerCutoff = $this->resolveDeductionAmountPerCutoff($deduction, $currentInstallments);
+
+        $postNeededInstallments = $this->calculateDeductionInstallmentsNeeded(
+            (int) $deduction->installments_paid,
+            (float) $deduction->balance,
+            $amountPerCutoff
+        );
+
+        $restoredNeededInstallments = $this->calculateDeductionInstallmentsNeeded(
+            $restoredInstallmentsPaid,
+            $restoredBalance,
+            $amountPerCutoff
+        );
+
+        // Preserve explicit user-added buffer installments (when current installments exceed post-payment minimum).
+        // Otherwise, follow the restored minimum so rollback can shrink auto-extensions.
+        $targetInstallments = $currentInstallments > $postNeededInstallments
+            ? max($currentInstallments, $restoredNeededInstallments)
+            : $restoredNeededInstallments;
+
+        $targetEndDate = $this->resolveDeductionRollbackEndDate(
+            $deduction,
+            $currentInstallments,
+            $targetInstallments
+        );
+
+        return [
+            'installments' => $targetInstallments,
+            'end_date' => $targetEndDate,
+        ];
+    }
+
+    private function resolveDeductionAmountPerCutoff(EmployeeDeduction $deduction, int $fallbackInstallments): float
+    {
+        $amountPerCutoff = (float) ($deduction->amount_per_cutoff ?? 0);
+        if ($amountPerCutoff > 0) {
+            return $amountPerCutoff;
+        }
+
+        $safeInstallments = max($fallbackInstallments, 1);
+        if ((float) $deduction->total_amount > 0) {
+            return (float) $deduction->total_amount / $safeInstallments;
+        }
+
+        return 0.0;
+    }
+
+    private function calculateDeductionInstallmentsNeeded(int $installmentsPaid, float $balance, float $amountPerCutoff): int
+    {
+        $normalizedInstallmentsPaid = max($installmentsPaid, 0);
+        $normalizedBalance = max($balance, 0);
+
+        if ($normalizedBalance <= 0 || $amountPerCutoff <= 0) {
+            return max($normalizedInstallmentsPaid, 1);
+        }
+
+        return max(
+            $normalizedInstallmentsPaid + (int) ceil($normalizedBalance / $amountPerCutoff),
+            1
+        );
+    }
+
+    private function resolveDeductionRollbackEndDate(
+        EmployeeDeduction $deduction,
+        int $currentInstallments,
+        int $targetInstallments
+    ): ?string {
+        if (empty($deduction->start_date)) {
+            return $deduction->end_date;
+        }
+
+        $startDate = Carbon::parse($deduction->start_date);
+        $currentScheduledEndDate = $startDate->copy()->addMonths((int) ceil($currentInstallments / 2));
+        $targetScheduledEndDate = $startDate->copy()->addMonths((int) ceil($targetInstallments / 2));
+
+        if (empty($deduction->end_date)) {
+            return $targetScheduledEndDate->toDateString();
+        }
+
+        $existingEndDate = Carbon::parse($deduction->end_date);
+
+        if (
+            $existingEndDate->equalTo($currentScheduledEndDate)
+            || $existingEndDate->lt($targetScheduledEndDate)
+        ) {
+            return $targetScheduledEndDate->toDateString();
+        }
+
+        return $deduction->end_date;
     }
 }

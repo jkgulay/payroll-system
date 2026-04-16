@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeDeduction;
 use App\Models\Employee;
+use App\Models\Attendance;
+use App\Models\Payroll;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -360,21 +362,49 @@ class DeductionController extends Controller
 
         DB::beginTransaction();
         try {
-            $newBalance = $deduction->balance - $validated['amount'];
-            $newInstallmentsPaid = $deduction->installments_paid + 1;
+            $amountPerCutoff = (float) ($deduction->amount_per_cutoff ?? 0);
+            if ($amountPerCutoff <= 0 && (int) $deduction->installments > 0) {
+                $amountPerCutoff = (float) $deduction->total_amount / max((int) $deduction->installments, 1);
+            }
+
+            $newBalance = max((float) $deduction->balance - (float) $validated['amount'], 0);
+            $newInstallmentsPaid = (int) $deduction->installments_paid + 1;
+
+            $currentInstallments = max((int) ($deduction->installments ?? 0), $newInstallmentsPaid, 1);
+            $newInstallments = $currentInstallments;
+
+            if ($newBalance > 0 && $amountPerCutoff > 0) {
+                $remainingInstallmentsNeeded = (int) ceil($newBalance / $amountPerCutoff);
+                $newInstallments = max($newInstallments, $newInstallmentsPaid + $remainingInstallmentsNeeded);
+            }
 
             // Capture old values BEFORE updating
             $oldBalance = $deduction->balance;
             $oldInstallmentsPaid = $deduction->installments_paid;
+            $oldInstallments = $deduction->installments;
 
             $updateData = [
                 'installments_paid' => $newInstallmentsPaid,
                 'balance' => $newBalance,
+                'installments' => $newInstallments,
+                'status' => $newBalance <= 0 ? 'completed' : 'active',
             ];
 
-            // Mark as completed if balance is zero or all installments paid
-            if ($newBalance <= 0 || $newInstallmentsPaid >= $deduction->installments) {
-                $updateData['status'] = 'completed';
+            if ($newBalance <= 0) {
+                $updateData['balance'] = 0;
+            }
+
+            if (
+                $newInstallments > (int) ($deduction->installments ?? 0)
+                && !empty($deduction->start_date)
+            ) {
+                $extendedEndDate = Carbon::parse($deduction->start_date)
+                    ->addMonths((int) ceil($newInstallments / 2))
+                    ->toDateString();
+
+                if (empty($deduction->end_date) || Carbon::parse($extendedEndDate)->gt(Carbon::parse($deduction->end_date))) {
+                    $updateData['end_date'] = $extendedEndDate;
+                }
             }
 
             $deduction->update($updateData);
@@ -386,8 +416,16 @@ class DeductionController extends Controller
                 'description' => "Installment payment for {$deduction->deduction_name}: ₱" . number_format($validated['amount'], 2),
                 'user_id' => auth()->id(),
                 'record_id' => $deduction->id,
-                'old_values' => json_encode(['balance' => $oldBalance, 'installments_paid' => $oldInstallmentsPaid]),
-                'new_values' => json_encode(['balance' => $newBalance, 'installments_paid' => $newInstallmentsPaid]),
+                'old_values' => json_encode([
+                    'balance' => $oldBalance,
+                    'installments_paid' => $oldInstallmentsPaid,
+                    'installments' => $oldInstallments,
+                ]),
+                'new_values' => json_encode([
+                    'balance' => $updateData['balance'],
+                    'installments_paid' => $newInstallmentsPaid,
+                    'installments' => $newInstallments,
+                ]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
@@ -943,6 +981,151 @@ class DeductionController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get estimated cash advance availability for an employee.
+     *
+     * Availability is estimated from approved attendance earnings
+     * between the day after the latest payroll period end and the as-of date.
+     */
+    public function getCashAdvanceAvailability(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_id' => [
+                'required',
+                Rule::exists('employees', 'id')->whereNull('deleted_at'),
+            ],
+            'as_of_date' => 'nullable|date',
+        ]);
+
+        $employee = Employee::with('positionRate')->findOrFail($validated['employee_id']);
+        $user = auth()->user();
+
+        if ($user->role === 'employee' && (int) $user->employee_id !== (int) $employee->id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $asOfDate = Carbon::parse($validated['as_of_date'] ?? now())->toDateString();
+
+        $latestPayroll = Payroll::query()
+            ->join('payroll_items', 'payroll_items.payroll_id', '=', 'payrolls.id')
+            ->where('payroll_items.employee_id', $employee->id)
+            ->whereIn('payrolls.status', ['draft', 'finalized', 'paid'])
+            ->whereDate('payrolls.period_end', '<=', $asOfDate)
+            ->orderByDesc('payrolls.period_end')
+            ->select([
+                'payrolls.id',
+                'payrolls.period_name',
+                'payrolls.period_end',
+                'payrolls.status',
+            ])
+            ->first();
+
+        $startDate = $latestPayroll
+            ? Carbon::parse($latestPayroll->period_end)->addDay()->toDateString()
+            : ($employee->date_hired
+                ? Carbon::parse($employee->date_hired)->toDateString()
+                : $asOfDate);
+
+        if (Carbon::parse($startDate)->gt(Carbon::parse($asOfDate))) {
+            return response()->json([
+                'employee_id' => $employee->id,
+                'last_payroll' => $latestPayroll,
+                'start_date' => $startDate,
+                'as_of_date' => $asOfDate,
+                'attendance_days_counted' => 0,
+                'payable_days' => 0,
+                'daily_rate' => 0,
+                'estimated_basic_pay' => 0,
+                'estimated_overtime_hours' => 0,
+                'estimated_overtime_pay' => 0,
+                'estimated_gross_pay' => 0,
+                'active_cash_advance_balance' => 0,
+                'recommended_limit' => 0,
+                'available_balance' => 0,
+            ]);
+        }
+
+        $standardHours = (float) config('payroll.standard_hours_per_day', 8);
+        $workingDaysPerMonth = (float) config('payroll.working_days_per_month', 22);
+        $baseRate = (float) $employee->getBasicSalary();
+
+        if ($employee->salary_type === 'monthly') {
+            $dailyRate = $workingDaysPerMonth > 0 ? ($baseRate / $workingDaysPerMonth) : 0;
+        } elseif ($employee->salary_type === 'hourly') {
+            $dailyRate = $baseRate * ($standardHours > 0 ? $standardHours : 8);
+        } else {
+            $dailyRate = $baseRate;
+        }
+
+        $hourlyRate = $standardHours > 0 ? ($dailyRate / $standardHours) : 0;
+
+        $attendances = Attendance::query()
+            ->where('employee_id', $employee->id)
+            ->whereBetween('attendance_date', [$startDate, $asOfDate])
+            ->where('status', '!=', 'absent')
+            ->where('approval_status', 'approved')
+            ->whereNotNull('time_in')
+            ->where(function ($query) {
+                $query->whereNotNull('time_out')
+                    ->orWhere('status', 'half_day');
+            })
+            ->get(['attendance_date', 'status', 'regular_hours', 'overtime_hours']);
+
+        $payableDays = 0;
+        $estimatedBasicPay = 0;
+        $estimatedOvertimeHours = 0;
+        $estimatedOvertimePay = 0;
+
+        foreach ($attendances as $attendance) {
+            $status = strtolower((string) ($attendance->status ?? ''));
+            $regularHours = max((float) ($attendance->regular_hours ?? 0), 0);
+
+            if ($status === 'half_day') {
+                $dayFraction = 0.5;
+            } elseif ($regularHours > 0 && $standardHours > 0) {
+                $dayFraction = max(min($regularHours / $standardHours, 1), 0);
+            } else {
+                $dayFraction = 1.0;
+            }
+
+            $overtimeHours = max((float) ($attendance->overtime_hours ?? 0), 0);
+
+            $payableDays += $dayFraction;
+            $estimatedBasicPay += $dailyRate * $dayFraction;
+            $estimatedOvertimeHours += $overtimeHours;
+            $estimatedOvertimePay += $hourlyRate * $overtimeHours;
+        }
+
+        $estimatedGrossPay = $estimatedBasicPay + $estimatedOvertimePay;
+
+        $activeCashAdvanceBalance = (float) EmployeeDeduction::query()
+            ->where('employee_id', $employee->id)
+            ->where('deduction_type', 'cash_advance')
+            ->where('status', 'active')
+            ->sum('balance');
+
+        $recommendedLimit = max($estimatedGrossPay - $activeCashAdvanceBalance, 0);
+
+        return response()->json([
+            'employee_id' => $employee->id,
+            'last_payroll' => $latestPayroll,
+            'start_date' => $startDate,
+            'as_of_date' => $asOfDate,
+            'attendance_days_counted' => $attendances->count(),
+            'payable_days' => round($payableDays, 2),
+            'daily_rate' => round($dailyRate, 2),
+            'estimated_basic_pay' => round($estimatedBasicPay, 2),
+            'estimated_overtime_hours' => round($estimatedOvertimeHours, 2),
+            'estimated_overtime_pay' => round($estimatedOvertimePay, 2),
+            'estimated_gross_pay' => round($estimatedGrossPay, 2),
+            'active_cash_advance_balance' => round($activeCashAdvanceBalance, 2),
+            'recommended_limit' => round($recommendedLimit, 2),
+            'available_balance' => round($estimatedGrossPay, 2),
+        ]);
     }
 
     /**

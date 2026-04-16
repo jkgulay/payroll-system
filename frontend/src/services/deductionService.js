@@ -11,6 +11,16 @@ export default {
     return api.get(`/deductions/${id}`);
   },
 
+  // Get estimated cash advance availability for an employee
+  getCashAdvanceAvailability(employeeId, params = {}) {
+    return api.get("/deductions/cash-advance/availability", {
+      params: {
+        employee_id: employeeId,
+        ...params,
+      },
+    });
+  },
+
   // Create a new deduction
   createDeduction(data) {
     return api.post("/deductions", data);

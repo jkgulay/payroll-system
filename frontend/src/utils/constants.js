@@ -106,7 +106,6 @@ export const LOAN_TYPES = [
   { value: "pag_ibig", title: "Pag-IBIG Loan" },
   { value: "company", title: "Company Loan" },
   { value: "emergency", title: "Emergency Loan" },
-  { value: "salary_advance", title: "Salary Advance" },
   { value: "other", title: "Other Loan" },
 ];
 
