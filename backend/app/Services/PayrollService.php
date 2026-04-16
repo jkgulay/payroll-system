@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Cache;
 
 class PayrollService
 {
+    private const DAILY_OVERTIME_CAP_HOURS = 2.0;
+
     public function __construct(private CompanySettingService $settings) {}
 
     /**
@@ -74,6 +76,7 @@ class PayrollService
                 ->unique()
                 ->values()
                 ->all();
+            $dailyOvertimeCapConfig = $this->getOvertimeDailyCapConfig();
 
             foreach ($employees as $employee) {
                 $includeOvertime = empty($selectedOvertimeEmployeeIds)
@@ -82,6 +85,7 @@ class PayrollService
 
                 $item = $this->calculatePayrollItem($payroll, $employee, $holidays, [
                     'include_overtime' => $includeOvertime,
+                    'daily_overtime_cap_config' => $dailyOvertimeCapConfig,
                 ]);
 
                 // Skip employees with ₱0 or negative gross pay
@@ -372,6 +376,7 @@ class PayrollService
     public function calculatePayrollItem(Payroll $payroll, Employee $employee, array $holidays = [], array $options = [])
     {
         $includeOvertime = $options['include_overtime'] ?? true;
+        $dailyOvertimeCapHours = $this->resolveDailyOvertimeCapHours($employee, $options, $includeOvertime);
 
         // OPTIMIZATION: Use preloaded attendances (already eager loaded)
         $attendances = $employee->attendances;
@@ -387,6 +392,7 @@ class PayrollService
         $specialHolidayOtHours = 0; // Special holiday OT
         $holidayPay = 0;
         $totalUndertimeHours = 0;
+        $dailyOvertimeByDate = [];
 
         // Resolve to a daily-equivalent rate used by payroll formulas.
         // - daily: getBasicSalary() is already a daily rate
@@ -413,6 +419,11 @@ class PayrollService
         // Process each attendance record
         foreach ($attendances as $attendance) {
             $attendanceDate = Carbon::parse($attendance->attendance_date);
+            $attendanceOvertimeHours = $this->resolveAttendanceOvertimeHours(
+                $attendance,
+                $dailyOvertimeCapHours,
+                $dailyOvertimeByDate
+            );
 
             // Avoid double-penalizing half-day records: half-day pay is already
             // represented via regularDays += 0.5, so its attendance-side
@@ -442,19 +453,19 @@ class PayrollService
                 $holidayDays += ($attendance->status === 'half_day') ? 0.5 : 1;
 
                 // Handle holiday overtime with specific rates
-                if ($includeOvertime && $attendance->overtime_hours > 0) {
+                if ($includeOvertime && $attendanceOvertimeHours > 0) {
                     if ($holiday->type === 'regular') {
                         // Regular holiday overtime
                         if ($isSunday) {
                             // Regular holiday on Sunday: rate/8 × 1.3 × 1.3 × hours
-                            $regularHolidaySundayOtHours += $attendance->overtime_hours;
+                            $regularHolidaySundayOtHours += $attendanceOvertimeHours;
                         } else {
                             // Regular holiday weekday: rate/8 × 2 × 1.3 × hours
-                            $regularHolidayOtHours += $attendance->overtime_hours;
+                            $regularHolidayOtHours += $attendanceOvertimeHours;
                         }
                     } else {
                         // Special holiday: rate/8 × 1.3 × 1.3 × hours
-                        $specialHolidayOtHours += $attendance->overtime_hours;
+                        $specialHolidayOtHours += $attendanceOvertimeHours;
                     }
                 }
             } else {
@@ -482,11 +493,11 @@ class PayrollService
                 }
 
                 // Add overtime - separate Sunday from regular days
-                if ($includeOvertime && $attendance->overtime_hours > 0) {
+                if ($includeOvertime && $attendanceOvertimeHours > 0) {
                     if ($isSunday) {
-                        $sundayOtHours += $attendance->overtime_hours;
+                        $sundayOtHours += $attendanceOvertimeHours;
                     } else {
-                        $regularOtHours += $attendance->overtime_hours;
+                        $regularOtHours += $attendanceOvertimeHours;
                     }
                 }
             }
@@ -872,6 +883,116 @@ class PayrollService
             '_adjustment_ids' => $adjustmentIds, // Internal: collected by processPayroll
             '_bonus_ids' => $bonusIds, // Internal: collected by processPayroll to mark bonuses as paid
         ];
+    }
+
+    private function resolveDailyOvertimeCapHours(Employee $employee, array $options, bool $includeOvertime): ?float
+    {
+        if (!$includeOvertime) {
+            return null;
+        }
+
+        if (array_key_exists('daily_overtime_cap_hours', $options)) {
+            $capHours = $options['daily_overtime_cap_hours'];
+            if ($capHours === null) {
+                return null;
+            }
+
+            return max((float) $capHours, 0);
+        }
+
+        $dailyCapConfig = $options['daily_overtime_cap_config'] ?? $this->getOvertimeDailyCapConfig();
+
+        if (!$this->shouldApplyDailyOvertimeCap($employee, $dailyCapConfig)) {
+            return null;
+        }
+
+        return max((float) ($dailyCapConfig['hours'] ?? self::DAILY_OVERTIME_CAP_HOURS), 0);
+    }
+
+    private function resolveAttendanceOvertimeHours($attendance, ?float $dailyOvertimeCapHours, array &$dailyOvertimeByDate = []): float
+    {
+        $overtimeHours = (float) ($attendance->overtime_hours ?? 0);
+
+        if ($overtimeHours <= 0) {
+            return 0;
+        }
+
+        if ($dailyOvertimeCapHours === null) {
+            return $overtimeHours;
+        }
+
+        if ($dailyOvertimeCapHours <= 0) {
+            return 0;
+        }
+
+        $attendanceDate = $attendance->attendance_date;
+        if ($attendanceDate instanceof Carbon) {
+            $dateKey = $attendanceDate->format('Y-m-d');
+        } else {
+            $dateKey = Carbon::parse($attendanceDate)->format('Y-m-d');
+        }
+
+        $alreadyAllocated = (float) ($dailyOvertimeByDate[$dateKey] ?? 0);
+        $remainingForDay = max($dailyOvertimeCapHours - $alreadyAllocated, 0);
+        if ($remainingForDay <= 0) {
+            return 0;
+        }
+
+        $allowedOvertime = min($overtimeHours, $remainingForDay);
+        $dailyOvertimeByDate[$dateKey] = round($alreadyAllocated + $allowedOvertime, 4);
+
+        return $allowedOvertime;
+    }
+
+    private function getOvertimeDailyCapConfig(): array
+    {
+        return [
+            'hours' => self::DAILY_OVERTIME_CAP_HOURS,
+            'position_ids' => $this->normalizeIdArray(
+                $this->settings->get('payroll.overtime.dailyCap.positionIds', [])
+            ),
+            'employee_ids' => $this->normalizeIdArray(
+                $this->settings->get('payroll.overtime.dailyCap.employeeIds', [])
+            ),
+        ];
+    }
+
+    private function shouldApplyDailyOvertimeCap(Employee $employee, array $dailyCapConfig): bool
+    {
+        $positionIds = $dailyCapConfig['position_ids'] ?? [];
+        $employeeIds = $dailyCapConfig['employee_ids'] ?? [];
+
+        if (empty($positionIds) && empty($employeeIds)) {
+            return false;
+        }
+
+        $employeeId = (int) $employee->id;
+        if ($employeeId > 0 && in_array($employeeId, $employeeIds, true)) {
+            return true;
+        }
+
+        $positionId = (int) ($employee->position_id ?? 0);
+
+        return $positionId > 0 && in_array($positionId, $positionIds, true);
+    }
+
+    private function normalizeIdArray($value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

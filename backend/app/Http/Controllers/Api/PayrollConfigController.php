@@ -23,10 +23,21 @@ class PayrollConfigController extends Controller
         $validated = $request->validate([
             'overtime.regularDay' => 'required|numeric|min:0',
             'overtime.sunday' => 'required|numeric|min:0',
+            'overtime.dailyCap.positionIds' => 'nullable|array',
+            'overtime.dailyCap.positionIds.*' => 'integer|exists:position_rates,id',
+            'overtime.dailyCap.employeeIds' => 'nullable|array',
+            'overtime.dailyCap.employeeIds.*' => 'integer|exists:employees,id',
             'holidays.regularHoliday' => 'required|numeric|min:0',
             'holidays.regularHolidaySunday' => 'required|numeric|min:0',
             'holidays.specialHoliday' => 'required|numeric|min:0',
         ]);
+
+        $dailyCapPositionIds = $this->normalizeIdArray(
+            data_get($validated, 'overtime.dailyCap.positionIds', [])
+        );
+        $dailyCapEmployeeIds = $this->normalizeIdArray(
+            data_get($validated, 'overtime.dailyCap.employeeIds', [])
+        );
 
         $this->settings->set(
             'payroll.overtime.regularDay',
@@ -41,6 +52,20 @@ class PayrollConfigController extends Controller
             'number',
             'payroll',
             'Sunday overtime multiplier'
+        );
+        $this->settings->set(
+            'payroll.overtime.dailyCap.positionIds',
+            $dailyCapPositionIds,
+            'json',
+            'payroll',
+            'Positions limited to 2-hour maximum daily overtime'
+        );
+        $this->settings->set(
+            'payroll.overtime.dailyCap.employeeIds',
+            $dailyCapEmployeeIds,
+            'json',
+            'payroll',
+            'Employees limited to 2-hour maximum daily overtime'
         );
         $this->settings->set(
             'payroll.holidays.regularHoliday',
@@ -79,6 +104,15 @@ class PayrollConfigController extends Controller
                     'payroll.overtime.sunday',
                     1.3
                 ),
+                'dailyCap' => [
+                    'hours' => 2,
+                    'positionIds' => $this->normalizeIdArray(
+                        $this->settings->get('payroll.overtime.dailyCap.positionIds', [])
+                    ),
+                    'employeeIds' => $this->normalizeIdArray(
+                        $this->settings->get('payroll.overtime.dailyCap.employeeIds', [])
+                    ),
+                ],
             ],
             'holidays' => [
                 'regularHoliday' => (float) $this->settings->get(
@@ -95,5 +129,19 @@ class PayrollConfigController extends Controller
                 ),
             ],
         ];
+    }
+
+    private function normalizeIdArray($value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 }
