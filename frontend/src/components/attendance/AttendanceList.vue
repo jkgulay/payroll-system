@@ -356,17 +356,35 @@ const filteredAttendance = computed(() => {
   const hasSearch = !!filters.search;
   const q = filters.search.toLowerCase();
 
-  return attendance.value.filter((a) => {
-    const approvalMatches =
-      !filters.approval_status || a.approval_status === filters.approval_status;
+  return attendance.value
+    .filter((a) => {
+      const approvalMatches =
+        !filters.approval_status ||
+        a.approval_status === filters.approval_status;
 
-    if (!approvalMatches) return false;
-    if (!hasSearch) return true;
+      if (!approvalMatches) return false;
+      if (!hasSearch) return true;
 
-    const name = (a.employee?.full_name || "").toLowerCase();
-    const code = (a.employee?.employee_number || "").toLowerCase();
-    return name.includes(q) || code.includes(q);
-  });
+      const name = (a.employee?.full_name || "").toLowerCase();
+      const code = (a.employee?.employee_number || "").toLowerCase();
+      return name.includes(q) || code.includes(q);
+    })
+    .sort((a, b) => {
+      const dateA = String(a.attendance_date || "");
+      const dateB = String(b.attendance_date || "");
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+
+      const nameA = String(a.employee?.full_name || "");
+      const nameB = String(b.employee?.full_name || "");
+      const nameCompare = nameA.localeCompare(nameB);
+      if (nameCompare !== 0) {
+        return nameCompare;
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
 });
 
 const clearFilters = () => {

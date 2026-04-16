@@ -1,5 +1,5 @@
 <template>
-  <div class="attendance-settings-page">
+  <div class="modern-dashboard">
     <v-overlay :model-value="loading" class="align-center justify-center">
       <v-progress-circular
         indeterminate
@@ -1388,9 +1388,10 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.attendance-settings-page {
-  max-width: 1400px;
+.modern-dashboard {
+  max-width: 1600px;
   margin: 0 auto;
+  padding: 0 8px;
 }
 
 .page-header {

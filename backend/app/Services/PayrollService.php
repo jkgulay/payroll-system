@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\Employee;
-use App\Models\MealAllowanceItem;
 use App\Models\SalaryAdjustment;
 use App\Models\Holiday;
 use App\Models\GovernmentRate;
@@ -189,10 +188,11 @@ class PayrollService
                         );
                 },
                 // Active allowances for period
-                // CRITERIA: is_active=true, effective_date <= period_end, 
+                // CRITERIA: status='approved', is_active=true, effective_date <= period_end,
                 // (end_date IS NULL OR end_date >= period_start)
                 'allowances' => function ($q) use ($payroll) {
-                    $q->where('is_active', true)
+                    $q->where('status', 'approved')
+                        ->where('is_active', true)
                         ->where('effective_date', '<=', $payroll->period_end)
                         ->where(function ($query) use ($payroll) {
                             $query->whereNull('end_date')
@@ -274,14 +274,6 @@ class PayrollService
                             'amount',
                             'is_taxable'
                         );
-                },
-                // Meal allowance items (via approved MealAllowance within period)
-                'mealAllowanceItems' => function ($q) use ($payroll) {
-                    $q->whereHas('mealAllowance', function ($mq) use ($payroll) {
-                        $mq->where('status', 'approved')
-                            ->where('period_start', '<=', $payroll->period_end)
-                            ->where('period_end', '>=', $payroll->period_start);
-                    })->select('id', 'employee_id', 'total_amount');
                 },
             ])
             // Eager load positionRate for getBasicSalary() / getMonthlyRate() (avoids N+1)
@@ -603,9 +595,8 @@ class PayrollService
         // OPTIMIZATION: Use preloaded relationships (no queries)
         $activeAllowances = $employee->allowances;
         $allowances = $activeAllowances->sum('amount') ?? 0;
-        $taxableAllowances = (float) $activeAllowances
-            ->where('is_taxable', true)
-            ->sum('amount');
+        // Taxable allowance classification is deprecated for this module.
+        $taxableAllowances = 0;
 
         $allowancesBreakdown = $activeAllowances->map(function ($allowance) {
             return [
@@ -615,27 +606,6 @@ class PayrollService
                 'amount' => (float) $allowance->amount,
             ];
         })->values()->all();
-
-        // OPTIMIZATION: Use preloaded meal allowance items (no N+1 query)
-        $mealAllowanceTotal = $employee->relationLoaded('mealAllowanceItems')
-            ? $employee->mealAllowanceItems->sum('total_amount')
-            : MealAllowanceItem::where('employee_id', $employee->id)
-            ->whereHas('mealAllowance', function ($query) use ($payroll) {
-                $query->where('status', 'approved')
-                    ->where('period_start', '<=', $payroll->period_end)
-                    ->where('period_end', '>=', $payroll->period_start);
-            })
-            ->sum('total_amount');
-        $mealAllowanceTotal = (float) ($mealAllowanceTotal ?? 0);
-
-        if ($mealAllowanceTotal > 0) {
-            $allowancesBreakdown[] = [
-                'id' => null,
-                'type' => 'meal_allowance',
-                'name' => 'Meal Allowance',
-                'amount' => $mealAllowanceTotal,
-            ];
-        }
 
         // OPTIMIZATION: Use preloaded bonuses (pending bonuses with payment_date in period)
         $pendingBonuses = $employee->relationLoaded('bonuses')
@@ -660,7 +630,7 @@ class PayrollService
             $bonusIds[] = $bonus->id;
         }
 
-        $otherAllowances = $allowances + $mealAllowanceTotal + $bonusTotal;
+        $otherAllowances = $allowances + $bonusTotal;
 
         // Calculate salary adjustment from pending adjustments (OPTIMIZED - preloaded)
         // Business rule: "No. of Days" should count only regular weekday days.
@@ -737,7 +707,6 @@ class PayrollService
 
         // Compute withholding tax from dynamic GovernmentRate tax table.
         // Taxable base excludes non-taxable allowances.
-        // Meal allowance remains excluded by default unless modeled as taxable allowance type.
         $taxableSupplementalIncome = $taxableAllowances + $taxableBonusTotal;
         $taxableGrossPay = $basicPay + $holidayPay + $totalOtPay + $taxableSupplementalIncome + $salaryAdjustment;
         $taxableIncome = max($taxableGrossPay - $sss - $philhealth - $pagibig, 0);

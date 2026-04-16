@@ -118,7 +118,23 @@ const loadPending = async () => {
   loading.value = true;
   try {
     const response = await attendanceService.getPendingApprovals();
-    pendingList.value = response.data || [];
+    const pendingData = Array.isArray(response.data) ? response.data : [];
+    pendingList.value = pendingData.sort((a, b) => {
+      const dateA = String(a.attendance_date || "");
+      const dateB = String(b.attendance_date || "");
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+
+      const nameA = String(a.employee?.full_name || "");
+      const nameB = String(b.employee?.full_name || "");
+      const nameCompare = nameA.localeCompare(nameB);
+      if (nameCompare !== 0) {
+        return nameCompare;
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
     emit("update-count", pendingList.value.length);
   } catch (error) {
     toast.error("Failed to load pending approvals");

@@ -529,7 +529,7 @@ const menuItems = computed(() => {
       children: [
         {
           title: "Allowances",
-          icon: "mdi-food",
+          icon: "mdi-cash-multiple",
           value: "allowances",
           to: "/allowances",
           roles: ["admin", "hr", "hr"],
@@ -813,7 +813,7 @@ const menuSections = computed(() => {
       children: [
         {
           title: "Allowances",
-          icon: "mdi-food",
+          icon: "mdi-cash-multiple",
           value: "allowances",
           to: "/allowances",
           roles: ["admin", "payrollist"],
@@ -1025,7 +1025,7 @@ async function downloadCurrentPayslip() {
   position: fixed !important;
   top: 0 !important;
   bottom: 0 !important;
-  height: 100vh !important;
+  height: auto !important;
   overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;

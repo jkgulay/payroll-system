@@ -2010,7 +2010,8 @@ class PayrollController extends Controller
                     ->whereNotNull('time_out');
             },
             'allowances' => function ($q) use ($payroll) {
-                $q->where('is_active', true)
+                $q->where('status', 'approved')
+                    ->where('is_active', true)
                     ->where('effective_date', '<=', $payroll->period_end)
                     ->where(function ($query) use ($payroll) {
                         $query->whereNull('end_date')
@@ -2050,14 +2051,6 @@ class PayrollController extends Controller
                 $q->where('payment_status', 'pending')
                     ->where('payment_date', '>=', $payroll->period_start)
                     ->where('payment_date', '<=', $payroll->period_end);
-            },
-            // Meal allowance items (via approved MealAllowance within period)
-            'mealAllowanceItems' => function ($q) use ($payroll) {
-                $q->whereHas('mealAllowance', function ($mq) use ($payroll) {
-                    $mq->where('status', 'approved')
-                        ->where('period_start', '<=', $payroll->period_end)
-                        ->where('period_end', '>=', $payroll->period_start);
-                });
             },
             'positionRate',
         ]);

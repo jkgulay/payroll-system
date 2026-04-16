@@ -382,7 +382,7 @@
                                 <td class="amount-col">{{ $splHolPay > 0 ? number_format($splHolPay, 2) : '' }}</td>
                             </tr>
                             <tr>
-                                <td>Water Allowance</td>
+                                <td>Allowance</td>
                                 <td class="colon-col">:</td>
                                 <td class="value-col">{{ $allowances > 0 ? number_format($allowances, 2) : '-' }}</td>
                                 <td class="amount-col"></td>

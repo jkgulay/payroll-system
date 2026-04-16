@@ -72,7 +72,13 @@ class AttendanceController extends Controller
 
         // Use per_page from request, default to 1000 to show all records
         $perPage = $request->input('per_page', 1000);
-        return response()->json($query->latest('attendance_date')->paginate($perPage));
+        return response()->json(
+            $query
+                ->orderByDesc('attendance_date')
+                ->orderBy('employee_id')
+                ->orderByDesc('id')
+                ->paginate($perPage)
+        );
     }
 
     public function store(Request $request)
@@ -784,7 +790,13 @@ class AttendanceController extends Controller
 
         // Use per_page from request, default to 1000 to show all records
         $perPage = $request->input('per_page', 1000);
-        return response()->json($query->latest('attendance_date')->paginate($perPage));
+        return response()->json(
+            $query
+                ->orderByDesc('attendance_date')
+                ->orderBy('employee_id')
+                ->orderByDesc('id')
+                ->paginate($perPage)
+        );
     }
 
     /**
