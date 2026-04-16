@@ -25,6 +25,35 @@ export default {
     return response.data;
   },
 
+  // Approve or reject allowance (Admin only)
+  async updateApproval(id, action, rejectionReason = null) {
+    const response = await api.post(`/allowances/${id}/approval`, {
+      action,
+      rejection_reason: rejectionReason,
+    });
+    return response.data;
+  },
+
+  // Bulk approve or reject allowances (Admin only)
+  async updateBulkApproval(allowanceIds, action, rejectionReason = null) {
+    const response = await api.post(`/allowances/approval/bulk`, {
+      allowance_ids: allowanceIds,
+      action,
+      rejection_reason: rejectionReason,
+    });
+    return response.data;
+  },
+
+  // Approve or reject a whole request batch (Admin only)
+  async updateBatchApproval(batchId, action, rejectionReason = null) {
+    const response = await api.post(`/allowances/approval/batch`, {
+      batch_id: batchId,
+      action,
+      rejection_reason: rejectionReason,
+    });
+    return response.data;
+  },
+
   // Delete allowance
   async delete(id) {
     const response = await api.delete(`/allowances/${id}`);

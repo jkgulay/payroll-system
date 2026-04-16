@@ -303,38 +303,15 @@
 
                     // Deductions
                     $cashAdvance = $item->cash_advance ?? 0;
+                    $employeeSavings = $item->employee_savings ?? 0;
+                    $loanDeductions = $item->loans ?? 0;
+                    $combinedDeductions = ($item->employee_deductions ?? 0) + ($item->other_deductions ?? 0);
                     $undertime = $item->undertime_deduction ?? 0;
                     $sssPrem = $item->sss ?? 0;
                     $phicPrem = $item->philhealth ?? 0;
                     $hdmfPrem = $item->pagibig ?? 0;
                     $totalDeductions = $item->total_deductions ?? 0;
                     $netAmount = $item->net_pay ?? 0;
-
-                    // Parse deductions breakdown
-                    $ppeBoots = 0;
-                    $cashBond = 0;
-                    $sssLoan = 0;
-                    $hdmfLoan = 0;
-                    $otherDeduction = 0;
-
-                    if (!empty($item->deductions_breakdown) && is_array($item->deductions_breakdown)) {
-                    foreach ($item->deductions_breakdown as $deduction) {
-                    $deductionName = strtolower($deduction['name'] ?? $deduction['type'] ?? '');
-                    $deductionAmount = $deduction['amount'] ?? 0;
-
-                    if (str_contains($deductionName, 'ppe') || str_contains($deductionName, 'safety') || str_contains($deductionName, 'boots')) {
-                    $ppeBoots += $deductionAmount;
-                    } elseif (str_contains($deductionName, 'cash bond')) {
-                    $cashBond += $deductionAmount;
-                    } elseif (str_contains($deductionName, 'sss loan')) {
-                    $sssLoan += $deductionAmount;
-                    } elseif (str_contains($deductionName, 'hdmf loan') || str_contains($deductionName, 'pag-ibig loan') || str_contains($deductionName, 'pagibig loan')) {
-                    $hdmfLoan += $deductionAmount;
-                    } else {
-                    $otherDeduction += $deductionAmount;
-                    }
-                    }
-                    }
                     @endphp
 
                     <div class="payslip">
@@ -382,7 +359,7 @@
                                 <td class="amount-col">{{ $splHolPay > 0 ? number_format($splHolPay, 2) : '' }}</td>
                             </tr>
                             <tr>
-                                <td>Water Allowance</td>
+                                <td>Allowance</td>
                                 <td class="colon-col">:</td>
                                 <td class="value-col">{{ $allowances > 0 ? number_format($allowances, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
@@ -412,27 +389,33 @@
                                 <td colspan="4" class="section-label">LESS DEDUCTION:</td>
                             </tr>
                             <tr>
+                                <td>EMP. SAVINGS</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $employeeSavings > 0 ? number_format($employeeSavings, 2) : '-' }}</td>
+                                <td class="amount-col"></td>
+                            </tr>
+                            <tr>
                                 <td>CASH ADVANCE</td>
                                 <td class="colon-col">:</td>
                                 <td class="value-col">{{ $cashAdvance > 0 ? number_format($cashAdvance, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
-                                <td>PPE/safety boots</td>
+                                <td>LOANS</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $ppeBoots > 0 ? number_format($ppeBoots, 2) : '-' }}</td>
+                                <td class="value-col">{{ $loanDeductions > 0 ? number_format($loanDeductions, 2) : '-' }}</td>
+                                <td class="amount-col"></td>
+                            </tr>
+                            <tr>
+                                <td>DEDUCTIONS</td>
+                                <td class="colon-col">:</td>
+                                <td class="value-col">{{ $combinedDeductions > 0 ? number_format($combinedDeductions, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>UNDERTIME</td>
                                 <td class="colon-col">:</td>
                                 <td class="value-col">{{ $undertime > 0 ? number_format($undertime, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
-                            </tr>
-                            <tr>
-                                <td>CASH BOND</td>
-                                <td class="colon-col">:</td>
-                                <td class="value-col">{{ $cashBond > 0 ? number_format($cashBond, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
@@ -451,18 +434,6 @@
                                 <td>HDMF Prem.</td>
                                 <td class="colon-col">:</td>
                                 <td class="value-col">{{ $hdmfPrem > 0 ? number_format($hdmfPrem, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
-                            </tr>
-                            <tr>
-                                <td>SSS Loan</td>
-                                <td class="colon-col">:</td>
-                                <td class="value-col">{{ $sssLoan > 0 ? number_format($sssLoan, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
-                            </tr>
-                            <tr>
-                                <td>HDMF Loan</td>
-                                <td class="colon-col">:</td>
-                                <td class="value-col">{{ $hdmfLoan > 0 ? number_format($hdmfLoan, 2) : '-' }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr class="separator-line">

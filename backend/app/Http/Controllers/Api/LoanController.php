@@ -63,7 +63,7 @@ class LoanController extends Controller
                 'required',
                 Rule::exists('employees', 'id')->whereNull('deleted_at'),
             ],
-            'loan_type' => 'required|in:sss,pag_ibig,company,emergency,salary_advance,other',
+            'loan_type' => 'required|in:sss,pag_ibig,company,emergency,other',
             'principal_amount' => 'required|numeric|min:100',
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'loan_term_months' => 'required|integer|min:1|max:60',
@@ -198,7 +198,7 @@ class LoanController extends Controller
         }
 
         $validated = $request->validate([
-            'loan_type' => 'sometimes|in:sss,pag_ibig,company,emergency,salary_advance,other',
+            'loan_type' => 'sometimes|in:sss,pag_ibig,company,emergency,other',
             'principal_amount' => 'sometimes|numeric|min:100',
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'loan_term_months' => 'sometimes|integer|min:1|max:60',
@@ -493,7 +493,6 @@ class LoanController extends Controller
             'pag_ibig' => 5.5,
             'company' => 8.0,
             'emergency' => 5.0,
-            'salary_advance' => 0.0,
             'other' => 6.0,
         ];
 

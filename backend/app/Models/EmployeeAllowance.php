@@ -21,10 +21,15 @@ class EmployeeAllowance extends Model
         'end_date',
         'is_taxable',
         'is_active',
+        'status',
+        'request_batch_id',
         'notes',
         'created_by',
         'approved_by',
         'approved_at',
+        'rejected_by',
+        'rejected_at',
+        'rejection_reason',
     ];
 
     protected $casts = [
@@ -34,6 +39,11 @@ class EmployeeAllowance extends Model
         'is_taxable' => 'boolean',
         'is_active' => 'boolean',
         'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
+    ];
+
+    protected $attributes = [
+        'status' => 'approved',
     ];
 
     public function employee(): BelongsTo
@@ -41,13 +51,34 @@ class EmployeeAllowance extends Model
         return $this->belongsTo(Employee::class);
     }
 
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
+    }
+
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
+        return $query->where('status', 'approved')
+            ->where('is_active', true)
             ->where(function ($q) {
                 $q->whereNull('end_date')
                     ->orWhere('end_date', '>=', now());
             });
+    }
+
+    public function scopePendingApproval($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
     }
 
     public function scopeByType($query, $type)

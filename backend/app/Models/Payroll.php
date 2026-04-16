@@ -33,6 +33,8 @@ class Payroll extends Model
         'deduct_sss',
         'deduct_philhealth',
         'deduct_pagibig',
+        'deduct_loans',
+        'deduct_employee_deductions',
         'overtime_employee_ids',
         'created_by',
         'finalized_by',
@@ -56,6 +58,8 @@ class Payroll extends Model
         'deduct_sss' => 'boolean',
         'deduct_philhealth' => 'boolean',
         'deduct_pagibig' => 'boolean',
+        'deduct_loans' => 'boolean',
+        'deduct_employee_deductions' => 'boolean',
         'overtime_employee_ids' => 'array',
     ];
 

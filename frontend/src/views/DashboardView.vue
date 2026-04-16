@@ -287,21 +287,26 @@
 
             <!-- Pending Allowances -->
             <div
-              v-if="stats.pendingMealAllowances > 0"
+              v-if="stats.pendingAllowances > 0"
               class="action-item"
-              @click="$router.push('/allowances')"
+              @click="
+                $router.push({
+                  path: '/allowances',
+                  query: { status: 'pending' },
+                })
+              "
             >
               <div class="action-item-icon action-icon-warning">
-                <v-icon size="24">mdi-food</v-icon>
+                <v-icon size="24">mdi-cash-multiple</v-icon>
               </div>
               <div class="action-item-content">
                 <div class="action-item-title">Allowances</div>
                 <div class="action-item-desc">
-                  {{ stats.pendingMealAllowances }} pending approval
+                  {{ stats.pendingAllowances }} pending approval
                 </div>
               </div>
               <div class="action-item-badge">
-                {{ stats.pendingMealAllowances }}
+                {{ stats.pendingAllowances }}
               </div>
             </div>
 
@@ -400,7 +405,7 @@ const stats = ref({
   pendingAttendanceCorrections: 0,
   draftPayrolls: 0,
   pendingResignations: 0,
-  pendingMealAllowances: 0,
+  pendingAllowances: 0,
   pending13thMonthPay: 0,
   pendingEmployeeLoans: 0,
   employeesCompleteData: 0,
@@ -439,7 +444,7 @@ const totalPendingActions = computed(() => {
     (stats.value.pendingDeductionRequests || 0) +
     stats.value.draftPayrolls +
     (stats.value.pendingResignations || 0) +
-    (stats.value.pendingMealAllowances || 0) +
+    (stats.value.pendingAllowances || 0) +
     (stats.value.pending13thMonthPay || 0) +
     (stats.value.pendingEmployeeLoans || 0)
   );

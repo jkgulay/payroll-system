@@ -974,8 +974,8 @@
                 </template>
                 <div class="text-caption">
                   <strong>Note:</strong> Select which government contributions
-                  to deduct for this payroll period. Unchecked contributions
-                  will not be deducted, even if enabled for the employee.
+                  and recurring deductions to apply for this payroll period.
+                  Unchecked options will be skipped for this run.
                 </div>
               </v-alert>
 
@@ -1010,6 +1010,44 @@
                     label="Pag-IBIG"
                     prepend-icon="mdi-home-account"
                     hint="Home Development Mutual Fund"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </v-col>
+              </v-row>
+
+              <v-col cols="12" class="px-0 mt-2">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon size="18">mdi-cash-multiple</v-icon>
+                  </div>
+                  <h3 class="section-title">
+                    Recurring Loan and Deduction Controls
+                  </h3>
+                </div>
+              </v-col>
+
+              <v-row class="mt-n2">
+                <v-col cols="12" md="6">
+                  <v-checkbox
+                    v-model="formData.deduct_loans"
+                    label="Deduct Loans"
+                    prepend-icon="mdi-hand-coin"
+                    hint="Apply approved active loan amortizations"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-checkbox
+                    v-model="formData.deduct_employee_deductions"
+                    label="Deduct Employee Deductions"
+                    prepend-icon="mdi-cash-minus"
+                    hint="Apply active employee deductions (cash advance, cooperative, damages, etc.)"
                     persistent-hint
                     color="#ed985f"
                     density="compact"
@@ -1630,6 +1668,8 @@ const formData = ref({
   deduct_sss: true,
   deduct_philhealth: true,
   deduct_pagibig: true,
+  deduct_loans: true,
+  deduct_employee_deductions: true,
 });
 
 const employeeOptions = ref([]);
@@ -1687,6 +1727,8 @@ const selectedContributionCount = computed(() => {
     formData.value.deduct_sss,
     formData.value.deduct_philhealth,
     formData.value.deduct_pagibig,
+    formData.value.deduct_loans,
+    formData.value.deduct_employee_deductions,
   ].filter(Boolean).length;
 });
 
@@ -2113,6 +2155,8 @@ function openCreateDialog() {
     deduct_sss: true,
     deduct_philhealth: true,
     deduct_pagibig: true,
+    deduct_loans: true,
+    deduct_employee_deductions: true,
   };
   overtimeCandidates.value = [];
   overtimeCandidatesLoaded.value = false;
@@ -2167,6 +2211,8 @@ function editPayroll(item) {
     deduct_sss: item.deduct_sss !== false,
     deduct_philhealth: item.deduct_philhealth !== false,
     deduct_pagibig: item.deduct_pagibig !== false,
+    deduct_loans: item.deduct_loans !== false,
+    deduct_employee_deductions: item.deduct_employee_deductions !== false,
   };
   overtimeCandidates.value = [];
   overtimeCandidatesLoaded.value = false;
@@ -2584,6 +2630,8 @@ async function savePayroll() {
     deduct_sss: formData.value.deduct_sss,
     deduct_philhealth: formData.value.deduct_philhealth,
     deduct_pagibig: formData.value.deduct_pagibig,
+    deduct_loans: formData.value.deduct_loans,
+    deduct_employee_deductions: formData.value.deduct_employee_deductions,
   };
 
   if (

@@ -26,7 +26,7 @@ const CACHE_TTL_BY_PREFIX = [
   { prefix: "/deductions", ttl: 15000 },
   { prefix: "/cash-bonds", ttl: 15000 },
   { prefix: "/employee-savings", ttl: 15000 },
-  { prefix: "/meal-allowances", ttl: 15000 },
+  { prefix: "/allowances", ttl: 15000 },
   { prefix: "/thirteenth-month", ttl: 15000 },
   { prefix: "/salary-adjustments", ttl: 15000 },
   { prefix: "/projects", ttl: 120000 },
