@@ -32,6 +32,10 @@
             <v-icon start>mdi-calendar-star</v-icon>
             Holiday Rates
           </v-tab>
+          <v-tab value="daily-cap">
+            <v-icon start>mdi-timer-lock-outline</v-icon>
+            Daily OT Cap
+          </v-tab>
         </v-tabs>
 
         <v-window v-model="activeTab" class="config-window">
@@ -228,6 +232,110 @@
               </div>
             </div>
           </v-window-item>
+
+          <v-window-item value="daily-cap">
+            <div class="config-section">
+              <div class="section-header">
+                <h3 class="section-title">2-Hour Daily Overtime Cap</h3>
+                <p class="section-description">
+                  Apply a fixed maximum of 2 overtime hours per day to selected
+                  positions or specific employees.
+                </p>
+              </div>
+
+              <v-alert type="info" variant="tonal" density="comfortable">
+                Employees not selected here keep their original overtime hours.
+                When selected, overtime is automatically limited to 2 hours per
+                day even if punch records exceed that amount.
+              </v-alert>
+
+              <div class="cap-summary">
+                <span class="cap-pill">
+                  <v-icon size="16" start>mdi-timer-sand</v-icon>
+                  Fixed OT Max: 2 hours/day
+                </span>
+                <span class="cap-pill secondary">
+                  <v-icon size="16" start>mdi-account-group</v-icon>
+                  {{ config.overtime.dailyCap.positionIds.length }} position(s)
+                </span>
+                <span class="cap-pill secondary">
+                  <v-icon size="16" start>mdi-account-check</v-icon>
+                  {{ config.overtime.dailyCap.employeeIds.length }} employee(s)
+                </span>
+              </div>
+
+              <div class="rate-card cap-target-card">
+                <div class="rate-icon regular">
+                  <v-icon size="24">mdi-badge-account-horizontal</v-icon>
+                </div>
+                <div class="rate-details">
+                  <h4 class="rate-label">Positions With 2-Hour Daily OT Cap</h4>
+                  <p class="rate-formula">
+                    Any employee in selected positions will be capped to 2 OT
+                    hours per day.
+                  </p>
+                  <v-select
+                    v-model="config.overtime.dailyCap.positionIds"
+                    :items="positionOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="Select positions"
+                    placeholder="Choose position(s)"
+                    prepend-inner-icon="mdi-account-tie"
+                    variant="outlined"
+                    density="comfortable"
+                    multiple
+                    chips
+                    closable-chips
+                    clearable
+                    :loading="targetOptionsLoading"
+                    :disabled="targetOptionsLoading"
+                    hint="Example: Admin, Engineer, General Worker"
+                    persistent-hint
+                  >
+                    <template #item="{ props, item }">
+                      <v-list-item v-bind="props" :subtitle="item.raw.subtitle" />
+                    </template>
+                  </v-select>
+                </div>
+              </div>
+
+              <div class="rate-card cap-target-card">
+                <div class="rate-icon sunday">
+                  <v-icon size="24">mdi-account-multiple-check</v-icon>
+                </div>
+                <div class="rate-details">
+                  <h4 class="rate-label">Specific Employees With 2-Hour Daily OT Cap</h4>
+                  <p class="rate-formula">
+                    Use this for exceptions or employee-specific overrides.
+                  </p>
+                  <v-select
+                    v-model="config.overtime.dailyCap.employeeIds"
+                    :items="employeeOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="Select employees"
+                    placeholder="Choose employee(s)"
+                    prepend-inner-icon="mdi-account"
+                    variant="outlined"
+                    density="comfortable"
+                    multiple
+                    chips
+                    closable-chips
+                    clearable
+                    :loading="targetOptionsLoading"
+                    :disabled="targetOptionsLoading"
+                    hint="Employee-level selection works together with position selection."
+                    persistent-hint
+                  >
+                    <template #item="{ props, item }">
+                      <v-list-item v-bind="props" :subtitle="item.raw.subtitle" />
+                    </template>
+                  </v-select>
+                </div>
+              </div>
+            </div>
+          </v-window-item>
         </v-window>
       </v-card-text>
 
@@ -270,12 +378,19 @@ const toast = useToast();
 const isOpen = ref(props.modelValue);
 const activeTab = ref("overtime");
 const saving = ref(false);
+const targetOptionsLoading = ref(false);
+const positionOptions = ref([]);
+const employeeOptions = ref([]);
 
-// Configuration data
-const config = ref({
+const createDefaultConfig = () => ({
   overtime: {
     regularDay: 1.25,
     sunday: 1.3,
+    dailyCap: {
+      hours: 2,
+      positionIds: [],
+      employeeIds: [],
+    },
   },
   holidays: {
     regularHoliday: 1.3,
@@ -283,6 +398,52 @@ const config = ref({
     specialHoliday: 1.3,
   },
 });
+
+const normalizeNumber = (value, fallback) => {
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : fallback;
+};
+
+const normalizeIdArray = (value) => {
+  if (!Array.isArray(value)) return [];
+
+  return [...new Set(value.map((item) => Number(item)).filter((id) => id > 0))];
+};
+
+const normalizeConfig = (payload = {}) => {
+  const defaults = createDefaultConfig();
+  const overtime = payload?.overtime || {};
+  const holidays = payload?.holidays || {};
+  const dailyCap = overtime?.dailyCap || {};
+
+  return {
+    overtime: {
+      regularDay: normalizeNumber(overtime.regularDay, defaults.overtime.regularDay),
+      sunday: normalizeNumber(overtime.sunday, defaults.overtime.sunday),
+      dailyCap: {
+        hours: 2,
+        positionIds: normalizeIdArray(dailyCap.positionIds),
+        employeeIds: normalizeIdArray(dailyCap.employeeIds),
+      },
+    },
+    holidays: {
+      regularHoliday: normalizeNumber(
+        holidays.regularHoliday,
+        defaults.holidays.regularHoliday,
+      ),
+      regularHolidaySunday: normalizeNumber(
+        holidays.regularHolidaySunday,
+        defaults.holidays.regularHolidaySunday,
+      ),
+      specialHoliday: normalizeNumber(
+        holidays.specialHoliday,
+        defaults.holidays.specialHoliday,
+      ),
+    },
+  };
+};
+
+const config = ref(createDefaultConfig());
 
 watch(
   () => props.modelValue,
@@ -294,7 +455,7 @@ watch(
 watch(isOpen, (newVal) => {
   emit("update:modelValue", newVal);
   if (newVal) {
-    loadConfiguration();
+    initializeDialog();
   }
 });
 
@@ -302,15 +463,96 @@ const closeDialog = () => {
   isOpen.value = false;
 };
 
+const initializeDialog = async () => {
+  await Promise.all([loadConfiguration(), loadTargetOptions()]);
+  ensureSelectedTargetsVisible();
+};
+
+const ensureSelectedTargetsVisible = () => {
+  const existingPositionIds = new Set(positionOptions.value.map((item) => item.value));
+  const existingEmployeeIds = new Set(employeeOptions.value.map((item) => item.value));
+
+  (config.value.overtime.dailyCap.positionIds || []).forEach((id) => {
+    if (!existingPositionIds.has(id)) {
+      positionOptions.value.push({
+        title: `Position #${id}`,
+        subtitle: "Not active or no longer available",
+        value: id,
+      });
+    }
+  });
+
+  (config.value.overtime.dailyCap.employeeIds || []).forEach((id) => {
+    if (!existingEmployeeIds.has(id)) {
+      employeeOptions.value.push({
+        title: `Employee #${id}`,
+        subtitle: "Not active or no longer available",
+        value: id,
+      });
+    }
+  });
+};
+
+const loadTargetOptions = async () => {
+  targetOptionsLoading.value = true;
+
+  try {
+    const [positionsResponse, employeesResponse] = await Promise.all([
+      api.get("/position-rates", {
+        params: { active_only: true },
+      }),
+      api.get("/employees", {
+        params: {
+          per_page: 500,
+          activity_status: "active,on_leave",
+        },
+      }),
+    ]);
+
+    const positions = Array.isArray(positionsResponse.data)
+      ? positionsResponse.data
+      : [];
+    positionOptions.value = positions.map((position) => ({
+      title: position.position_name,
+      subtitle: `Daily Rate: ₱${Number(position.daily_rate || 0).toFixed(2)}`,
+      value: Number(position.id),
+    }));
+
+    const employees = Array.isArray(employeesResponse.data?.data)
+      ? employeesResponse.data.data
+      : [];
+    employeeOptions.value = employees.map((employee) => {
+      const fullName =
+        employee.full_name ||
+        [employee.first_name, employee.last_name].filter(Boolean).join(" ");
+
+      return {
+        title: `${employee.employee_number || "EMP"} - ${fullName}`,
+        subtitle: employee.position || "No position assigned",
+        value: Number(employee.id),
+      };
+    });
+
+    ensureSelectedTargetsVisible();
+  } catch (error) {
+    toast.error("Failed to load position and employee options");
+  } finally {
+    targetOptionsLoading.value = false;
+  }
+};
+
 const saveConfiguration = async () => {
   saving.value = true;
 
   try {
-    await api.put("/payroll-config", config.value);
+    const payload = normalizeConfig(config.value);
+    await api.put("/payroll-config", payload);
     toast.success("Payroll configuration saved successfully");
     closeDialog();
   } catch (error) {
-    toast.error("Failed to save configuration: " + error.message);
+    const message =
+      error.response?.data?.message || error.message || "Failed to save payroll configuration";
+    toast.error(message);
   } finally {
     saving.value = false;
   }
@@ -319,9 +561,8 @@ const saveConfiguration = async () => {
 const loadConfiguration = async () => {
   try {
     const response = await api.get("/payroll-config");
-    if (response.data) {
-      config.value = response.data;
-    }
+    config.value = normalizeConfig(response.data || {});
+    ensureSelectedTargetsVisible();
   } catch (error) {
     toast.error("Failed to load payroll configuration");
   }
@@ -425,6 +666,29 @@ const loadConfiguration = async () => {
   margin: 0;
 }
 
+.cap-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cap-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(237, 152, 95, 0.15);
+  color: #7b3b12;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cap-pill.secondary {
+  background: rgba(0, 31, 61, 0.08);
+  color: #001f3d;
+}
+
 // Rate Cards
 .rate-cards {
   display: flex;
@@ -445,6 +709,10 @@ const loadConfiguration = async () => {
     background: rgba(237, 152, 95, 0.08);
     border-color: rgba(237, 152, 95, 0.3);
   }
+}
+
+.cap-target-card {
+  align-items: flex-start;
 }
 
 .rate-icon {
