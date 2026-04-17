@@ -37,7 +37,7 @@ export function usePositionRates() {
   // Get rate for a position
   const getRate = (positionName) => {
     const position = positionRates.value.find(
-      (rate) => rate.position_name === positionName
+      (rate) => rate.position_name === positionName,
     );
     return position ? parseFloat(position.daily_rate) : 450; // Default to 450 if not found
   };
@@ -45,7 +45,7 @@ export function usePositionRates() {
   // Get full position rate object
   const getPositionRate = (positionName) => {
     return positionRates.value.find(
-      (rate) => rate.position_name === positionName
+      (rate) => rate.position_name === positionName,
     );
   };
 
@@ -65,6 +65,10 @@ export function usePositionRates() {
   const updateRate = async (id, positionData) => {
     try {
       const response = await api.put(`/position-rates/${id}`, positionData);
+      if (response.data?.approval_required) {
+        return response.data;
+      }
+
       const index = positionRates.value.findIndex((rate) => rate.id === id);
       if (index !== -1) {
         positionRates.value[index] = response.data.data;
@@ -95,11 +99,16 @@ export function usePositionRates() {
     try {
       const response = await api.post(
         `/position-rates/${positionRateId}/bulk-update`,
-        { new_rate: newRate }
+        { new_rate: newRate },
       );
+
+      if (response.data?.approval_required) {
+        return response.data;
+      }
+
       // Update the rate in our local array
       const index = positionRates.value.findIndex(
-        (rate) => rate.id === positionRateId
+        (rate) => rate.id === positionRateId,
       );
       if (index !== -1) {
         positionRates.value[index] = response.data.position_rate;

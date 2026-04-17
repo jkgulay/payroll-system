@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\EmployeeGovernmentInfo;
 use App\Models\EmployeeLeave;
 use App\Models\Attendance;
+use App\Models\SalaryAdjustment;
 use App\Models\User;
 use App\Models\AuditLog;
 use App\Helpers\DateHelper;
@@ -24,6 +25,8 @@ use Carbon\Carbon;
 
 class EmployeeController extends Controller
 {
+    private const RATE_REQUEST_META_PREFIX = '[RATE_REQUEST_META]';
+
     public function index(Request $request)
     {
         $this->syncLeaveStatusesForToday();
@@ -158,7 +161,88 @@ class EmployeeController extends Controller
         $perPage = $request->get('per_page', 50); // Increased default from 15 to 50
         $employees = $query->latest('created_at')->paginate($perPage);
 
+        $this->appendPendingPayRateRequestAttributes($employees);
+
         return response()->json($employees);
+    }
+
+    private function appendPendingPayRateRequestAttributes($employees): void
+    {
+        if (!method_exists($employees, 'getCollection') || !method_exists($employees, 'setCollection')) {
+            return;
+        }
+
+        $collection = $employees->getCollection();
+        $employeeIds = $collection
+            ->pluck('id')
+            ->filter()
+            ->map(fn($id) => (int) $id)
+            ->values();
+
+        if ($employeeIds->isEmpty()) {
+            return;
+        }
+
+        $pendingByEmployee = [];
+        $pendingRequests = SalaryAdjustment::query()
+            ->select(['id', 'employee_id', 'reference_period', 'created_at'])
+            ->whereIn('employee_id', $employeeIds->all())
+            ->where('status', 'pending')
+            ->where(function ($query) {
+                $query
+                    ->where('reference_period', 'like', 'APPROVAL:EMPLOYEE_CUSTOM_RATE_UPDATE:%')
+                    ->orWhere('reference_period', 'like', 'APPROVAL:EMPLOYEE_CUSTOM_RATE_CLEAR:%');
+            })
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        foreach ($pendingRequests as $request) {
+            $employeeId = (int) $request->employee_id;
+
+            // Keep the latest pending request per employee.
+            if (isset($pendingByEmployee[$employeeId])) {
+                continue;
+            }
+
+            $type = $this->resolveEmployeePendingRequestType((string) $request->reference_period);
+
+            $pendingByEmployee[$employeeId] = [
+                'id' => (int) $request->id,
+                'type' => $type,
+                'label' => $this->resolveEmployeePendingRequestLabel($type),
+                'requested_at' => $request->created_at?->toDateTimeString(),
+            ];
+        }
+
+        $employees->setCollection($collection->map(function ($employee) use ($pendingByEmployee) {
+            $pending = $pendingByEmployee[(int) $employee->id] ?? null;
+
+            $employee->setAttribute('has_pending_pay_rate_request', $pending !== null);
+            $employee->setAttribute('pending_pay_rate_request_id', $pending['id'] ?? null);
+            $employee->setAttribute('pending_pay_rate_request_type', $pending['type'] ?? null);
+            $employee->setAttribute('pending_pay_rate_request_label', $pending['label'] ?? null);
+            $employee->setAttribute('pending_pay_rate_requested_at', $pending['requested_at'] ?? null);
+
+            return $employee;
+        }));
+    }
+
+    private function resolveEmployeePendingRequestType(string $referencePeriod): string
+    {
+        if (str_starts_with($referencePeriod, 'APPROVAL:EMPLOYEE_CUSTOM_RATE_CLEAR:')) {
+            return 'employee_custom_pay_rate_clear';
+        }
+
+        return 'employee_custom_pay_rate_update';
+    }
+
+    private function resolveEmployeePendingRequestLabel(string $type): string
+    {
+        return match ($type) {
+            'employee_custom_pay_rate_clear' => 'Pending custom rate clear request',
+            default => 'Pending custom rate update request',
+        };
     }
 
     private function syncLeaveStatusesForToday(): void
@@ -511,8 +595,75 @@ class EmployeeController extends Controller
             'reason' => 'nullable|string|max:500', // Optional reason for audit trail
         ]);
 
-        $oldRate = $employee->getBasicSalary();
-        $newRate = $validated['custom_pay_rate'];
+        $oldCustomRate = $employee->custom_pay_rate;
+        $oldRate = (float) $employee->getBasicSalary();
+        $newRate = (float) $validated['custom_pay_rate'];
+
+        if ($oldCustomRate !== null && abs((float) $oldCustomRate - $newRate) < 0.0001) {
+            return response()->json([
+                'message' => 'No change detected. The requested custom pay rate is already set for this employee.',
+            ], 422);
+        }
+
+        if ($this->requiresAdminApprovalForRateChange()) {
+            $referencePeriod = 'APPROVAL:EMPLOYEE_CUSTOM_RATE_UPDATE:' . $employee->id;
+            $existingPending = $this->findPendingRateApprovalRequest($referencePeriod);
+            if ($existingPending) {
+                return response()->json([
+                    'message' => 'A pending admin approval request already exists for this employee pay-rate update.',
+                    'request_id' => $existingPending->id,
+                ], 422);
+            }
+
+            $delta = round($newRate - $oldRate, 2);
+            $requestType = $delta < 0 ? 'deduction' : 'addition';
+            $notes = $this->buildRateApprovalNotes([
+                'request_type' => 'employee_custom_pay_rate_update',
+                'employee_id' => $employee->id,
+                'employee_number' => $employee->employee_number,
+                'old_custom_pay_rate' => $oldCustomRate !== null ? (float) $oldCustomRate : null,
+                'new_custom_pay_rate' => $newRate,
+                'old_effective_rate' => $oldRate,
+                'new_effective_rate' => $newRate,
+                'requested_by' => auth()->id(),
+                'requested_by_role' => strtolower((string) (auth()->user()?->role ?? '')),
+                'requested_reason' => $validated['reason'] ?? null,
+                'requested_at' => now()->toDateTimeString(),
+            ], $validated['reason'] ?? null);
+
+            $approvalRequest = SalaryAdjustment::create([
+                'employee_id' => $employee->id,
+                'amount' => $this->normalizeApprovalRequestAmount($delta),
+                'type' => $requestType,
+                'reason' => 'Employee Custom Pay Rate Update Request',
+                'reference_period' => $referencePeriod,
+                'effective_date' => now()->toDateString(),
+                'status' => 'pending',
+                'created_by' => auth()->id(),
+                'notes' => $notes,
+            ]);
+
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'salary_adjustments',
+                'action' => 'create_adjustment',
+                'description' => "Custom pay-rate update request submitted for employee {$employee->employee_number} ({$employee->full_name})",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'new_values' => array_merge($approvalRequest->toArray(), [
+                    'approval_required' => true,
+                    'request_scope' => 'employee_custom_pay_rate_update',
+                ]),
+            ]);
+
+            return response()->json([
+                'message' => 'Custom pay rate update submitted for admin approval. It is now visible in Salary Exception Records.',
+                'approval_required' => true,
+                'request' => $approvalRequest->load(['employee', 'createdBy']),
+                'old_rate' => $oldRate,
+                'new_rate' => $newRate,
+            ], 202);
+        }
 
         // Update the custom pay rate
         $employee->custom_pay_rate = $newRate;
@@ -529,11 +680,22 @@ class EmployeeController extends Controller
             'user_id' => auth()->id(),
             'module' => 'employees',
             'action' => 'pay_rate_update',
+            'model_type' => Employee::class,
+            'model_id' => $employee->id,
             'description' => $description,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'old_values' => ['custom_pay_rate' => $oldRate, 'employee_id' => $employee->id],
-            'new_values' => ['custom_pay_rate' => $newRate, 'employee_id' => $employee->id],
+            'old_values' => [
+                'employee_id' => $employee->id,
+                'custom_pay_rate' => $oldCustomRate,
+                'effective_pay_rate' => $oldRate,
+            ],
+            'new_values' => [
+                'employee_id' => $employee->id,
+                'custom_pay_rate' => $newRate,
+                'effective_pay_rate' => $newRate,
+                'reason' => $validated['reason'] ?? null,
+            ],
         ]);
 
         Log::info("Pay rate updated for employee {$employee->employee_number} from {$oldRate} to {$newRate} by user " . auth()->id());
@@ -557,7 +719,72 @@ class EmployeeController extends Controller
             ], 422);
         }
 
-        $oldRate = $employee->custom_pay_rate;
+        $oldCustomRate = $employee->custom_pay_rate;
+        $oldRate = (float) $employee->custom_pay_rate;
+
+        if ($this->requiresAdminApprovalForRateChange()) {
+            $referencePeriod = 'APPROVAL:EMPLOYEE_CUSTOM_RATE_CLEAR:' . $employee->id;
+            $existingPending = $this->findPendingRateApprovalRequest($referencePeriod);
+            if ($existingPending) {
+                return response()->json([
+                    'message' => 'A pending admin approval request already exists for clearing this employee custom pay rate.',
+                    'request_id' => $existingPending->id,
+                ], 422);
+            }
+
+            $newRate = $this->estimateEmployeeRateWithoutCustom($employee);
+            $delta = round($newRate - $oldRate, 2);
+            $requestType = $delta < 0 ? 'deduction' : 'addition';
+            $reason = $request->input('reason');
+
+            $notes = $this->buildRateApprovalNotes([
+                'request_type' => 'employee_custom_pay_rate_clear',
+                'employee_id' => $employee->id,
+                'employee_number' => $employee->employee_number,
+                'old_custom_pay_rate' => $oldCustomRate !== null ? (float) $oldCustomRate : null,
+                'new_custom_pay_rate' => null,
+                'old_effective_rate' => $oldRate,
+                'new_effective_rate' => $newRate,
+                'requested_by' => auth()->id(),
+                'requested_by_role' => strtolower((string) (auth()->user()?->role ?? '')),
+                'requested_reason' => $reason,
+                'requested_at' => now()->toDateTimeString(),
+            ], $reason);
+
+            $approvalRequest = SalaryAdjustment::create([
+                'employee_id' => $employee->id,
+                'amount' => $this->normalizeApprovalRequestAmount($delta),
+                'type' => $requestType,
+                'reason' => 'Employee Custom Pay Rate Clear Request',
+                'reference_period' => $referencePeriod,
+                'effective_date' => now()->toDateString(),
+                'status' => 'pending',
+                'created_by' => auth()->id(),
+                'notes' => $notes,
+            ]);
+
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'module' => 'salary_adjustments',
+                'action' => 'create_adjustment',
+                'description' => "Custom pay-rate clear request submitted for employee {$employee->employee_number} ({$employee->full_name})",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'new_values' => array_merge($approvalRequest->toArray(), [
+                    'approval_required' => true,
+                    'request_scope' => 'employee_custom_pay_rate_clear',
+                ]),
+            ]);
+
+            return response()->json([
+                'message' => 'Custom pay rate clear request submitted for admin approval. It is now visible in Salary Exception Records.',
+                'approval_required' => true,
+                'request' => $approvalRequest->load(['employee', 'createdBy']),
+                'old_rate' => $oldRate,
+                'new_rate' => $newRate,
+            ], 202);
+        }
+
         $employee->custom_pay_rate = null;
         $employee->save();
 
@@ -576,11 +803,22 @@ class EmployeeController extends Controller
             'user_id' => auth()->id(),
             'module' => 'employees',
             'action' => 'pay_rate_clear',
+            'model_type' => Employee::class,
+            'model_id' => $employee->id,
             'description' => $description,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'old_values' => ['custom_pay_rate' => $oldRate, 'employee_id' => $employee->id],
-            'new_values' => ['custom_pay_rate' => null, 'position_rate' => $newRate, 'employee_id' => $employee->id],
+            'old_values' => [
+                'employee_id' => $employee->id,
+                'custom_pay_rate' => $oldCustomRate,
+                'effective_pay_rate' => $oldRate,
+            ],
+            'new_values' => [
+                'employee_id' => $employee->id,
+                'custom_pay_rate' => null,
+                'effective_pay_rate' => $newRate,
+                'reason' => $reason,
+            ],
         ]);
 
         Log::info("Custom pay rate cleared for employee {$employee->employee_number} by user " . auth()->id());
@@ -591,6 +829,60 @@ class EmployeeController extends Controller
             'old_rate' => $oldRate,
             'new_rate' => $newRate,
         ]);
+    }
+
+    private function requiresAdminApprovalForRateChange(): bool
+    {
+        $role = strtolower((string) (auth()->user()?->role ?? ''));
+        return in_array($role, ['hr', 'payrollist'], true);
+    }
+
+    private function findPendingRateApprovalRequest(string $referencePeriod): ?SalaryAdjustment
+    {
+        return SalaryAdjustment::query()
+            ->where('reference_period', $referencePeriod)
+            ->where('status', 'pending')
+            ->latest('id')
+            ->first();
+    }
+
+    private function normalizeApprovalRequestAmount(float $delta): float
+    {
+        $normalized = round(abs($delta), 2);
+        return $normalized >= 0 ? $normalized : 0.0;
+    }
+
+    private function estimateEmployeeRateWithoutCustom(Employee $employee): float
+    {
+        $employee->loadMissing('positionRate');
+
+        if ($employee->positionRate?->daily_rate !== null) {
+            return (float) $employee->positionRate->daily_rate;
+        }
+
+        return $employee->basic_salary !== null
+            ? (float) $employee->basic_salary
+            : 0.0;
+    }
+
+    private function buildRateApprovalNotes(array $meta, ?string $reason = null): string
+    {
+        $lines = [
+            self::RATE_REQUEST_META_PREFIX . json_encode($meta, JSON_UNESCAPED_SLASHES),
+            'Requested by user #' . (string) ($meta['requested_by'] ?? auth()->id()),
+            'Request type: ' . (string) ($meta['request_type'] ?? 'rate_change_request'),
+        ];
+
+        if (isset($meta['old_effective_rate']) || isset($meta['new_effective_rate'])) {
+            $lines[] = 'Effective rate change: ₱' . number_format((float) ($meta['old_effective_rate'] ?? 0), 2) .
+                ' -> ₱' . number_format((float) ($meta['new_effective_rate'] ?? 0), 2);
+        }
+
+        if (!empty($reason)) {
+            $lines[] = 'Reason: ' . $reason;
+        }
+
+        return implode(PHP_EOL, $lines);
     }
 
     /**

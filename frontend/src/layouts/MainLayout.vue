@@ -574,7 +574,7 @@ const menuItems = computed(() => {
           roles: ["admin", "hr"],
         },
         {
-          title: "Salary Adjustments",
+          title: "Salary Exception Records",
           icon: "mdi-cash-sync",
           value: "salary-adjustments",
           to: "/salary-adjustments",
@@ -868,7 +868,7 @@ const menuSections = computed(() => {
           roles: ["admin", "payrollist"],
         },
         {
-          title: "Salary Adjustments",
+          title: "Salary Exception Records",
           icon: "mdi-cash-sync",
           value: "salary-adjustments",
           to: "/salary-adjustments",

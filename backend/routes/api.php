@@ -180,8 +180,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/employees/{employee}/deductions', [App\Http\Controllers\Api\EmployeeController::class, 'deductions']);
     Route::get('/employees/{employee}/credentials', [App\Http\Controllers\Api\EmployeeController::class, 'getCredentials']);
     Route::post('/employees/{employee}/reset-password', [App\Http\Controllers\Api\EmployeeController::class, 'resetPassword']);
-    Route::post('/employees/{employee}/update-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'updatePayRate']);
-    Route::post('/employees/{employee}/clear-custom-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'clearCustomPayRate']);
+    Route::post('/employees/{employee}/update-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'updatePayRate'])->middleware('role:admin,hr,payrollist');
+    Route::post('/employees/{employee}/clear-custom-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'clearCustomPayRate'])->middleware('role:admin,hr,payrollist');
 
     // Employee Applications
     Route::apiResource('employee-applications', App\Http\Controllers\Api\EmployeeApplicationController::class);
@@ -242,7 +242,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Position Rates
     Route::apiResource('position-rates', App\Http\Controllers\Api\PositionRateController::class);
-    Route::post('/position-rates/{positionRate}/bulk-update', [App\Http\Controllers\Api\PositionRateController::class, 'bulkUpdateEmployees']);
+    Route::post('/position-rates/{positionRate}/bulk-update', [App\Http\Controllers\Api\PositionRateController::class, 'bulkUpdateEmployees'])->middleware('role:admin,hr,payrollist');
     Route::get('/position-rates/by-name/search', [App\Http\Controllers\Api\PositionRateController::class, 'getByName']);
     Route::get('/positions/names', [App\Http\Controllers\Api\PositionRateController::class, 'getPositionNames']);
 
@@ -298,11 +298,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 
-    // Salary Adjustments - specific routes MUST come before apiResource
+    // Salary Exception Records - specific routes MUST come before apiResource
     Route::get('/salary-adjustments/employees', [App\Http\Controllers\SalaryAdjustmentController::class, 'getEmployees']);
-    Route::post('/salary-adjustments/bulk', [App\Http\Controllers\SalaryAdjustmentController::class, 'bulkStore'])->middleware('role:admin,payrollist');
+    Route::get('/salary-adjustments/overlap-check', [App\Http\Controllers\SalaryAdjustmentController::class, 'overlapCheck'])->middleware('role:admin,hr,payrollist');
+    Route::post('/salary-adjustments/bulk', [App\Http\Controllers\SalaryAdjustmentController::class, 'bulkStore'])->middleware('role:admin,hr,payrollist');
+    Route::post('/salary-adjustments/{salaryAdjustment}/approve', [App\Http\Controllers\SalaryAdjustmentController::class, 'approve'])->middleware('role:admin,hr');
+    Route::post('/salary-adjustments/{salaryAdjustment}/reject', [App\Http\Controllers\SalaryAdjustmentController::class, 'reject'])->middleware('role:admin,hr');
     Route::get('/salary-adjustments/employee/{employee}', [App\Http\Controllers\SalaryAdjustmentController::class, 'getEmployeeAdjustments']);
-    Route::apiResource('salary-adjustments', App\Http\Controllers\SalaryAdjustmentController::class)->middleware('role:admin,payrollist');
+    Route::apiResource('salary-adjustments', App\Http\Controllers\SalaryAdjustmentController::class)->middleware('role:admin,hr,payrollist');
 
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);
 

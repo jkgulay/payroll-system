@@ -213,7 +213,7 @@ class AttendanceModificationRequestController extends Controller
                 'cash-advances' => 'cash advances',
                 'cash-bonds' => 'cash bonds',
                 'employee-savings' => 'employee savings',
-                'salary-adjustments' => 'salary adjustments',
+                'salary-adjustments' => 'salary exception records',
                 'payroll-item-adjustments' => 'payroll item adjustments',
                 'attendance-settings' => 'attendance settings',
             ];

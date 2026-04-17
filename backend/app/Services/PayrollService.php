@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\Employee;
-use App\Models\SalaryAdjustment;
 use App\Models\Holiday;
 use App\Models\GovernmentRate;
+use App\Models\SalaryAdjustment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -67,7 +67,7 @@ class PayrollService
             $totalDeductions = 0;
             $totalNet = 0;
             $payrollItems = []; // Collect items for insert
-            $allAdjustmentIds = []; // Collect salary adjustment IDs to mark after successful insert
+            $allAdjustmentIds = []; // Collect one-time salary adjustment IDs to mark as consumed
             $allBonusIds = []; // Collect bonus IDs to mark as paid after successful insert
             $selectedOvertimeEmployeeIds = collect($payroll->overtime_employee_ids ?? [])
                 ->map(fn($id) => (int) $id)
@@ -96,7 +96,7 @@ class PayrollService
                 // Collect items instead of individual inserts
                 $payrollItems[] = $item;
 
-                // Collect adjustment IDs from this item
+                // Collect approved one-time adjustment IDs from this item
                 if (!empty($item['_adjustment_ids'])) {
                     $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
                 }
@@ -120,13 +120,9 @@ class PayrollService
                 PayrollItem::create($item);
             }
 
-            // Mark salary adjustments as applied AFTER successful inserts
+            // Mark approved one-time salary adjustments as consumed by this payroll.
             if (!empty($allAdjustmentIds)) {
-                SalaryAdjustment::whereIn('id', $allAdjustmentIds)
-                    ->update([
-                        'status' => 'applied',
-                        'applied_payroll_id' => $payroll->id,
-                    ]);
+                $this->markSalaryAdjustmentsAsAppliedToPayroll($allAdjustmentIds, $payroll);
             }
 
             // Mark bonuses as paid AFTER successful inserts
@@ -211,14 +207,30 @@ class PayrollService
                             'amount'
                         );
                 },
-                // Pending salary adjustments (only those effective within or before the pay period)
+                // Approved one-time salary exception records awaiting payroll consumption.
                 'salaryAdjustments' => function ($q) use ($payroll) {
-                    $q->where('status', 'pending')
+                    $q->where('status', 'applied')
+                        ->whereNull('applied_payroll_id')
+                        ->whereNotNull('reason')
+                        ->whereRaw("TRIM(reason) <> ''")
+                        ->whereNotNull('reference_period')
+                        ->whereRaw("TRIM(reference_period) <> ''")
+                        ->where('reference_period', 'not like', 'APPROVAL:%')
                         ->where(function ($query) use ($payroll) {
                             $query->whereNull('effective_date')
-                                ->orWhere('effective_date', '<=', $payroll->period_end);
+                                ->orWhereDate('effective_date', '<=', $payroll->period_end);
                         })
-                        ->select('id', 'employee_id', 'type', 'amount');
+                        ->select(
+                            'id',
+                            'employee_id',
+                            'amount',
+                            'type',
+                            'reason',
+                            'reference_period',
+                            'effective_date',
+                            'status',
+                            'applied_payroll_id'
+                        );
                 },
                 // Active loans with balance
                 'loans' => function ($q) use ($payroll) {
@@ -644,20 +656,13 @@ class PayrollService
         // Sunday and holiday work are shown in SUN/SPL. HOL columns instead.
         $totalDaysWorked = $regularDays;
 
-        // OPTIMIZATION: Use preloaded salary adjustments
-        $pendingAdjustments = $employee->salaryAdjustments;
-
-        $salaryAdjustment = 0;
-        $adjustmentIds = [];
-        foreach ($pendingAdjustments as $adjustment) {
-            // Deductions are negative, additions are positive
-            if ($adjustment->type === 'deduction') {
-                $salaryAdjustment -= abs($adjustment->amount);
-            } else {
-                $salaryAdjustment += abs($adjustment->amount);
-            }
-            $adjustmentIds[] = $adjustment->id;
-        }
+        // ADJ. PREV. SALARY comes only from approved one-time
+        // salary exception records awaiting payroll consumption.
+        [$oneTimeAdjustment, $oneTimeAdjustmentIds] = $this->calculateApprovedOneTimeAdjustment(
+            $payroll,
+            $employee,
+        );
+        $salaryAdjustment = round($oneTimeAdjustment, 2);
 
         // Calculate undertime deduction
         // Formula: (rate / standard_hours) * undertime_hours
@@ -913,9 +918,80 @@ class PayrollService
             'other_deductions' => $otherDeductions,
             'total_deductions' => $totalDeductions,
             'net_pay' => $netPay,
-            '_adjustment_ids' => $adjustmentIds, // Internal: collected by processPayroll
+            '_adjustment_ids' => $oneTimeAdjustmentIds, // Internal: mark consumed after successful payroll save
             '_bonus_ids' => $bonusIds, // Internal: collected by processPayroll to mark bonuses as paid
         ];
+    }
+
+    /**
+     * Sum approved one-time salary exception records for the employee.
+     *
+     * Returns [totalAdjustment, adjustmentIds]
+     */
+    private function calculateApprovedOneTimeAdjustment(Payroll $payroll, Employee $employee): array
+    {
+        if ($employee->relationLoaded('salaryAdjustments')) {
+            $adjustments = $employee->salaryAdjustments;
+        } else {
+            $adjustments = SalaryAdjustment::query()
+                ->where('employee_id', $employee->id)
+                ->where('status', 'applied')
+                ->whereNull('applied_payroll_id')
+                ->whereNotNull('reason')
+                ->whereRaw("TRIM(reason) <> ''")
+                ->whereNotNull('reference_period')
+                ->whereRaw("TRIM(reference_period) <> ''")
+                ->where('reference_period', 'not like', 'APPROVAL:%')
+                ->where(function ($query) use ($payroll) {
+                    $query->whereNull('effective_date')
+                        ->orWhereDate('effective_date', '<=', $payroll->period_end);
+                })
+                ->get(['id', 'employee_id', 'amount', 'type']);
+        }
+
+        if ($adjustments->isEmpty()) {
+            return [0.0, []];
+        }
+
+        $total = 0.0;
+        $adjustmentIds = [];
+
+        foreach ($adjustments as $adjustment) {
+            $amount = (float) ($adjustment->amount ?? 0);
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $total += $adjustment->type === 'deduction'
+                ? -abs($amount)
+                : abs($amount);
+
+            $adjustmentIds[] = (int) $adjustment->id;
+        }
+
+        return [round($total, 2), array_values(array_unique($adjustmentIds))];
+    }
+
+    private function markSalaryAdjustmentsAsAppliedToPayroll(array $adjustmentIds, Payroll $payroll): void
+    {
+        $normalizedIds = collect($adjustmentIds)
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($normalizedIds)) {
+            return;
+        }
+
+        SalaryAdjustment::query()
+            ->whereIn('id', $normalizedIds)
+            ->where('status', 'applied')
+            ->whereNull('applied_payroll_id')
+            ->update([
+                'applied_payroll_id' => $payroll->id,
+            ]);
     }
 
     private function resolveDailyOvertimeCapHours(Employee $employee, array $options, bool $includeOvertime): ?float

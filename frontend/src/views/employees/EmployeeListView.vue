@@ -118,9 +118,15 @@
               title="Clear Filters"
             ></v-btn>
           </v-col>
-          <v-col cols="auto" class="d-flex align-center" v-if="hasActiveFilters">
+          <v-col
+            cols="auto"
+            class="d-flex align-center"
+            v-if="hasActiveFilters"
+          >
             <v-chip size="small" color="info" variant="tonal">
-              {{ activeFilterCount }} active filter{{ activeFilterCount > 1 ? 's' : '' }}
+              {{ activeFilterCount }} active filter{{
+                activeFilterCount > 1 ? "s" : ""
+              }}
             </v-chip>
           </v-col>
         </v-row>
@@ -227,16 +233,28 @@
               <div class="font-weight-bold">
                 ₱{{ formatCurrency(getEmployeeEffectiveRate(item)) }}
               </div>
-              <v-chip
-                v-if="item.custom_pay_rate"
-                size="x-small"
-                color="success"
-                variant="tonal"
-                class="mt-1"
-              >
-                <v-icon start size="x-small">mdi-star</v-icon>
-                Custom
-              </v-chip>
+              <div class="d-flex flex-column align-end">
+                <v-chip
+                  v-if="item.custom_pay_rate"
+                  size="x-small"
+                  color="success"
+                  variant="tonal"
+                  class="mt-1"
+                >
+                  <v-icon start size="x-small">mdi-star</v-icon>
+                  Custom
+                </v-chip>
+                <v-chip
+                  v-if="hasPendingPayRateRequest(item)"
+                  size="x-small"
+                  color="warning"
+                  variant="tonal"
+                  class="mt-1"
+                >
+                  <v-icon start size="x-small">mdi-clock-outline</v-icon>
+                  Pending Approval
+                </v-chip>
+              </div>
             </div>
           </template>
 
@@ -295,6 +313,12 @@
                     <v-icon color="success">mdi-cash</v-icon>
                   </template>
                   <v-list-item-title>Update Pay Rate</v-list-item-title>
+                  <v-list-item-subtitle
+                    v-if="hasPendingPayRateRequest(item)"
+                    class="text-warning"
+                  >
+                    {{ getPendingPayRateRequestLabel(item) }}
+                  </v-list-item-subtitle>
                 </v-list-item>
                 <v-divider></v-divider>
                 <v-list-item
@@ -336,7 +360,8 @@
               <v-icon size="56" color="grey">mdi-account-search-outline</v-icon>
               <p class="text-h6 mt-3 mb-1">No employees found</p>
               <p class="text-body-2 text-medium-emphasis mb-4">
-                Try adjusting your filters or clearing them to see all employees.
+                Try adjusting your filters or clearing them to see all
+                employees.
               </p>
               <v-btn
                 variant="outlined"
@@ -1327,6 +1352,20 @@
             </div>
           </v-alert>
 
+          <v-alert
+            v-if="hasPendingPayRateRequest(payRateEmployee)"
+            type="warning"
+            variant="tonal"
+            class="mb-4"
+          >
+            <div class="text-subtitle-2 mb-1">
+              {{ getPendingPayRateRequestLabel(payRateEmployee) }}
+            </div>
+            <div class="text-caption">
+              {{ getPendingPayRateRequestStatusText(payRateEmployee) }}
+            </div>
+          </v-alert>
+
           <v-form ref="payRateForm" v-model="payRateFormValid">
             <!-- Current Rate Info -->
             <v-sheet color="grey-lighten-4" rounded class="pa-4 mb-4">
@@ -2073,6 +2112,15 @@ async function updatePayRate() {
       },
     );
 
+    if (response.data?.approval_required) {
+      toast.success(
+        response.data?.message ||
+          "Pay-rate update request submitted for admin approval.",
+      );
+      closePayRateDialog();
+      return;
+    }
+
     toast.success(
       `Pay rate updated successfully from ₱${response.data.old_rate} to ₱${response.data.new_rate}`,
     );
@@ -2105,6 +2153,15 @@ async function clearCustomPayRate() {
         reason: payRateData.value.reason,
       },
     );
+
+    if (response.data?.approval_required) {
+      toast.success(
+        response.data?.message ||
+          "Custom pay-rate clear request submitted for admin approval.",
+      );
+      closePayRateDialog();
+      return;
+    }
 
     toast.success(
       `Custom pay rate cleared. Rate changed from ₱${response.data.old_rate} to ₱${response.data.new_rate}`,
@@ -2146,6 +2203,43 @@ function getEmployeeEffectiveRate(employee) {
 
   // Priority 2: Position-based rate
   return getEmployeePositionRate(employee);
+}
+
+function hasPendingPayRateRequest(employee) {
+  return Boolean(employee?.has_pending_pay_rate_request);
+}
+
+function getPendingPayRateRequestLabel(employee) {
+  return employee?.pending_pay_rate_request_label || "Pending pay-rate request";
+}
+
+function formatPendingRequestedAt(value) {
+  if (!value) return "";
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return parsedDate.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getPendingPayRateRequestStatusText(employee) {
+  const requestedAt = formatPendingRequestedAt(
+    employee?.pending_pay_rate_requested_at,
+  );
+
+  if (requestedAt) {
+    return `Submitted ${requestedAt}. This request is waiting for admin approval.`;
+  }
+
+  return "This request is waiting for admin approval.";
 }
 
 // Format salary display based on position rate

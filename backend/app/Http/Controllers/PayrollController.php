@@ -1921,6 +1921,9 @@ class PayrollController extends Controller
      *   Site B gets  5/9 of those same totals.
      *
      * The daily rate is left unchanged (it is per-day, not a period total).
+     * ADJ. PREV. SAL is employee-level and is not prorated; it is assigned once
+     * to the employee's primary device row (highest logged hours) to avoid
+     * split-dependent values while preserving totals.
      * Employees with no attendance device record fall into "Unassigned".
      *
      * @return \Illuminate\Support\Collection  keyed by device name, Unassigned last
@@ -1975,7 +1978,6 @@ class PayrollController extends Controller
             'regular_ot_pay',
             'special_ot_hours',
             'special_ot_pay',
-            'salary_adjustment',
             'other_allowances',
             'undertime_hours',
             'undertime_deduction',
@@ -1998,6 +2000,12 @@ class PayrollController extends Controller
             $deviceMap = $employeeDeviceHours[$empId] ?? ['Unassigned' => 1];
             $totalHours = array_sum($deviceMap);
 
+            $primaryDevice = collect($deviceMap)
+                ->sortDesc()
+                ->keys()
+                ->first() ?? 'Unassigned';
+            $fullSalaryAdjustment = (float) ($item->getAttribute('salary_adjustment') ?? 0);
+
             foreach ($deviceMap as $device => $hours) {
                 $ratio = $totalHours > 0 ? ($hours / $totalHours) : 1;
 
@@ -2010,6 +2018,19 @@ class PayrollController extends Controller
                     $value = in_array($field, $dayFields) ? round($raw * 2) / 2 : round($raw, 4);
                     $split->setAttribute($field, $value);
                 }
+
+                // Keep ADJ. PREV. SAL independent from device split: assign once
+                // to the primary device row, then rebalance gross/net by the delta
+                // against the prorated value to preserve row and grand totals.
+                $proratedSalaryAdjustment = round($fullSalaryAdjustment * $ratio, 4);
+                $assignedSalaryAdjustment = $device === $primaryDevice
+                    ? round($fullSalaryAdjustment, 4)
+                    : 0.0;
+                $salaryAdjustmentDelta = $assignedSalaryAdjustment - $proratedSalaryAdjustment;
+
+                $split->setAttribute('salary_adjustment', $assignedSalaryAdjustment);
+                $split->setAttribute('gross_pay', round((float) $split->getAttribute('gross_pay') + $salaryAdjustmentDelta, 4));
+                $split->setAttribute('net_pay', round((float) $split->getAttribute('net_pay') + $salaryAdjustmentDelta, 4));
 
                 $deviceGroups[$device][] = $split;
             }
@@ -2069,10 +2090,16 @@ class PayrollController extends Controller
                     });
             },
             'salaryAdjustments' => function ($q) use ($payroll) {
-                $q->where('status', 'pending')
+                $q->where('status', 'applied')
+                    ->whereNull('applied_payroll_id')
+                    ->whereNotNull('reason')
+                    ->whereRaw("TRIM(reason) <> ''")
+                    ->whereNotNull('reference_period')
+                    ->whereRaw("TRIM(reference_period) <> ''")
+                    ->where('reference_period', 'not like', 'APPROVAL:%')
                     ->where(function ($query) use ($payroll) {
                         $query->whereNull('effective_date')
-                            ->orWhere('effective_date', '<=', $payroll->period_end);
+                            ->orWhereDate('effective_date', '<=', $payroll->period_end);
                     });
             },
             'loans' => function ($q) use ($payroll) {
@@ -2131,7 +2158,7 @@ class PayrollController extends Controller
         $totalGross = 0;
         $totalDeductions = 0;
         $totalNet = 0;
-        $allAdjustmentIds = []; // Track salary adjustment IDs to mark as applied
+        $allAdjustmentIds = []; // Track approved one-time salary exception IDs to mark as consumed
         $allBonusIds = []; // Track bonus IDs to mark as paid
         $selectedOvertimeEmployeeIds = $this->normalizeEmployeeIds($filters['overtime_employee_ids'] ?? []);
 
@@ -2160,13 +2187,12 @@ class PayrollController extends Controller
                     throw new \Exception("Invalid net_pay calculated for employee {$employee->employee_number}: {$item['net_pay']}");
                 }
 
-                // Collect salary adjustment IDs before removing internal field
-                if (!empty($item['_adjustment_ids'])) {
-                    $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
-                }
                 // Collect bonus IDs before removing internal field
                 if (!empty($item['_bonus_ids'])) {
                     $allBonusIds = array_merge($allBonusIds, $item['_bonus_ids']);
+                }
+                if (!empty($item['_adjustment_ids'])) {
+                    $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
                 }
                 unset($item['_adjustment_ids']);
                 unset($item['_bonus_ids']);
@@ -2192,15 +2218,6 @@ class PayrollController extends Controller
             }
         }
 
-        // Mark salary adjustments as applied AFTER all items are created successfully
-        if (!empty($allAdjustmentIds)) {
-            SalaryAdjustment::whereIn('id', $allAdjustmentIds)
-                ->update([
-                    'status' => 'applied',
-                    'applied_payroll_id' => $payroll->id,
-                ]);
-        }
-
         // Mark bonuses as paid AFTER all items are created successfully
         if (!empty($allBonusIds)) {
             \App\Models\EmployeeBonus::whereIn('id', $allBonusIds)
@@ -2208,6 +2225,26 @@ class PayrollController extends Controller
                     'payment_status' => 'paid',
                     'paid_at' => now(),
                 ]);
+        }
+
+        // Mark approved one-time salary exception records as consumed by this payroll.
+        if (!empty($allAdjustmentIds)) {
+            $normalizedAdjustmentIds = collect($allAdjustmentIds)
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            if (!empty($normalizedAdjustmentIds)) {
+                SalaryAdjustment::query()
+                    ->whereIn('id', $normalizedAdjustmentIds)
+                    ->where('status', 'applied')
+                    ->whereNull('applied_payroll_id')
+                    ->update([
+                        'applied_payroll_id' => $payroll->id,
+                    ]);
+            }
         }
 
         $payroll->update([
@@ -2972,7 +3009,7 @@ class PayrollController extends Controller
     }
 
     /**
-     * Reverse salary adjustments for a payroll (used when reprocessing/deleting)
+     * Reverse salary exception records for a payroll (used when reprocessing/deleting)
      */
     private function reverseSalaryAdjustmentsForPayroll(Payroll $payroll)
     {
@@ -2986,7 +3023,6 @@ class PayrollController extends Controller
         SalaryAdjustment::where('applied_payroll_id', $payroll->id)
             ->where('status', 'applied')
             ->update([
-                'status' => 'pending',
                 'applied_payroll_id' => null,
             ]);
     }

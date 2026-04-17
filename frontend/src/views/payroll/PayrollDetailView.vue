@@ -199,7 +199,8 @@
         >
           Device split is based on attendance device hours in this payroll
           period. Values shown per row are prorated device shares of the
-          employee total.
+          employee total. ADJ. PREV. SAL is employee-level and is shown once, so
+          it stays consistent with Employee Totals.
         </v-alert>
 
         <v-alert

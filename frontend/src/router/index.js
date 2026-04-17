@@ -283,7 +283,7 @@ const router = createRouter({
               /* webpackChunkName: "payroll" */ "@/views/payroll/SalaryAdjustmentView.vue"
             ),
           meta: {
-            title: "Salary Adjustments",
+            title: "Salary Exception Records",
             roles: ["admin", "hr", "payrollist"],
           },
         },
