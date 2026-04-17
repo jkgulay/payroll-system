@@ -318,13 +318,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/thirteenth-month/{id}', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'destroy']);
 
     // Resignations - Define specific routes BEFORE the resource route to avoid conflicts
-    Route::get('/resignations/employee/{employeeId}', [App\Http\Controllers\Api\ResignationController::class, 'getEmployeeResignation']);
-    Route::post('/resignations/{id}/approve', [App\Http\Controllers\Api\ResignationController::class, 'approve']);
-    Route::post('/resignations/{id}/reject', [App\Http\Controllers\Api\ResignationController::class, 'reject']);
-    Route::post('/resignations/{id}/process-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'processFinalPay']);
-    Route::post('/resignations/{id}/release-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'releaseFinalPay']);
-    Route::get('/resignations/{id}/attachments/{attachmentIndex}/download', [App\Http\Controllers\Api\ResignationController::class, 'downloadAttachment']);
-    Route::delete('/resignations/{id}/attachments/{attachmentIndex}', [App\Http\Controllers\Api\ResignationController::class, 'deleteAttachment']);
+    Route::get('/resignations/stats', [App\Http\Controllers\Api\ResignationController::class, 'stats'])->middleware('role:admin,hr');
+    Route::get('/resignations/my', [App\Http\Controllers\Api\ResignationController::class, 'myResignation'])->middleware('role:employee,payrollist');
+    Route::get('/resignations/employee/{employeeId}', [App\Http\Controllers\Api\ResignationController::class, 'getEmployeeResignation'])->middleware('role:admin,hr,employee,payrollist');
+    Route::post('/resignations/{id}/approve', [App\Http\Controllers\Api\ResignationController::class, 'approve'])->middleware('role:admin,hr');
+    Route::post('/resignations/{id}/reject', [App\Http\Controllers\Api\ResignationController::class, 'reject'])->middleware('role:admin,hr');
+    Route::post('/resignations/{id}/process-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'processFinalPay'])->middleware('role:admin,hr');
+    Route::post('/resignations/{id}/release-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'releaseFinalPay'])->middleware('role:admin,hr');
+    Route::get('/resignations/{id}/attachments/{attachmentIndex}/download', [App\Http\Controllers\Api\ResignationController::class, 'downloadAttachment'])->middleware('role:admin,hr,employee,payrollist');
+    Route::delete('/resignations/{id}/attachments/{attachmentIndex}', [App\Http\Controllers\Api\ResignationController::class, 'deleteAttachment'])->middleware('role:admin,hr,employee,payrollist');
     Route::apiResource('resignations', App\Http\Controllers\Api\ResignationController::class);
 
     // Recruitment - Job Postings
