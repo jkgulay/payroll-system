@@ -328,6 +328,7 @@ class PayrollController extends Controller
                 'included_employee_id' => $scopePayload['included_employee_id'],
                 'has_attendance' => $scopePayload['has_attendance'],
                 'excluded_positions' => $scopePayload['excluded_positions'],
+                'excluded_employee_ids' => $scopePayload['excluded_employee_ids'],
                 'deduct_sss' => $validated['deduct_sss'] ?? true,
                 'deduct_philhealth' => $validated['deduct_philhealth'] ?? true,
                 'deduct_pagibig' => $validated['deduct_pagibig'] ?? true,
@@ -885,6 +886,8 @@ class PayrollController extends Controller
             'has_attendance' => 'sometimes|boolean',
             'excluded_positions' => 'nullable|array',
             'excluded_positions.*' => 'string',
+            'excluded_employee_ids' => 'nullable|array',
+            'excluded_employee_ids.*' => 'integer|exists:employees,id',
             'deduct_sss' => 'sometimes|boolean',
             'deduct_philhealth' => 'sometimes|boolean',
             'deduct_pagibig' => 'sometimes|boolean',
@@ -904,6 +907,7 @@ class PayrollController extends Controller
             'included_employee_id',
             'has_attendance',
             'excluded_positions',
+            'excluded_employee_ids',
         ];
         $incomingScopeChanges = array_intersect_key($validated, array_flip($scopeFieldKeys));
         if (!empty($incomingScopeChanges)) {
@@ -978,6 +982,7 @@ class PayrollController extends Controller
             'included_employee_id',
             'has_attendance',
             'excluded_positions',
+            'excluded_employee_ids',
             'overtime_employee_ids',
         ];
         $shouldRecalculate = $this->hasRecalculationChanges($payroll, $validated, $recalculationFields);
@@ -1106,6 +1111,25 @@ class PayrollController extends Controller
 
         $editReason = trim((string) ($validated['reason'] ?? ''));
         unset($validated['reason']);
+
+        $sideEffectManagedFields = [
+            'sss',
+            'philhealth',
+            'pagibig',
+            'withholding_tax',
+            'employee_savings',
+            'cash_advance',
+            'loans',
+            'employee_deductions',
+            'other_deductions',
+        ];
+        $attemptedManagedFields = array_values(array_intersect($sideEffectManagedFields, array_keys($validated)));
+        if (!empty($attemptedManagedFields)) {
+            return response()->json([
+                'message' => 'Direct edits to payroll-managed deduction fields are not allowed. Update source deduction/loan records or payroll-level toggles, then reprocess payroll.',
+                'blocked_fields' => $attemptedManagedFields,
+            ], 422);
+        }
 
         $editAccessRequest = null;
         if ($user && $user->role === 'payrollist') {
@@ -2057,10 +2081,6 @@ class PayrollController extends Controller
                     ->where(function ($query) use ($payroll) {
                         $query->whereNull('first_payment_date')
                             ->orWhere('first_payment_date', '<=', $payroll->period_end);
-                    })
-                    ->where(function ($query) use ($payroll) {
-                        $query->whereNull('maturity_date')
-                            ->orWhere('maturity_date', '>=', $payroll->period_start);
                     });
             },
             'deductions' => function ($q) use ($payroll) {
@@ -2274,6 +2294,12 @@ class PayrollController extends Controller
             $excludedPositions = is_array($decoded) ? $decoded : [];
         }
 
+        $excludedEmployeeIds = $payroll->excluded_employee_ids;
+        if (is_string($excludedEmployeeIds)) {
+            $decoded = json_decode($excludedEmployeeIds, true);
+            $excludedEmployeeIds = is_array($decoded) ? $decoded : [];
+        }
+
         return $this->normalizePayrollScopePayload([
             'payroll_scope' => $payroll->payroll_scope,
             'individual_target' => $payroll->individual_target,
@@ -2281,7 +2307,7 @@ class PayrollController extends Controller
             'included_employee_id' => $payroll->included_employee_id,
             'has_attendance' => (bool) ($payroll->has_attendance ?? false),
             'excluded_positions' => is_array($excludedPositions) ? $excludedPositions : [],
-            'excluded_employee_ids' => [],
+            'excluded_employee_ids' => is_array($excludedEmployeeIds) ? $excludedEmployeeIds : [],
         ]);
     }
 
@@ -2386,6 +2412,7 @@ class PayrollController extends Controller
             'included_employee_id',
             'has_attendance',
             'excluded_positions',
+            'excluded_employee_ids',
         ];
 
         foreach ($metadataFields as $field) {
@@ -2407,16 +2434,32 @@ class PayrollController extends Controller
             $currentValue = $payroll->{$field};
             $newValue = $validated[$field];
 
-            if (in_array($field, ['excluded_positions', 'overtime_employee_ids'], true)) {
-                $normalizeArray = function ($value): array {
+            if (in_array($field, ['excluded_positions', 'excluded_employee_ids', 'overtime_employee_ids'], true)) {
+                $isNumericArray = in_array($field, ['excluded_employee_ids', 'overtime_employee_ids'], true);
+
+                $normalizeArray = function ($value) use ($isNumericArray): array {
                     if (is_string($value)) {
                         $decoded = json_decode($value, true);
                         $value = is_array($decoded) ? $decoded : [];
                     }
 
-                    return collect(is_array($value) ? $value : [])
+                    $normalized = collect(is_array($value) ? $value : [])
                         ->map(fn($item) => is_scalar($item) ? trim((string) $item) : null)
                         ->filter(fn($item) => $item !== null && $item !== '')
+                        ->values();
+
+                    if ($isNumericArray) {
+                        return $normalized
+                            ->map(fn($item) => (int) $item)
+                            ->filter(fn($item) => $item > 0)
+                            ->unique()
+                            ->sort()
+                            ->values()
+                            ->all();
+                    }
+
+                    return $normalized
+                        ->unique()
                         ->values()
                         ->all();
                 };
@@ -2662,6 +2705,43 @@ class PayrollController extends Controller
     /**
      * Record loan payments when payroll is generated
      */
+    private function resolveLoanProjectedMaturityDate(EmployeeLoan $loan, float $remainingBalance, Carbon $asOfDate): ?string
+    {
+        if ($remainingBalance <= 0) {
+            return null;
+        }
+
+        $scheduledInstallmentAmount = $loan->payment_frequency === 'semi_monthly'
+            ? (float) ($loan->semi_monthly_amortization ?? 0)
+            : (float) ($loan->monthly_amortization ?? 0);
+
+        if ($scheduledInstallmentAmount <= 0) {
+            return null;
+        }
+
+        $remainingInstallments = (int) ceil($remainingBalance / $scheduledInstallmentAmount);
+        if ($remainingInstallments <= 0) {
+            return null;
+        }
+
+        $remainingMonths = $loan->payment_frequency === 'semi_monthly'
+            ? (int) ceil($remainingInstallments / 2)
+            : $remainingInstallments;
+
+        $projectedDate = $asOfDate->copy()
+            ->addMonths(max($remainingMonths, 1))
+            ->toDateString();
+
+        if (!empty($loan->maturity_date)) {
+            $currentMaturity = Carbon::parse($loan->maturity_date);
+            if ($currentMaturity->gte(Carbon::parse($projectedDate))) {
+                return null;
+            }
+        }
+
+        return $projectedDate;
+    }
+
     private function recordLoanPayments(Payroll $payroll, Employee $employee, PayrollItem $payrollItem)
     {
         if (($payroll->deduct_loans ?? true) !== true) {
@@ -2690,11 +2770,6 @@ class PayrollController extends Controller
             ->where(function ($query) use ($payroll) {
                 $query->whereNull('first_payment_date')
                     ->orWhere('first_payment_date', '<=', $payroll->period_end);
-            })
-            ->where(function ($query) use ($payroll) {
-                // Loan hasn't matured yet (maturity date is null or after payroll period starts)
-                $query->whereNull('maturity_date')
-                    ->orWhere('maturity_date', '>=', $payroll->period_start);
             })
             ->get();
 
@@ -2732,6 +2807,17 @@ class PayrollController extends Controller
                     $updateData['status'] = 'paid';
                     $updateData['balance'] = 0; // Ensure balance is exactly zero
                     $updateData['amount_paid'] = $loan->total_amount; // Ensure exact total
+                } else {
+                    // Keep maturity aligned with remaining balance so overdue active loans continue deduction.
+                    $projectedMaturityDate = $this->resolveLoanProjectedMaturityDate(
+                        $loan,
+                        (float) ($updateData['balance'] ?? $newBalance),
+                        $periodEnd
+                    );
+
+                    if (!empty($projectedMaturityDate)) {
+                        $updateData['maturity_date'] = $projectedMaturityDate;
+                    }
                 }
 
                 $loan->update($updateData);
@@ -2845,10 +2931,6 @@ class PayrollController extends Controller
                 ->where(function ($query) use ($payroll) {
                     $query->whereNull('first_payment_date')
                         ->orWhere('first_payment_date', '<=', $payroll->period_end);
-                })
-                ->where(function ($query) use ($payroll) {
-                    $query->whereNull('maturity_date')
-                        ->orWhere('maturity_date', '>=', $payroll->period_start);
                 })
                 ->get();
 

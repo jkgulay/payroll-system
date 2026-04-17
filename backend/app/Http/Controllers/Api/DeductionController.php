@@ -29,7 +29,6 @@ class DeductionController extends Controller
         'absence',
         'cash_advance',
         'cash_bond',
-        'loan',
         'insurance',
         'cooperative',
         'damages',
@@ -198,6 +197,61 @@ class DeductionController extends Controller
             ->max('installment_number');
 
         return $lastInstallment ? ((int) $lastInstallment + 1) : 1;
+    }
+
+    private function resolveAmountPerCutoff(EmployeeDeduction $deduction, int $fallbackInstallments): float
+    {
+        $amountPerCutoff = (float) ($deduction->amount_per_cutoff ?? 0);
+        if ($amountPerCutoff > 0) {
+            return $amountPerCutoff;
+        }
+
+        $safeInstallments = max($fallbackInstallments, 1);
+        if ((float) $deduction->total_amount > 0) {
+            return (float) $deduction->total_amount / $safeInstallments;
+        }
+
+        return 0.0;
+    }
+
+    private function buildScheduleUpdateForBalance(
+        EmployeeDeduction $deduction,
+        float $targetBalance,
+        ?int $targetInstallmentsPaid = null
+    ): array {
+        $normalizedBalance = max($targetBalance, 0);
+        $installmentsPaid = max((int) ($targetInstallmentsPaid ?? $deduction->installments_paid), 0);
+
+        $currentInstallments = max((int) ($deduction->installments ?? 0), $installmentsPaid, 1);
+        $amountPerCutoff = $this->resolveAmountPerCutoff($deduction, $currentInstallments);
+
+        $targetInstallments = $currentInstallments;
+        if ($normalizedBalance > 0 && $amountPerCutoff > 0) {
+            $remainingInstallments = (int) ceil($normalizedBalance / $amountPerCutoff);
+            $targetInstallments = max($targetInstallments, $installmentsPaid + $remainingInstallments);
+        }
+
+        $updateData = [
+            'installments_paid' => $installmentsPaid,
+            'balance' => $normalizedBalance <= 0 ? 0 : $normalizedBalance,
+            'installments' => $targetInstallments,
+            'status' => $normalizedBalance <= 0 ? 'completed' : 'active',
+        ];
+
+        if (!empty($deduction->start_date)) {
+            $scheduledEndDate = Carbon::parse($deduction->start_date)
+                ->addMonths((int) ceil($targetInstallments / 2))
+                ->toDateString();
+
+            if (
+                empty($deduction->end_date)
+                || Carbon::parse($deduction->end_date)->lt(Carbon::parse($scheduledEndDate))
+            ) {
+                $updateData['end_date'] = $scheduledEndDate;
+            }
+        }
+
+        return $updateData;
     }
 
     public function index(Request $request)
@@ -567,50 +621,15 @@ class DeductionController extends Controller
 
         DB::beginTransaction();
         try {
-            $amountPerCutoff = (float) ($deduction->amount_per_cutoff ?? 0);
-            if ($amountPerCutoff <= 0 && (int) $deduction->installments > 0) {
-                $amountPerCutoff = (float) $deduction->total_amount / max((int) $deduction->installments, 1);
-            }
-
             $newBalance = max((float) $deduction->balance - (float) $validated['amount'], 0);
             $newInstallmentsPaid = (int) $deduction->installments_paid + 1;
-
-            $currentInstallments = max((int) ($deduction->installments ?? 0), $newInstallmentsPaid, 1);
-            $newInstallments = $currentInstallments;
-
-            if ($newBalance > 0 && $amountPerCutoff > 0) {
-                $remainingInstallmentsNeeded = (int) ceil($newBalance / $amountPerCutoff);
-                $newInstallments = max($newInstallments, $newInstallmentsPaid + $remainingInstallmentsNeeded);
-            }
 
             // Capture old values BEFORE updating
             $oldBalance = $deduction->balance;
             $oldInstallmentsPaid = $deduction->installments_paid;
             $oldInstallments = $deduction->installments;
 
-            $updateData = [
-                'installments_paid' => $newInstallmentsPaid,
-                'balance' => $newBalance,
-                'installments' => $newInstallments,
-                'status' => $newBalance <= 0 ? 'completed' : 'active',
-            ];
-
-            if ($newBalance <= 0) {
-                $updateData['balance'] = 0;
-            }
-
-            if (
-                $newInstallments > (int) ($deduction->installments ?? 0)
-                && !empty($deduction->start_date)
-            ) {
-                $extendedEndDate = Carbon::parse($deduction->start_date)
-                    ->addMonths((int) ceil($newInstallments / 2))
-                    ->toDateString();
-
-                if (empty($deduction->end_date) || Carbon::parse($extendedEndDate)->gt(Carbon::parse($deduction->end_date))) {
-                    $updateData['end_date'] = $extendedEndDate;
-                }
-            }
+            $updateData = $this->buildScheduleUpdateForBalance($deduction, $newBalance, $newInstallmentsPaid);
 
             $deduction->update($updateData);
 
@@ -642,7 +661,7 @@ class DeductionController extends Controller
                 'new_values' => json_encode([
                     'balance' => $updateData['balance'],
                     'installments_paid' => $newInstallmentsPaid,
-                    'installments' => $newInstallments,
+                    'installments' => $updateData['installments'],
                 ]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
@@ -959,6 +978,8 @@ class DeductionController extends Controller
         try {
             $oldBalance = $deduction->balance;
             $oldStatus = $deduction->status;
+            $oldInstallments = (int) $deduction->installments;
+            $oldEndDate = $deduction->end_date;
             $contributedAmount = max(0, (float) $deduction->total_amount - (float) $oldBalance);
 
             if ($contributedAmount <= 0) {
@@ -974,11 +995,13 @@ class DeductionController extends Controller
             }
 
             $newBalance = min((float) $deduction->total_amount, (float) $oldBalance + (float) $validated['refund_amount']);
-            $newStatus = $newBalance <= 0 ? 'completed' : 'active';
+            $scheduleUpdate = $this->buildScheduleUpdateForBalance($deduction, $newBalance, (int) $deduction->installments_paid);
 
             $deduction->update([
-                'balance' => $newBalance,
-                'status' => $newStatus,
+                'balance' => $scheduleUpdate['balance'],
+                'status' => $scheduleUpdate['status'],
+                'installments' => $scheduleUpdate['installments'],
+                'end_date' => $scheduleUpdate['end_date'] ?? $deduction->end_date,
                 'notes' => ($deduction->notes ? $deduction->notes . "\n\n" : '') .
                     "Refunded on " . Carbon::parse($validated['refund_date'])->format('Y-m-d') .
                     ": ₱" . number_format($validated['refund_amount'], 2) .
@@ -992,7 +1015,7 @@ class DeductionController extends Controller
                     'payroll_item_id' => null,
                     'payment_date' => $validated['refund_date'],
                     'amount' => -(float) $validated['refund_amount'],
-                    'balance_after_payment' => (float) $newBalance,
+                    'balance_after_payment' => (float) $scheduleUpdate['balance'],
                     'installment_number' => $this->nextDeductionInstallmentNumber((int) $deduction->id),
                     'remarks' => 'Cash bond refund/return',
                 ]);
@@ -1005,8 +1028,18 @@ class DeductionController extends Controller
                 'description' => "Cash Bond refunded for {$deduction->employee->full_name}: ₱" . number_format($validated['refund_amount'], 2),
                 'user_id' => auth()->id(),
                 'record_id' => $deduction->id,
-                'old_values' => json_encode(['balance' => $oldBalance, 'status' => $oldStatus]),
-                'new_values' => json_encode(['balance' => $newBalance, 'status' => $newStatus]),
+                'old_values' => json_encode([
+                    'balance' => $oldBalance,
+                    'status' => $oldStatus,
+                    'installments' => $oldInstallments,
+                    'end_date' => $oldEndDate,
+                ]),
+                'new_values' => json_encode([
+                    'balance' => $scheduleUpdate['balance'],
+                    'status' => $scheduleUpdate['status'],
+                    'installments' => $scheduleUpdate['installments'],
+                    'end_date' => $scheduleUpdate['end_date'] ?? $deduction->end_date,
+                ]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
@@ -1185,6 +1218,8 @@ class DeductionController extends Controller
         try {
             $oldBalance = $deduction->balance;
             $oldStatus = $deduction->status;
+            $oldInstallments = (int) $deduction->installments;
+            $oldEndDate = $deduction->end_date;
             $contributedAmount = max(0, (float) $deduction->total_amount - (float) $oldBalance);
 
             if ($contributedAmount <= 0) {
@@ -1200,11 +1235,13 @@ class DeductionController extends Controller
             }
 
             $newBalance = min((float) $deduction->total_amount, (float) $oldBalance + (float) $validated['withdraw_amount']);
-            $newStatus = $newBalance <= 0 ? 'completed' : 'active';
+            $scheduleUpdate = $this->buildScheduleUpdateForBalance($deduction, $newBalance, (int) $deduction->installments_paid);
 
             $deduction->update([
-                'balance' => $newBalance,
-                'status' => $newStatus,
+                'balance' => $scheduleUpdate['balance'],
+                'status' => $scheduleUpdate['status'],
+                'installments' => $scheduleUpdate['installments'],
+                'end_date' => $scheduleUpdate['end_date'] ?? $deduction->end_date,
                 'notes' => ($deduction->notes ? $deduction->notes . "\n\n" : '') .
                     "Withdrawn on " . Carbon::parse($validated['withdraw_date'])->format('Y-m-d') .
                     ": P" . number_format($validated['withdraw_amount'], 2) .
@@ -1218,7 +1255,7 @@ class DeductionController extends Controller
                     'payroll_item_id' => null,
                     'payment_date' => $validated['withdraw_date'],
                     'amount' => -(float) $validated['withdraw_amount'],
-                    'balance_after_payment' => (float) $newBalance,
+                    'balance_after_payment' => (float) $scheduleUpdate['balance'],
                     'installment_number' => $this->nextDeductionInstallmentNumber((int) $deduction->id),
                     'remarks' => 'Employee savings withdrawal',
                 ]);
@@ -1232,8 +1269,18 @@ class DeductionController extends Controller
                 'description' => "Employee savings withdrawn for {$deduction->employee->full_name}: P" . number_format($validated['withdraw_amount'], 2),
                 'user_id' => auth()->id(),
                 'record_id' => $deduction->id,
-                'old_values' => json_encode(['balance' => $oldBalance, 'status' => $oldStatus]),
-                'new_values' => json_encode(['balance' => $newBalance, 'status' => $newStatus]),
+                'old_values' => json_encode([
+                    'balance' => $oldBalance,
+                    'status' => $oldStatus,
+                    'installments' => $oldInstallments,
+                    'end_date' => $oldEndDate,
+                ]),
+                'new_values' => json_encode([
+                    'balance' => $scheduleUpdate['balance'],
+                    'status' => $scheduleUpdate['status'],
+                    'installments' => $scheduleUpdate['installments'],
+                    'end_date' => $scheduleUpdate['end_date'] ?? $deduction->end_date,
+                ]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
@@ -1685,7 +1732,7 @@ class DeductionController extends Controller
             'estimated_gross_pay' => round($estimatedGrossPay, 2),
             'active_cash_advance_balance' => round($activeCashAdvanceBalance, 2),
             'recommended_limit' => round($recommendedLimit, 2),
-            'available_balance' => round($estimatedGrossPay, 2),
+            'available_balance' => round($recommendedLimit, 2),
         ]);
     }
 

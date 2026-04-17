@@ -58,6 +58,11 @@ class LoanController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isEmployeeRequest = $user->role === 'employee';
+        $isHrRequest = $user->role === 'hr';
+        $isAdminCreate = $user->role === 'admin';
+
         $validated = $request->validate([
             'employee_id' => [
                 'required',
@@ -68,12 +73,20 @@ class LoanController extends Controller
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'loan_term_months' => 'required|integer|min:1|max:60',
             'payment_frequency' => 'required|in:monthly,semi_monthly',
-            'loan_date' => 'required|date',
-            'first_payment_date' => 'required|date|after:loan_date',
+            'loan_date' => [Rule::requiredIf(!$isEmployeeRequest), 'nullable', 'date'],
+            'first_payment_date' => [Rule::requiredIf(!$isEmployeeRequest), 'nullable', 'date', 'after:loan_date'],
             'purpose' => 'nullable|string|max:500',
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        // Employee requests are approved later, so schedule ownership stays with admin approval.
+        $loanDate = $isEmployeeRequest
+            ? Carbon::now()->toDateString()
+            : $validated['loan_date'];
+        $firstPaymentDate = $isEmployeeRequest
+            ? Carbon::now()->addMonth()->toDateString()
+            : $validated['first_payment_date'];
 
         // Set default interest rate if not provided
         if (!isset($validated['interest_rate'])) {
@@ -91,19 +104,15 @@ class LoanController extends Controller
         $amortization = $totalAmount / $totalPayments;
 
         // Calculate maturity date
-        $maturityDate = Carbon::parse($validated['first_payment_date'])
+        $maturityDate = Carbon::parse($firstPaymentDate)
             ->addMonths($validated['loan_term_months']);
 
         // Generate loan number
         $loanNumber = $this->generateLoanNumber($validated['loan_type']);
 
-        // Determine who is creating the loan
-        $user = auth()->user();
-        $isEmployeeRequest = $user->role === 'employee';
-        $isHrRequest = $user->role === 'hr';
-        $isAdminCreate = $user->role === 'admin';
-
         $loanData = array_merge($validated, [
+            'loan_date' => $loanDate,
+            'first_payment_date' => $firstPaymentDate,
             'loan_number' => $loanNumber,
             'total_amount' => round($totalAmount, 2),
             'monthly_amortization' => $validated['payment_frequency'] === 'monthly' ? round($amortization, 2) : round($amortization * 2, 2),
@@ -203,14 +212,29 @@ class LoanController extends Controller
             'interest_rate' => 'nullable|numeric|min:0|max:100',
             'loan_term_months' => 'sometimes|integer|min:1|max:60',
             'payment_frequency' => 'sometimes|in:monthly,semi_monthly',
+            'loan_date' => 'sometimes|date',
             'first_payment_date' => 'sometimes|date',
             'purpose' => 'nullable|string|max:500',
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        // Recalculate if principal, interest, or term changed
-        if (isset($validated['principal_amount']) || isset($validated['interest_rate']) || isset($validated['loan_term_months'])) {
+        $effectiveLoanDate = $validated['loan_date'] ?? optional($loan->loan_date)->toDateString();
+        if (isset($validated['first_payment_date']) && !empty($effectiveLoanDate)) {
+            if (Carbon::parse($validated['first_payment_date'])->lte(Carbon::parse($effectiveLoanDate))) {
+                return response()->json([
+                    'message' => 'First payment date must be after loan date'
+                ], 422);
+            }
+        }
+
+        // Recalculate amortization when amount/term/frequency changes.
+        if (
+            isset($validated['principal_amount'])
+            || isset($validated['interest_rate'])
+            || isset($validated['loan_term_months'])
+            || isset($validated['payment_frequency'])
+        ) {
             $principal = $validated['principal_amount'] ?? $loan->principal_amount;
             $interestRate = $validated['interest_rate'] ?? $loan->interest_rate;
             $termMonths = $validated['loan_term_months'] ?? $loan->loan_term_months;
@@ -227,6 +251,18 @@ class LoanController extends Controller
             $validated['monthly_amortization'] = $paymentFreq === 'monthly' ? round($amortization, 2) : round($amortization * 2, 2);
             $validated['semi_monthly_amortization'] = $paymentFreq === 'semi_monthly' ? round($amortization, 2) : 0;
             $validated['balance'] = round($totalAmount, 2);
+        }
+
+        // Keep maturity date aligned with first payment date and term when either changes.
+        if (isset($validated['loan_term_months']) || isset($validated['first_payment_date'])) {
+            $firstPaymentDate = $validated['first_payment_date'] ?? optional($loan->first_payment_date)->toDateString();
+            $termMonths = $validated['loan_term_months'] ?? $loan->loan_term_months;
+
+            if (!empty($firstPaymentDate) && !empty($termMonths)) {
+                $validated['maturity_date'] = Carbon::parse($firstPaymentDate)
+                    ->addMonths((int) $termMonths)
+                    ->toDateString();
+            }
         }
 
         DB::beginTransaction();
@@ -312,12 +348,20 @@ class LoanController extends Controller
 
         $validated = $request->validate([
             'approval_notes' => 'nullable|string|max:500',
+            'loan_date' => 'required|date',
+            'first_payment_date' => 'required|date|after:loan_date',
         ]);
+
+        $maturityDate = Carbon::parse($validated['first_payment_date'])
+            ->addMonths($loan->loan_term_months);
 
         DB::beginTransaction();
         try {
             $loan->update([
                 'status' => 'active', // Changed from 'approved' to 'active'
+                'loan_date' => $validated['loan_date'],
+                'first_payment_date' => $validated['first_payment_date'],
+                'maturity_date' => $maturityDate,
                 'approved_by' => auth()->id(),
                 'approved_at' => now(),
                 'approval_notes' => $validated['approval_notes'] ?? null,
@@ -331,7 +375,13 @@ class LoanController extends Controller
                 'user_id' => auth()->id(),
                 'record_id' => $loan->id,
                 'old_values' => json_encode(['status' => 'pending']),
-                'new_values' => json_encode(['status' => 'active', 'approval_notes' => $validated['approval_notes'] ?? null]),
+                'new_values' => json_encode([
+                    'status' => 'active',
+                    'loan_date' => $validated['loan_date'],
+                    'first_payment_date' => $validated['first_payment_date'],
+                    'maturity_date' => $maturityDate->toDateString(),
+                    'approval_notes' => $validated['approval_notes'] ?? null,
+                ]),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);

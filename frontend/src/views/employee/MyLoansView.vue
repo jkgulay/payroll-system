@@ -268,38 +268,15 @@
               </v-col>
 
               <v-col cols="12" class="mt-2">
-                <div class="section-header">
-                  <div class="section-icon">
-                    <v-icon size="18">mdi-calendar-clock</v-icon>
-                  </div>
-                  <h3 class="section-title">Payment Schedule</h3>
-                </div>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="requestForm.loan_date"
-                  label="Loan Date"
-                  type="date"
-                  placeholder="Select loan date"
-                  variant="outlined"
+                <v-alert
+                  type="info"
+                  variant="tonal"
                   density="comfortable"
-                  prepend-inner-icon="mdi-calendar"
-                  :rules="[rules.required]"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="requestForm.first_payment_date"
-                  label="First Payment Date"
-                  type="date"
-                  placeholder="Select first payment date"
-                  variant="outlined"
-                  density="comfortable"
-                  prepend-inner-icon="mdi-calendar-start"
-                  :rules="[rules.required]"
-                ></v-text-field>
+                  icon="mdi-information-outline"
+                >
+                  Loan and first payment dates are finalized by admin during
+                  approval.
+                </v-alert>
               </v-col>
 
               <v-col cols="12" md="6">
@@ -539,8 +516,6 @@ const requestForm = ref({
   interest_rate: 0,
   loan_term_months: 12,
   payment_frequency: "semi_monthly",
-  loan_date: new Date().toISOString().split("T")[0],
-  first_payment_date: null,
   purpose: "",
   notes: "",
 });
@@ -564,7 +539,7 @@ const loanTypes = [
 
 const statusOptions = [
   { title: "Pending", value: "pending" },
-  { title: "Approved", value: "approved" },
+  { title: "Active", value: "active" },
   { title: "Rejected", value: "rejected" },
   { title: "Paid", value: "paid" },
 ];
@@ -575,7 +550,9 @@ const pendingCount = computed(
 );
 
 const activeCount = computed(
-  () => loans.value.filter((loan) => loan.status === "active").length,
+  () =>
+    loans.value.filter((loan) => ["active", "approved"].includes(loan.status))
+      .length,
 );
 
 const totalBalanceRemaining = computed(() =>
@@ -650,20 +627,12 @@ const fetchMyLoans = async () => {
 
 // Open request dialog
 const openRequestDialog = () => {
-  const today = new Date();
-  const nextMonth = new Date(today);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-  const loanDate = today.toISOString().split("T")[0];
-  const firstPaymentDate = nextMonth.toISOString().split("T")[0];
-
   requestForm.value = {
     loan_type: null,
     principal_amount: null,
     interest_rate: 0,
     loan_term_months: 12,
     payment_frequency: "semi_monthly",
-    loan_date: loanDate,
-    first_payment_date: firstPaymentDate,
     purpose: "",
     notes: "",
   };
@@ -684,8 +653,6 @@ const submitRequest = async () => {
       interest_rate: requestForm.value.interest_rate,
       loan_term_months: requestForm.value.loan_term_months,
       payment_frequency: requestForm.value.payment_frequency,
-      loan_date: requestForm.value.loan_date,
-      first_payment_date: requestForm.value.first_payment_date,
       purpose: requestForm.value.purpose,
       notes: requestForm.value.notes,
     });
@@ -766,6 +733,7 @@ const getLoanTypeColor = (type) => {
 const getStatusColor = (status) => {
   const colors = {
     pending: "warning",
+    active: "success",
     approved: "success",
     rejected: "error",
     paid: "info",

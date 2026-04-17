@@ -1410,7 +1410,6 @@ const baseDeductionTypes = [
   { title: "Absence", value: "absence" },
   { title: "Damages", value: "damages" },
   { title: "Insurance", value: "insurance" },
-  { title: "Loan Repayment", value: "loan" },
   { title: "Other", value: "other" },
 ];
 
@@ -1677,6 +1676,11 @@ const saveDeduction = async () => {
     toast.error(
       "Use the Employee Savings page to create or manage employee savings.",
     );
+    return;
+  }
+
+  if (normalizedTypeForGuard === "loan") {
+    toast.error("Use the Loans page to create or manage loan repayments.");
     return;
   }
 

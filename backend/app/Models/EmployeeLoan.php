@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 
 class EmployeeLoan extends Model
 {
@@ -58,6 +59,10 @@ class EmployeeLoan extends Model
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
         'released_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'is_overdue_but_collecting',
     ];
 
     public function employee(): BelongsTo
@@ -113,6 +118,27 @@ class EmployeeLoan extends Model
     public function scopeByType($query, $type)
     {
         return $query->where('loan_type', $type);
+    }
+
+    public function getIsOverdueButCollectingAttribute(): bool
+    {
+        if ((string) $this->status !== 'active') {
+            return false;
+        }
+
+        if ((float) ($this->balance ?? 0) <= 0) {
+            return false;
+        }
+
+        if (empty($this->first_payment_date) || (int) ($this->loan_term_months ?? 0) <= 0) {
+            return false;
+        }
+
+        $originalMaturity = Carbon::parse($this->first_payment_date)
+            ->addMonths((int) $this->loan_term_months)
+            ->endOfDay();
+
+        return Carbon::now()->gt($originalMaturity);
     }
 
     /**

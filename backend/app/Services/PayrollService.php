@@ -228,10 +228,6 @@ class PayrollService
                             $query->whereNull('first_payment_date')
                                 ->orWhere('first_payment_date', '<=', $payroll->period_end);
                         })
-                        ->where(function ($query) use ($payroll) {
-                            $query->whereNull('maturity_date')
-                                ->orWhere('maturity_date', '>=', $payroll->period_start);
-                        })
                         ->select(
                             'id',
                             'employee_id',
