@@ -275,6 +275,9 @@ class PayrollController extends Controller
             // Loan and manual deduction flags
             'deduct_loans' => 'nullable|boolean',
             'deduct_employee_deductions' => 'nullable|boolean',
+            'deduct_cash_advance' => 'nullable|boolean',
+            'deduct_cash_bond' => 'nullable|boolean',
+            'deduct_employee_savings' => 'nullable|boolean',
             // Only employees with attendance
             'has_attendance' => 'nullable|boolean',
             'excluded_positions' => 'nullable|array',
@@ -330,6 +333,9 @@ class PayrollController extends Controller
                 'deduct_pagibig' => $validated['deduct_pagibig'] ?? true,
                 'deduct_loans' => $validated['deduct_loans'] ?? true,
                 'deduct_employee_deductions' => $validated['deduct_employee_deductions'] ?? true,
+                'deduct_cash_advance' => $validated['deduct_cash_advance'] ?? true,
+                'deduct_cash_bond' => $validated['deduct_cash_bond'] ?? true,
+                'deduct_employee_savings' => $validated['deduct_employee_savings'] ?? true,
                 'overtime_employee_ids' => !empty($overtimeEmployeeIds) ? $overtimeEmployeeIds : null,
             ]);
 
@@ -884,6 +890,9 @@ class PayrollController extends Controller
             'deduct_pagibig' => 'sometimes|boolean',
             'deduct_loans' => 'sometimes|boolean',
             'deduct_employee_deductions' => 'sometimes|boolean',
+            'deduct_cash_advance' => 'sometimes|boolean',
+            'deduct_cash_bond' => 'sometimes|boolean',
+            'deduct_employee_savings' => 'sometimes|boolean',
             'overtime_employee_ids' => 'nullable|array',
             'overtime_employee_ids.*' => 'integer|exists:employees,id',
         ]);
@@ -960,6 +969,9 @@ class PayrollController extends Controller
             'deduct_pagibig',
             'deduct_loans',
             'deduct_employee_deductions',
+            'deduct_cash_advance',
+            'deduct_cash_bond',
+            'deduct_employee_savings',
             'payroll_scope',
             'individual_target',
             'included_position',
@@ -2416,7 +2428,17 @@ class PayrollController extends Controller
                 continue;
             }
 
-            if (in_array($field, ['deduct_sss', 'deduct_philhealth', 'deduct_pagibig', 'deduct_loans', 'deduct_employee_deductions', 'has_attendance'], true)) {
+            if (in_array($field, [
+                'deduct_sss',
+                'deduct_philhealth',
+                'deduct_pagibig',
+                'deduct_loans',
+                'deduct_employee_deductions',
+                'deduct_cash_advance',
+                'deduct_cash_bond',
+                'deduct_employee_savings',
+                'has_attendance',
+            ], true)) {
                 if ((bool) $currentValue !== (bool) $newValue) {
                     return true;
                 }
@@ -2478,12 +2500,23 @@ class PayrollController extends Controller
      */
     private function recordDeductionInstallments(Payroll $payroll, Employee $employee, ?PayrollItem $payrollItem = null)
     {
-        if (($payroll->deduct_employee_deductions ?? true) !== true) {
+        $deductOtherEmployeeDeductions = (bool) ($payroll->deduct_employee_deductions ?? true);
+        $deductCashAdvance = (bool) ($payroll->deduct_cash_advance ?? true);
+        $deductCashBond = (bool) ($payroll->deduct_cash_bond ?? true);
+        $deductEmployeeSavings = (bool) ($payroll->deduct_employee_savings ?? true);
+
+        if (
+            !$deductOtherEmployeeDeductions
+            && !$deductCashAdvance
+            && !$deductCashBond
+            && !$deductEmployeeSavings
+        ) {
             return;
         }
 
         // Government deductions are computed from GovernmentRate settings, not manual deduction rows.
         $governmentManagedDeductionTypes = ['sss', 'philhealth', 'pagibig', 'tax'];
+        $employeeSavingsTypes = ['cooperative'];
 
         $payrollItemDeductionAmounts = [];
         if ($payrollItem && is_array($payrollItem->deductions_breakdown)) {
@@ -2503,6 +2536,7 @@ class PayrollController extends Controller
         // Get active deductions for this employee in this payroll period
         $activeDeductions = EmployeeDeduction::where('employee_id', $employee->id)
             ->where('status', 'active')
+            ->where('balance', '>', 0)
             ->where('start_date', '<=', $payroll->period_end)
             ->where(function ($query) use ($payroll) {
                 $query->whereNull('end_date')
@@ -2511,7 +2545,31 @@ class PayrollController extends Controller
             ->get();
 
         foreach ($activeDeductions as $deduction) {
-            if (in_array($deduction->deduction_type, $governmentManagedDeductionTypes, true)) {
+            $deductionType = (string) $deduction->deduction_type;
+
+            if (in_array($deductionType, $governmentManagedDeductionTypes, true)) {
+                continue;
+            }
+
+            if ($deductionType === 'cash_advance' && !$deductCashAdvance) {
+                continue;
+            }
+
+            if ($deductionType === 'cash_bond' && !$deductCashBond) {
+                continue;
+            }
+
+            if (in_array($deductionType, $employeeSavingsTypes, true) && !$deductEmployeeSavings) {
+                continue;
+            }
+
+            $isGeneralEmployeeDeduction = !in_array(
+                $deductionType,
+                array_merge($governmentManagedDeductionTypes, ['cash_advance', 'cash_bond'], $employeeSavingsTypes),
+                true
+            );
+
+            if ($isGeneralEmployeeDeduction && !$deductOtherEmployeeDeductions) {
                 continue;
             }
 

@@ -370,7 +370,16 @@
                 ></v-btn>
               </template>
               <v-list>
-                <v-list-item @click="viewDetails(item)">
+                <v-list-item
+                  v-if="item.is_virtual && userRole !== 'employee'"
+                  @click="openAddDialogForEmployee(item.employee)"
+                >
+                  <v-list-item-title>
+                    <v-icon size="small" class="mr-2">mdi-account-cash</v-icon>
+                    Set Contribution Plan
+                  </v-list-item-title>
+                </v-list-item>
+                <v-list-item v-if="!item.is_virtual" @click="viewDetails(item)">
                   <v-list-item-title>
                     <v-icon size="small" class="mr-2">mdi-eye</v-icon>
                     View Details
@@ -378,6 +387,7 @@
                 </v-list-item>
                 <v-list-item
                   v-if="
+                    !item.is_virtual &&
                     (item.status === 'active' || item.status === 'completed') &&
                     Number(item.total_amount || 0) - Number(item.balance || 0) >
                       0
@@ -390,7 +400,11 @@
                   </v-list-item-title>
                 </v-list-item>
                 <v-list-item
-                  v-if="item.status === 'active' && userRole !== 'employee'"
+                  v-if="
+                    !item.is_virtual &&
+                    item.status === 'active' &&
+                    userRole !== 'employee'
+                  "
                   @click="openEditDialog(item)"
                 >
                   <v-list-item-title>
@@ -401,6 +415,7 @@
                 <v-divider v-if="userRole !== 'employee'"></v-divider>
                 <v-list-item
                   v-if="
+                    !item.is_virtual &&
                     userRole !== 'employee' &&
                     item.status !== 'completed' &&
                     item.installments_paid === 0
@@ -651,7 +666,7 @@
                 <v-text-field
                   v-model.number="form.total_amount"
                   type="number"
-                  label="Total Employee Savings Amount *"
+                  label="Contribution Goal *"
                   prefix="₱"
                   placeholder="0.00"
                   variant="outlined"
@@ -698,7 +713,6 @@
                   </template>
                 </v-text-field>
               </v-col>
-
               <!-- Reference Number -->
               <v-col cols="12" md="6">
                 <v-text-field
@@ -913,7 +927,7 @@
             <v-col cols="12" md="6">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">
-                  Total Amount
+                  Contribution Goal
                 </div>
                 <div class="text-h6 text-primary">
                   ₱{{ formatNumber(selectedSavings.total_amount) }}
@@ -1008,6 +1022,64 @@
                   {{ selectedSavings.notes }}
                 </div>
               </div>
+            </v-col>
+            <v-col cols="12" v-if="!selectedSavings.is_virtual">
+              <div class="mb-2 d-flex align-center justify-space-between">
+                <div class="text-caption text-medium-emphasis">
+                  Wallet Ledger
+                </div>
+                <v-chip size="x-small" color="info" variant="tonal">
+                  {{ accountLedger.length }} transaction{{
+                    accountLedger.length === 1 ? "" : "s"
+                  }}
+                </v-chip>
+              </div>
+              <v-progress-linear
+                v-if="ledgerLoading"
+                indeterminate
+                color="primary"
+                class="mb-2"
+              ></v-progress-linear>
+              <v-table v-else density="compact" class="ledger-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-right">Remaining Target</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="tx in accountLedger" :key="tx.id">
+                    <td>{{ formatDate(tx.payment_date) }}</td>
+                    <td>
+                      <v-chip
+                        size="x-small"
+                        :color="tx.amount >= 0 ? 'success' : 'warning'"
+                        variant="flat"
+                      >
+                        {{ tx.amount >= 0 ? "Contribution" : "Withdrawal" }}
+                      </v-chip>
+                    </td>
+                    <td
+                      class="text-right"
+                      :class="tx.amount >= 0 ? 'text-success' : 'text-warning'"
+                    >
+                      ₱{{ formatNumber(Math.abs(tx.amount || 0)) }}
+                    </td>
+                    <td class="text-right">
+                      ₱{{ formatNumber(tx.balance_after_payment || 0) }}
+                    </td>
+                    <td>{{ tx.remarks || "-" }}</td>
+                  </tr>
+                  <tr v-if="accountLedger.length === 0">
+                    <td colspan="5" class="text-center text-medium-emphasis">
+                      No transactions yet.
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
             </v-col>
           </v-row>
         </v-card-text>
@@ -1127,6 +1199,8 @@ const withdrawFormValid = ref(false);
 const saving = ref(false);
 const withdrawing = ref(false);
 const selectedSavings = ref(null);
+const accountLedger = ref([]);
+const ledgerLoading = ref(false);
 
 const snackbar = ref(false);
 const snackbarMessage = ref("");
@@ -1152,6 +1226,7 @@ const statusOptions = [
   { title: "Active", value: "active" },
   { title: "Completed", value: "completed" },
   { title: "Cancelled", value: "cancelled" },
+  { title: "No Plan", value: "no_plan" },
 ];
 
 const hasActiveFilters = computed(() => {
@@ -1225,7 +1300,7 @@ watch(selectionMode, () => {
 const headers = computed(() => {
   const baseHeaders = [
     { title: "Employee", key: "employee", sortable: true },
-    { title: "Total Amount", key: "total_amount", sortable: true },
+    { title: "Target Goal", key: "total_amount", sortable: true },
     { title: "Per Cutoff", key: "amount_per_cutoff", sortable: true },
     { title: "Remaining Target", key: "balance", sortable: true },
     { title: "Progress", key: "progress", sortable: false },
@@ -1263,10 +1338,24 @@ const fetchSavingsRecords = async () => {
     const params = {};
     if (filters.value.employee_id)
       params.employee_id = filters.value.employee_id;
-    if (filters.value.status) params.status = filters.value.status;
+
+    params.paginate = false;
+    if (userRole.value !== "employee") {
+      params.include_all_employees = true;
+    }
 
     const response = await api.get("/employee-savings", { params });
-    savingsRecords.value = response.data.data;
+
+    const rows = Array.isArray(response.data)
+      ? response.data
+      : Array.isArray(response.data?.data)
+        ? response.data.data
+        : [];
+
+    savingsRecords.value = filters.value.status
+      ? rows.filter((row) => row?.status === filters.value.status)
+      : rows;
+
     calculateSummary();
   } catch (error) {
     showSnackbar("Failed to fetch employee savings: " + error.message, "error");
@@ -1399,6 +1488,14 @@ const openAddDialog = () => {
   setTimeout(() => {
     savingsFormRef.value?.resetValidation();
   }, 100);
+};
+
+const openAddDialogForEmployee = (employee) => {
+  openAddDialog();
+  if (employee?.id) {
+    selectionMode.value = "individual";
+    form.value.employee_id = employee.id;
+  }
 };
 
 const openEditDialog = (bond) => {
@@ -1604,9 +1701,36 @@ const processWithdrawal = async () => {
   }
 };
 
+const loadAccountLedger = async (deductionId) => {
+  if (!deductionId) {
+    accountLedger.value = [];
+    return;
+  }
+
+  ledgerLoading.value = true;
+  try {
+    const response = await api.get(`/deductions/${deductionId}/ledger`);
+    accountLedger.value = response.data?.transactions || [];
+  } catch (error) {
+    accountLedger.value = [];
+    showSnackbar(
+      "Failed to load wallet ledger: " +
+        (error.response?.data?.message || error.message),
+      "error",
+    );
+  } finally {
+    ledgerLoading.value = false;
+  }
+};
+
 const viewDetails = (bond) => {
   selectedSavings.value = bond;
+  accountLedger.value = [];
   detailsDialog.value = true;
+
+  if (!bond?.is_virtual && Number(bond?.id) > 0) {
+    loadAccountLedger(bond.id);
+  }
 };
 
 const confirmDelete = async (bond) => {
@@ -1647,11 +1771,16 @@ const getStatusColor = (status) => {
     active: "primary",
     completed: "success",
     cancelled: "error",
+    no_plan: "grey",
   };
   return colors[status] || "grey";
 };
 
 const formatStatus = (status) => {
+  if (status === "no_plan") {
+    return "No Plan";
+  }
+
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
@@ -1673,16 +1802,15 @@ onMounted(async () => {
   await checkModuleAccess();
   loadMyAccessRequests();
   if (hasAccess.value) {
-    fetchSavingsRecords();
     if (userRole.value !== "employee") {
-      runWhenIdle(() => {
-        ensureEmployeesLoaded();
-      });
+      await ensureEmployeesLoaded();
       runWhenIdle(() => {
         fetchDepartments();
         fetchPositions();
       });
     }
+
+    fetchSavingsRecords();
   }
 });
 </script>

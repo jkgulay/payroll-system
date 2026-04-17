@@ -315,6 +315,7 @@ const ALL_REQUEST_MODULES = [
   "allowances",
   "thirteenth-month-pay",
   "loans",
+  "cash-advances",
   "cash-bonds",
   "employee-savings",
   "salary-adjustments",
@@ -554,6 +555,12 @@ const menuItems = computed(() => {
           to: "/deductions",
         },
         {
+          title: "Cash Advances",
+          icon: "mdi-wallet-plus-outline",
+          value: "cash-advances",
+          to: "/cash-advances",
+        },
+        {
           title: "Cash Bonds",
           icon: "mdi-cash-lock",
           value: "cash-bonds",
@@ -564,7 +571,7 @@ const menuItems = computed(() => {
           icon: "mdi-piggy-bank-outline",
           value: "employee-savings",
           to: "/employee-savings",
-          roles: ["admin"],
+          roles: ["admin", "hr"],
         },
         {
           title: "Salary Adjustments",
@@ -840,6 +847,13 @@ const menuSections = computed(() => {
           roles: ["admin", "payrollist"],
         },
         {
+          title: "Cash Advances",
+          icon: "mdi-wallet-plus-outline",
+          value: "cash-advances",
+          to: "/cash-advances",
+          roles: ["admin", "payrollist"],
+        },
+        {
           title: "Cash Bonds",
           icon: "mdi-cash-lock",
           value: "cash-bonds",
@@ -896,6 +910,13 @@ const menuSections = computed(() => {
       value: "my-loans",
       to: "/my-loans",
       roles: ["employee", "payrollist"],
+    },
+    {
+      title: "My Cash Advances",
+      icon: "mdi-wallet-plus-outline",
+      value: "my-cash-advances",
+      to: "/cash-advances",
+      roles: ["employee"],
     },
     {
       title: "My Cash Bonds",

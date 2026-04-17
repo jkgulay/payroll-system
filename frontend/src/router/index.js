@@ -240,6 +240,18 @@ const router = createRouter({
           meta: { title: "Deductions", roles: ["admin", "hr", "payrollist"] },
         },
         {
+          path: "cash-advances",
+          name: "cash-advances",
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/CashAdvanceView.vue"
+            ),
+          meta: {
+            title: "Cash Advance Management",
+            roles: ["admin", "hr", "payrollist", "employee"],
+          },
+        },
+        {
           path: "cash-bonds",
           name: "cash-bonds",
           component: () =>
@@ -260,7 +272,7 @@ const router = createRouter({
             ),
           meta: {
             title: "Employee Savings Management",
-            roles: ["admin", "payrollist", "employee"],
+            roles: ["admin", "hr", "payrollist", "employee"],
           },
         },
         {

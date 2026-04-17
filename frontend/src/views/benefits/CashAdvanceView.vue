@@ -1,15 +1,19 @@
 <template>
-  <div class="cash-bond-page">
+  <div class="cash-advance-page">
     <div class="modern-card">
       <!-- Modern Page Header -->
       <div class="page-header">
         <div class="page-icon-badge">
-          <v-icon icon="mdi-cash-lock" size="24" color="white"></v-icon>
+          <v-icon
+            icon="mdi-wallet-plus-outline"
+            size="24"
+            color="white"
+          ></v-icon>
         </div>
         <div class="page-header-content">
-          <h1 class="page-title">Cash Bond Management</h1>
+          <h1 class="page-title">Cash Advance Management</h1>
           <p class="page-subtitle">
-            Track and manage employee cash bonds and refunds
+            Track and manage employee cash advances and repayments
           </p>
         </div>
         <button
@@ -18,7 +22,7 @@
           @click="openAddDialog"
         >
           <v-icon size="20">mdi-cash-plus</v-icon>
-          <span>Add Cash Bond</span>
+          <span>Add Cash Advance</span>
         </button>
       </div>
 
@@ -35,7 +39,7 @@
           <v-alert-title>Access Required</v-alert-title>
           <p class="mt-1">
             You need to request access from an administrator before you can
-            manage cash bonds.
+            manage cash advances.
           </p>
           <v-btn
             color="primary"
@@ -57,7 +61,7 @@
           <v-alert-title>Pending Approval</v-alert-title>
           <p class="mt-1">
             Your access request is pending admin approval. You will be able to
-            manage cash bonds once approved.
+            manage cash advances once approved.
           </p>
         </v-alert>
         <v-alert
@@ -122,12 +126,12 @@
             <v-card-title class="d-flex align-center pa-4"
               ><v-icon color="primary" class="mr-2"
                 >mdi-lock-open-variant</v-icon
-              >Request Cash Bonds Access</v-card-title
+              >Request Cash Advance Access</v-card-title
             >
             <v-divider></v-divider>
             <v-card-text class="pa-4">
               <p class="text-body-2 mb-4">
-                Please provide a reason for needing access to the Cash Bonds
+                Please provide a reason for needing access to the Cash Advance
                 module.
               </p>
               <v-textarea
@@ -173,7 +177,7 @@
               <v-icon size="20">mdi-lock-check</v-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Active Bonds</div>
+              <div class="stat-label">Active Advances</div>
               <div class="stat-value">{{ summary.active_count || 0 }}</div>
               <div class="stat-sublabel">
                 ₱{{ formatNumber(summary.active_total || 0) }}
@@ -186,7 +190,7 @@
               <v-icon size="20">mdi-alert-circle</v-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Remaining Target</div>
+              <div class="stat-label">Remaining Balance</div>
               <div class="stat-value warning-text">
                 ₱{{ formatNumber(summary.outstanding_balance || 0) }}
               </div>
@@ -198,7 +202,7 @@
               <v-icon size="20">mdi-check-circle</v-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Completed Bonds</div>
+              <div class="stat-label">Completed Advances</div>
               <div class="stat-value">{{ summary.completed_count || 0 }}</div>
               <div class="stat-sublabel">
                 ₱{{ formatNumber(summary.completed_total || 0) }}
@@ -211,7 +215,7 @@
               <v-icon size="20">mdi-cash-check</v-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">Total Collected</div>
+              <div class="stat-label">Total Paid</div>
               <div class="stat-value info-text">
                 ₱{{ formatNumber(summary.total_collected || 0) }}
               </div>
@@ -233,7 +237,7 @@
                 density="comfortable"
                 clearable
                 hide-details
-                @update:model-value="fetchCashBonds"
+                @update:model-value="fetchCashAdvances"
               ></v-autocomplete>
             </v-col>
             <v-col cols="12" :md="userRole === 'employee' ? 6 : 4">
@@ -245,7 +249,7 @@
                 density="comfortable"
                 clearable
                 hide-details
-                @update:model-value="fetchCashBonds"
+                @update:model-value="fetchCashAdvances"
               ></v-select>
             </v-col>
             <v-col cols="auto" class="d-flex align-center">
@@ -272,10 +276,10 @@
           </v-row>
         </div>
 
-        <!-- Cash Bonds Table -->
+        <!-- Cash Advance Table -->
         <v-data-table
           :headers="headers"
-          :items="cashBonds"
+          :items="cashAdvanceRecords"
           :loading="loading"
           :items-per-page="15"
           class="modern-table"
@@ -315,10 +319,37 @@
                 ₱{{ formatNumber(item.balance) }}
               </span>
               <div class="text-caption text-medium-emphasis">
-                Contributed: ₱{{
-                  formatNumber(item.total_amount - item.balance)
-                }}
+                Paid: ₱{{ formatNumber(item.total_amount - item.balance) }}
               </div>
+            </div>
+          </template>
+
+          <template v-slot:item.available_estimated_balance="{ item }">
+            <div>
+              <span v-if="isRowAvailabilityLoading(item)">
+                <v-progress-circular
+                  indeterminate
+                  size="14"
+                  width="2"
+                  class="mr-1"
+                ></v-progress-circular>
+                <span class="text-caption">Loading...</span>
+              </span>
+              <template v-else>
+                <span class="font-weight-medium">
+                  {{
+                    getRowAvailableBalance(item) === null
+                      ? "—"
+                      : `₱${formatNumber(getRowAvailableBalance(item))}`
+                  }}
+                </span>
+                <div
+                  v-if="getRowAvailabilityAsOfLabel(item)"
+                  class="text-caption text-medium-emphasis"
+                >
+                  As of {{ getRowAvailabilityAsOfLabel(item) }}
+                </div>
+              </template>
             </div>
           </template>
 
@@ -376,7 +407,7 @@
                 >
                   <v-list-item-title>
                     <v-icon size="small" class="mr-2">mdi-account-cash</v-icon>
-                    Set Contribution Plan
+                    Set Repayment Plan
                   </v-list-item-title>
                 </v-list-item>
                 <v-list-item v-if="!item.is_virtual" @click="viewDetails(item)">
@@ -388,15 +419,15 @@
                 <v-list-item
                   v-if="
                     !item.is_virtual &&
-                    (item.status === 'active' || item.status === 'completed') &&
-                    Number(item.total_amount || 0) - Number(item.balance || 0) >
-                      0
+                    userRole !== 'employee' &&
+                    item.status === 'active' &&
+                    Number(item.balance || 0) > 0
                   "
-                  @click="openRefundDialog(item)"
+                  @click="openPaymentDialog(item)"
                 >
                   <v-list-item-title>
-                    <v-icon size="small" class="mr-2">mdi-cash-refund</v-icon>
-                    Refund/Return
+                    <v-icon size="small" class="mr-2">mdi-cash-check</v-icon>
+                    Record Payment
                   </v-list-item-title>
                 </v-list-item>
                 <v-list-item
@@ -434,10 +465,10 @@
 
           <template v-slot:no-data>
             <div class="text-center py-8">
-              <v-icon size="64" color="grey">mdi-cash-lock</v-icon>
-              <p class="text-h6 mt-4">No cash bonds found</p>
+              <v-icon size="64" color="grey">mdi-wallet-plus-outline</v-icon>
+              <p class="text-h6 mt-4">No cash advances found</p>
               <p class="text-body-2 text-medium-emphasis">
-                No cash bond records match your current filters.
+                No cash advance records match your current filters.
               </p>
               <v-btn
                 class="mt-3"
@@ -454,24 +485,24 @@
       </template>
     </div>
 
-    <!-- Add/Edit Cash Bond Dialog -->
+    <!-- Add/Edit Cash Advance Dialog -->
     <v-dialog v-model="dialog" max-width="900px" persistent scrollable>
-      <v-card class="modern-dialog cashbond-dialog">
+      <v-card class="modern-dialog cash-advance-dialog">
         <v-card-title class="dialog-header">
           <div class="dialog-icon-wrapper primary">
             <v-icon size="24">{{
-              editMode ? "mdi-pencil" : "mdi-cash-lock"
+              editMode ? "mdi-pencil" : "mdi-wallet-plus-outline"
             }}</v-icon>
           </div>
           <div>
             <div class="dialog-title">
-              {{ editMode ? "Edit Cash Bond" : "Add Cash Bond" }}
+              {{ editMode ? "Edit Cash Advance" : "Add Cash Advance" }}
             </div>
             <div class="dialog-subtitle">
               {{
                 editMode
-                  ? "Update cash bond details"
-                  : "Create new cash bond for employee"
+                  ? "Update cash advance details"
+                  : "Create new cash advance for employee"
               }}
             </div>
           </div>
@@ -479,11 +510,11 @@
         <v-divider></v-divider>
 
         <v-card-text
-          class="dialog-content cashbond-dialog-content"
+          class="dialog-content cash-advance-dialog-content"
           style="max-height: 70vh"
-          @keydown.capture="handleCashBondFormKeydown"
+          @keydown.capture="handleCashAdvanceFormKeydown"
         >
-          <v-form ref="bondFormRef" v-model="formValid">
+          <v-form ref="cashAdvanceFormRef" v-model="formValid">
             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
               <template v-slot:prepend>
                 <v-icon icon="mdi-information"></v-icon>
@@ -498,7 +529,7 @@
                   <div class="section-icon">
                     <v-icon size="18">mdi-account-cash</v-icon>
                   </div>
-                  <h3 class="section-title">Bond Information</h3>
+                  <h3 class="section-title">Cash Advance Information</h3>
                 </div>
               </v-col>
 
@@ -642,7 +673,7 @@
               >
                 <v-alert type="info" variant="tonal" density="compact">
                   <strong>{{ affectedEmployeesCount }}</strong> active
-                  employee(s) will receive this cash bond.
+                  employee(s) will receive this cash advance deduction.
                 </v-alert>
               </v-col>
 
@@ -666,15 +697,92 @@
                 <v-text-field
                   v-model.number="form.total_amount"
                   type="number"
-                  label="Contribution Goal *"
+                  label="Advance Amount *"
                   prefix="₱"
                   placeholder="0.00"
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-currency-php"
+                  :loading="cashAdvanceAvailabilityLoading"
                   :rules="[rules.required, rules.positiveNumber]"
                   @input="calculateInstallments"
                 ></v-text-field>
+
+                <v-alert
+                  v-if="showCashAdvanceAvailability"
+                  class="mt-2"
+                  density="compact"
+                  variant="tonal"
+                  :type="hasCashAdvanceLimitWarning ? 'warning' : 'info'"
+                  :icon="
+                    hasCashAdvanceLimitWarning
+                      ? 'mdi-alert'
+                      : 'mdi-wallet-outline'
+                  "
+                >
+                  <div
+                    class="d-flex align-center justify-space-between flex-wrap ga-2"
+                  >
+                    <span class="text-caption"
+                      >Available Balance (Estimated)</span
+                    >
+                    <strong
+                      >₱{{ formatNumber(cashAdvanceAvailableBalance) }}</strong
+                    >
+                  </div>
+                  <div class="text-caption mt-1">
+                    Based on approved attendance from
+                    <strong>{{ cashAdvanceStartDateLabel }}</strong>
+                    to
+                    <strong>{{ cashAdvanceAsOfDateLabel }}</strong>
+                    <span v-if="cashAdvanceLastPayrollLabel">
+                      (last payroll ended {{ cashAdvanceLastPayrollLabel }})
+                    </span>
+                  </div>
+                  <div
+                    v-if="
+                      cashAdvanceAvailability.active_cash_advance_balance > 0
+                    "
+                    class="text-caption mt-1"
+                  >
+                    Current active cash advance balance: ₱{{
+                      formatNumber(
+                        cashAdvanceAvailability.active_cash_advance_balance,
+                      )
+                    }}. Suggested additional cap: ₱{{
+                      formatNumber(cashAdvanceAvailability.recommended_limit)
+                    }}.
+                  </div>
+                  <div
+                    v-if="hasCashAdvanceLimitWarning"
+                    class="text-caption mt-1 font-weight-medium"
+                  >
+                    Entered amount is above the estimated available balance.
+                  </div>
+                </v-alert>
+
+                <v-alert
+                  v-else-if="showCashAdvanceAvailabilityError"
+                  class="mt-2"
+                  density="compact"
+                  variant="tonal"
+                  type="warning"
+                  icon="mdi-alert-circle-outline"
+                >
+                  {{ cashAdvanceAvailabilityError }}
+                </v-alert>
+
+                <v-alert
+                  v-else-if="showCashAdvanceSelectionHint"
+                  class="mt-2"
+                  density="compact"
+                  variant="tonal"
+                  type="info"
+                  icon="mdi-information-outline"
+                >
+                  Available balance preview is shown for individual employee
+                  selection.
+                </v-alert>
               </v-col>
 
               <!-- Amount per Cutoff -->
@@ -755,7 +863,7 @@
                 <v-textarea
                   v-model="form.description"
                   label="Description"
-                  placeholder="Reason for cash bond"
+                  placeholder="Reason for cash advance"
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-text-box"
@@ -781,7 +889,7 @@
 
         <v-divider></v-divider>
 
-        <v-card-actions class="dialog-actions cashbond-dialog-actions">
+        <v-card-actions class="dialog-actions cash-advance-dialog-actions">
           <v-spacer></v-spacer>
           <v-btn
             variant="outlined"
@@ -794,7 +902,7 @@
           <v-btn
             color="#ED985F"
             variant="flat"
-            @click="saveCashBond"
+            @click="saveCashAdvanceRecord"
             :disabled="!formValid || saving"
           >
             <v-progress-circular
@@ -813,81 +921,72 @@
                   ? "Updating..."
                   : "Creating..."
                 : editMode
-                  ? "Update Cash Bond"
-                  : "Create Cash Bond"
+                  ? "Update Cash Advance"
+                  : "Create Cash Advance"
             }}
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Refund Dialog -->
-    <v-dialog v-model="refundDialog" max-width="500px" persistent>
+    <!-- Payment Dialog -->
+    <v-dialog v-model="paymentDialog" max-width="500px" persistent>
       <v-card>
         <v-card-title class="bg-success">
-          <span class="text-h6">Refund/Return Cash Bond</span>
+          <span class="text-h6">Record Cash Advance Payment</span>
         </v-card-title>
         <v-card-text class="pt-4">
           <v-alert type="info" variant="tonal" class="mb-4">
             <div class="text-caption">
-              Employee: <strong>{{ refundForm.employee_name }}</strong>
+              Employee: <strong>{{ paymentForm.employee_name }}</strong>
             </div>
             <div class="text-caption">
-              Total Bond:
-              <strong>₱{{ formatNumber(refundForm.total_amount) }}</strong>
+              Total Advance:
+              <strong>₱{{ formatNumber(paymentForm.total_amount) }}</strong>
             </div>
             <div class="text-caption">
-              Already Deducted:
-              <strong>₱{{ formatNumber(refundForm.amount_paid) }}</strong>
+              Already Paid:
+              <strong>₱{{ formatNumber(paymentForm.amount_paid) }}</strong>
             </div>
             <div class="text-caption">
-              Available to Refund:
-              <strong>₱{{ formatNumber(refundForm.current_balance) }}</strong>
+              Remaining Balance:
+              <strong>₱{{ formatNumber(paymentForm.current_balance) }}</strong>
             </div>
           </v-alert>
 
-          <v-form ref="refundFormRef" v-model="refundFormValid">
+          <v-form ref="paymentFormRef" v-model="paymentFormValid">
             <v-text-field
-              v-model="refundForm.refund_amount"
-              label="Refund Amount *"
+              v-model="paymentForm.payment_amount"
+              label="Payment Amount *"
               variant="outlined"
               type="number"
               prefix="₱"
-              :rules="[rules.required, rules.positiveNumber, rules.maxRefund]"
+              :rules="[rules.required, rules.positiveNumber, rules.maxPayment]"
               class="mb-2"
-              hint="Can only refund from already deducted contributions"
+              hint="Cannot exceed the remaining balance"
               persistent-hint
             ></v-text-field>
 
             <v-text-field
-              v-model="refundForm.refund_date"
-              label="Refund Date *"
+              v-model="paymentForm.payment_date"
+              label="Payment Date *"
               variant="outlined"
               type="date"
               :rules="[rules.required]"
               class="mb-2"
             ></v-text-field>
-
-            <v-textarea
-              v-model="refundForm.refund_reason"
-              label="Refund Reason"
-              variant="outlined"
-              rows="2"
-              placeholder="e.g., Employee resignation, Contract completion"
-              class="mb-2"
-            ></v-textarea>
           </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeRefundDialog">Cancel</v-btn>
+          <v-btn variant="text" @click="closePaymentDialog">Cancel</v-btn>
           <v-btn
             color="success"
-            :loading="refunding"
-            :disabled="!refundFormValid"
-            @click="processRefund"
+            :loading="processingPayment"
+            :disabled="!paymentFormValid"
+            @click="processPayment"
           >
-            Process Refund
+            Record Payment
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -895,9 +994,9 @@
 
     <!-- Details Dialog -->
     <v-dialog v-model="detailsDialog" max-width="700px">
-      <v-card v-if="selectedBond">
+      <v-card v-if="selectedCashAdvance">
         <v-card-title class="bg-primary">
-          <span class="text-h6">Cash Bond Details</span>
+          <span class="text-h6">Cash Advance Details</span>
         </v-card-title>
         <v-card-text class="pt-4">
           <v-row>
@@ -905,10 +1004,10 @@
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Employee</div>
                 <div class="font-weight-medium">
-                  {{ selectedBond.employee?.full_name }}
+                  {{ selectedCashAdvance.employee?.full_name }}
                 </div>
                 <div class="text-caption">
-                  {{ selectedBond.employee?.employee_number }}
+                  {{ selectedCashAdvance.employee?.employee_number }}
                 </div>
               </div>
             </v-col>
@@ -916,21 +1015,21 @@
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Status</div>
                 <v-chip
-                  :color="getStatusColor(selectedBond.status)"
+                  :color="getStatusColor(selectedCashAdvance.status)"
                   size="small"
                   class="mt-1"
                 >
-                  {{ formatStatus(selectedBond.status) }}
+                  {{ formatStatus(selectedCashAdvance.status) }}
                 </v-chip>
               </div>
             </v-col>
             <v-col cols="12" md="6">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">
-                  Contribution Goal
+                  Advance Amount
                 </div>
                 <div class="text-h6 text-primary">
-                  ₱{{ formatNumber(selectedBond.total_amount) }}
+                  ₱{{ formatNumber(selectedCashAdvance.total_amount) }}
                 </div>
               </div>
             </v-col>
@@ -940,22 +1039,24 @@
                   Amount per Cutoff
                 </div>
                 <div class="text-h6">
-                  ₱{{ formatNumber(selectedBond.amount_per_cutoff) }}
+                  ₱{{ formatNumber(selectedCashAdvance.amount_per_cutoff) }}
                 </div>
               </div>
             </v-col>
             <v-col cols="12" md="6">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">
-                  Remaining Target
+                  Remaining Balance
                 </div>
                 <div
                   class="text-h6"
                   :class="
-                    selectedBond.balance > 0 ? 'text-warning' : 'text-success'
+                    selectedCashAdvance.balance > 0
+                      ? 'text-warning'
+                      : 'text-success'
                   "
                 >
-                  ₱{{ formatNumber(selectedBond.balance) }}
+                  ₱{{ formatNumber(selectedCashAdvance.balance) }}
                 </div>
               </div>
             </v-col>
@@ -964,9 +1065,9 @@
                 <div class="text-caption text-medium-emphasis">Progress</div>
                 <div>
                   <v-progress-linear
-                    :model-value="getProgress(selectedBond)"
+                    :model-value="getProgress(selectedCashAdvance)"
                     :color="
-                      selectedBond.status === 'completed'
+                      selectedCashAdvance.status === 'completed'
                         ? 'success'
                         : 'primary'
                     "
@@ -976,13 +1077,15 @@
                   >
                     <template v-slot:default>
                       <span class="text-caption"
-                        >{{ Math.round(getProgress(selectedBond)) }}%</span
+                        >{{
+                          Math.round(getProgress(selectedCashAdvance))
+                        }}%</span
                       >
                     </template>
                   </v-progress-linear>
                   <div class="text-caption">
-                    {{ selectedBond.installments_paid }} of
-                    {{ selectedBond.installments }} installments paid
+                    {{ selectedCashAdvance.installments_paid }} of
+                    {{ selectedCashAdvance.installments }} installments paid
                   </div>
                 </div>
               </div>
@@ -990,38 +1093,38 @@
             <v-col cols="12" md="6">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Start Date</div>
-                <div>{{ formatDate(selectedBond.start_date) }}</div>
+                <div>{{ formatDate(selectedCashAdvance.start_date) }}</div>
               </div>
             </v-col>
             <v-col cols="12" md="6">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">End Date</div>
-                <div>{{ formatDate(selectedBond.end_date) }}</div>
+                <div>{{ formatDate(selectedCashAdvance.end_date) }}</div>
               </div>
             </v-col>
-            <v-col cols="12" v-if="selectedBond.reference_number">
+            <v-col cols="12" v-if="selectedCashAdvance.reference_number">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">
                   Reference Number
                 </div>
-                <div>{{ selectedBond.reference_number }}</div>
+                <div>{{ selectedCashAdvance.reference_number }}</div>
               </div>
             </v-col>
-            <v-col cols="12" v-if="selectedBond.description">
+            <v-col cols="12" v-if="selectedCashAdvance.description">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Description</div>
-                <div>{{ selectedBond.description }}</div>
+                <div>{{ selectedCashAdvance.description }}</div>
               </div>
             </v-col>
-            <v-col cols="12" v-if="selectedBond.notes">
+            <v-col cols="12" v-if="selectedCashAdvance.notes">
               <div class="mb-3">
                 <div class="text-caption text-medium-emphasis">Notes</div>
                 <div class="text-caption" style="white-space: pre-wrap">
-                  {{ selectedBond.notes }}
+                  {{ selectedCashAdvance.notes }}
                 </div>
               </div>
             </v-col>
-            <v-col cols="12" v-if="!selectedBond.is_virtual">
+            <v-col cols="12" v-if="!selectedCashAdvance.is_virtual">
               <div class="mb-2 d-flex align-center justify-space-between">
                 <div class="text-caption text-medium-emphasis">
                   Wallet Ledger
@@ -1044,7 +1147,7 @@
                     <th>Date</th>
                     <th>Type</th>
                     <th class="text-right">Amount</th>
-                    <th class="text-right">Remaining Target</th>
+                    <th class="text-right">Remaining Balance</th>
                     <th>Remarks</th>
                   </tr>
                 </thead>
@@ -1057,7 +1160,7 @@
                         :color="tx.amount >= 0 ? 'success' : 'warning'"
                         variant="flat"
                       >
-                        {{ tx.amount >= 0 ? "Contribution" : "Withdrawal" }}
+                        {{ tx.amount >= 0 ? "Payment" : "Adjustment" }}
                       </v-chip>
                     </td>
                     <td
@@ -1097,7 +1200,6 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 import { formatDate, formatNumber } from "@/utils/formatters";
@@ -1106,7 +1208,6 @@ import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import moduleAccessService from "@/services/moduleAccessService";
 import { useKeyboardFirstFlow } from "@/composables/useKeyboardFirstFlow";
 
-const route = useRoute();
 const authStore = useAuthStore();
 const { confirm: confirmDialog } = useConfirmDialog();
 const userRole = computed(() => authStore.user?.role);
@@ -1137,7 +1238,7 @@ const getAccessRequestStatusColor = (status) =>
 const checkModuleAccess = async () => {
   if (isAdminOrHr.value || userRole.value === "employee") return;
   try {
-    const response = await moduleAccessService.checkAccess("cash-bonds");
+    const response = await moduleAccessService.checkAccess("cash-advances");
     accessStatus.value = response.status;
     accessMessage.value = response.message || "";
   } catch {
@@ -1148,7 +1249,7 @@ const checkModuleAccess = async () => {
 const loadMyAccessRequests = async () => {
   if (isAdminOrHr.value || userRole.value === "employee") return;
   try {
-    const response = await moduleAccessService.getRequests("cash-bonds");
+    const response = await moduleAccessService.getRequests("cash-advances");
     myAccessRequests.value = response.data || [];
   } catch {
     myAccessRequests.value = [];
@@ -1159,7 +1260,7 @@ const submitAccessRequest = async () => {
   if (!accessRequestReason.value) return;
   submittingAccessRequest.value = true;
   try {
-    await moduleAccessService.submitRequest("cash-bonds", {
+    await moduleAccessService.submitRequest("cash-advances", {
       reason: accessRequestReason.value,
     });
     accessRequestDialog.value = false;
@@ -1177,7 +1278,7 @@ const submitAccessRequest = async () => {
 };
 
 // Data
-const cashBonds = ref([]);
+const cashAdvanceRecords = ref([]);
 const employees = ref([]);
 const departments = ref([]);
 const positions = ref([]);
@@ -1186,19 +1287,25 @@ const loadingEmployees = ref(false);
 const loadingDepartments = ref(false);
 const loadingPositions = ref(false);
 const dialog = ref(false);
-const refundDialog = ref(false);
+const paymentDialog = ref(false);
 const detailsDialog = ref(false);
 const editMode = ref(false);
 const selectionMode = ref("individual");
 const affectedEmployeesCount = ref(0);
-const bondFormRef = ref(null);
+const cashAdvanceFormRef = ref(null);
 const formValid = ref(false);
-const refundFormValid = ref(false);
+const paymentFormValid = ref(false);
 const saving = ref(false);
-const refunding = ref(false);
-const selectedBond = ref(null);
+const processingPayment = ref(false);
+const selectedCashAdvance = ref(null);
 const accountLedger = ref([]);
 const ledgerLoading = ref(false);
+const cashAdvanceAvailability = ref(null);
+const cashAdvanceAvailabilityLoading = ref(false);
+const cashAdvanceAvailabilityError = ref("");
+const rowAvailableBalanceByEmployee = ref({});
+const rowAvailabilityAsOfByEmployee = ref({});
+const rowAvailabilityLoadingByEmployee = ref({});
 
 const snackbar = ref(false);
 const snackbarMessage = ref("");
@@ -1236,13 +1343,66 @@ const activeFilterCount = computed(() => {
     .length;
 });
 
-const { handleKeydown: handleCashBondFormKeydown } = useKeyboardFirstFlow({
+const isIndividualCashAdvanceContext = computed(() => {
+  if (!dialog.value) return false;
+  if (!form.value.employee_id) return false;
+
+  if (editMode.value) {
+    return true;
+  }
+
+  return selectionMode.value === "individual";
+});
+
+const showCashAdvanceAvailability = computed(
+  () => isIndividualCashAdvanceContext.value && !!cashAdvanceAvailability.value,
+);
+
+const showCashAdvanceAvailabilityError = computed(
+  () =>
+    isIndividualCashAdvanceContext.value &&
+    !!cashAdvanceAvailabilityError.value &&
+    !cashAdvanceAvailabilityLoading.value,
+);
+
+const showCashAdvanceSelectionHint = computed(
+  () =>
+    dialog.value &&
+    !editMode.value &&
+    selectionMode.value !== "individual" &&
+    !cashAdvanceAvailabilityLoading.value,
+);
+
+const cashAdvanceAvailableBalance = computed(() =>
+  Number(cashAdvanceAvailability.value?.available_balance || 0),
+);
+
+const cashAdvanceStartDateLabel = computed(() =>
+  formatDate(cashAdvanceAvailability.value?.start_date, "N/A"),
+);
+
+const cashAdvanceAsOfDateLabel = computed(() =>
+  formatDate(cashAdvanceAvailability.value?.as_of_date, "N/A"),
+);
+
+const cashAdvanceLastPayrollLabel = computed(() =>
+  formatDate(cashAdvanceAvailability.value?.last_payroll?.period_end, ""),
+);
+
+const hasCashAdvanceLimitWarning = computed(() => {
+  if (!showCashAdvanceAvailability.value) return false;
+
+  const requested = Number(form.value.total_amount || 0);
+  return requested > cashAdvanceAvailableBalance.value;
+});
+
+const { handleKeydown: handleCashAdvanceFormKeydown } = useKeyboardFirstFlow({
   onEscape: () => {
     if (!saving.value) closeDialog();
   },
   onSubmitLast: () => {
     if (!saving.value && formValid.value) {
-      saveCashBond();
+      saveCashAdvanceRecord();
     }
   },
 });
@@ -1263,15 +1423,14 @@ const form = ref({
   notes: "",
 });
 
-const refundForm = ref({
+const paymentForm = ref({
   deduction_id: null,
   employee_name: "",
   total_amount: 0,
   amount_paid: 0,
   current_balance: 0,
-  refund_amount: 0,
-  refund_date: new Date().toISOString().substr(0, 10),
-  refund_reason: "",
+  payment_amount: 0,
+  payment_date: new Date().toISOString().substr(0, 10),
 });
 
 // Validation rules
@@ -1281,9 +1440,9 @@ const rules = {
     (Array.isArray(value) && value.length > 0) ||
     "Please select at least one employee",
   positiveNumber: (value) => value > 0 || "Must be greater than 0",
-  maxRefund: (value) =>
-    value <= refundForm.value.current_balance ||
-    "Cannot exceed contributed amount",
+  maxPayment: (value) =>
+    value <= paymentForm.value.current_balance ||
+    "Cannot exceed remaining balance",
 };
 
 watch(selectionMode, () => {
@@ -1294,13 +1453,35 @@ watch(selectionMode, () => {
   form.value.position = null;
 });
 
+watch(
+  [
+    () => dialog.value,
+    () => editMode.value,
+    () => selectionMode.value,
+    () => form.value.employee_id,
+  ],
+  () => {
+    if (!isIndividualCashAdvanceContext.value) {
+      resetCashAdvanceAvailability();
+      return;
+    }
+
+    fetchCashAdvanceAvailability();
+  },
+);
+
 // Table headers
 const headers = computed(() => {
   const baseHeaders = [
     { title: "Employee", key: "employee", sortable: true },
-    { title: "Target Goal", key: "total_amount", sortable: true },
+    { title: "Advance Amount", key: "total_amount", sortable: true },
     { title: "Per Cutoff", key: "amount_per_cutoff", sortable: true },
-    { title: "Remaining Target", key: "balance", sortable: true },
+    { title: "Remaining Balance", key: "balance", sortable: true },
+    {
+      title: "Available (Est.)",
+      key: "available_estimated_balance",
+      sortable: false,
+    },
     { title: "Progress", key: "progress", sortable: false },
     { title: "Dates", key: "dates", sortable: false },
     { title: "Status", key: "status", sortable: true },
@@ -1329,8 +1510,136 @@ const customEmployeeFilter = (itemTitle, queryText, item) => {
   );
 };
 
+const getRowEmployeeId = (row) =>
+  Number(row?.employee_id || row?.employee?.id || 0);
+
+const hasRowAvailableBalance = (employeeId) => {
+  if (employeeId <= 0) return false;
+  return Object.prototype.hasOwnProperty.call(
+    rowAvailableBalanceByEmployee.value,
+    employeeId,
+  );
+};
+
+const isRowAvailabilityLoading = (row) => {
+  const employeeId = getRowEmployeeId(row);
+  if (employeeId <= 0) return false;
+  return !!rowAvailabilityLoadingByEmployee.value[employeeId];
+};
+
+const fetchRowAvailableBalance = async (employeeId) => {
+  if (employeeId <= 0) return;
+  if (hasRowAvailableBalance(employeeId)) return;
+  if (rowAvailabilityLoadingByEmployee.value[employeeId]) return;
+
+  rowAvailabilityLoadingByEmployee.value = {
+    ...rowAvailabilityLoadingByEmployee.value,
+    [employeeId]: true,
+  };
+
+  try {
+    const response = await api.get("/deductions/cash-advance/availability", {
+      params: {
+        employee_id: employeeId,
+      },
+    });
+
+    rowAvailableBalanceByEmployee.value = {
+      ...rowAvailableBalanceByEmployee.value,
+      [employeeId]: Number(response.data?.available_balance || 0),
+    };
+
+    rowAvailabilityAsOfByEmployee.value = {
+      ...rowAvailabilityAsOfByEmployee.value,
+      [employeeId]: response.data?.as_of_date || null,
+    };
+  } catch {
+    rowAvailableBalanceByEmployee.value = {
+      ...rowAvailableBalanceByEmployee.value,
+      [employeeId]: null,
+    };
+    rowAvailabilityAsOfByEmployee.value = {
+      ...rowAvailabilityAsOfByEmployee.value,
+      [employeeId]: null,
+    };
+  } finally {
+    rowAvailabilityLoadingByEmployee.value = {
+      ...rowAvailabilityLoadingByEmployee.value,
+      [employeeId]: false,
+    };
+  }
+};
+
+const getRowAvailableBalance = (row) => {
+  const employeeId = getRowEmployeeId(row);
+  if (employeeId <= 0) return null;
+
+  if (!hasRowAvailableBalance(employeeId)) {
+    void fetchRowAvailableBalance(employeeId);
+    return null;
+  }
+
+  return rowAvailableBalanceByEmployee.value[employeeId];
+};
+
+const getRowAvailabilityAsOfLabel = (row) => {
+  const employeeId = getRowEmployeeId(row);
+  if (employeeId <= 0) return "";
+
+  const asOfDate = rowAvailabilityAsOfByEmployee.value[employeeId];
+  return asOfDate ? formatDate(asOfDate) : "";
+};
+
+const prefetchRowAvailableBalances = (rows = []) => {
+  const employeeIds = [...new Set(rows.map((row) => getRowEmployeeId(row)))];
+  employeeIds.forEach((employeeId) => {
+    if (employeeId > 0) {
+      void fetchRowAvailableBalance(employeeId);
+    }
+  });
+};
+
+const resetCashAdvanceAvailability = () => {
+  cashAdvanceAvailability.value = null;
+  cashAdvanceAvailabilityError.value = "";
+  cashAdvanceAvailabilityLoading.value = false;
+};
+
+const fetchCashAdvanceAvailability = async () => {
+  if (!isIndividualCashAdvanceContext.value) {
+    resetCashAdvanceAvailability();
+    return;
+  }
+
+  const employeeId = Number(form.value.employee_id || 0);
+  if (!employeeId) {
+    resetCashAdvanceAvailability();
+    return;
+  }
+
+  cashAdvanceAvailabilityLoading.value = true;
+  cashAdvanceAvailabilityError.value = "";
+
+  try {
+    const response = await api.get("/deductions/cash-advance/availability", {
+      params: {
+        employee_id: employeeId,
+      },
+    });
+
+    cashAdvanceAvailability.value = response.data || null;
+  } catch (error) {
+    cashAdvanceAvailability.value = null;
+    cashAdvanceAvailabilityError.value =
+      error.response?.data?.message ||
+      "Failed to load estimated available balance for this employee.";
+  } finally {
+    cashAdvanceAvailabilityLoading.value = false;
+  }
+};
+
 // Methods
-const fetchCashBonds = async () => {
+const fetchCashAdvances = async () => {
   loading.value = true;
   try {
     const params = {};
@@ -1342,7 +1651,7 @@ const fetchCashBonds = async () => {
       params.include_all_employees = true;
     }
 
-    const response = await api.get("/cash-bonds", { params });
+    const response = await api.get("/cash-advances", { params });
 
     const rows = Array.isArray(response.data)
       ? response.data
@@ -1350,13 +1659,18 @@ const fetchCashBonds = async () => {
         ? response.data.data
         : [];
 
-    cashBonds.value = filters.value.status
+    cashAdvanceRecords.value = filters.value.status
       ? rows.filter((row) => row?.status === filters.value.status)
       : rows;
 
+    rowAvailableBalanceByEmployee.value = {};
+    rowAvailabilityAsOfByEmployee.value = {};
+    rowAvailabilityLoadingByEmployee.value = {};
+    prefetchRowAvailableBalances(cashAdvanceRecords.value.slice(0, 15));
+
     calculateSummary();
   } catch (error) {
-    showSnackbar("Failed to fetch cash bonds: " + error.message, "error");
+    showSnackbar("Failed to fetch cash advances: " + error.message, "error");
   } finally {
     loading.value = false;
   }
@@ -1440,8 +1754,10 @@ const runWhenIdle = (callback) => {
 };
 
 const calculateSummary = () => {
-  const active = cashBonds.value.filter((b) => b.status === "active");
-  const completed = cashBonds.value.filter((b) => b.status === "completed");
+  const active = cashAdvanceRecords.value.filter((b) => b.status === "active");
+  const completed = cashAdvanceRecords.value.filter(
+    (b) => b.status === "completed",
+  );
 
   summary.value = {
     active_count: active.length,
@@ -1458,7 +1774,7 @@ const calculateSummary = () => {
       (sum, b) => sum + parseFloat(b.total_amount),
       0,
     ),
-    total_collected: cashBonds.value.reduce(
+    total_collected: cashAdvanceRecords.value.reduce(
       (sum, b) => sum + (parseFloat(b.total_amount) - parseFloat(b.balance)),
       0,
     ),
@@ -1478,11 +1794,12 @@ const openAddDialog = () => {
   editMode.value = false;
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
+  resetCashAdvanceAvailability();
   resetForm();
   dialog.value = true;
   // Reset form validation after dialog opens
   setTimeout(() => {
-    bondFormRef.value?.resetValidation();
+    cashAdvanceFormRef.value?.resetValidation();
   }, 100);
 };
 
@@ -1494,62 +1811,62 @@ const openAddDialogForEmployee = (employee) => {
   }
 };
 
-const openEditDialog = (bond) => {
+const openEditDialog = (advance) => {
   ensureEmployeesLoaded();
   editMode.value = true;
+  resetCashAdvanceAvailability();
   Object.assign(form.value, {
-    id: bond.id,
-    employee_id: bond.employee_id,
-    total_amount: bond.total_amount,
-    amount_per_cutoff: bond.amount_per_cutoff,
-    installments: bond.installments,
-    start_date: bond.start_date,
-    reference_number: bond.reference_number || "",
-    description: bond.description || "",
-    notes: bond.notes || "",
+    id: advance.id,
+    employee_id: advance.employee_id,
+    total_amount: advance.total_amount,
+    amount_per_cutoff: advance.amount_per_cutoff,
+    installments: advance.installments,
+    start_date: advance.start_date,
+    reference_number: advance.reference_number || "",
+    description: advance.description || "",
+    notes: advance.notes || "",
   });
   dialog.value = true;
   // Reset form validation after dialog opens
   setTimeout(() => {
-    bondFormRef.value?.resetValidation();
+    cashAdvanceFormRef.value?.resetValidation();
   }, 100);
 };
 
-const openRefundDialog = (bond) => {
-  const totalAmount = parseFloat(bond.total_amount) || 0;
-  const remainingBalance = parseFloat(bond.balance) || 0;
-  const contributedAmount = Math.max(0, totalAmount - remainingBalance);
+const openPaymentDialog = (advance) => {
+  const totalAmount = parseFloat(advance.total_amount) || 0;
+  const remainingBalance = parseFloat(advance.balance) || 0;
+  const amountPaid = Math.max(0, totalAmount - remainingBalance);
 
-  Object.assign(refundForm.value, {
-    deduction_id: bond.id,
-    employee_name: bond.employee.full_name,
+  Object.assign(paymentForm.value, {
+    deduction_id: advance.id,
+    employee_name: advance.employee.full_name,
     total_amount: totalAmount,
-    amount_paid: contributedAmount,
-    current_balance: contributedAmount,
-    refund_amount: contributedAmount,
-    refund_date: new Date().toISOString().substr(0, 10),
-    refund_reason: "",
+    amount_paid: amountPaid,
+    current_balance: remainingBalance,
+    payment_amount: remainingBalance,
+    payment_date: new Date().toISOString().substr(0, 10),
   });
-  refundDialog.value = true;
+  paymentDialog.value = true;
 };
 
 const closeDialog = () => {
   dialog.value = false;
-  bondFormRef.value?.reset();
+  cashAdvanceFormRef.value?.reset();
+  resetCashAdvanceAvailability();
   resetForm();
 };
 
-const closeRefundDialog = () => {
-  refundDialog.value = false;
-  Object.assign(refundForm.value, {
+const closePaymentDialog = () => {
+  paymentDialog.value = false;
+  Object.assign(paymentForm.value, {
     deduction_id: null,
     employee_name: "",
     total_amount: 0,
     amount_paid: 0,
     current_balance: 0,
-    refund_amount: 0,
-    refund_date: new Date().toISOString().substr(0, 10),
-    refund_reason: "",
+    payment_amount: 0,
+    payment_date: new Date().toISOString().substr(0, 10),
   });
 };
 
@@ -1570,9 +1887,9 @@ const resetForm = () => {
   });
 };
 
-const saveCashBond = async () => {
+const saveCashAdvanceRecord = async () => {
   // Validate form before submission
-  const { valid } = await bondFormRef.value?.validate();
+  const { valid } = await cashAdvanceFormRef.value?.validate();
   if (!valid) {
     showSnackbar("Please fill in all required fields correctly", "error");
     return;
@@ -1617,11 +1934,11 @@ const saveCashBond = async () => {
 
     if (editMode.value) {
       await api.put(`/deductions/${form.value.id}`, payload);
-      showSnackbar("Cash bond updated successfully", "success");
+      showSnackbar("Cash advance updated successfully", "success");
     } else {
       if (selectionMode.value === "individual") {
-        await api.post("/cash-bonds", payload);
-        showSnackbar("Cash bond created successfully", "success");
+        await api.post("/cash-advances", payload);
+        showSnackbar("Cash advance created successfully", "success");
       } else {
         const bulkPayload = {
           selection_mode: selectionMode.value,
@@ -1637,8 +1954,8 @@ const saveCashBond = async () => {
             selectionMode.value === "position"
               ? form.value.position
               : undefined,
-          deduction_type: "cash_bond",
-          deduction_name: "Cash Bond",
+          deduction_type: "cash_advance",
+          deduction_name: "Cash Advance",
           total_amount: form.value.total_amount,
           amount_per_cutoff: form.value.amount_per_cutoff,
           installments: form.value.installments,
@@ -1650,14 +1967,17 @@ const saveCashBond = async () => {
 
         const response = await api.post("/deductions/bulk", bulkPayload);
         const count = response.data?.data?.count || 0;
-        showSnackbar(`Cash bond created for ${count} employee(s)`, "success");
+        showSnackbar(
+          `Cash advance created for ${count} employee(s)`,
+          "success",
+        );
       }
     }
     closeDialog();
-    fetchCashBonds();
+    fetchCashAdvances();
   } catch (error) {
     showSnackbar(
-      "Failed to save cash bond: " +
+      "Failed to save cash advance: " +
         (error.response?.data?.message || error.message),
       "error",
     );
@@ -1666,28 +1986,27 @@ const saveCashBond = async () => {
   }
 };
 
-const processRefund = async () => {
-  refunding.value = true;
+const processPayment = async () => {
+  processingPayment.value = true;
   try {
     await api.post(
-      `/deductions/${refundForm.value.deduction_id}/refund-cash-bond`,
+      `/deductions/${paymentForm.value.deduction_id}/record-installment`,
       {
-        refund_amount: refundForm.value.refund_amount,
-        refund_date: refundForm.value.refund_date,
-        refund_reason: refundForm.value.refund_reason,
+        amount: paymentForm.value.payment_amount,
+        payment_date: paymentForm.value.payment_date,
       },
     );
-    showSnackbar("Cash bond refunded successfully", "success");
-    closeRefundDialog();
-    fetchCashBonds();
+    showSnackbar("Cash advance payment recorded successfully", "success");
+    closePaymentDialog();
+    fetchCashAdvances();
   } catch (error) {
     showSnackbar(
-      "Failed to refund cash bond: " +
+      "Failed to record cash advance payment: " +
         (error.response?.data?.message || error.message),
       "error",
     );
   } finally {
-    refunding.value = false;
+    processingPayment.value = false;
   }
 };
 
@@ -1713,29 +2032,29 @@ const loadAccountLedger = async (deductionId) => {
   }
 };
 
-const viewDetails = (bond) => {
-  selectedBond.value = bond;
+const viewDetails = (advance) => {
+  selectedCashAdvance.value = advance;
   accountLedger.value = [];
   detailsDialog.value = true;
 
-  if (!bond?.is_virtual && Number(bond?.id) > 0) {
-    loadAccountLedger(bond.id);
+  if (!advance?.is_virtual && Number(advance?.id) > 0) {
+    loadAccountLedger(advance.id);
   }
 };
 
-const confirmDelete = async (bond) => {
+const confirmDelete = async (advance) => {
   if (
     await confirmDialog(
-      `Are you sure you want to delete this cash bond for ${bond.employee.full_name}?`,
+      `Are you sure you want to delete this cash advance for ${advance.employee.full_name}?`,
     )
   ) {
     try {
-      await api.delete(`/deductions/${bond.id}`);
-      showSnackbar("Cash bond deleted successfully", "success");
-      fetchCashBonds();
+      await api.delete(`/deductions/${advance.id}`);
+      showSnackbar("Cash advance record deleted successfully", "success");
+      fetchCashAdvances();
     } catch (error) {
       showSnackbar(
-        "Failed to delete cash bond: " +
+        "Failed to delete cash advance: " +
           (error.response?.data?.message || error.message),
         "error",
       );
@@ -1748,12 +2067,12 @@ const clearFilters = () => {
     employee_id: null,
     status: null,
   };
-  fetchCashBonds();
+  fetchCashAdvances();
 };
 
-const getProgress = (bond) => {
-  if (bond.installments === 0) return 0;
-  return (bond.installments_paid / bond.installments) * 100;
+const getProgress = (advance) => {
+  if (advance.installments === 0) return 0;
+  return (advance.installments_paid / advance.installments) * 100;
 };
 
 const getStatusColor = (status) => {
@@ -1800,13 +2119,13 @@ onMounted(async () => {
       });
     }
 
-    fetchCashBonds();
+    fetchCashAdvances();
   }
 });
 </script>
 
 <style lang="scss" scoped>
-.cash-bond-page {
+.cash-advance-page {
   background-color: #f8f9fa;
   min-height: 100vh;
 }
@@ -2156,11 +2475,11 @@ onMounted(async () => {
   margin: 0;
 }
 
-.cashbond-dialog-content {
+.cash-advance-dialog-content {
   padding-bottom: 10px;
 }
 
-.cashbond-dialog-actions {
+.cash-advance-dialog-actions {
   position: sticky;
   bottom: 0;
   z-index: 2;

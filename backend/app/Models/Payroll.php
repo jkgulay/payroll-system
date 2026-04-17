@@ -35,6 +35,9 @@ class Payroll extends Model
         'deduct_pagibig',
         'deduct_loans',
         'deduct_employee_deductions',
+        'deduct_cash_advance',
+        'deduct_cash_bond',
+        'deduct_employee_savings',
         'overtime_employee_ids',
         'created_by',
         'finalized_by',
@@ -60,6 +63,9 @@ class Payroll extends Model
         'deduct_pagibig' => 'boolean',
         'deduct_loans' => 'boolean',
         'deduct_employee_deductions' => 'boolean',
+        'deduct_cash_advance' => 'boolean',
+        'deduct_cash_bond' => 'boolean',
+        'deduct_employee_savings' => 'boolean',
         'overtime_employee_ids' => 'array',
     ];
 
