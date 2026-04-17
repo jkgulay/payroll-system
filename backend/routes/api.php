@@ -180,8 +180,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/employees/{employee}/deductions', [App\Http\Controllers\Api\EmployeeController::class, 'deductions']);
     Route::get('/employees/{employee}/credentials', [App\Http\Controllers\Api\EmployeeController::class, 'getCredentials']);
     Route::post('/employees/{employee}/reset-password', [App\Http\Controllers\Api\EmployeeController::class, 'resetPassword']);
-    Route::post('/employees/{employee}/update-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'updatePayRate']);
-    Route::post('/employees/{employee}/clear-custom-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'clearCustomPayRate']);
+    Route::post('/employees/{employee}/update-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'updatePayRate'])->middleware('role:admin,hr,payrollist');
+    Route::post('/employees/{employee}/clear-custom-pay-rate', [App\Http\Controllers\Api\EmployeeController::class, 'clearCustomPayRate'])->middleware('role:admin,hr,payrollist');
 
     // Employee Applications
     Route::apiResource('employee-applications', App\Http\Controllers\Api\EmployeeApplicationController::class);
@@ -242,7 +242,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Position Rates
     Route::apiResource('position-rates', App\Http\Controllers\Api\PositionRateController::class);
-    Route::post('/position-rates/{positionRate}/bulk-update', [App\Http\Controllers\Api\PositionRateController::class, 'bulkUpdateEmployees']);
+    Route::post('/position-rates/{positionRate}/bulk-update', [App\Http\Controllers\Api\PositionRateController::class, 'bulkUpdateEmployees'])->middleware('role:admin,hr,payrollist');
     Route::get('/position-rates/by-name/search', [App\Http\Controllers\Api\PositionRateController::class, 'getByName']);
     Route::get('/positions/names', [App\Http\Controllers\Api\PositionRateController::class, 'getPositionNames']);
 
@@ -298,11 +298,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::apiResource('deductions', App\Http\Controllers\Api\DeductionController::class);
 
-    // Salary Adjustments - specific routes MUST come before apiResource
+    // Salary Exception Records - specific routes MUST come before apiResource
     Route::get('/salary-adjustments/employees', [App\Http\Controllers\SalaryAdjustmentController::class, 'getEmployees']);
-    Route::post('/salary-adjustments/bulk', [App\Http\Controllers\SalaryAdjustmentController::class, 'bulkStore'])->middleware('role:admin,payrollist');
+    Route::get('/salary-adjustments/overlap-check', [App\Http\Controllers\SalaryAdjustmentController::class, 'overlapCheck'])->middleware('role:admin,hr,payrollist');
+    Route::post('/salary-adjustments/bulk', [App\Http\Controllers\SalaryAdjustmentController::class, 'bulkStore'])->middleware('role:admin,hr,payrollist');
+    Route::post('/salary-adjustments/{salaryAdjustment}/approve', [App\Http\Controllers\SalaryAdjustmentController::class, 'approve'])->middleware('role:admin,hr');
+    Route::post('/salary-adjustments/{salaryAdjustment}/reject', [App\Http\Controllers\SalaryAdjustmentController::class, 'reject'])->middleware('role:admin,hr');
     Route::get('/salary-adjustments/employee/{employee}', [App\Http\Controllers\SalaryAdjustmentController::class, 'getEmployeeAdjustments']);
-    Route::apiResource('salary-adjustments', App\Http\Controllers\SalaryAdjustmentController::class)->middleware('role:admin,payrollist');
+    Route::apiResource('salary-adjustments', App\Http\Controllers\SalaryAdjustmentController::class)->middleware('role:admin,hr,payrollist');
 
     Route::apiResource('bonuses', App\Http\Controllers\Api\BonusController::class);
 
@@ -318,13 +321,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/thirteenth-month/{id}', [App\Http\Controllers\Api\ThirteenthMonthPayController::class, 'destroy']);
 
     // Resignations - Define specific routes BEFORE the resource route to avoid conflicts
-    Route::get('/resignations/employee/{employeeId}', [App\Http\Controllers\Api\ResignationController::class, 'getEmployeeResignation']);
-    Route::post('/resignations/{id}/approve', [App\Http\Controllers\Api\ResignationController::class, 'approve']);
-    Route::post('/resignations/{id}/reject', [App\Http\Controllers\Api\ResignationController::class, 'reject']);
-    Route::post('/resignations/{id}/process-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'processFinalPay']);
-    Route::post('/resignations/{id}/release-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'releaseFinalPay']);
-    Route::get('/resignations/{id}/attachments/{attachmentIndex}/download', [App\Http\Controllers\Api\ResignationController::class, 'downloadAttachment']);
-    Route::delete('/resignations/{id}/attachments/{attachmentIndex}', [App\Http\Controllers\Api\ResignationController::class, 'deleteAttachment']);
+    Route::get('/resignations/stats', [App\Http\Controllers\Api\ResignationController::class, 'stats'])->middleware('role:admin,hr');
+    Route::get('/resignations/my', [App\Http\Controllers\Api\ResignationController::class, 'myResignation'])->middleware('role:employee,payrollist');
+    Route::get('/resignations/employee/{employeeId}', [App\Http\Controllers\Api\ResignationController::class, 'getEmployeeResignation'])->middleware('role:admin,hr,employee,payrollist');
+    Route::post('/resignations/{id}/approve', [App\Http\Controllers\Api\ResignationController::class, 'approve'])->middleware('role:admin,hr');
+    Route::post('/resignations/{id}/reject', [App\Http\Controllers\Api\ResignationController::class, 'reject'])->middleware('role:admin,hr');
+    Route::post('/resignations/{id}/process-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'processFinalPay'])->middleware('role:admin,hr');
+    Route::post('/resignations/{id}/release-final-pay', [App\Http\Controllers\Api\ResignationController::class, 'releaseFinalPay'])->middleware('role:admin,hr');
+    Route::get('/resignations/{id}/attachments/{attachmentIndex}/download', [App\Http\Controllers\Api\ResignationController::class, 'downloadAttachment'])->middleware('role:admin,hr,employee,payrollist');
+    Route::delete('/resignations/{id}/attachments/{attachmentIndex}', [App\Http\Controllers\Api\ResignationController::class, 'deleteAttachment'])->middleware('role:admin,hr,employee,payrollist');
     Route::apiResource('resignations', App\Http\Controllers\Api\ResignationController::class);
 
     // Recruitment - Job Postings
@@ -375,14 +380,36 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Leave Management
-    Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class);
-    Route::get('/leaves/my-leaves', [App\Http\Controllers\Api\LeaveController::class, 'myLeaves']);
-    Route::get('/leaves/my-credits', [App\Http\Controllers\Api\LeaveController::class, 'myCredits']);
-    Route::get('/leaves/pending', [App\Http\Controllers\Api\LeaveController::class, 'pendingLeaves']);
-    Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class);
-    Route::post('/leaves/{leave}/approve', [App\Http\Controllers\Api\LeaveController::class, 'approve']);
-    Route::post('/leaves/{leave}/reject', [App\Http\Controllers\Api\LeaveController::class, 'reject']);
-    Route::get('/leaves/employee/{employee}/credits', [App\Http\Controllers\Api\LeaveController::class, 'employeeCredits']);
+    Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class)
+        ->only(['index', 'show']);
+    Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class)
+        ->only(['store', 'update', 'destroy'])
+        ->middleware('role:admin,hr');
+
+    Route::get('/leaves/my-leaves', [App\Http\Controllers\Api\LeaveController::class, 'myLeaves'])
+        ->middleware('role:employee,hr,payrollist');
+    Route::get('/leaves/my-credits', [App\Http\Controllers\Api\LeaveController::class, 'myCredits'])
+        ->middleware('role:employee,hr,payrollist');
+    Route::get('/leaves/pending', [App\Http\Controllers\Api\LeaveController::class, 'pendingLeaves'])
+        ->middleware('role:admin,hr');
+    Route::get('/leaves/stats', [App\Http\Controllers\Api\LeaveController::class, 'stats'])
+        ->middleware('role:admin,hr');
+    Route::post('/leaves/set-leave', [App\Http\Controllers\Api\LeaveController::class, 'setLeave'])
+        ->middleware('role:admin,hr');
+
+    Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class)
+        ->only(['index'])
+        ->middleware('role:admin,hr');
+    Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class)
+        ->only(['store', 'show', 'update', 'destroy'])
+        ->middleware('role:admin,hr,employee,payrollist');
+
+    Route::post('/leaves/{leave}/approve', [App\Http\Controllers\Api\LeaveController::class, 'approve'])
+        ->middleware('role:admin,hr');
+    Route::post('/leaves/{leave}/reject', [App\Http\Controllers\Api\LeaveController::class, 'reject'])
+        ->middleware('role:admin,hr');
+    Route::get('/leaves/employee/{employee}/credits', [App\Http\Controllers\Api\LeaveController::class, 'employeeCredits'])
+        ->middleware('role:admin,hr,employee,payrollist');
 
     // Holidays - specific routes MUST come before apiResource
     Route::get('/holidays/year/{year}', [App\Http\Controllers\HolidayController::class, 'getYearHolidays']);

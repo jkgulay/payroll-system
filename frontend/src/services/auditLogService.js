@@ -82,7 +82,7 @@ const MODULE_METADATA = {
     color: "blue-grey",
   },
   salary_adjustments: {
-    text: "Salary Adjustments",
+    text: "Salary Exception Records",
     icon: "mdi-cash-edit",
     color: "amber-darken-2",
   },
@@ -184,6 +184,8 @@ const ACTION_METADATA = {
   create_adjustment: { text: "Created Adjustment", color: "success" },
   update_adjustment: { text: "Updated Adjustment", color: "info" },
   delete_adjustment: { text: "Deleted Adjustment", color: "error" },
+  approve_adjustment: { text: "Approved Adjustment", color: "green" },
+  reject_adjustment: { text: "Rejected Adjustment", color: "red" },
   create_rate: { text: "Created Rate", color: "success" },
   update_rate: { text: "Updated Rate", color: "info" },
   delete_rate: { text: "Deleted Rate", color: "error" },

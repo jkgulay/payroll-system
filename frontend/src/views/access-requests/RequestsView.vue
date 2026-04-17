@@ -394,7 +394,7 @@ const moduleLabels = {
   "cash-advances": "Cash Advances",
   "cash-bonds": "Cash Bonds",
   "employee-savings": "Employee Savings",
-  "salary-adjustments": "Salary Adjustments",
+  "salary-adjustments": "Salary Exception Records",
   "payroll-item-adjustments": "Payroll Item Adjustments",
 };
 
@@ -446,7 +446,11 @@ const tabItems = [
     label: "Employee Savings",
     icon: "mdi-piggy-bank-outline",
   },
-  { key: "salary-adjustments", label: "Salary Adj.", icon: "mdi-cash-edit" },
+  {
+    key: "salary-adjustments",
+    label: "Salary Exceptions",
+    icon: "mdi-cash-edit",
+  },
   {
     key: "payroll-item-adjustments",
     label: "Payroll Item Adj.",

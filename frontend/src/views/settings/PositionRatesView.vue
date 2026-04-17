@@ -86,8 +86,20 @@
           </template>
 
           <template v-slot:item.daily_rate="{ item }">
-            <div class="text-right font-weight-bold">
-              ₱{{ formatCurrency(item.daily_rate) }}
+            <div class="text-right">
+              <div class="font-weight-bold">
+                ₱{{ formatCurrency(item.daily_rate) }}
+              </div>
+              <v-chip
+                v-if="hasPendingPositionRateRequest(item)"
+                size="x-small"
+                color="warning"
+                variant="tonal"
+                class="mt-1"
+              >
+                <v-icon start size="x-small">mdi-clock-outline</v-icon>
+                Pending Approval
+              </v-chip>
             </div>
           </template>
 
@@ -293,6 +305,23 @@
                   <v-icon start size="small">{{ rateComparison.icon }}</v-icon>
                   {{ rateComparison.changeText }}
                 </v-chip>
+              </div>
+            </v-alert>
+
+            <v-alert
+              v-if="
+                isEditing && hasPendingPositionRateRequest(selectedPosition)
+              "
+              type="warning"
+              variant="tonal"
+              density="comfortable"
+              class="mb-4"
+            >
+              <div class="text-subtitle-2 mb-1">
+                {{ getPendingPositionRateRequestLabel(selectedPosition) }}
+              </div>
+              <div class="text-caption">
+                {{ getPendingPositionRateRequestStatusText(selectedPosition) }}
               </div>
             </v-alert>
 
@@ -708,11 +737,19 @@ async function savePosition() {
   try {
     if (isEditing.value) {
       // Update existing position
-      await api.put(
+      const response = await api.put(
         `/position-rates/${selectedPosition.value.id}`,
         formData.value,
       );
-      toast.success("Position rate updated successfully!");
+
+      if (response.data?.approval_required) {
+        toast.success(
+          response.data?.message ||
+            "Position-rate update request submitted for admin approval.",
+        );
+      } else {
+        toast.success("Position rate updated successfully!");
+      }
     } else {
       // Create new position
       await api.post("/position-rates", formData.value);
@@ -779,6 +816,46 @@ function formatCategory(category) {
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join("-");
+}
+
+function hasPendingPositionRateRequest(position) {
+  return Boolean(position?.has_pending_rate_update_request);
+}
+
+function getPendingPositionRateRequestLabel(position) {
+  return (
+    position?.pending_rate_update_request_label ||
+    "Pending position rate update request"
+  );
+}
+
+function formatPendingRequestedAt(value) {
+  if (!value) return "";
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return parsedDate.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getPendingPositionRateRequestStatusText(position) {
+  const requestedAt = formatPendingRequestedAt(
+    position?.pending_rate_update_requested_at,
+  );
+
+  if (requestedAt) {
+    return `Submitted ${requestedAt}. This request is waiting for admin approval.`;
+  }
+
+  return "This request is waiting for admin approval.";
 }
 </script>
 

@@ -193,95 +193,43 @@
               </div>
             </div>
 
-            <!-- Pending Modification Requests -->
+            <!-- Pending Access Requests -->
             <div
-              v-if="stats.pendingModificationRequests > 0"
+              v-if="pendingAccessRequests > 0"
               class="action-item"
-              @click="
-                $router.push({
-                  path: '/attendance',
-                  query: { tab: 'mod-requests' },
-                })
-              "
+              @click="$router.push('/requests')"
             >
               <div class="action-item-icon action-icon-warning">
-                <v-icon size="24">mdi-file-document-edit-outline</v-icon>
+                <v-icon size="24">mdi-clipboard-check-outline</v-icon>
               </div>
               <div class="action-item-content">
-                <div class="action-item-title">
-                  Attendance Modification Requests
-                </div>
+                <div class="action-item-title">Access Requests</div>
                 <div class="action-item-desc">
-                  {{ stats.pendingModificationRequests }} awaiting approval
+                  {{ pendingAccessRequests }} awaiting approval
                 </div>
               </div>
               <div class="action-item-badge">
-                {{ stats.pendingModificationRequests }}
+                {{ pendingAccessRequests }}
               </div>
             </div>
 
-            <!-- Pending Deduction Access Requests -->
+            <!-- Pending Deductions Access Requests -->
             <div
-              v-if="stats.pendingDeductionRequests > 0"
+              v-if="pendingDeductionsAccessRequests > 0"
               class="action-item"
-              @click="
-                $router.push({
-                  path: '/deductions',
-                  query: { tab: 'access-requests' },
-                })
-              "
+              @click="$router.push('/deductions')"
             >
               <div class="action-item-icon action-icon-warning">
-                <v-icon size="24">mdi-cash-lock</v-icon>
+                <v-icon size="24">mdi-minus-circle-outline</v-icon>
               </div>
               <div class="action-item-content">
-                <div class="action-item-title">Deduction Access Requests</div>
+                <div class="action-item-title">Deductions</div>
                 <div class="action-item-desc">
-                  {{ stats.pendingDeductionRequests }} awaiting approval
+                  {{ pendingDeductionsAccessRequests }} access requests pending
                 </div>
               </div>
               <div class="action-item-badge">
-                {{ stats.pendingDeductionRequests }}
-              </div>
-            </div>
-
-            <!-- Draft Payrolls -->
-            <div
-              v-if="stats.draftPayrolls > 0"
-              class="action-item"
-              @click="$router.push('/payroll')"
-            >
-              <div class="action-item-icon action-icon-success">
-                <v-icon size="24">mdi-file-document-edit</v-icon>
-              </div>
-              <div class="action-item-content">
-                <div class="action-item-title">Draft Payrolls</div>
-                <div class="action-item-desc">
-                  {{ stats.draftPayrolls }} ready to finalize
-                </div>
-              </div>
-              <div class="action-item-badge">
-                {{ stats.draftPayrolls }}
-              </div>
-            </div>
-
-            <!-- Pending Resignations -->
-            <div
-              v-if="stats.pendingResignations > 0"
-              class="action-item"
-              @click="$router.push('/resignations')"
-            >
-              <div class="action-item-icon action-icon-danger">
-                <v-icon size="24">mdi-briefcase-remove</v-icon>
-              </div>
-              <div class="action-item-content">
-                <div class="action-item-title">Resignations</div>
-                <div class="action-item-desc">
-                  {{ stats.pendingResignations }} pending review
-                </div>
-              </div>
-              <div class="action-item-badge">
-                {{ stats.pendingResignations }}
+                {{ pendingDeductionsAccessRequests }}
               </div>
             </div>
 
@@ -349,6 +297,128 @@
                 {{ stats.pendingEmployeeLoans }}
               </div>
             </div>
+
+            <!-- Pending Cash Advance Access Requests -->
+            <div
+              v-if="pendingCashAdvancesAccessRequests > 0"
+              class="action-item"
+              @click="$router.push('/cash-advances')"
+            >
+              <div class="action-item-icon action-icon-info">
+                <v-icon size="24">mdi-wallet-plus-outline</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Cash Advances</div>
+                <div class="action-item-desc">
+                  {{ pendingCashAdvancesAccessRequests }} access requests
+                  pending
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ pendingCashAdvancesAccessRequests }}
+              </div>
+            </div>
+
+            <!-- Pending Cash Bond Access Requests -->
+            <div
+              v-if="pendingCashBondsAccessRequests > 0"
+              class="action-item"
+              @click="$router.push('/cash-bonds')"
+            >
+              <div class="action-item-icon action-icon-primary">
+                <v-icon size="24">mdi-certificate-outline</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Cash Bonds</div>
+                <div class="action-item-desc">
+                  {{ pendingCashBondsAccessRequests }} access requests pending
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ pendingCashBondsAccessRequests }}
+              </div>
+            </div>
+
+            <!-- Pending Employee Savings Access Requests -->
+            <div
+              v-if="pendingEmployeeSavingsAccessRequests > 0"
+              class="action-item"
+              @click="$router.push('/employee-savings')"
+            >
+              <div class="action-item-icon action-icon-success">
+                <v-icon size="24">mdi-piggy-bank-outline</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Employee Savings</div>
+                <div class="action-item-desc">
+                  {{ pendingEmployeeSavingsAccessRequests }} access requests
+                  pending
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ pendingEmployeeSavingsAccessRequests }}
+              </div>
+            </div>
+
+            <!-- Pending Salary Exception Records -->
+            <div
+              v-if="stats.pendingSalaryAdjustments > 0"
+              class="action-item"
+              @click="$router.push('/salary-adjustments')"
+            >
+              <div class="action-item-icon action-icon-warning">
+                <v-icon size="24">mdi-cash-clock</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Salary Exception Records</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingSalaryAdjustments }} pending approval
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingSalaryAdjustments }}
+              </div>
+            </div>
+
+            <!-- Draft Payrolls -->
+            <div
+              v-if="stats.draftPayrolls > 0"
+              class="action-item"
+              @click="$router.push('/payroll')"
+            >
+              <div class="action-item-icon action-icon-success">
+                <v-icon size="24">mdi-file-document-edit</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Draft Payrolls</div>
+                <div class="action-item-desc">
+                  {{ stats.draftPayrolls }} ready to finalize
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.draftPayrolls }}
+              </div>
+            </div>
+
+            <!-- Pending Resignations -->
+            <div
+              v-if="stats.pendingResignations > 0"
+              class="action-item"
+              @click="$router.push('/resignations')"
+            >
+              <div class="action-item-icon action-icon-danger">
+                <v-icon size="24">mdi-briefcase-remove</v-icon>
+              </div>
+              <div class="action-item-content">
+                <div class="action-item-title">Resignations</div>
+                <div class="action-item-desc">
+                  {{ stats.pendingResignations }} pending review
+                </div>
+              </div>
+              <div class="action-item-badge">
+                {{ stats.pendingResignations }}
+              </div>
+            </div>
           </div>
 
           <!-- No Pending Actions -->
@@ -408,9 +478,15 @@ const stats = ref({
   pendingAllowances: 0,
   pending13thMonthPay: 0,
   pendingEmployeeLoans: 0,
+  pendingSalaryAdjustments: 0,
+  pendingAccessRequests: 0,
   employeesCompleteData: 0,
   monthlyAttendanceRate: 0,
   lastBiometricImportDate: null,
+  pendingDeductionsAccessRequests: 0,
+  pendingCashAdvancesAccessRequests: 0,
+  pendingCashBondsAccessRequests: 0,
+  pendingEmployeeSavingsAccessRequests: 0,
 });
 const DASHBOARD_STATS_CACHE_KEY = "dashboard:stats:v1";
 const isFetchingDashboard = ref(false);
@@ -435,18 +511,49 @@ const fullName = computed(() => {
   return authStore.user?.name || authStore.user?.username || "Admin";
 });
 
+const pendingAccessRequests = computed(() => {
+  if (Number.isFinite(stats.value.pendingAccessRequests)) {
+    return stats.value.pendingAccessRequests;
+  }
+
+  return (
+    (stats.value.pendingModificationRequests || 0) +
+    (stats.value.pendingDeductionRequests || 0)
+  );
+});
+
+const pendingDeductionsAccessRequests = computed(() => {
+  if (Number.isFinite(stats.value.pendingDeductionsAccessRequests)) {
+    return stats.value.pendingDeductionsAccessRequests;
+  }
+
+  return stats.value.pendingDeductionRequests || 0;
+});
+
+const pendingCashAdvancesAccessRequests = computed(
+  () => stats.value.pendingCashAdvancesAccessRequests || 0,
+);
+
+const pendingCashBondsAccessRequests = computed(
+  () => stats.value.pendingCashBondsAccessRequests || 0,
+);
+
+const pendingEmployeeSavingsAccessRequests = computed(
+  () => stats.value.pendingEmployeeSavingsAccessRequests || 0,
+);
+
 const totalPendingActions = computed(() => {
   return (
     stats.value.pendingApplications +
     stats.value.pendingLeaves +
     stats.value.pendingAttendanceCorrections +
-    (stats.value.pendingModificationRequests || 0) +
-    (stats.value.pendingDeductionRequests || 0) +
+    pendingAccessRequests.value +
     stats.value.draftPayrolls +
     (stats.value.pendingResignations || 0) +
     (stats.value.pendingAllowances || 0) +
     (stats.value.pending13thMonthPay || 0) +
-    (stats.value.pendingEmployeeLoans || 0)
+    (stats.value.pendingEmployeeLoans || 0) +
+    (stats.value.pendingSalaryAdjustments || 0)
   );
 });
 
@@ -484,10 +591,10 @@ async function fetchDashboardData() {
   isFetchingDashboard.value = true;
   try {
     const response = await api.get("/dashboard", { cacheTTL: 20000 });
-    stats.value = response.data.stats;
+    stats.value = { ...stats.value, ...(response.data.stats || {}) };
     sessionStorage.setItem(
       DASHBOARD_STATS_CACHE_KEY,
-      JSON.stringify(response.data.stats),
+      JSON.stringify(stats.value),
     );
   } catch (error) {
     devLog.error("Error fetching dashboard data:", error);
@@ -510,22 +617,38 @@ function goToAttendanceToday() {
 
 function goToPendingActions() {
   // Intelligently route to the page with pending actions
-  // Priority order: Applications > Leaves > Attendance Corrections > Payrolls
+  // Priority order by page: Resume > Leave > Resignations > Benefits/Deductions > Salary Exceptions > Requests
   if (stats.value.pendingApplications > 0) {
     router.push("/resume-review");
   } else if (stats.value.pendingLeaves > 0) {
     router.push("/leave-approval");
+  } else if (stats.value.pendingResignations > 0) {
+    router.push("/resignations");
+  } else if (stats.value.pendingAllowances > 0) {
+    router.push({ path: "/allowances", query: { status: "pending" } });
+  } else if (stats.value.pending13thMonthPay > 0) {
+    router.push("/thirteenth-month-pay");
+  } else if (pendingDeductionsAccessRequests.value > 0) {
+    router.push("/deductions");
+  } else if (stats.value.pendingEmployeeLoans > 0) {
+    router.push("/loans");
+  } else if (pendingCashAdvancesAccessRequests.value > 0) {
+    router.push("/cash-advances");
+  } else if (pendingCashBondsAccessRequests.value > 0) {
+    router.push("/cash-bonds");
+  } else if (pendingEmployeeSavingsAccessRequests.value > 0) {
+    router.push("/employee-savings");
+  } else if (stats.value.pendingSalaryAdjustments > 0) {
+    router.push("/salary-adjustments");
+  } else if (pendingAccessRequests.value > 0) {
+    router.push("/requests");
   } else if (stats.value.pendingAttendanceCorrections > 0) {
     router.push({ path: "/attendance", query: { tab: "approvals" } });
-  } else if (stats.value.pendingModificationRequests > 0) {
-    router.push({ path: "/attendance", query: { tab: "mod-requests" } });
-  } else if (stats.value.pendingDeductionRequests > 0) {
-    router.push({ path: "/deductions", query: { tab: "access-requests" } });
   } else if (stats.value.draftPayrolls > 0) {
     router.push("/payroll");
   } else {
-    // Fallback to resume-review if no specific pending actions
-    router.push("/resume-review");
+    // Fallback to access requests page for quick review
+    router.push("/requests");
   }
 }
 

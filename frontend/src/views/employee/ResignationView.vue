@@ -24,7 +24,7 @@
     </div>
 
     <!-- No Resignation Filed - Show Form -->
-    <v-row v-else-if="!resignation" justify="center">
+    <v-row v-else-if="!resignation || isRefiling" justify="center">
       <v-col cols="12" md="8" lg="6">
         <!-- Resignation Form Card -->
         <div class="resignation-form-card">
@@ -33,7 +33,9 @@
               <div class="card-header-icon">
                 <v-icon size="18">mdi-file-document-edit</v-icon>
               </div>
-              <h3 class="card-header-title">Submit Resignation</h3>
+              <h3 class="card-header-title">
+                {{ isRefiling ? "File New Resignation" : "Submit Resignation" }}
+              </h3>
             </div>
           </div>
 
@@ -135,10 +137,10 @@
                 <button
                   type="button"
                   class="form-btn form-btn-secondary"
-                  @click="$router.back()"
+                  @click="isRefiling ? cancelRefiling() : $router.back()"
                 >
                   <v-icon size="18">mdi-arrow-left</v-icon>
-                  <span>Cancel</span>
+                  <span>{{ isRefiling ? "Back" : "Cancel" }}</span>
                 </button>
                 <button
                   type="submit"
@@ -300,7 +302,9 @@
                       {{ attachment.original_name }}
                     </div>
                     <div class="attachment-size">
-                      {{ formatFileSize(attachment.size) }}
+                      {{
+                        formatFileSize(attachment.file_size || attachment.size)
+                      }}
                     </div>
                   </div>
                   <button
@@ -414,6 +418,31 @@
             >
               <v-icon size="18">mdi-cancel</v-icon>
               <span>Withdraw Resignation</span>
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-else-if="resignation.status === 'rejected'"
+          class="action-card mb-4"
+        >
+          <div class="card-header">
+            <div class="card-header-left">
+              <div class="card-header-icon success">
+                <v-icon size="18">mdi-file-refresh</v-icon>
+              </div>
+              <h3 class="card-header-title">Re-file Request</h3>
+            </div>
+          </div>
+
+          <div class="action-content">
+            <p class="action-text">
+              Your previous resignation was rejected. You can submit a new
+              resignation request.
+            </p>
+            <button class="refile-btn" @click="startRefiling">
+              <v-icon size="18">mdi-plus-circle-outline</v-icon>
+              <span>File New Resignation</span>
             </button>
           </div>
         </div>
@@ -570,14 +599,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import api from "@/services/api";
-import { useAuthStore } from "@/stores/auth";
+import resignationService from "@/services/resignationService";
 import { formatDate, formatCurrency } from "@/utils/formatters";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 
-const router = useRouter();
-const authStore = useAuthStore();
 const { confirm: confirmDialog } = useConfirmDialog();
 
 // State
@@ -586,6 +611,7 @@ const submitting = ref(false);
 const withdrawing = ref(false);
 const formValid = ref(false);
 const resignation = ref(null);
+const isRefiling = ref(false);
 const showWithdrawDialog = ref(false);
 const showAttachmentDialog = ref(false);
 const currentAttachment = ref(null);
@@ -637,22 +663,38 @@ const minDate = computed(() => {
   return tomorrow.toISOString().split("T")[0];
 });
 
+const resetResignationForm = () => {
+  formData.value.last_working_day = "";
+  formData.value.reason = "";
+  attachmentFiles.value = [];
+};
+
+const toAttachmentBlob = (response, fallbackMimeType = "") => {
+  const mimeType =
+    fallbackMimeType ||
+    response?.headers?.["content-type"] ||
+    "application/octet-stream";
+
+  if (response?.data instanceof Blob) {
+    return response.data;
+  }
+
+  return new Blob([response?.data ?? ""], { type: mimeType });
+};
+
 // Methods
 const loadResignation = async () => {
   try {
     loading.value = true;
-    const employeeId = authStore.user?.employee_id;
-    if (!employeeId) {
-      loading.value = false;
-      return;
-    }
-    const response = await api.get(`/resignations/employee/${employeeId}`, {
+    const response = await resignationService.getMyResignation({
       skipToast: true,
     });
-    resignation.value = response.data;
+    resignation.value = response;
+    isRefiling.value = false;
   } catch {
     // 404 means no resignation exists, which is expected - don't show error
     resignation.value = null;
+    isRefiling.value = false;
   } finally {
     loading.value = false;
   }
@@ -663,10 +705,7 @@ const submitResignation = async () => {
 
   try {
     submitting.value = true;
-    const employeeId = authStore.user.employee_id;
-
     const formDataToSend = new FormData();
-    formDataToSend.append("employee_id", employeeId);
     formDataToSend.append("last_working_day", formData.value.last_working_day);
     if (formData.value.reason) {
       formDataToSend.append("reason", formData.value.reason);
@@ -678,10 +717,15 @@ const submitResignation = async () => {
       });
     }
 
-    const response = await api.post("/resignations", formDataToSend, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    resignation.value = response.data.resignation;
+    const response = await resignationService.createResignation(
+      formDataToSend,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
+    resignation.value = response.resignation;
+    isRefiling.value = false;
+    resetResignationForm();
     showSnackbar("Resignation submitted successfully", "success");
   } catch (error) {
     showSnackbar(
@@ -697,10 +741,19 @@ const confirmWithdraw = () => {
   showWithdrawDialog.value = true;
 };
 
+const startRefiling = () => {
+  isRefiling.value = true;
+  resetResignationForm();
+};
+
+const cancelRefiling = () => {
+  isRefiling.value = false;
+};
+
 const withdrawResignation = async () => {
   try {
     withdrawing.value = true;
-    await api.delete(`/resignations/${resignation.value.id}`);
+    await resignationService.withdrawResignation(resignation.value.id);
     showSnackbar("Resignation withdrawn successfully", "success");
     resignation.value = null;
     showWithdrawDialog.value = false;
@@ -776,15 +829,15 @@ const viewAttachment = async (index, attachment) => {
     currentAttachment.value = attachment;
     currentAttachmentIndex.value = index;
 
-    const response = await api.get(
-      `/resignations/${resignation.value.id}/attachments/${index}/download`,
-      { responseType: "blob" },
+    const response = await resignationService.downloadAttachment(
+      resignation.value.id,
+      index,
     );
 
+    const attachmentBlob = toAttachmentBlob(response, attachment?.mime_type);
+
     if (attachmentUrl.value) window.URL.revokeObjectURL(attachmentUrl.value);
-    attachmentUrl.value = window.URL.createObjectURL(
-      new Blob([response.data], { type: attachment.mime_type }),
-    );
+    attachmentUrl.value = window.URL.createObjectURL(attachmentBlob);
     showAttachmentDialog.value = true;
   } catch {
     showSnackbar("Failed to load attachment", "error");
@@ -793,12 +846,17 @@ const viewAttachment = async (index, attachment) => {
 
 const downloadCurrentAttachment = async () => {
   try {
-    const response = await api.get(
-      `/resignations/${resignation.value.id}/attachments/${currentAttachmentIndex.value}/download`,
-      { responseType: "blob" },
+    const response = await resignationService.downloadAttachment(
+      resignation.value.id,
+      currentAttachmentIndex.value,
     );
 
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const attachmentBlob = toAttachmentBlob(
+      response,
+      currentAttachment.value?.mime_type,
+    );
+
+    const url = window.URL.createObjectURL(attachmentBlob);
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", currentAttachment.value.original_name);
@@ -818,10 +876,11 @@ const deleteAttachment = async (index) => {
     return;
 
   try {
-    const response = await api.delete(
-      `/resignations/${resignation.value.id}/attachments/${index}`,
+    const response = await resignationService.deleteAttachment(
+      resignation.value.id,
+      index,
     );
-    resignation.value = response.data.resignation;
+    resignation.value = response.resignation;
     showSnackbar("Attachment deleted successfully", "success");
   } catch (error) {
     showSnackbar(
@@ -1426,6 +1485,28 @@ onMounted(() => {
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+}
+
+.refile-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  color: #10b981;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.3);
   }
 }
 

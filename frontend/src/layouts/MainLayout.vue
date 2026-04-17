@@ -574,7 +574,7 @@ const menuItems = computed(() => {
           roles: ["admin", "hr"],
         },
         {
-          title: "Salary Adjustments",
+          title: "Salary Exception Records",
           icon: "mdi-cash-sync",
           value: "salary-adjustments",
           to: "/salary-adjustments",
@@ -868,7 +868,7 @@ const menuSections = computed(() => {
           roles: ["admin", "payrollist"],
         },
         {
-          title: "Salary Adjustments",
+          title: "Salary Exception Records",
           icon: "mdi-cash-sync",
           value: "salary-adjustments",
           to: "/salary-adjustments",
@@ -1217,6 +1217,20 @@ async function downloadCurrentPayslip() {
         right: 0 !important;
         top: 0 !important;
         bottom: 0 !important;
+
+        // Vuetify adds a spacer after prepend icons; in rail mode this shifts
+        // the visible icon slightly left. Remove it so the icon sits centered.
+        .v-list-item__spacer {
+          display: none !important;
+          width: 0 !important;
+          margin: 0 !important;
+        }
+
+        > .v-badge {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
 
         .v-icon {
           font-size: 20px !important;

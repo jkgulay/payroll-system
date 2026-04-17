@@ -14,6 +14,15 @@
             </p>
           </div>
         </div>
+
+        <v-btn
+          color="#ED985F"
+          variant="flat"
+          prepend-icon="mdi-calendar-plus"
+          @click="openSetLeaveDialog"
+        >
+          Set Leave
+        </v-btn>
       </div>
     </div>
 
@@ -70,7 +79,7 @@
               density="comfortable"
               hide-details
               clearable
-              @update:model-value="loadLeaves"
+              @update:model-value="onFilterChange"
             ></v-select>
           </v-col>
           <v-col cols="12" md="3">
@@ -84,7 +93,7 @@
               density="comfortable"
               hide-details
               clearable
-              @update:model-value="loadLeaves"
+              @update:model-value="onFilterChange"
             ></v-select>
           </v-col>
           <v-col cols="12" md="4">
@@ -104,7 +113,7 @@
               color="#ED985F"
               variant="tonal"
               icon="mdi-refresh"
-              @click="loadLeaves"
+              @click="loadLeaves(currentPage)"
               :loading="loading"
               title="Refresh"
             ></v-btn>
@@ -113,13 +122,18 @@
       </div>
 
       <div class="table-section">
-        <v-data-table
+        <v-data-table-server
           :headers="headers"
           :items="leaves"
           :loading="loading"
-          :search="search"
+          :items-length="totalItems"
+          :items-per-page="itemsPerPage"
+          :page="currentPage"
+          :items-per-page-options="pageSizeOptions"
           item-value="id"
           class="elevation-1"
+          @update:page="onPageChange"
+          @update:items-per-page="onItemsPerPageChange"
         >
           <template #item.employee="{ item }">
             <div class="d-flex align-center py-2">
@@ -197,7 +211,7 @@
               </v-list>
             </v-menu>
           </template>
-        </v-data-table>
+        </v-data-table-server>
       </div>
     </div>
 
@@ -295,6 +309,20 @@
               {{ formatDateTime(selectedLeave.approved_at) }}
             </div>
           </div>
+
+          <v-alert
+            v-if="
+              selectedLeave.approval_remarks &&
+              selectedLeave.status === 'approved'
+            "
+            type="success"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <div class="alert-title">Approval Remarks</div>
+            <div>{{ selectedLeave.approval_remarks }}</div>
+          </v-alert>
 
           <v-alert
             v-if="
@@ -519,25 +547,231 @@
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">
       {{ snackbar.message }}
     </v-snackbar>
+
+    <!-- Set Leave Dialog -->
+    <v-dialog v-model="showSetLeaveDialog" max-width="700px" persistent>
+      <v-card class="modern-dialog">
+        <v-card-title class="dialog-header">
+          <div class="dialog-icon-wrapper info">
+            <v-icon size="24">mdi-calendar-plus</v-icon>
+          </div>
+          <div>
+            <div class="dialog-title">Set Leave</div>
+            <div class="dialog-subtitle">
+              Manually set and approve leave (same fields as My Leaves)
+            </div>
+          </div>
+          <v-spacer></v-spacer>
+          <button class="close-btn" @click="closeSetLeaveDialog">
+            <v-icon size="20">mdi-close</v-icon>
+          </button>
+        </v-card-title>
+
+        <v-card-text class="dialog-content">
+          <v-form ref="setLeaveFormRef" v-model="setLeaveFormValid">
+            <v-row>
+              <v-col cols="12">
+                <div class="form-field-label">
+                  <v-icon size="16" color="#ed985f">mdi-account</v-icon>
+                  <span>Employee <span class="required">*</span></span>
+                </div>
+
+                <v-autocomplete
+                  v-model="setLeaveForm.employee_id"
+                  :items="employeeOptions"
+                  item-title="title"
+                  item-value="value"
+                  placeholder="Select employee"
+                  :rules="[setLeaveRules.required]"
+                  :loading="loadingEmployees"
+                  no-data-text="No employees found"
+                  variant="outlined"
+                  density="comfortable"
+                  color="#ed985f"
+                  hide-details="auto"
+                ></v-autocomplete>
+              </v-col>
+
+              <v-col cols="12">
+                <div class="form-field-label">
+                  <v-icon size="16" color="#ed985f">mdi-calendar-text</v-icon>
+                  <span>Leave Type <span class="required">*</span></span>
+                </div>
+                <v-select
+                  v-model="setLeaveForm.leave_type_id"
+                  :items="leaveTypes"
+                  item-title="name"
+                  item-value="id"
+                  placeholder="Select leave type"
+                  :rules="[setLeaveRules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                  color="#ed985f"
+                  hide-details="auto"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <div class="form-field-label">
+                  <v-icon size="16" color="#ed985f">mdi-calendar-start</v-icon>
+                  <span>From Date <span class="required">*</span></span>
+                </div>
+                <v-text-field
+                  v-model="setLeaveForm.leave_date_from"
+                  type="date"
+                  placeholder="Select start date"
+                  :rules="[setLeaveRules.required]"
+                  :min="minDate"
+                  variant="outlined"
+                  density="comfortable"
+                  color="#ed985f"
+                  hide-details="auto"
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <div class="form-field-label">
+                  <v-icon size="16" color="#ed985f">mdi-calendar-end</v-icon>
+                  <span>To Date <span class="required">*</span></span>
+                </div>
+                <v-text-field
+                  v-model="setLeaveForm.leave_date_to"
+                  type="date"
+                  placeholder="Select end date"
+                  :rules="[
+                    setLeaveRules.required,
+                    setLeaveRules.endDateAfterStart,
+                  ]"
+                  :min="setLeaveForm.leave_date_from || minDate"
+                  variant="outlined"
+                  density="comfortable"
+                  color="#ed985f"
+                  hide-details="auto"
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" v-if="setLeaveNumberOfDays > 0">
+                <v-alert
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                  class="days-alert"
+                >
+                  <div class="d-flex align-center">
+                    <v-icon size="18" class="mr-2">mdi-calendar-range</v-icon>
+                    <span>
+                      Total Days:
+                      <strong>{{ setLeaveNumberOfDays }}</strong> day{{
+                        setLeaveNumberOfDays > 1 ? "s" : ""
+                      }}
+                    </span>
+                  </div>
+                </v-alert>
+              </v-col>
+
+              <v-col cols="12">
+                <div class="form-field-label">
+                  <v-icon size="16" color="#ed985f">mdi-text-box</v-icon>
+                  <span>Reason <span class="required">*</span></span>
+                </div>
+                <v-textarea
+                  v-model="setLeaveForm.reason"
+                  placeholder="Please provide a reason for this leave"
+                  :rules="[setLeaveRules.required]"
+                  rows="3"
+                  variant="outlined"
+                  density="comfortable"
+                  color="#ed985f"
+                  hide-details="auto"
+                ></v-textarea>
+              </v-col>
+
+              <v-col cols="12">
+                <div class="form-field-label">
+                  <v-icon size="16" color="#10b981">mdi-note-text</v-icon>
+                  <span>Approval Remarks (Optional)</span>
+                </div>
+                <v-textarea
+                  v-model="setLeaveForm.approval_remarks"
+                  placeholder="Add optional remarks"
+                  rows="2"
+                  variant="outlined"
+                  density="comfortable"
+                  color="#10b981"
+                  hide-details="auto"
+                ></v-textarea>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+
+        <v-card-actions class="dialog-actions leave-dialog-actions">
+          <v-spacer></v-spacer>
+          <v-btn variant="outlined" color="grey" @click="closeSetLeaveDialog">
+            <v-icon size="18">mdi-close</v-icon>
+            Cancel
+          </v-btn>
+          <v-btn
+            color="success"
+            variant="flat"
+            :disabled="savingSetLeave"
+            @click="submitSetLeave"
+          >
+            <v-progress-circular
+              v-if="savingSetLeave"
+              size="18"
+              width="2"
+              indeterminate
+              color="white"
+            ></v-progress-circular>
+            <v-icon v-else size="18">mdi-check</v-icon>
+            Set Leave
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { differenceInDays } from "date-fns";
 import { formatDate, formatDateTime } from "@/utils/formatters";
 import leaveService from "@/services/leaveService";
 
 // State
 const loading = ref(false);
+const loadingEmployees = ref(false);
 const approving = ref(false);
 const rejecting = ref(false);
+const savingSetLeave = ref(false);
 const leaves = ref([]);
 const leaveTypes = ref([]);
+const employees = ref([]);
+const leaveStats = ref({
+  pending: 0,
+  approved: 0,
+  rejected: 0,
+  total: 0,
+});
+const currentPage = ref(1);
+const itemsPerPage = ref(15);
+const totalItems = ref(0);
+const pageSizeOptions = [
+  { value: 10, title: "10" },
+  { value: 15, title: "15" },
+  { value: 25, title: "25" },
+  { value: 50, title: "50" },
+];
 const search = ref("");
 const showViewDialog = ref(false);
 const showApproveDialog = ref(false);
 const showRejectDialog = ref(false);
+const showSetLeaveDialog = ref(false);
 const selectedLeave = ref(null);
+const setLeaveFormRef = ref(null);
+const setLeaveFormValid = ref(false);
+let searchDebounceTimeout = null;
 
 const filters = ref({
   status: null,
@@ -552,6 +786,15 @@ const rejectData = ref({
   rejection_reason: "",
 });
 
+const setLeaveForm = ref({
+  employee_id: null,
+  leave_type_id: null,
+  leave_date_from: "",
+  leave_date_to: "",
+  reason: "",
+  approval_remarks: "",
+});
+
 const snackbar = ref({
   show: false,
   message: "",
@@ -560,29 +803,85 @@ const snackbar = ref({
 
 // Computed
 const pendingCount = computed(() => {
-  return leaves.value.filter((l) => l.status === "pending").length;
+  return leaveStats.value.pending;
 });
 
 const approvedCount = computed(() => {
-  return leaves.value.filter((l) => l.status === "approved").length;
+  return leaveStats.value.approved;
 });
 
 const rejectedCount = computed(() => {
-  return leaves.value.filter((l) => l.status === "rejected").length;
+  return leaveStats.value.rejected;
 });
 
 const totalCount = computed(() => {
-  return leaves.value.length;
+  return leaveStats.value.total;
 });
+
+const minDate = computed(() => {
+  return new Date().toISOString().split("T")[0];
+});
+
+const setLeaveNumberOfDays = computed(() => {
+  if (
+    !setLeaveForm.value.leave_date_from ||
+    !setLeaveForm.value.leave_date_to
+  ) {
+    return 0;
+  }
+
+  const from = new Date(setLeaveForm.value.leave_date_from);
+  const to = new Date(setLeaveForm.value.leave_date_to);
+  return differenceInDays(to, from) + 1;
+});
+
+const employeeOptions = computed(() => {
+  const mapped = employees.value.map((employee) => {
+    const fullName =
+      `${employee.first_name || ""} ${employee.last_name || ""}`.trim();
+    const employeeNumber = employee.employee_number
+      ? ` (${employee.employee_number})`
+      : "";
+    const projectName = employee.project?.name || "No Project";
+    const positionName =
+      employee.positionRate?.position_name ||
+      employee.position ||
+      "No Position";
+
+    return {
+      value: employee.id,
+      fullName,
+      title: `${fullName}${employeeNumber} - ${projectName} / ${positionName}`,
+    };
+  });
+
+  mapped.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+  return mapped.map((employee) => ({
+    value: employee.value,
+    title: employee.title,
+  }));
+});
+
+const setLeaveRules = {
+  required: (v) => !!v || "This field is required",
+  endDateAfterStart: (v) => {
+    if (!setLeaveForm.value.leave_date_from || !v) return true;
+    return (
+      v >= setLeaveForm.value.leave_date_from ||
+      "End date must be after start date"
+    );
+  },
+};
 
 // Table headers
 const headers = [
-  { title: "Employee", key: "employee", sortable: true },
-  { title: "Leave Type", key: "leave_type", sortable: true },
-  { title: "From Date", key: "leave_date_from", sortable: true },
-  { title: "To Date", key: "leave_date_to", sortable: true },
-  { title: "Days", key: "number_of_days", sortable: true, align: "center" },
-  { title: "Status", key: "status", sortable: true },
+  { title: "Employee", key: "employee", sortable: false },
+  { title: "Leave Type", key: "leave_type", sortable: false },
+  { title: "From Date", key: "leave_date_from", sortable: false },
+  { title: "To Date", key: "leave_date_to", sortable: false },
+  { title: "Days", key: "number_of_days", sortable: false, align: "center" },
+  { title: "Status", key: "status", sortable: false },
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
@@ -593,29 +892,85 @@ const statusOptions = [
   { title: "Rejected", value: "rejected" },
 ];
 
-// Validation rules
-const rules = {
-  required: (v) => !!v || "This field is required",
-};
-
 // Methods
-const loadLeaves = async () => {
+const loadLeaves = async (page = currentPage.value) => {
   try {
     loading.value = true;
-    const params = {};
+    const normalizedPage = Number(page) > 0 ? Number(page) : 1;
+    currentPage.value = normalizedPage;
+
+    const searchTerm = String(search.value || "").trim();
+
+    const listParams = {
+      page: normalizedPage,
+      per_page: itemsPerPage.value,
+    };
     if (filters.value.status) {
-      params.status = filters.value.status;
+      listParams.status = filters.value.status;
     }
     if (filters.value.leave_type_id) {
-      params.leave_type_id = filters.value.leave_type_id;
+      listParams.leave_type_id = filters.value.leave_type_id;
     }
-    const response = await leaveService.getLeaves(params);
-    leaves.value = response.data || response;
+    if (searchTerm) {
+      listParams.search = searchTerm;
+    }
+
+    const statsParams = {};
+    if (filters.value.leave_type_id) {
+      statsParams.leave_type_id = filters.value.leave_type_id;
+    }
+    if (searchTerm) {
+      statsParams.search = searchTerm;
+    }
+
+    const [listResponse, statsResponse] = await Promise.all([
+      leaveService.getLeaves(listParams),
+      leaveService.getLeaveStats(statsParams),
+    ]);
+
+    leaves.value = Array.isArray(listResponse?.data) ? listResponse.data : [];
+    currentPage.value = Number(listResponse?.current_page || normalizedPage);
+    totalItems.value = Number(listResponse?.total || leaves.value.length || 0);
+    itemsPerPage.value = Number(listResponse?.per_page || itemsPerPage.value);
+
+    leaveStats.value = {
+      pending: Number(statsResponse?.pending || 0),
+      approved: Number(statsResponse?.approved || 0),
+      rejected: Number(statsResponse?.rejected || 0),
+      total: Number(statsResponse?.total || 0),
+    };
   } catch (error) {
     showSnackbar("Failed to load leave requests", "error");
+    leaves.value = [];
+    totalItems.value = 0;
   } finally {
     loading.value = false;
   }
+};
+
+const onFilterChange = () => {
+  currentPage.value = 1;
+  loadLeaves(1);
+};
+
+const onPageChange = (page) => {
+  const nextPage = Number(page) > 0 ? Number(page) : 1;
+  if (nextPage === currentPage.value) {
+    return;
+  }
+
+  loadLeaves(nextPage);
+};
+
+const onItemsPerPageChange = (perPage) => {
+  const normalizedPerPage = Number(perPage) > 0 ? Number(perPage) : 15;
+  if (normalizedPerPage === itemsPerPage.value) {
+    return;
+  }
+
+  itemsPerPage.value = normalizedPerPage;
+  currentPage.value = 1;
+  loadLeaves(1);
 };
 
 const loadLeaveTypes = async () => {
@@ -624,6 +979,90 @@ const loadLeaveTypes = async () => {
     leaveTypes.value = response.data || response;
   } catch (error) {
     showSnackbar("Failed to load leave types", "error");
+  }
+};
+
+const loadEmployees = async () => {
+  try {
+    loadingEmployees.value = true;
+
+    const allEmployees = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+      const response = await leaveService.getEmployees({ page, per_page: 200 });
+      const rows = Array.isArray(response?.data) ? response.data : [];
+      allEmployees.push(...rows);
+      lastPage = Number(response?.last_page || 1);
+      page += 1;
+    } while (page <= lastPage);
+
+    employees.value = allEmployees;
+  } catch (error) {
+    showSnackbar("Failed to load employees", "error");
+    employees.value = [];
+  } finally {
+    loadingEmployees.value = false;
+  }
+};
+
+const resetSetLeaveForm = () => {
+  setLeaveForm.value = {
+    employee_id: null,
+    leave_type_id: null,
+    leave_date_from: "",
+    leave_date_to: "",
+    reason: "",
+    approval_remarks: "",
+  };
+};
+
+const openSetLeaveDialog = async () => {
+  resetSetLeaveForm();
+  showSetLeaveDialog.value = true;
+
+  if (!employees.value.length) {
+    await loadEmployees();
+  }
+};
+
+const closeSetLeaveDialog = () => {
+  showSetLeaveDialog.value = false;
+  resetSetLeaveForm();
+};
+
+const submitSetLeave = async () => {
+  if (!setLeaveFormRef.value) return;
+
+  const { valid } = await setLeaveFormRef.value.validate();
+  if (!valid) {
+    showSnackbar("Please fill in all required fields correctly", "error");
+    return;
+  }
+
+  try {
+    savingSetLeave.value = true;
+
+    await leaveService.setLeave({
+      employee_id: setLeaveForm.value.employee_id,
+      leave_type_id: setLeaveForm.value.leave_type_id,
+      leave_date_from: setLeaveForm.value.leave_date_from,
+      leave_date_to: setLeaveForm.value.leave_date_to,
+      reason: setLeaveForm.value.reason,
+      approval_remarks: setLeaveForm.value.approval_remarks || null,
+    });
+
+    showSnackbar("Leave was set and approved successfully", "success");
+    closeSetLeaveDialog();
+    await loadLeaves(currentPage.value);
+  } catch (error) {
+    showSnackbar(
+      error.response?.data?.message || "Failed to set leave",
+      "error",
+    );
+  } finally {
+    savingSetLeave.value = false;
   }
 };
 
@@ -715,8 +1154,27 @@ const showSnackbar = (message, color = "success") => {
 
 // Lifecycle
 onMounted(() => {
-  loadLeaves();
+  loadLeaves(1);
   loadLeaveTypes();
+  loadEmployees();
+});
+
+watch(search, () => {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+  }
+
+  searchDebounceTimeout = setTimeout(() => {
+    currentPage.value = 1;
+    loadLeaves(1);
+  }, 350);
+});
+
+onUnmounted(() => {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+    searchDebounceTimeout = null;
+  }
 });
 </script>
 

@@ -372,7 +372,12 @@
           </div>
 
           <div v-if="selectedLeave.approved_by" class="detail-row full-width">
-            <div class="detail-label">Approved/Rejected By</div>
+            <div class="detail-label">
+              {{
+                selectedLeave.status === "approved" ? "Approved" : "Rejected"
+              }}
+              By
+            </div>
             <div class="detail-value">
               {{ selectedLeave.approved_by?.name || "N/A" }} on
               {{ formatDateTime(selectedLeave.approved_at) }}
@@ -380,7 +385,24 @@
           </div>
 
           <v-alert
-            v-if="selectedLeave.rejection_reason"
+            v-if="
+              selectedLeave.approval_remarks &&
+              selectedLeave.status === 'approved'
+            "
+            type="success"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <div class="alert-title">Approval Remarks</div>
+            <div>{{ selectedLeave.approval_remarks }}</div>
+          </v-alert>
+
+          <v-alert
+            v-if="
+              selectedLeave.rejection_reason &&
+              selectedLeave.status === 'rejected'
+            "
             type="error"
             variant="tonal"
             density="compact"

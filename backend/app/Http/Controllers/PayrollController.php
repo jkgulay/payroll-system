@@ -328,6 +328,7 @@ class PayrollController extends Controller
                 'included_employee_id' => $scopePayload['included_employee_id'],
                 'has_attendance' => $scopePayload['has_attendance'],
                 'excluded_positions' => $scopePayload['excluded_positions'],
+                'excluded_employee_ids' => $scopePayload['excluded_employee_ids'],
                 'deduct_sss' => $validated['deduct_sss'] ?? true,
                 'deduct_philhealth' => $validated['deduct_philhealth'] ?? true,
                 'deduct_pagibig' => $validated['deduct_pagibig'] ?? true,
@@ -885,6 +886,8 @@ class PayrollController extends Controller
             'has_attendance' => 'sometimes|boolean',
             'excluded_positions' => 'nullable|array',
             'excluded_positions.*' => 'string',
+            'excluded_employee_ids' => 'nullable|array',
+            'excluded_employee_ids.*' => 'integer|exists:employees,id',
             'deduct_sss' => 'sometimes|boolean',
             'deduct_philhealth' => 'sometimes|boolean',
             'deduct_pagibig' => 'sometimes|boolean',
@@ -904,6 +907,7 @@ class PayrollController extends Controller
             'included_employee_id',
             'has_attendance',
             'excluded_positions',
+            'excluded_employee_ids',
         ];
         $incomingScopeChanges = array_intersect_key($validated, array_flip($scopeFieldKeys));
         if (!empty($incomingScopeChanges)) {
@@ -978,6 +982,7 @@ class PayrollController extends Controller
             'included_employee_id',
             'has_attendance',
             'excluded_positions',
+            'excluded_employee_ids',
             'overtime_employee_ids',
         ];
         $shouldRecalculate = $this->hasRecalculationChanges($payroll, $validated, $recalculationFields);
@@ -1106,6 +1111,25 @@ class PayrollController extends Controller
 
         $editReason = trim((string) ($validated['reason'] ?? ''));
         unset($validated['reason']);
+
+        $sideEffectManagedFields = [
+            'sss',
+            'philhealth',
+            'pagibig',
+            'withholding_tax',
+            'employee_savings',
+            'cash_advance',
+            'loans',
+            'employee_deductions',
+            'other_deductions',
+        ];
+        $attemptedManagedFields = array_values(array_intersect($sideEffectManagedFields, array_keys($validated)));
+        if (!empty($attemptedManagedFields)) {
+            return response()->json([
+                'message' => 'Direct edits to payroll-managed deduction fields are not allowed. Update source deduction/loan records or payroll-level toggles, then reprocess payroll.',
+                'blocked_fields' => $attemptedManagedFields,
+            ], 422);
+        }
 
         $editAccessRequest = null;
         if ($user && $user->role === 'payrollist') {
@@ -1897,6 +1921,9 @@ class PayrollController extends Controller
      *   Site B gets  5/9 of those same totals.
      *
      * The daily rate is left unchanged (it is per-day, not a period total).
+     * ADJ. PREV. SAL is employee-level and is not prorated; it is assigned once
+     * to the employee's primary device row (highest logged hours) to avoid
+     * split-dependent values while preserving totals.
      * Employees with no attendance device record fall into "Unassigned".
      *
      * @return \Illuminate\Support\Collection  keyed by device name, Unassigned last
@@ -1951,7 +1978,6 @@ class PayrollController extends Controller
             'regular_ot_pay',
             'special_ot_hours',
             'special_ot_pay',
-            'salary_adjustment',
             'other_allowances',
             'undertime_hours',
             'undertime_deduction',
@@ -1974,6 +2000,12 @@ class PayrollController extends Controller
             $deviceMap = $employeeDeviceHours[$empId] ?? ['Unassigned' => 1];
             $totalHours = array_sum($deviceMap);
 
+            $primaryDevice = collect($deviceMap)
+                ->sortDesc()
+                ->keys()
+                ->first() ?? 'Unassigned';
+            $fullSalaryAdjustment = (float) ($item->getAttribute('salary_adjustment') ?? 0);
+
             foreach ($deviceMap as $device => $hours) {
                 $ratio = $totalHours > 0 ? ($hours / $totalHours) : 1;
 
@@ -1986,6 +2018,19 @@ class PayrollController extends Controller
                     $value = in_array($field, $dayFields) ? round($raw * 2) / 2 : round($raw, 4);
                     $split->setAttribute($field, $value);
                 }
+
+                // Keep ADJ. PREV. SAL independent from device split: assign once
+                // to the primary device row, then rebalance gross/net by the delta
+                // against the prorated value to preserve row and grand totals.
+                $proratedSalaryAdjustment = round($fullSalaryAdjustment * $ratio, 4);
+                $assignedSalaryAdjustment = $device === $primaryDevice
+                    ? round($fullSalaryAdjustment, 4)
+                    : 0.0;
+                $salaryAdjustmentDelta = $assignedSalaryAdjustment - $proratedSalaryAdjustment;
+
+                $split->setAttribute('salary_adjustment', $assignedSalaryAdjustment);
+                $split->setAttribute('gross_pay', round((float) $split->getAttribute('gross_pay') + $salaryAdjustmentDelta, 4));
+                $split->setAttribute('net_pay', round((float) $split->getAttribute('net_pay') + $salaryAdjustmentDelta, 4));
 
                 $deviceGroups[$device][] = $split;
             }
@@ -2045,10 +2090,16 @@ class PayrollController extends Controller
                     });
             },
             'salaryAdjustments' => function ($q) use ($payroll) {
-                $q->where('status', 'pending')
+                $q->where('status', 'applied')
+                    ->whereNull('applied_payroll_id')
+                    ->whereNotNull('reason')
+                    ->whereRaw("TRIM(reason) <> ''")
+                    ->whereNotNull('reference_period')
+                    ->whereRaw("TRIM(reference_period) <> ''")
+                    ->where('reference_period', 'not like', 'APPROVAL:%')
                     ->where(function ($query) use ($payroll) {
                         $query->whereNull('effective_date')
-                            ->orWhere('effective_date', '<=', $payroll->period_end);
+                            ->orWhereDate('effective_date', '<=', $payroll->period_end);
                     });
             },
             'loans' => function ($q) use ($payroll) {
@@ -2057,10 +2108,6 @@ class PayrollController extends Controller
                     ->where(function ($query) use ($payroll) {
                         $query->whereNull('first_payment_date')
                             ->orWhere('first_payment_date', '<=', $payroll->period_end);
-                    })
-                    ->where(function ($query) use ($payroll) {
-                        $query->whereNull('maturity_date')
-                            ->orWhere('maturity_date', '>=', $payroll->period_start);
                     });
             },
             'deductions' => function ($q) use ($payroll) {
@@ -2111,7 +2158,7 @@ class PayrollController extends Controller
         $totalGross = 0;
         $totalDeductions = 0;
         $totalNet = 0;
-        $allAdjustmentIds = []; // Track salary adjustment IDs to mark as applied
+        $allAdjustmentIds = []; // Track approved one-time salary exception IDs to mark as consumed
         $allBonusIds = []; // Track bonus IDs to mark as paid
         $selectedOvertimeEmployeeIds = $this->normalizeEmployeeIds($filters['overtime_employee_ids'] ?? []);
 
@@ -2140,13 +2187,12 @@ class PayrollController extends Controller
                     throw new \Exception("Invalid net_pay calculated for employee {$employee->employee_number}: {$item['net_pay']}");
                 }
 
-                // Collect salary adjustment IDs before removing internal field
-                if (!empty($item['_adjustment_ids'])) {
-                    $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
-                }
                 // Collect bonus IDs before removing internal field
                 if (!empty($item['_bonus_ids'])) {
                     $allBonusIds = array_merge($allBonusIds, $item['_bonus_ids']);
+                }
+                if (!empty($item['_adjustment_ids'])) {
+                    $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
                 }
                 unset($item['_adjustment_ids']);
                 unset($item['_bonus_ids']);
@@ -2172,15 +2218,6 @@ class PayrollController extends Controller
             }
         }
 
-        // Mark salary adjustments as applied AFTER all items are created successfully
-        if (!empty($allAdjustmentIds)) {
-            SalaryAdjustment::whereIn('id', $allAdjustmentIds)
-                ->update([
-                    'status' => 'applied',
-                    'applied_payroll_id' => $payroll->id,
-                ]);
-        }
-
         // Mark bonuses as paid AFTER all items are created successfully
         if (!empty($allBonusIds)) {
             \App\Models\EmployeeBonus::whereIn('id', $allBonusIds)
@@ -2188,6 +2225,26 @@ class PayrollController extends Controller
                     'payment_status' => 'paid',
                     'paid_at' => now(),
                 ]);
+        }
+
+        // Mark approved one-time salary exception records as consumed by this payroll.
+        if (!empty($allAdjustmentIds)) {
+            $normalizedAdjustmentIds = collect($allAdjustmentIds)
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            if (!empty($normalizedAdjustmentIds)) {
+                SalaryAdjustment::query()
+                    ->whereIn('id', $normalizedAdjustmentIds)
+                    ->where('status', 'applied')
+                    ->whereNull('applied_payroll_id')
+                    ->update([
+                        'applied_payroll_id' => $payroll->id,
+                    ]);
+            }
         }
 
         $payroll->update([
@@ -2274,6 +2331,12 @@ class PayrollController extends Controller
             $excludedPositions = is_array($decoded) ? $decoded : [];
         }
 
+        $excludedEmployeeIds = $payroll->excluded_employee_ids;
+        if (is_string($excludedEmployeeIds)) {
+            $decoded = json_decode($excludedEmployeeIds, true);
+            $excludedEmployeeIds = is_array($decoded) ? $decoded : [];
+        }
+
         return $this->normalizePayrollScopePayload([
             'payroll_scope' => $payroll->payroll_scope,
             'individual_target' => $payroll->individual_target,
@@ -2281,7 +2344,7 @@ class PayrollController extends Controller
             'included_employee_id' => $payroll->included_employee_id,
             'has_attendance' => (bool) ($payroll->has_attendance ?? false),
             'excluded_positions' => is_array($excludedPositions) ? $excludedPositions : [],
-            'excluded_employee_ids' => [],
+            'excluded_employee_ids' => is_array($excludedEmployeeIds) ? $excludedEmployeeIds : [],
         ]);
     }
 
@@ -2386,6 +2449,7 @@ class PayrollController extends Controller
             'included_employee_id',
             'has_attendance',
             'excluded_positions',
+            'excluded_employee_ids',
         ];
 
         foreach ($metadataFields as $field) {
@@ -2407,16 +2471,32 @@ class PayrollController extends Controller
             $currentValue = $payroll->{$field};
             $newValue = $validated[$field];
 
-            if (in_array($field, ['excluded_positions', 'overtime_employee_ids'], true)) {
-                $normalizeArray = function ($value): array {
+            if (in_array($field, ['excluded_positions', 'excluded_employee_ids', 'overtime_employee_ids'], true)) {
+                $isNumericArray = in_array($field, ['excluded_employee_ids', 'overtime_employee_ids'], true);
+
+                $normalizeArray = function ($value) use ($isNumericArray): array {
                     if (is_string($value)) {
                         $decoded = json_decode($value, true);
                         $value = is_array($decoded) ? $decoded : [];
                     }
 
-                    return collect(is_array($value) ? $value : [])
+                    $normalized = collect(is_array($value) ? $value : [])
                         ->map(fn($item) => is_scalar($item) ? trim((string) $item) : null)
                         ->filter(fn($item) => $item !== null && $item !== '')
+                        ->values();
+
+                    if ($isNumericArray) {
+                        return $normalized
+                            ->map(fn($item) => (int) $item)
+                            ->filter(fn($item) => $item > 0)
+                            ->unique()
+                            ->sort()
+                            ->values()
+                            ->all();
+                    }
+
+                    return $normalized
+                        ->unique()
                         ->values()
                         ->all();
                 };
@@ -2662,6 +2742,43 @@ class PayrollController extends Controller
     /**
      * Record loan payments when payroll is generated
      */
+    private function resolveLoanProjectedMaturityDate(EmployeeLoan $loan, float $remainingBalance, Carbon $asOfDate): ?string
+    {
+        if ($remainingBalance <= 0) {
+            return null;
+        }
+
+        $scheduledInstallmentAmount = $loan->payment_frequency === 'semi_monthly'
+            ? (float) ($loan->semi_monthly_amortization ?? 0)
+            : (float) ($loan->monthly_amortization ?? 0);
+
+        if ($scheduledInstallmentAmount <= 0) {
+            return null;
+        }
+
+        $remainingInstallments = (int) ceil($remainingBalance / $scheduledInstallmentAmount);
+        if ($remainingInstallments <= 0) {
+            return null;
+        }
+
+        $remainingMonths = $loan->payment_frequency === 'semi_monthly'
+            ? (int) ceil($remainingInstallments / 2)
+            : $remainingInstallments;
+
+        $projectedDate = $asOfDate->copy()
+            ->addMonths(max($remainingMonths, 1))
+            ->toDateString();
+
+        if (!empty($loan->maturity_date)) {
+            $currentMaturity = Carbon::parse($loan->maturity_date);
+            if ($currentMaturity->gte(Carbon::parse($projectedDate))) {
+                return null;
+            }
+        }
+
+        return $projectedDate;
+    }
+
     private function recordLoanPayments(Payroll $payroll, Employee $employee, PayrollItem $payrollItem)
     {
         if (($payroll->deduct_loans ?? true) !== true) {
@@ -2690,11 +2807,6 @@ class PayrollController extends Controller
             ->where(function ($query) use ($payroll) {
                 $query->whereNull('first_payment_date')
                     ->orWhere('first_payment_date', '<=', $payroll->period_end);
-            })
-            ->where(function ($query) use ($payroll) {
-                // Loan hasn't matured yet (maturity date is null or after payroll period starts)
-                $query->whereNull('maturity_date')
-                    ->orWhere('maturity_date', '>=', $payroll->period_start);
             })
             ->get();
 
@@ -2732,6 +2844,17 @@ class PayrollController extends Controller
                     $updateData['status'] = 'paid';
                     $updateData['balance'] = 0; // Ensure balance is exactly zero
                     $updateData['amount_paid'] = $loan->total_amount; // Ensure exact total
+                } else {
+                    // Keep maturity aligned with remaining balance so overdue active loans continue deduction.
+                    $projectedMaturityDate = $this->resolveLoanProjectedMaturityDate(
+                        $loan,
+                        (float) ($updateData['balance'] ?? $newBalance),
+                        $periodEnd
+                    );
+
+                    if (!empty($projectedMaturityDate)) {
+                        $updateData['maturity_date'] = $projectedMaturityDate;
+                    }
                 }
 
                 $loan->update($updateData);
@@ -2846,10 +2969,6 @@ class PayrollController extends Controller
                     $query->whereNull('first_payment_date')
                         ->orWhere('first_payment_date', '<=', $payroll->period_end);
                 })
-                ->where(function ($query) use ($payroll) {
-                    $query->whereNull('maturity_date')
-                        ->orWhere('maturity_date', '>=', $payroll->period_start);
-                })
                 ->get();
 
             foreach ($loans as $loan) {
@@ -2890,7 +3009,7 @@ class PayrollController extends Controller
     }
 
     /**
-     * Reverse salary adjustments for a payroll (used when reprocessing/deleting)
+     * Reverse salary exception records for a payroll (used when reprocessing/deleting)
      */
     private function reverseSalaryAdjustmentsForPayroll(Payroll $payroll)
     {
@@ -2904,7 +3023,6 @@ class PayrollController extends Controller
         SalaryAdjustment::where('applied_payroll_id', $payroll->id)
             ->where('status', 'applied')
             ->update([
-                'status' => 'pending',
                 'applied_payroll_id' => null,
             ]);
     }

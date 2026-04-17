@@ -69,18 +69,17 @@
               variant="outlined"
               density="comfortable"
               hide-details
-              @update:model-value="loadResignations"
+              @update:model-value="onFilterChange"
             ></v-select>
           </v-col>
           <v-col cols="12" md="4">
             <v-text-field
-              v-model="filters.search"
+              v-model="search"
               label="Search Employee"
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="mdi-magnify"
               hide-details
-              @keyup.enter="loadResignations"
               clearable
             ></v-text-field>
           </v-col>
@@ -90,7 +89,7 @@
               color="#ED985F"
               variant="tonal"
               icon="mdi-refresh"
-              @click="loadResignations"
+              @click="loadResignations(currentPage)"
               :loading="loading"
               title="Refresh"
             ></v-btn>
@@ -99,12 +98,18 @@
       </div>
 
       <div class="table-section">
-        <v-data-table
+        <v-data-table-server
           :headers="headers"
           :items="resignations"
           :loading="loading"
-          :items-per-page="15"
+          :items-length="totalItems"
+          :items-per-page="itemsPerPage"
+          :page="currentPage"
+          :items-per-page-options="pageSizeOptions"
+          item-value="id"
           class="elevation-0"
+          @update:page="onPageChange"
+          @update:items-per-page="onItemsPerPageChange"
         >
           <!-- Employee -->
           <template v-slot:item.employee="{ item }">
@@ -250,7 +255,7 @@
               </v-list>
             </v-menu>
           </template>
-        </v-data-table>
+        </v-data-table-server>
       </div>
     </div>
 
@@ -566,7 +571,7 @@
     </v-dialog>
 
     <!-- Calculate Final Pay Dialog -->
-    <v-dialog v-model="showFinalPayDialog" max-width="600">
+    <v-dialog v-model="showFinalPayDialog" max-width="760">
       <v-card>
         <v-card-title class="pa-6">
           <v-icon left color="primary">mdi-calculator</v-icon>
@@ -603,25 +608,142 @@
           <v-alert type="warning" variant="tonal" class="mt-4">
             The system will automatically calculate:
             <ul class="mt-2">
+              <li>Unpaid attendance salary (after last paid payroll period)</li>
               <li>Pro-rated 13th month pay</li>
               <li>Unused leave credits (if applicable)</li>
+              <li>Employee savings payout</li>
+              <li>Outstanding loans and deductions to subtract</li>
             </ul>
           </v-alert>
+
+          <v-card
+            v-if="finalPayBreakdown"
+            variant="tonal"
+            color="primary"
+            class="mt-4"
+          >
+            <v-card-title class="text-subtitle-1 pb-0">
+              Final Pay Breakdown Preview
+            </v-card-title>
+            <v-card-text class="pt-3">
+              <div class="d-flex justify-space-between py-1">
+                <span>
+                  Unpaid Attendance Salary ({{
+                    finalPayBreakdown.unpaid_attendance_days || 0
+                  }}
+                  day/s)
+                </span>
+                <strong>
+                  ₱{{
+                    formatCurrency(
+                      finalPayBreakdown.unpaid_attendance_salary || 0,
+                    )
+                  }}
+                </strong>
+              </div>
+
+              <div class="d-flex justify-space-between py-1">
+                <span>13th Month Pay</span>
+                <strong>
+                  ₱{{
+                    formatCurrency(finalPayBreakdown.thirteenth_month_pay || 0)
+                  }}
+                </strong>
+              </div>
+
+              <div class="d-flex justify-space-between py-1">
+                <span>Unused Leave Credits</span>
+                <strong
+                  >₱{{
+                    formatCurrency(finalPayBreakdown.unused_leave || 0)
+                  }}</strong
+                >
+              </div>
+
+              <div class="d-flex justify-space-between py-1">
+                <span>Employee Savings Payout</span>
+                <strong>
+                  ₱{{ formatCurrency(finalPayBreakdown.employee_savings || 0) }}
+                </strong>
+              </div>
+
+              <div class="d-flex justify-space-between py-1">
+                <span>Additional Amount</span>
+                <strong>
+                  ₱{{ formatCurrency(finalPayBreakdown.remaining_salary || 0) }}
+                </strong>
+              </div>
+
+              <v-divider class="my-2"></v-divider>
+
+              <div class="d-flex justify-space-between py-1">
+                <span>Gross Total</span>
+                <strong
+                  >₱{{
+                    formatCurrency(finalPayBreakdown.gross_total || 0)
+                  }}</strong
+                >
+              </div>
+
+              <div class="d-flex justify-space-between py-1 text-error">
+                <span>Outstanding Loans</span>
+                <strong>
+                  - ₱{{
+                    formatCurrency(finalPayBreakdown.outstanding_loans || 0)
+                  }}
+                </strong>
+              </div>
+
+              <div class="d-flex justify-space-between py-1 text-error">
+                <span>Outstanding Deductions</span>
+                <strong>
+                  - ₱{{
+                    formatCurrency(
+                      finalPayBreakdown.outstanding_deductions || 0,
+                    )
+                  }}
+                </strong>
+              </div>
+
+              <v-divider class="my-2"></v-divider>
+
+              <div
+                class="d-flex justify-space-between py-1 text-h6 font-weight-bold"
+              >
+                <span>Net Final Pay</span>
+                <span>₱{{ formatCurrency(finalPayBreakdown.total || 0) }}</span>
+              </div>
+
+              <div class="text-caption text-medium-emphasis mt-2">
+                Attendance coverage:
+                {{ formatDate(finalPayBreakdown.unpaid_attendance_start) }} to
+                {{ formatDate(finalPayBreakdown.unpaid_attendance_end) }}
+              </div>
+            </v-card-text>
+          </v-card>
         </v-card-text>
 
         <v-divider></v-divider>
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="showFinalPayDialog = false"
-            >Cancel</v-btn
+          <v-btn variant="text" @click="closeFinalPayDialog">Cancel</v-btn>
+          <v-btn
+            color="secondary"
+            variant="tonal"
+            @click="previewFinalPayBreakdown"
+            :loading="previewingFinalPay"
+            :disabled="processing"
           >
+            Preview Breakdown
+          </v-btn>
           <v-btn
             color="primary"
             @click="calculateFinalPay"
             :loading="processing"
+            :disabled="!finalPayBreakdown || previewingFinalPay"
           >
-            Calculate
+            Confirm & Calculate
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -752,8 +874,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
-import api from "@/services/api";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
+import resignationService from "@/services/resignationService";
 import { formatDate, formatCurrency } from "@/utils/formatters";
 
 // State
@@ -761,6 +883,24 @@ const loading = ref(true);
 const processing = ref(false);
 const resignations = ref([]);
 const selectedResignation = ref(null);
+const resignationStats = ref({
+  pending: 0,
+  approved: 0,
+  rejected: 0,
+  completed: 0,
+  total: 0,
+});
+const currentPage = ref(1);
+const itemsPerPage = ref(15);
+const totalItems = ref(0);
+const pageSizeOptions = [
+  { value: 10, title: "10" },
+  { value: 15, title: "15" },
+  { value: 25, title: "25" },
+  { value: 50, title: "50" },
+];
+const search = ref("");
+let searchDebounceTimeout = null;
 
 // Dialogs
 const showDetailsDialog = ref(false);
@@ -791,11 +931,12 @@ const rejectData = ref({
 const finalPayData = ref({
   remaining_salary: 0,
 });
+const finalPayBreakdown = ref(null);
+const previewingFinalPay = ref(false);
 
 // Filters
 const filters = ref({
   status: "all",
-  search: "",
 });
 
 // Snackbar
@@ -814,10 +955,10 @@ const statusOptions = [
 
 // Computed
 const stats = computed(() => ({
-  pending: resignations.value.filter((r) => r.status === "pending").length,
-  approved: resignations.value.filter((r) => r.status === "approved").length,
-  rejected: resignations.value.filter((r) => r.status === "rejected").length,
-  completed: resignations.value.filter((r) => r.status === "completed").length,
+  pending: resignationStats.value.pending,
+  approved: resignationStats.value.approved,
+  rejected: resignationStats.value.rejected,
+  completed: resignationStats.value.completed,
 }));
 
 // Table headers
@@ -833,20 +974,88 @@ const headers = [
 ];
 
 // Methods
-const loadResignations = async () => {
+const loadResignations = async (page = currentPage.value) => {
   try {
     loading.value = true;
-    const params = {
+
+    const normalizedPage = Number(page) > 0 ? Number(page) : 1;
+    currentPage.value = normalizedPage;
+
+    const searchTerm = String(search.value || "").trim();
+
+    const listParams = {
+      page: normalizedPage,
+      per_page: itemsPerPage.value,
       status: filters.value.status,
-      search: filters.value.search,
     };
-    const response = await api.get("/resignations", { params });
-    resignations.value = response.data.data || response.data;
+
+    if (searchTerm) {
+      listParams.search = searchTerm;
+    }
+
+    const statsParams = {};
+    if (searchTerm) {
+      statsParams.search = searchTerm;
+    }
+
+    const [listData, statsData] = await Promise.all([
+      resignationService.getResignations(listParams),
+      resignationService.getResignationStats(statsParams),
+    ]);
+
+    resignations.value = Array.isArray(listData?.data) ? listData.data : [];
+    currentPage.value = Number(listData?.current_page || normalizedPage);
+    totalItems.value = Number(
+      listData?.total || resignations.value.length || 0,
+    );
+    itemsPerPage.value = Number(listData?.per_page || itemsPerPage.value);
+
+    resignationStats.value = {
+      pending: Number(statsData?.pending || 0),
+      approved: Number(statsData?.approved || 0),
+      rejected: Number(statsData?.rejected || 0),
+      completed: Number(statsData?.completed || 0),
+      total: Number(statsData?.total || 0),
+    };
   } catch (error) {
     showSnackbar("Failed to load resignations", "error");
+    resignations.value = [];
+    totalItems.value = 0;
+    resignationStats.value = {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      completed: 0,
+      total: 0,
+    };
   } finally {
     loading.value = false;
   }
+};
+
+const onFilterChange = () => {
+  currentPage.value = 1;
+  loadResignations(1);
+};
+
+const onPageChange = (page) => {
+  const nextPage = Number(page) > 0 ? Number(page) : 1;
+  if (nextPage === currentPage.value) {
+    return;
+  }
+
+  loadResignations(nextPage);
+};
+
+const onItemsPerPageChange = (perPage) => {
+  const normalizedPerPage = Number(perPage) > 0 ? Number(perPage) : 15;
+  if (normalizedPerPage === itemsPerPage.value) {
+    return;
+  }
+
+  itemsPerPage.value = normalizedPerPage;
+  currentPage.value = 1;
+  loadResignations(1);
 };
 
 const viewDetails = (resignation) => {
@@ -876,7 +1085,13 @@ const openFinalPayDialog = (resignation) => {
   finalPayData.value = {
     remaining_salary: 0,
   };
+  finalPayBreakdown.value = null;
   showFinalPayDialog.value = true;
+};
+
+const closeFinalPayDialog = () => {
+  showFinalPayDialog.value = false;
+  finalPayBreakdown.value = null;
 };
 
 const openReleaseDialog = (resignation) => {
@@ -887,13 +1102,13 @@ const openReleaseDialog = (resignation) => {
 const approveResignation = async () => {
   try {
     processing.value = true;
-    const response = await api.post(
-      `/resignations/${selectedResignation.value.id}/approve`,
+    await resignationService.approveResignation(
+      selectedResignation.value.id,
       approveData.value,
     );
     showSnackbar("Resignation approved successfully", "success");
     showApproveDialog.value = false;
-    await loadResignations();
+    await loadResignations(currentPage.value);
   } catch (error) {
     showSnackbar(
       error.response?.data?.message || "Failed to approve resignation",
@@ -907,13 +1122,13 @@ const approveResignation = async () => {
 const rejectResignation = async () => {
   try {
     processing.value = true;
-    await api.post(
-      `/resignations/${selectedResignation.value.id}/reject`,
+    await resignationService.rejectResignation(
+      selectedResignation.value.id,
       rejectData.value,
     );
     showSnackbar("Resignation rejected", "success");
     showRejectDialog.value = false;
-    await loadResignations();
+    await loadResignations(currentPage.value);
   } catch (error) {
     showSnackbar(
       error.response?.data?.message || "Failed to reject resignation",
@@ -925,16 +1140,26 @@ const rejectResignation = async () => {
 };
 
 const calculateFinalPay = async () => {
+  if (!finalPayBreakdown.value) {
+    showSnackbar("Please preview the breakdown before confirming.", "warning");
+    return;
+  }
+
   try {
     processing.value = true;
-    const response = await api.post(
-      `/resignations/${selectedResignation.value.id}/process-final-pay`,
+    const response = await resignationService.processFinalPay(
+      selectedResignation.value.id,
       finalPayData.value,
     );
-    showSnackbar("Final pay calculated successfully", "success");
-    showFinalPayDialog.value = false;
 
-    await loadResignations();
+    if (response?.resignation) {
+      selectedResignation.value = response.resignation;
+    }
+
+    showSnackbar("Final pay calculated successfully", "success");
+    closeFinalPayDialog();
+
+    await loadResignations(currentPage.value);
   } catch (error) {
     showSnackbar(
       error.response?.data?.message || "Failed to calculate final pay",
@@ -945,18 +1170,46 @@ const calculateFinalPay = async () => {
   }
 };
 
+const previewFinalPayBreakdown = async () => {
+  try {
+    previewingFinalPay.value = true;
+    const response = await resignationService.processFinalPay(
+      selectedResignation.value.id,
+      {
+        ...finalPayData.value,
+        preview_only: true,
+      },
+    );
+
+    finalPayBreakdown.value = response?.breakdown || null;
+
+    if (!finalPayBreakdown.value) {
+      showSnackbar("Unable to generate final pay preview.", "warning");
+      return;
+    }
+
+    showSnackbar("Final pay breakdown preview updated", "success");
+  } catch (error) {
+    finalPayBreakdown.value = null;
+    showSnackbar(
+      error.response?.data?.message || "Failed to preview final pay breakdown",
+      "error",
+    );
+  } finally {
+    previewingFinalPay.value = false;
+  }
+};
+
 const releaseFinalPay = async () => {
   try {
     processing.value = true;
-    await api.post(
-      `/resignations/${selectedResignation.value.id}/release-final-pay`,
-    );
+    await resignationService.releaseFinalPay(selectedResignation.value.id);
     showSnackbar(
       "Final pay released successfully. Employee status updated to resigned.",
       "success",
     );
     showReleaseDialog.value = false;
-    await loadResignations();
+    await loadResignations(currentPage.value);
   } catch (error) {
     showSnackbar(
       error.response?.data?.message || "Failed to release final pay",
@@ -987,24 +1240,37 @@ const getStatusIcon = (status) => {
   return icons[status] || "mdi-help-circle";
 };
 
+const toAttachmentBlob = (response, fallbackMimeType = "") => {
+  const mimeType =
+    fallbackMimeType ||
+    response?.headers?.["content-type"] ||
+    "application/octet-stream";
+
+  if (response?.data instanceof Blob) {
+    return response.data;
+  }
+
+  return new Blob([response?.data ?? ""], { type: mimeType });
+};
+
 const viewAttachment = async (resignationId, index, attachment) => {
   try {
     currentAttachment.value = attachment;
     currentResignationId.value = resignationId;
     currentAttachmentIndex.value = index;
 
-    const response = await api.get(
-      `/resignations/${resignationId}/attachments/${index}/download`,
-      { responseType: "blob" },
+    const response = await resignationService.downloadAttachment(
+      resignationId,
+      index,
     );
+
+    const attachmentBlob = toAttachmentBlob(response, attachment?.mime_type);
 
     // Create object URL for viewing
     if (attachmentUrl.value) {
       window.URL.revokeObjectURL(attachmentUrl.value);
     }
-    attachmentUrl.value = window.URL.createObjectURL(
-      new Blob([response.data], { type: attachment.mime_type }),
-    );
+    attachmentUrl.value = window.URL.createObjectURL(attachmentBlob);
     showAttachmentDialog.value = true;
   } catch (error) {
     showSnackbar("Failed to load attachment", "error");
@@ -1013,13 +1279,18 @@ const viewAttachment = async (resignationId, index, attachment) => {
 
 const downloadCurrentAttachment = async () => {
   try {
-    const response = await api.get(
-      `/resignations/${currentResignationId.value}/attachments/${currentAttachmentIndex.value}/download`,
-      { responseType: "blob" },
+    const response = await resignationService.downloadAttachment(
+      currentResignationId.value,
+      currentAttachmentIndex.value,
+    );
+
+    const attachmentBlob = toAttachmentBlob(
+      response,
+      currentAttachment.value?.mime_type,
     );
 
     // Create a download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const url = window.URL.createObjectURL(attachmentBlob);
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", currentAttachment.value.original_name);
@@ -1056,7 +1327,32 @@ const showSnackbar = (text, color = "success") => {
 
 // Lifecycle
 onMounted(() => {
-  loadResignations();
+  loadResignations(1);
+});
+
+watch(search, () => {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+  }
+
+  searchDebounceTimeout = setTimeout(() => {
+    currentPage.value = 1;
+    loadResignations(1);
+  }, 350);
+});
+
+watch(
+  () => finalPayData.value.remaining_salary,
+  () => {
+    finalPayBreakdown.value = null;
+  },
+);
+
+onUnmounted(() => {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+    searchDebounceTimeout = null;
+  }
 });
 </script>
 

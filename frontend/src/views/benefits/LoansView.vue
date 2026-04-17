@@ -798,6 +798,20 @@
             <strong>{{ selectedLoan?.employee?.full_name }}</strong
             >?
           </p>
+          <v-text-field
+            v-model="approvalLoanDate"
+            label="Loan Date *"
+            type="date"
+            variant="outlined"
+            class="mb-3"
+          ></v-text-field>
+          <v-text-field
+            v-model="approvalFirstPaymentDate"
+            label="First Payment Date *"
+            type="date"
+            variant="outlined"
+            class="mb-3"
+          ></v-text-field>
           <v-textarea
             v-model="approvalNotes"
             label="Approval Notes (Optional)"
@@ -812,6 +826,7 @@
             color="success"
             variant="flat"
             :loading="saving"
+            :disabled="!approvalLoanDate || !approvalFirstPaymentDate"
             @click="approveLoan"
           >
             Approve
@@ -1263,6 +1278,8 @@ const formValid = ref(false);
 const form = ref(null);
 const selectedLoan = ref(null);
 const approvalNotes = ref("");
+const approvalLoanDate = ref("");
+const approvalFirstPaymentDate = ref("");
 const rejectionReason = ref("");
 const pendingCount = ref(0);
 
@@ -1521,6 +1538,18 @@ const openEditDialog = (loan) => {
 const openApproveDialog = (loan) => {
   selectedLoan.value = loan;
   approvalNotes.value = "";
+  const baseLoanDate =
+    loan?.loan_date || new Date().toISOString().split("T")[0];
+  approvalLoanDate.value = baseLoanDate;
+
+  if (loan?.first_payment_date) {
+    approvalFirstPaymentDate.value = loan.first_payment_date;
+  } else {
+    const nextMonth = new Date(baseLoanDate);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    approvalFirstPaymentDate.value = nextMonth.toISOString().split("T")[0];
+  }
+
   approveDialog.value = true;
 };
 
@@ -1585,9 +1614,18 @@ const saveLoan = async () => {
 
 // Approve loan
 const approveLoan = async () => {
+  if (!approvalLoanDate.value || !approvalFirstPaymentDate.value) {
+    toast.error("Loan date and first payment date are required");
+    return;
+  }
+
   saving.value = true;
   try {
-    await loanService.approveLoan(selectedLoan.value.id, approvalNotes.value);
+    await loanService.approveLoan(selectedLoan.value.id, {
+      approval_notes: approvalNotes.value,
+      loan_date: approvalLoanDate.value,
+      first_payment_date: approvalFirstPaymentDate.value,
+    });
     toast.success("Loan approved successfully");
     approveDialog.value = false;
     fetchLoans();
