@@ -1044,10 +1044,46 @@
                 </v-col>
                 <v-col cols="12" md="6">
                   <v-checkbox
+                    v-model="formData.deduct_cash_advance"
+                    label="Deduct Cash Advance"
+                    prepend-icon="mdi-wallet-plus"
+                    hint="Apply active cash advance repayments"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-checkbox
+                    v-model="formData.deduct_cash_bond"
+                    label="Deduct Cash Bond"
+                    prepend-icon="mdi-shield-lock"
+                    hint="Apply active cash bond contribution plans"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-checkbox
+                    v-model="formData.deduct_employee_savings"
+                    label="Deduct Employee Savings"
+                    prepend-icon="mdi-piggy-bank"
+                    hint="Apply active employee savings contribution plans"
+                    persistent-hint
+                    color="#ed985f"
+                    density="compact"
+                    class="payroll-checkbox"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-checkbox
                     v-model="formData.deduct_employee_deductions"
-                    label="Deduct Employee Deductions"
+                    label="Deduct Other Employee Deductions"
                     prepend-icon="mdi-cash-minus"
-                    hint="Apply active employee deductions (cash advance, cooperative, damages, etc.)"
+                    hint="Apply remaining active deductions (damages, tools, uniform, etc.)"
                     persistent-hint
                     color="#ed985f"
                     density="compact"
@@ -1669,6 +1705,9 @@ const formData = ref({
   deduct_philhealth: true,
   deduct_pagibig: true,
   deduct_loans: true,
+  deduct_cash_advance: true,
+  deduct_cash_bond: true,
+  deduct_employee_savings: true,
   deduct_employee_deductions: true,
 });
 
@@ -1728,6 +1767,9 @@ const selectedContributionCount = computed(() => {
     formData.value.deduct_philhealth,
     formData.value.deduct_pagibig,
     formData.value.deduct_loans,
+    formData.value.deduct_cash_advance,
+    formData.value.deduct_cash_bond,
+    formData.value.deduct_employee_savings,
     formData.value.deduct_employee_deductions,
   ].filter(Boolean).length;
 });
@@ -2156,6 +2198,9 @@ function openCreateDialog() {
     deduct_philhealth: true,
     deduct_pagibig: true,
     deduct_loans: true,
+    deduct_cash_advance: true,
+    deduct_cash_bond: true,
+    deduct_employee_savings: true,
     deduct_employee_deductions: true,
   };
   overtimeCandidates.value = [];
@@ -2212,6 +2257,9 @@ function editPayroll(item) {
     deduct_philhealth: item.deduct_philhealth !== false,
     deduct_pagibig: item.deduct_pagibig !== false,
     deduct_loans: item.deduct_loans !== false,
+    deduct_cash_advance: item.deduct_cash_advance !== false,
+    deduct_cash_bond: item.deduct_cash_bond !== false,
+    deduct_employee_savings: item.deduct_employee_savings !== false,
     deduct_employee_deductions: item.deduct_employee_deductions !== false,
   };
   overtimeCandidates.value = [];
@@ -2631,6 +2679,9 @@ async function savePayroll() {
     deduct_philhealth: formData.value.deduct_philhealth,
     deduct_pagibig: formData.value.deduct_pagibig,
     deduct_loans: formData.value.deduct_loans,
+    deduct_cash_advance: formData.value.deduct_cash_advance,
+    deduct_cash_bond: formData.value.deduct_cash_bond,
+    deduct_employee_savings: formData.value.deduct_employee_savings,
     deduct_employee_deductions: formData.value.deduct_employee_deductions,
   };
 

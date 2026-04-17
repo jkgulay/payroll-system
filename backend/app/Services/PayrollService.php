@@ -762,8 +762,18 @@ class PayrollService
         // Cash advance (displayed separately in payroll register)
         $cashAdvance = 0;
 
-        // OPTIMIZATION: Use preloaded deductions when enabled for this payroll
-        $activeDeductions = ($payroll->deduct_employee_deductions ?? true) ? $employee->deductions : collect();
+        $deductOtherEmployeeDeductions = (bool) ($payroll->deduct_employee_deductions ?? true);
+        $deductCashAdvance = (bool) ($payroll->deduct_cash_advance ?? true);
+        $deductCashBond = (bool) ($payroll->deduct_cash_bond ?? true);
+        $deductEmployeeSavings = (bool) ($payroll->deduct_employee_savings ?? true);
+
+        // OPTIMIZATION: Use preloaded deductions only when at least one manual stream is enabled.
+        $shouldUseManualDeductions =
+            $deductOtherEmployeeDeductions ||
+            $deductCashAdvance ||
+            $deductCashBond ||
+            $deductEmployeeSavings;
+        $activeDeductions = $shouldUseManualDeductions ? $employee->deductions : collect();
 
         // Government deductions must come from GovernmentRate settings and
         // employee contribution toggles only, never from manual deductions.
@@ -780,7 +790,31 @@ class PayrollService
         $scheduledCashAdvance = 0;
 
         foreach ($activeDeductions as $deduction) {
-            if (in_array($deduction->deduction_type, $governmentManagedDeductionTypes, true)) {
+            $deductionType = (string) $deduction->deduction_type;
+
+            if (in_array($deductionType, $governmentManagedDeductionTypes, true)) {
+                continue;
+            }
+
+            if ($deductionType === 'cash_advance' && !$deductCashAdvance) {
+                continue;
+            }
+
+            if ($deductionType === 'cash_bond' && !$deductCashBond) {
+                continue;
+            }
+
+            if (in_array($deductionType, $employeeSavingsTypes, true) && !$deductEmployeeSavings) {
+                continue;
+            }
+
+            $isGeneralEmployeeDeduction = !in_array(
+                $deductionType,
+                array_merge($governmentManagedDeductionTypes, ['cash_advance', 'cash_bond'], $employeeSavingsTypes),
+                true
+            );
+
+            if ($isGeneralEmployeeDeduction && !$deductOtherEmployeeDeductions) {
                 continue;
             }
 
@@ -801,11 +835,11 @@ class PayrollService
                 'amount' => $deductionAmount,
             ];
 
-            if ($deduction->deduction_type === 'cash_advance') {
+            if ($deductionType === 'cash_advance') {
                 $scheduledCashAdvance += $deductionAmount;
-            } elseif (in_array($deduction->deduction_type, $employeeSavingsTypes, true)) {
+            } elseif (in_array($deductionType, $employeeSavingsTypes, true)) {
                 $employeeSavings += $deductionAmount;
-            } elseif (in_array($deduction->deduction_type, $otherDeductionTypes)) {
+            } elseif (in_array($deductionType, $otherDeductionTypes, true)) {
                 $otherDeductions += $deductionAmount;
             } else {
                 $employeeDeductions += $deductionAmount;

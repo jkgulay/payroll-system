@@ -3,20 +3,25 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttendanceModificationRequest;
+use App\Models\DeductionPayment;
 use App\Models\EmployeeDeduction;
 use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\Payroll;
 use App\Models\AuditLog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class DeductionController extends Controller
 {
     private const GOVERNMENT_RATE_ONLY_TYPES = ['sss', 'philhealth', 'pagibig', 'tax'];
+    private const SINGLE_ACTIVE_PLAN_TYPES = ['cash_advance', 'cash_bond', 'cooperative'];
     private const MANUAL_DEDUCTION_TYPES = [
         'ppe',
         'tools',
@@ -35,6 +40,164 @@ class DeductionController extends Controller
     {
         // Admin, HR, and Payrollist can manage deductions
         $this->middleware('role:admin,hr,payrollist')->only(['store', 'update', 'destroy']);
+    }
+
+    private function resolveModuleLabel(string $module): string
+    {
+        $moduleLabels = [
+            'cash-bonds' => 'cash bonds',
+            'employee-savings' => 'employee savings',
+            'cash-advances' => 'cash advances',
+        ];
+
+        return $moduleLabels[$module] ?? 'this module';
+    }
+
+    private function resolveModuleByDeductionType(string $deductionType): ?string
+    {
+        return match ($deductionType) {
+            'cash_bond' => 'cash-bonds',
+            'cooperative' => 'employee-savings',
+            'cash_advance' => 'cash-advances',
+            default => null,
+        };
+    }
+
+    private function assertSingleActivePlanAllowed(int $employeeId, string $deductionType, ?int $ignoreDeductionId = null): ?JsonResponse
+    {
+        if (!in_array($deductionType, self::SINGLE_ACTIVE_PLAN_TYPES, true)) {
+            return null;
+        }
+
+        $query = EmployeeDeduction::query()
+            ->where('employee_id', $employeeId)
+            ->where('deduction_type', $deductionType)
+            ->where('status', 'active')
+            ->where('balance', '>', 0);
+
+        if ($ignoreDeductionId) {
+            $query->where('id', '!=', $ignoreDeductionId);
+        }
+
+        if (!$query->exists()) {
+            return null;
+        }
+
+        $deductionLabels = [
+            'cash_advance' => 'cash advance',
+            'cash_bond' => 'cash bond',
+            'cooperative' => 'employee savings',
+        ];
+        $label = $deductionLabels[$deductionType] ?? str_replace('_', ' ', $deductionType);
+
+        return response()->json([
+            'message' => "Employee already has an active {$label} account. Complete or cancel the existing account first."
+        ], 422);
+    }
+
+    private function enforcePayrollistModuleAccess(string $module): ?JsonResponse
+    {
+        $user = auth()->user();
+
+        if (!$user || in_array($user->role, ['admin', 'hr', 'employee'], true)) {
+            return null;
+        }
+
+        if ($user->role !== 'payrollist') {
+            return null;
+        }
+
+        $hasApprovedAccess = AttendanceModificationRequest::query()
+            ->where('requested_by', $user->id)
+            ->where('module', $module)
+            ->where('status', 'approved')
+            ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])
+            ->exists();
+
+        if ($hasApprovedAccess) {
+            return null;
+        }
+
+        $moduleLabel = $this->resolveModuleLabel($module);
+
+        return response()->json([
+            'message' => "Access request required for {$moduleLabel} management today."
+        ], 403);
+    }
+
+    private function buildBenefitAccountsSnapshot($records, ?int $employeeFilter = null)
+    {
+        $employeesQuery = Employee::query()
+            ->where('is_active', true)
+            ->select('id', 'employee_number', 'first_name', 'middle_name', 'last_name', 'suffix');
+
+        if ($employeeFilter) {
+            $employeesQuery->where('id', $employeeFilter);
+        }
+
+        $employees = $employeesQuery->orderBy('last_name')->orderBy('first_name')->get();
+        $recordsByEmployee = $records->groupBy('employee_id');
+
+        return $employees->map(function (Employee $employee) use ($recordsByEmployee) {
+            $employeeRecords = $recordsByEmployee->get($employee->id, collect())->values();
+            $activePlanCount = $employeeRecords
+                ->where('status', 'active')
+                ->where('balance', '>', 0)
+                ->count();
+
+            $selectedRecord = $employeeRecords->firstWhere('status', 'active')
+                ?? $employeeRecords->firstWhere('status', 'completed')
+                ?? $employeeRecords->first();
+
+            if ($selectedRecord) {
+                $payload = $selectedRecord->toArray();
+                $payload['is_virtual'] = false;
+                $payload['wallet_balance'] = max(0, (float) ($payload['total_amount'] ?? 0) - (float) ($payload['balance'] ?? 0));
+                $payload['active_plan_count'] = (int) $activePlanCount;
+                return $payload;
+            }
+
+            return [
+                'id' => 'virtual-' . $employee->id,
+                'employee_id' => $employee->id,
+                'employee' => [
+                    'id' => $employee->id,
+                    'employee_number' => $employee->employee_number,
+                    'full_name' => $employee->full_name,
+                    'first_name' => $employee->first_name,
+                    'middle_name' => $employee->middle_name,
+                    'last_name' => $employee->last_name,
+                    'suffix' => $employee->suffix,
+                ],
+                'deduction_type' => null,
+                'deduction_name' => null,
+                'total_amount' => 0,
+                'amount_per_cutoff' => 0,
+                'installments' => 0,
+                'installments_paid' => 0,
+                'balance' => 0,
+                'wallet_balance' => 0,
+                'start_date' => null,
+                'end_date' => null,
+                'status' => 'no_plan',
+                'description' => null,
+                'reference_number' => null,
+                'notes' => null,
+                'is_virtual' => true,
+                'active_plan_count' => 0,
+                'created_at' => null,
+                'updated_at' => null,
+            ];
+        })->values();
+    }
+
+    private function nextDeductionInstallmentNumber(int $deductionId): int
+    {
+        $lastInstallment = DeductionPayment::query()
+            ->where('employee_deduction_id', $deductionId)
+            ->max('installment_number');
+
+        return $lastInstallment ? ((int) $lastInstallment + 1) : 1;
     }
 
     public function index(Request $request)
@@ -131,6 +294,15 @@ class DeductionController extends Controller
             return response()->json([
                 'message' => 'Government deductions (SSS, PhilHealth, Pag-IBIG, Tax) are computed from Government Rate settings and cannot be created as manual deductions.'
             ], 422);
+        }
+
+        $module = $this->resolveModuleByDeductionType((string) $validated['deduction_type']);
+        if ($module && ($accessDenied = $this->enforcePayrollistModuleAccess($module))) {
+            return $accessDenied;
+        }
+
+        if ($planConflict = $this->assertSingleActivePlanAllowed((int) $validated['employee_id'], (string) $validated['deduction_type'])) {
+            return $planConflict;
         }
 
         // Auto-generate deduction_name from deduction_type if not provided
@@ -262,6 +434,29 @@ class DeductionController extends Controller
             $validated['balance'] = max(0, $validated['total_amount'] - $amountPaid);
         }
 
+        $nextDeductionType = (string) ($validated['deduction_type'] ?? $deduction->deduction_type);
+        $nextStatus = (string) ($validated['status'] ?? $deduction->status);
+        $nextBalance = array_key_exists('balance', $validated)
+            ? (float) $validated['balance']
+            : (float) $deduction->balance;
+
+        $modulesToCheck = array_filter(array_unique([
+            $this->resolveModuleByDeductionType((string) $deduction->deduction_type),
+            $this->resolveModuleByDeductionType($nextDeductionType),
+        ]));
+
+        foreach ($modulesToCheck as $module) {
+            if ($accessDenied = $this->enforcePayrollistModuleAccess($module)) {
+                return $accessDenied;
+            }
+        }
+
+        if ($nextStatus === 'active' && $nextBalance > 0) {
+            if ($planConflict = $this->assertSingleActivePlanAllowed((int) $deduction->employee_id, $nextDeductionType, (int) $deduction->id)) {
+                return $planConflict;
+            }
+        }
+
         DB::beginTransaction();
         try {
             $oldValues = $deduction->toArray();
@@ -300,6 +495,11 @@ class DeductionController extends Controller
 
     public function destroy(EmployeeDeduction $deduction)
     {
+        $module = $this->resolveModuleByDeductionType((string) $deduction->deduction_type);
+        if ($module && ($accessDenied = $this->enforcePayrollistModuleAccess($module))) {
+            return $accessDenied;
+        }
+
         // Cannot delete active deductions with balance
         if ($deduction->status === 'active' && $deduction->balance > 0 && $deduction->installments_paid > 0) {
             return response()->json([
@@ -347,6 +547,11 @@ class DeductionController extends Controller
             return response()->json([
                 'message' => 'Only active deductions can accept payments'
             ], 422);
+        }
+
+        $module = $this->resolveModuleByDeductionType((string) $deduction->deduction_type);
+        if ($module && ($accessDenied = $this->enforcePayrollistModuleAccess($module))) {
+            return $accessDenied;
         }
 
         $validated = $request->validate([
@@ -409,6 +614,19 @@ class DeductionController extends Controller
 
             $deduction->update($updateData);
 
+            if (Schema::hasTable('deduction_payments')) {
+                DeductionPayment::create([
+                    'employee_deduction_id' => $deduction->id,
+                    'payroll_id' => null,
+                    'payroll_item_id' => null,
+                    'payment_date' => $validated['payment_date'],
+                    'amount' => (float) $validated['amount'],
+                    'balance_after_payment' => (float) ($updateData['balance'] ?? $newBalance),
+                    'installment_number' => $this->nextDeductionInstallmentNumber((int) $deduction->id),
+                    'remarks' => 'Manual installment payment',
+                ]);
+            }
+
             // Create audit log
             AuditLog::create([
                 'module' => 'deductions',
@@ -446,10 +664,141 @@ class DeductionController extends Controller
     }
 
     /**
+     * Get all cash advance deductions
+     */
+    public function getCashAdvances(Request $request)
+    {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('cash-advances')) {
+            return $accessDenied;
+        }
+
+        $query = EmployeeDeduction::with(['employee', 'createdBy', 'approvedBy'])
+            ->where('deduction_type', 'cash_advance');
+
+        if ($request->has('employee_id')) {
+            $query->where('employee_id', $request->employee_id);
+        }
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        } else {
+            $query->whereIn('status', ['active', 'completed']);
+        }
+
+        if (auth()->user()->role === 'employee') {
+            $query->where('employee_id', auth()->user()->employee_id);
+        }
+
+        $shouldPaginate = $request->boolean('paginate', true);
+        $perPage = $request->integer('per_page', 15);
+
+        if ($shouldPaginate) {
+            return response()->json($query->latest()->paginate($perPage));
+        }
+
+        $records = $query->latest()->get();
+        $includeAllEmployees =
+            $request->boolean('include_all_employees', false)
+            && auth()->user()->role !== 'employee';
+
+        if ($includeAllEmployees) {
+            $employeeFilter = $request->filled('employee_id') ? (int) $request->employee_id : null;
+            return response()->json($this->buildBenefitAccountsSnapshot($records, $employeeFilter));
+        }
+
+        return response()->json($records);
+    }
+
+    /**
+     * Create a cash advance deduction
+     */
+    public function createCashAdvance(Request $request)
+    {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('cash-advances')) {
+            return $accessDenied;
+        }
+
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'total_amount' => 'required|numeric|min:1',
+            'amount_per_cutoff' => 'required|numeric|min:1',
+            'installments' => 'nullable|integer|min:1',
+            'start_date' => 'required|date',
+            'description' => 'nullable|string|max:500',
+            'reference_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($planConflict = $this->assertSingleActivePlanAllowed((int) $validated['employee_id'], 'cash_advance')) {
+            return $planConflict;
+        }
+
+        if (!isset($validated['installments'])) {
+            $validated['installments'] = ceil($validated['total_amount'] / $validated['amount_per_cutoff']);
+        }
+
+        if (empty($validated['reference_number'])) {
+            $validated['reference_number'] = 'CA-' . date('Y') . '-' . strtoupper(uniqid());
+        }
+
+        $installmentsInMonths = ceil($validated['installments'] / 2);
+        $endDate = Carbon::parse($validated['start_date'])
+            ->addMonths($installmentsInMonths)
+            ->toDateString();
+
+        $deductionData = array_merge($validated, [
+            'deduction_type' => 'cash_advance',
+            'deduction_name' => 'Cash Advance',
+            'end_date' => $endDate,
+            'balance' => $validated['total_amount'],
+            'installments_paid' => 0,
+            'status' => 'active',
+            'created_by' => auth()->id(),
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $cashAdvance = EmployeeDeduction::create($deductionData);
+            $cashAdvance->load('employee');
+
+            AuditLog::create([
+                'module' => 'deductions',
+                'action' => 'create',
+                'description' => "Cash advance created for employee: {$cashAdvance->employee->full_name} - ₱" . number_format($validated['total_amount'], 2),
+                'user_id' => auth()->id(),
+                'record_id' => $cashAdvance->id,
+                'old_values' => null,
+                'new_values' => json_encode($deductionData),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Cash advance created successfully',
+                'data' => $cashAdvance->load(['employee', 'createdBy', 'approvedBy'])
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to create cash advance',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get all cash bond deductions
      */
     public function getCashBonds(Request $request)
     {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('cash-bonds')) {
+            return $accessDenied;
+        }
+
         $query = EmployeeDeduction::with(['employee', 'createdBy', 'approvedBy'])
             ->where('deduction_type', 'cash_bond');
 
@@ -471,7 +820,24 @@ class DeductionController extends Controller
             $query->where('employee_id', auth()->user()->employee_id);
         }
 
-        return response()->json($query->latest()->paginate(15));
+        $shouldPaginate = $request->boolean('paginate', true);
+        $perPage = $request->integer('per_page', 15);
+
+        if ($shouldPaginate) {
+            return response()->json($query->latest()->paginate($perPage));
+        }
+
+        $records = $query->latest()->get();
+        $includeAllEmployees =
+            $request->boolean('include_all_employees', false)
+            && auth()->user()->role !== 'employee';
+
+        if ($includeAllEmployees) {
+            $employeeFilter = $request->filled('employee_id') ? (int) $request->employee_id : null;
+            return response()->json($this->buildBenefitAccountsSnapshot($records, $employeeFilter));
+        }
+
+        return response()->json($records);
     }
 
     /**
@@ -479,6 +845,10 @@ class DeductionController extends Controller
      */
     public function createCashBond(Request $request)
     {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('cash-bonds')) {
+            return $accessDenied;
+        }
+
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'total_amount' => 'required|numeric|min:1',
@@ -489,6 +859,10 @@ class DeductionController extends Controller
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        if ($planConflict = $this->assertSingleActivePlanAllowed((int) $validated['employee_id'], 'cash_bond')) {
+            return $planConflict;
+        }
 
         // Calculate installments if not provided
         if (!isset($validated['installments'])) {
@@ -558,6 +932,10 @@ class DeductionController extends Controller
      */
     public function refundCashBond(Request $request, EmployeeDeduction $deduction)
     {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('cash-bonds')) {
+            return $accessDenied;
+        }
+
         $user = auth()->user();
         if ($user->role === 'employee' && (int) $deduction->employee_id !== (int) $user->employee_id) {
             return response()->json([
@@ -607,6 +985,19 @@ class DeductionController extends Controller
                     ($validated['refund_reason'] ? " - {$validated['refund_reason']}" : ''),
             ]);
 
+            if (Schema::hasTable('deduction_payments')) {
+                DeductionPayment::create([
+                    'employee_deduction_id' => $deduction->id,
+                    'payroll_id' => null,
+                    'payroll_item_id' => null,
+                    'payment_date' => $validated['refund_date'],
+                    'amount' => -(float) $validated['refund_amount'],
+                    'balance_after_payment' => (float) $newBalance,
+                    'installment_number' => $this->nextDeductionInstallmentNumber((int) $deduction->id),
+                    'remarks' => 'Cash bond refund/return',
+                ]);
+            }
+
             // Create audit log
             AuditLog::create([
                 'module' => 'deductions',
@@ -640,6 +1031,10 @@ class DeductionController extends Controller
      */
     public function getEmployeeSavings(Request $request)
     {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('employee-savings')) {
+            return $accessDenied;
+        }
+
         $query = EmployeeDeduction::with(['employee', 'createdBy', 'approvedBy'])
             ->where('deduction_type', 'cooperative');
 
@@ -657,7 +1052,24 @@ class DeductionController extends Controller
             $query->where('employee_id', auth()->user()->employee_id);
         }
 
-        return response()->json($query->latest()->paginate(15));
+        $shouldPaginate = $request->boolean('paginate', true);
+        $perPage = $request->integer('per_page', 15);
+
+        if ($shouldPaginate) {
+            return response()->json($query->latest()->paginate($perPage));
+        }
+
+        $records = $query->latest()->get();
+        $includeAllEmployees =
+            $request->boolean('include_all_employees', false)
+            && auth()->user()->role !== 'employee';
+
+        if ($includeAllEmployees) {
+            $employeeFilter = $request->filled('employee_id') ? (int) $request->employee_id : null;
+            return response()->json($this->buildBenefitAccountsSnapshot($records, $employeeFilter));
+        }
+
+        return response()->json($records);
     }
 
     /**
@@ -665,6 +1077,10 @@ class DeductionController extends Controller
      */
     public function createEmployeeSavings(Request $request)
     {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('employee-savings')) {
+            return $accessDenied;
+        }
+
         $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'total_amount' => 'required|numeric|min:1',
@@ -675,6 +1091,10 @@ class DeductionController extends Controller
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        if ($planConflict = $this->assertSingleActivePlanAllowed((int) $validated['employee_id'], 'cooperative')) {
+            return $planConflict;
+        }
 
         if (!isset($validated['installments'])) {
             $validated['installments'] = ceil($validated['total_amount'] / $validated['amount_per_cutoff']);
@@ -738,6 +1158,10 @@ class DeductionController extends Controller
      */
     public function withdrawEmployeeSavings(Request $request, EmployeeDeduction $deduction)
     {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('employee-savings')) {
+            return $accessDenied;
+        }
+
         $user = auth()->user();
         if ($user->role === 'employee' && (int) $deduction->employee_id !== (int) $user->employee_id) {
             return response()->json([
@@ -787,6 +1211,19 @@ class DeductionController extends Controller
                     ($validated['withdraw_reason'] ? " - {$validated['withdraw_reason']}" : ''),
             ]);
 
+            if (Schema::hasTable('deduction_payments')) {
+                DeductionPayment::create([
+                    'employee_deduction_id' => $deduction->id,
+                    'payroll_id' => null,
+                    'payroll_item_id' => null,
+                    'payment_date' => $validated['withdraw_date'],
+                    'amount' => -(float) $validated['withdraw_amount'],
+                    'balance_after_payment' => (float) $newBalance,
+                    'installment_number' => $this->nextDeductionInstallmentNumber((int) $deduction->id),
+                    'remarks' => 'Employee savings withdrawal',
+                ]);
+            }
+
             $deduction->load('employee');
 
             AuditLog::create([
@@ -814,6 +1251,83 @@ class DeductionController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get deduction ledger transactions for a specific deduction account.
+     */
+    public function getDeductionLedger(EmployeeDeduction $deduction)
+    {
+        $user = auth()->user();
+
+        if ($user->role === 'employee' && (int) $deduction->employee_id !== (int) $user->employee_id) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        if ($deduction->deduction_type === 'cash_bond') {
+            if ($accessDenied = $this->enforcePayrollistModuleAccess('cash-bonds')) {
+                return $accessDenied;
+            }
+        }
+
+        if ($deduction->deduction_type === 'cooperative') {
+            if ($accessDenied = $this->enforcePayrollistModuleAccess('employee-savings')) {
+                return $accessDenied;
+            }
+        }
+
+        if ($deduction->deduction_type === 'cash_advance') {
+            if ($accessDenied = $this->enforcePayrollistModuleAccess('cash-advances')) {
+                return $accessDenied;
+            }
+        }
+
+        $transactions = collect();
+
+        if (Schema::hasTable('deduction_payments')) {
+            $transactions = DeductionPayment::query()
+                ->where('employee_deduction_id', $deduction->id)
+                ->orderByDesc('payment_date')
+                ->orderByDesc('id')
+                ->get()
+                ->map(function (DeductionPayment $payment) {
+                    return [
+                        'id' => $payment->id,
+                        'payment_date' => optional($payment->payment_date)->toDateString(),
+                        'amount' => (float) $payment->amount,
+                        'balance_after_payment' => (float) $payment->balance_after_payment,
+                        'installment_number' => (int) $payment->installment_number,
+                        'remarks' => $payment->remarks,
+                        'payroll_id' => $payment->payroll_id,
+                        'type' => (float) $payment->amount >= 0 ? 'contribution' : 'withdrawal',
+                    ];
+                })
+                ->values();
+        }
+
+        $targetAmount = (float) ($deduction->total_amount ?? 0);
+        $remainingTarget = max((float) ($deduction->balance ?? 0), 0);
+        $walletBalance = max($targetAmount - $remainingTarget, 0);
+        $progressPercent = $targetAmount > 0
+            ? min(100, max(0, ($walletBalance / $targetAmount) * 100))
+            : 0;
+
+        return response()->json([
+            'account' => [
+                'id' => $deduction->id,
+                'employee_id' => $deduction->employee_id,
+                'deduction_type' => $deduction->deduction_type,
+                'deduction_name' => $deduction->deduction_name,
+                'target_amount' => $targetAmount,
+                'remaining_target' => $remainingTarget,
+                'wallet_balance' => $walletBalance,
+                'progress_percent' => round($progressPercent, 2),
+                'status' => $deduction->status,
+            ],
+            'transactions' => $transactions,
+        ]);
     }
 
     /**
@@ -845,6 +1359,11 @@ class DeductionController extends Controller
             ], 422);
         }
 
+        $module = $this->resolveModuleByDeductionType((string) $validated['deduction_type']);
+        if ($module && ($accessDenied = $this->enforcePayrollistModuleAccess($module))) {
+            return $accessDenied;
+        }
+
         // Get employee IDs based on selection mode
         $employeeIds = [];
 
@@ -869,6 +1388,44 @@ class DeductionController extends Controller
             return response()->json([
                 'message' => 'No employees found matching the criteria'
             ], 422);
+        }
+
+        if (in_array($validated['deduction_type'], self::SINGLE_ACTIVE_PLAN_TYPES, true)) {
+            $conflictingEmployeeIds = EmployeeDeduction::query()
+                ->whereIn('employee_id', $employeeIds)
+                ->where('deduction_type', $validated['deduction_type'])
+                ->where('status', 'active')
+                ->where('balance', '>', 0)
+                ->pluck('employee_id')
+                ->unique()
+                ->values();
+
+            if ($conflictingEmployeeIds->isNotEmpty()) {
+                $conflictingNames = Employee::query()
+                    ->whereIn('id', $conflictingEmployeeIds->all())
+                    ->orderBy('last_name')
+                    ->orderBy('first_name')
+                    ->limit(5)
+                    ->get(['first_name', 'last_name'])
+                    ->map(fn(Employee $employee) => trim($employee->first_name . ' ' . $employee->last_name))
+                    ->filter()
+                    ->values();
+
+                $deductionLabels = [
+                    'cash_advance' => 'cash advance',
+                    'cash_bond' => 'cash bond',
+                    'cooperative' => 'employee savings',
+                ];
+                $label = $deductionLabels[$validated['deduction_type']] ?? str_replace('_', ' ', $validated['deduction_type']);
+                $namePreview = $conflictingNames->isNotEmpty()
+                    ? ' Conflicts include: ' . $conflictingNames->implode(', ') . '.'
+                    : '';
+
+                return response()->json([
+                    'message' => 'One or more employees already have active ' . $label . ' accounts. Complete or cancel existing accounts first.' . $namePreview,
+                    'conflict_count' => $conflictingEmployeeIds->count(),
+                ], 422);
+            }
         }
 
         // Auto-generate deduction_name from deduction_type if not provided
@@ -991,6 +1548,10 @@ class DeductionController extends Controller
      */
     public function getCashAdvanceAvailability(Request $request)
     {
+        if ($accessDenied = $this->enforcePayrollistModuleAccess('cash-advances')) {
+            return $accessDenied;
+        }
+
         $validated = $request->validate([
             'employee_id' => [
                 'required',

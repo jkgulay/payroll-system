@@ -812,85 +812,8 @@
                   variant="outlined"
                   density="comfortable"
                   prepend-inner-icon="mdi-currency-php"
-                  :loading="cashAdvanceAvailabilityLoading"
                   :rules="[rules.required, rules.positive]"
                 ></v-text-field>
-
-                <v-alert
-                  v-if="showCashAdvanceAvailability"
-                  class="mt-2"
-                  density="compact"
-                  variant="tonal"
-                  :type="hasCashAdvanceLimitWarning ? 'warning' : 'info'"
-                  :icon="
-                    hasCashAdvanceLimitWarning
-                      ? 'mdi-alert'
-                      : 'mdi-wallet-outline'
-                  "
-                >
-                  <div
-                    class="d-flex align-center justify-space-between flex-wrap ga-2"
-                  >
-                    <span class="text-caption"
-                      >Available Balance (Estimated)</span
-                    >
-                    <strong
-                      >₱{{ formatNumber(cashAdvanceAvailableBalance) }}</strong
-                    >
-                  </div>
-                  <div class="text-caption mt-1">
-                    Based on approved attendance from
-                    <strong>{{ cashAdvanceStartDateLabel }}</strong>
-                    to
-                    <strong>{{ cashAdvanceAsOfDateLabel }}</strong>
-                    <span v-if="cashAdvanceLastPayrollLabel">
-                      (last payroll ended {{ cashAdvanceLastPayrollLabel }})
-                    </span>
-                  </div>
-                  <div
-                    v-if="
-                      cashAdvanceAvailability.active_cash_advance_balance > 0
-                    "
-                    class="text-caption mt-1"
-                  >
-                    Current active cash advance balance: ₱{{
-                      formatNumber(
-                        cashAdvanceAvailability.active_cash_advance_balance,
-                      )
-                    }}. Suggested additional cap: ₱{{
-                      formatNumber(cashAdvanceAvailability.recommended_limit)
-                    }}.
-                  </div>
-                  <div
-                    v-if="hasCashAdvanceLimitWarning"
-                    class="text-caption mt-1 font-weight-medium"
-                  >
-                    Entered amount is above the estimated available balance.
-                  </div>
-                </v-alert>
-
-                <v-alert
-                  v-else-if="showCashAdvanceAvailabilityError"
-                  class="mt-2"
-                  density="compact"
-                  variant="tonal"
-                  type="warning"
-                  icon="mdi-alert-circle-outline"
-                >
-                  {{ cashAdvanceAvailabilityError }}
-                </v-alert>
-
-                <v-alert
-                  v-else-if="showCashAdvanceSelectionHint"
-                  class="mt-2"
-                  density="compact"
-                  variant="tonal"
-                  type="info"
-                  icon="mdi-information-outline"
-                >
-                  Available balance preview is shown for individual employee
-                  selection.
-                </v-alert>
               </v-col>
 
               <!-- Amount per Cutoff -->
@@ -1332,9 +1255,6 @@ const selectionMode = ref("individual");
 const affectedEmployeesCount = ref(0);
 const deductionStep = ref(1);
 const deductionStepItems = ["Employee & Type", "Amount & Schedule"];
-const cashAdvanceAvailability = ref(null);
-const cashAdvanceAvailabilityLoading = ref(false);
-const cashAdvanceAvailabilityError = ref("");
 
 // Filters
 const filters = ref({
@@ -1404,68 +1324,6 @@ const canSaveDeduction = computed(() => {
     Number(formData.value.installments) > 0 &&
     !!formData.value.start_date
   );
-});
-
-const isCashAdvanceType = computed(
-  () => formData.value.deduction_type === "cash_advance",
-);
-
-const isIndividualCashAdvanceContext = computed(() => {
-  if (!dialog.value || !isCashAdvanceType.value) return false;
-  if (editMode.value) return true;
-  return selectionMode.value === "individual";
-});
-
-const shouldFetchCashAdvanceAvailability = computed(() => {
-  return isIndividualCashAdvanceContext.value && !!formData.value.employee_id;
-});
-
-const showCashAdvanceAvailability = computed(() => {
-  return (
-    shouldFetchCashAdvanceAvailability.value && !!cashAdvanceAvailability.value
-  );
-});
-
-const showCashAdvanceAvailabilityError = computed(() => {
-  return (
-    shouldFetchCashAdvanceAvailability.value &&
-    !!cashAdvanceAvailabilityError.value
-  );
-});
-
-const showCashAdvanceSelectionHint = computed(() => {
-  return (
-    dialog.value &&
-    isCashAdvanceType.value &&
-    !editMode.value &&
-    selectionMode.value !== "individual"
-  );
-});
-
-const cashAdvanceAvailableBalance = computed(() => {
-  return Number(cashAdvanceAvailability.value?.available_balance || 0);
-});
-
-const hasCashAdvanceLimitWarning = computed(() => {
-  if (!showCashAdvanceAvailability.value) return false;
-  return (
-    Number(formData.value.total_amount || 0) > cashAdvanceAvailableBalance.value
-  );
-});
-
-const cashAdvanceStartDateLabel = computed(() => {
-  const date = cashAdvanceAvailability.value?.start_date;
-  return date ? formatDate(date) : "N/A";
-});
-
-const cashAdvanceAsOfDateLabel = computed(() => {
-  const date = cashAdvanceAvailability.value?.as_of_date;
-  return date ? formatDate(date) : "N/A";
-});
-
-const cashAdvanceLastPayrollLabel = computed(() => {
-  const date = cashAdvanceAvailability.value?.last_payroll?.period_end;
-  return date ? formatDate(date) : "";
 });
 
 const { handleKeydown: handleDeductionFormKeydown } = useKeyboardFirstFlow({
@@ -1550,10 +1408,8 @@ const baseDeductionTypes = [
   { title: "Tools", value: "tools" },
   { title: "Uniform", value: "uniform" },
   { title: "Absence", value: "absence" },
-  { title: "Cash Advance", value: "cash_advance" },
   { title: "Damages", value: "damages" },
   { title: "Insurance", value: "insurance" },
-  { title: "Cooperative", value: "cooperative" },
   { title: "Loan Repayment", value: "loan" },
   { title: "Other", value: "other" },
 ];
@@ -1588,59 +1444,6 @@ watch(selectionMode, (newMode) => {
   formData.value.department = null;
   formData.value.position = null;
 });
-
-const resetCashAdvanceAvailability = () => {
-  cashAdvanceAvailability.value = null;
-  cashAdvanceAvailabilityLoading.value = false;
-  cashAdvanceAvailabilityError.value = "";
-};
-
-const fetchCashAdvanceAvailability = async () => {
-  if (!shouldFetchCashAdvanceAvailability.value) {
-    resetCashAdvanceAvailability();
-    return;
-  }
-
-  cashAdvanceAvailabilityLoading.value = true;
-  cashAdvanceAvailabilityError.value = "";
-
-  try {
-    const response = await deductionService.getCashAdvanceAvailability(
-      formData.value.employee_id,
-    );
-    cashAdvanceAvailability.value = response.data;
-  } catch (error) {
-    cashAdvanceAvailability.value = null;
-    cashAdvanceAvailabilityError.value =
-      error.response?.data?.message ||
-      "Unable to load available balance estimate";
-  } finally {
-    cashAdvanceAvailabilityLoading.value = false;
-  }
-};
-
-watch(
-  () => [
-    dialog.value,
-    editMode.value,
-    selectionMode.value,
-    formData.value.deduction_type,
-    formData.value.employee_id,
-  ],
-  () => {
-    if (!dialog.value || !isCashAdvanceType.value) {
-      resetCashAdvanceAvailability();
-      return;
-    }
-
-    if (!isIndividualCashAdvanceContext.value) {
-      resetCashAdvanceAvailability();
-      return;
-    }
-
-    fetchCashAdvanceAvailability();
-  },
-);
 
 // Watch total_amount and installments to auto-calculate amount_per_cutoff
 watch(
@@ -1689,7 +1492,12 @@ const fetchDeductions = async () => {
     if (filters.value.status) params.status = filters.value.status;
 
     const response = await deductionService.getDeductions(params);
-    deductions.value = response.data.data || response.data;
+    const rows = response.data.data || response.data;
+    deductions.value = (Array.isArray(rows) ? rows : []).filter(
+      (row) =>
+        row?.deduction_type !== "cash_advance" &&
+        row?.deduction_type !== "cooperative",
+    );
   } catch (error) {
     toast.error("Failed to load deductions");
     devLog.error(error);
@@ -1807,7 +1615,6 @@ const openAddDialog = () => {
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
-  resetCashAdvanceAvailability();
   dialog.value = true;
 };
 
@@ -1831,7 +1638,6 @@ const openEditDialog = (deduction) => {
     description: deduction.description,
     reference_number: deduction.reference_number,
   };
-  resetCashAdvanceAvailability();
   dialog.value = true;
 };
 
@@ -1842,7 +1648,6 @@ const closeDialog = () => {
   selectionMode.value = "individual";
   affectedEmployeesCount.value = 0;
   formData.value = { ...defaultFormData };
-  resetCashAdvanceAvailability();
   if (form.value) form.value.resetValidation();
 };
 
@@ -1852,6 +1657,28 @@ const saveDeduction = async () => {
 
   const { valid } = await form.value.validate();
   if (!valid) return;
+
+  const selectedType = formData.value.deduction_type;
+  const normalizedTypeForGuard =
+    selectedType === "custom"
+      ? normalizeDeductionType(
+          (formData.value.custom_deduction_type || "").trim(),
+        )
+      : selectedType;
+
+  if (normalizedTypeForGuard === "cash_advance") {
+    toast.error(
+      "Use the Cash Advances page to create or manage cash advances.",
+    );
+    return;
+  }
+
+  if (normalizedTypeForGuard === "cooperative") {
+    toast.error(
+      "Use the Employee Savings page to create or manage employee savings.",
+    );
+    return;
+  }
 
   saving.value = true;
   try {
@@ -1953,10 +1780,8 @@ const formatDeductionType = (type) => {
     pagibig: "Pag-IBIG",
     tax: "Tax",
     loan: "Loan",
-    cash_advance: "Cash Advance",
     damages: "Damages",
     insurance: "Insurance",
-    cooperative: "Cooperative",
     other: "Other",
   };
   if (types[type]) return types[type];
@@ -1998,10 +1823,8 @@ const getDeductionTypeColor = (type) => {
     tools: "purple",
     uniform: "green",
     absence: "red",
-    cash_advance: "deep-orange",
     damages: "pink",
     insurance: "teal",
-    cooperative: "indigo",
     loan: "cyan",
     other: "grey",
   };
