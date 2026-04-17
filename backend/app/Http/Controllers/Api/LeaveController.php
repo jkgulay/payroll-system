@@ -39,62 +39,192 @@ class LeaveController extends Controller
             $employee->update(['activity_status' => 'active']);
         }
     }
-    public function index(Request $request)
+
+    private function isLeaveManager($user): bool
     {
-        $user = Auth::user();
-        $query = EmployeeLeave::with(['employee', 'leaveType', 'approvedBy']);
+        return in_array($user->role, ['admin', 'hr'], true);
+    }
 
-        // If employee role, only show their leaves
-        if ($user->role === 'employee') {
-            $query->where('employee_id', $user->employee_id);
+    private function canUseMyLeavePortal($user): bool
+    {
+        return in_array($user->role, ['employee', 'hr', 'payrollist'], true);
+    }
+
+    private function resolveUserEmployeeId($user): ?int
+    {
+        if (!empty($user->employee_id)) {
+            return (int) $user->employee_id;
         }
 
-        // Filter by employee ID (for admin/hr)
-        if ($request->has('employee_id')) {
-            $query->where('employee_id', $request->employee_id);
+        return Employee::where('user_id', $user->id)->value('id');
+    }
+
+    private function ensureCanAccessLeave($user, EmployeeLeave $leave)
+    {
+        if ($this->isLeaveManager($user)) {
+            return null;
         }
 
-        // Filter by status
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
+        $employeeId = $this->resolveUserEmployeeId($user);
+        if (!$employeeId || (int) $leave->employee_id !== (int) $employeeId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Filter by leave type
-        if ($request->has('leave_type_id')) {
-            $query->where('leave_type_id', $request->leave_type_id);
+        return null;
+    }
+
+    private function applyListFilters($query, Request $request, bool $includeStatus = true)
+    {
+        if ($request->filled('employee_id')) {
+            $query->where('employee_id', $request->input('employee_id'));
         }
 
-        // Filter for pending approvals (HR view)
-        if ($request->has('pending_only') && $request->pending_only) {
+        if ($includeStatus && $request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('leave_type_id')) {
+            $query->where('leave_type_id', $request->input('leave_type_id'));
+        }
+
+        if ($request->boolean('pending_only')) {
             $query->where('status', 'pending');
         }
 
-        return response()->json($query->latest()->paginate(15));
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('reason', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhereHas('employee', function ($employeeQuery) use ($search) {
+                        $employeeQuery->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('employee_number', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('leaveType', function ($leaveTypeQuery) use ($search) {
+                        $leaveTypeQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    public function index(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$this->isLeaveManager($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $perPage = (int) $request->input('per_page', 15);
+        $perPage = max(1, min($perPage, 100));
+
+        $query = EmployeeLeave::with(['employee', 'leaveType', 'approvedBy']);
+
+        $this->applyListFilters($query, $request, true);
+
+        return response()->json($query->latest()->paginate($perPage));
+    }
+
+    /**
+     * Manually set leave on behalf of an employee and auto-approve it.
+     */
+    public function setLeave(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$this->isLeaveManager($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'employee_id' => 'required|exists:employees,id',
+            'leave_type_id' => 'required|exists:leave_types,id',
+            'leave_date_from' => 'required|date|after_or_equal:today',
+            'leave_date_to' => 'required|date|after_or_equal:leave_date_from',
+            'reason' => 'required|string|max:1000',
+            'approval_remarks' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $startDate = Carbon::parse($request->leave_date_from);
+        $endDate = Carbon::parse($request->leave_date_to);
+        $numberOfDays = $startDate->diffInDays($endDate) + 1;
+
+        DB::beginTransaction();
+
+        try {
+            $leave = EmployeeLeave::create([
+                'employee_id' => $request->input('employee_id'),
+                'leave_type_id' => $request->input('leave_type_id'),
+                'leave_date_from' => $request->input('leave_date_from'),
+                'leave_date_to' => $request->input('leave_date_to'),
+                'number_of_days' => $numberOfDays,
+                'reason' => $request->input('reason'),
+                'status' => 'approved',
+                'approved_by' => $user->id,
+                'approved_at' => now(),
+                'approval_remarks' => $request->input('approval_remarks'),
+                'rejection_reason' => null,
+            ]);
+
+            // Immediately reflect today's approved leave in employee activity status.
+            $this->syncEmployeeLeaveStatus((int) $request->input('employee_id'));
+
+            AuditLog::create([
+                'module' => 'leaves',
+                'action' => 'set_leave',
+                'description' => "Leave manually set and approved for employee ID {$request->input('employee_id')}",
+                'user_id' => $user->id,
+                'record_id' => $leave->id,
+                'new_values' => json_encode($leave->toArray()),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Leave was set and approved successfully',
+                'data' => $leave->load(['employee', 'leaveType', 'approvedBy']),
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to set leave',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function store(Request $request)
     {
         $user = Auth::user();
 
-        // Determine employee_id based on role
-        if ($user->role === 'employee') {
-            // If employee_id is not set, try to find employee by user_id
-            $employeeId = $user->employee_id;
-            if (!$employeeId) {
-                $employee = Employee::where('user_id', $user->id)->first();
-                if (!$employee) {
-                    return response()->json([
-                        'message' => 'Employee record not found for your account'
-                    ], 404);
-                }
-                $employeeId = $employee->id;
-            }
-        } else {
-            $employeeId = $request->input('employee_id');
+        if (!in_array($user->role, ['admin', 'hr', 'employee', 'payrollist'], true)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $canCreateForAnotherEmployee = $this->isLeaveManager($user) && $request->filled('employee_id');
+        $employeeId = $canCreateForAnotherEmployee
+            ? (int) $request->input('employee_id')
+            : $this->resolveUserEmployeeId($user);
+
+        if (!$employeeId) {
+            return response()->json([
+                'message' => 'Employee record not found for your account'
+            ], 404);
         }
 
         $validator = Validator::make($request->all(), [
-            'employee_id' => $user->role === 'employee' ? 'nullable' : 'required|exists:employees,id',
+            'employee_id' => $canCreateForAnotherEmployee ? 'required|exists:employees,id' : 'nullable',
             'leave_type_id' => 'required|exists:leave_types,id',
             'leave_date_from' => 'required|date|after_or_equal:today',
             'leave_date_to' => 'required|date|after_or_equal:leave_date_from',
@@ -127,9 +257,11 @@ class LeaveController extends Controller
             AuditLog::create([
                 'module' => 'leaves',
                 'action' => 'create',
-                'description' => $user->role === 'employee'
-                    ? "Employee filed leave request for {$numberOfDays} day(s)"
-                    : "Leave request created for employee ID {$employeeId}",
+                'description' => $canCreateForAnotherEmployee
+                    ? "Leave request created for employee ID {$employeeId}"
+                    : (($user->role === 'employee' || $user->role === 'payrollist' || $user->role === 'hr')
+                        ? "Employee filed leave request for {$numberOfDays} day(s)"
+                        : "Leave request created"),
                 'user_id' => $user->id,
                 'record_id' => $leave->id,
                 'new_values' => json_encode($leave->toArray()),
@@ -156,9 +288,9 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        // Employees can only view their own leaves
-        if ($user->role === 'employee' && $leave->employee_id !== $user->employee_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        $accessError = $this->ensureCanAccessLeave($user, $leave);
+        if ($accessError) {
+            return $accessError;
         }
 
         return response()->json($leave->load(['employee', 'leaveType', 'approvedBy']));
@@ -168,9 +300,9 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        // Employees can only update their own pending leaves
-        if ($user->role === 'employee' && $leave->employee_id !== $user->employee_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        $accessError = $this->ensureCanAccessLeave($user, $leave);
+        if ($accessError) {
+            return $accessError;
         }
 
         // Only pending leaves can be updated
@@ -182,10 +314,22 @@ class LeaveController extends Controller
 
         $validator = Validator::make($request->all(), [
             'leave_type_id' => 'sometimes|exists:leave_types,id',
-            'leave_date_from' => 'sometimes|date',
-            'leave_date_to' => 'sometimes|date|after_or_equal:leave_date_from',
+            'leave_date_from' => 'sometimes|date|after_or_equal:today',
+            'leave_date_to' => 'sometimes|date',
             'reason' => 'sometimes|string|max:1000',
         ]);
+
+        $validator->after(function ($validator) use ($request, $leave) {
+            $startDate = $request->input('leave_date_from', optional($leave->leave_date_from)->toDateString());
+            $endDate = $request->input('leave_date_to', optional($leave->leave_date_to)->toDateString());
+
+            if ($startDate && $endDate && Carbon::parse($endDate)->lt(Carbon::parse($startDate))) {
+                $validator->errors()->add(
+                    'leave_date_to',
+                    'The leave date to must be a date after or equal to leave date from.'
+                );
+            }
+        });
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -238,9 +382,9 @@ class LeaveController extends Controller
     {
         $user = Auth::user();
 
-        // Employees can only delete their own pending leaves
-        if ($user->role === 'employee' && $leave->employee_id !== $user->employee_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        $accessError = $this->ensureCanAccessLeave($user, $leave);
+        if ($accessError) {
+            return $accessError;
         }
 
         // Only pending leaves can be deleted
@@ -313,7 +457,8 @@ class LeaveController extends Controller
                 'status' => 'approved',
                 'approved_by' => $user->id,
                 'approved_at' => now(),
-                'rejection_reason' => $request->remarks,
+                'approval_remarks' => $request->remarks,
+                'rejection_reason' => null,
             ]);
 
             // Instantly sync employee activity status
@@ -377,6 +522,7 @@ class LeaveController extends Controller
                 'approved_by' => $user->id,
                 'approved_at' => now(),
                 'rejection_reason' => $request->rejection_reason,
+                'approval_remarks' => null,
             ]);
 
             // Instantly sync employee activity status (may return to active if no other leaves)
@@ -416,15 +562,10 @@ class LeaveController extends Controller
 
         $user = Auth::user();
 
-        // Employees can only view their own credits
-        if ($user->role === 'employee') {
-            $userEmployeeId = $user->employee_id;
-            if (!$userEmployeeId) {
-                $userEmployee = Employee::where('user_id', $user->id)->first();
-                $userEmployeeId = $userEmployee?->id;
-            }
-
-            if ($employee->id !== $userEmployeeId) {
+        // Non-manager roles can only view their own credits
+        if (!$this->isLeaveManager($user)) {
+            $userEmployeeId = $this->resolveUserEmployeeId($user);
+            if (!$userEmployeeId || (int) $employee->id !== (int) $userEmployeeId) {
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
         }
@@ -456,24 +597,52 @@ class LeaveController extends Controller
     }
 
     /**
-     * Get my leaves (for employee portal)
+     * Get aggregated leave stats for approval dashboard
+     */
+    public function stats(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$this->isLeaveManager($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $query = EmployeeLeave::query();
+        $this->applyListFilters($query, $request, false);
+
+        $countsByStatus = (clone $query)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $pending = (int) ($countsByStatus['pending'] ?? 0);
+        $approved = (int) ($countsByStatus['approved'] ?? 0);
+        $rejected = (int) ($countsByStatus['rejected'] ?? 0);
+        $cancelled = (int) ($countsByStatus['cancelled'] ?? 0);
+
+        return response()->json([
+            'pending' => $pending,
+            'approved' => $approved,
+            'rejected' => $rejected,
+            'cancelled' => $cancelled,
+            'total' => $pending + $approved + $rejected + $cancelled,
+        ]);
+    }
+
+    /**
+     * Get my leaves (for employee, HR, and payrollist portal)
      */
     public function myLeaves(Request $request)
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['employee', 'payrollist'])) {
-            return response()->json(['message' => 'This endpoint is for employees only'], 403);
+        if (!$this->canUseMyLeavePortal($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Get employee_id from user or lookup via user_id
-        $employeeId = $user->employee_id;
+        $employeeId = $this->resolveUserEmployeeId($user);
         if (!$employeeId) {
-            $employee = Employee::where('user_id', $user->id)->first();
-            if (!$employee) {
-                return response()->json(['message' => 'Employee record not found'], 404);
-            }
-            $employeeId = $employee->id;
+            return response()->json(['message' => 'Employee record not found for this account'], 404);
         }
 
         $query = EmployeeLeave::with(['leaveType', 'approvedBy'])
@@ -504,26 +673,24 @@ class LeaveController extends Controller
     }
 
     /**
-     * Get my leave credits (for employee portal)
+     * Get my leave credits (for employee, HR, and payrollist portal)
      */
     public function myCredits(Request $request)
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['employee', 'payrollist'])) {
-            return response()->json(['message' => 'This endpoint is for employees only'], 403);
+        if (!$this->canUseMyLeavePortal($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Get employee_id from user or lookup via user_id
-        $employeeId = $user->employee_id;
+        $employeeId = $this->resolveUserEmployeeId($user);
         if (!$employeeId) {
-            $employee = Employee::where('user_id', $user->id)->first();
-            if (!$employee) {
-                return response()->json(['message' => 'Employee record not found'], 404);
-            }
-            $employeeId = $employee->id;
-        } else {
-            $employee = Employee::find($employeeId);
+            return response()->json(['message' => 'Employee record not found for this account'], 404);
+        }
+
+        $employee = Employee::find($employeeId);
+        if (!$employee) {
+            return response()->json(['message' => 'Employee record not found'], 404);
         }
 
         $leaveTypes = LeaveType::active()->get();

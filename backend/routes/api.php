@@ -375,14 +375,36 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Leave Management
-    Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class);
-    Route::get('/leaves/my-leaves', [App\Http\Controllers\Api\LeaveController::class, 'myLeaves']);
-    Route::get('/leaves/my-credits', [App\Http\Controllers\Api\LeaveController::class, 'myCredits']);
-    Route::get('/leaves/pending', [App\Http\Controllers\Api\LeaveController::class, 'pendingLeaves']);
-    Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class);
-    Route::post('/leaves/{leave}/approve', [App\Http\Controllers\Api\LeaveController::class, 'approve']);
-    Route::post('/leaves/{leave}/reject', [App\Http\Controllers\Api\LeaveController::class, 'reject']);
-    Route::get('/leaves/employee/{employee}/credits', [App\Http\Controllers\Api\LeaveController::class, 'employeeCredits']);
+    Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class)
+        ->only(['index', 'show']);
+    Route::apiResource('leave-types', App\Http\Controllers\Api\LeaveTypeController::class)
+        ->only(['store', 'update', 'destroy'])
+        ->middleware('role:admin,hr');
+
+    Route::get('/leaves/my-leaves', [App\Http\Controllers\Api\LeaveController::class, 'myLeaves'])
+        ->middleware('role:employee,hr,payrollist');
+    Route::get('/leaves/my-credits', [App\Http\Controllers\Api\LeaveController::class, 'myCredits'])
+        ->middleware('role:employee,hr,payrollist');
+    Route::get('/leaves/pending', [App\Http\Controllers\Api\LeaveController::class, 'pendingLeaves'])
+        ->middleware('role:admin,hr');
+    Route::get('/leaves/stats', [App\Http\Controllers\Api\LeaveController::class, 'stats'])
+        ->middleware('role:admin,hr');
+    Route::post('/leaves/set-leave', [App\Http\Controllers\Api\LeaveController::class, 'setLeave'])
+        ->middleware('role:admin,hr');
+
+    Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class)
+        ->only(['index'])
+        ->middleware('role:admin,hr');
+    Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class)
+        ->only(['store', 'show', 'update', 'destroy'])
+        ->middleware('role:admin,hr,employee,payrollist');
+
+    Route::post('/leaves/{leave}/approve', [App\Http\Controllers\Api\LeaveController::class, 'approve'])
+        ->middleware('role:admin,hr');
+    Route::post('/leaves/{leave}/reject', [App\Http\Controllers\Api\LeaveController::class, 'reject'])
+        ->middleware('role:admin,hr');
+    Route::get('/leaves/employee/{employee}/credits', [App\Http\Controllers\Api\LeaveController::class, 'employeeCredits'])
+        ->middleware('role:admin,hr,employee,payrollist');
 
     // Holidays - specific routes MUST come before apiResource
     Route::get('/holidays/year/{year}', [App\Http\Controllers\HolidayController::class, 'getYearHolidays']);

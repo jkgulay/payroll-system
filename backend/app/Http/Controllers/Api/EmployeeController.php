@@ -7,6 +7,7 @@ use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\EmployeeGovernmentInfo;
+use App\Models\EmployeeLeave;
 use App\Models\Attendance;
 use App\Models\User;
 use App\Models\AuditLog;
@@ -19,14 +20,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Carbon\Carbon;
 
 class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
+        $this->syncLeaveStatusesForToday();
+
         $query = Employee::query()
             ->select([
                 'id',
+                'user_id',
                 'employee_number',
                 'biometric_id',
                 'first_name',
@@ -48,6 +53,7 @@ class EmployeeController extends Controller
             ->with([
                 'project:id,name',
                 'positionRate:id,position_name,daily_rate',
+                'user:id,employee_id,role,name,username',
             ]);
 
         // Search - case-insensitive search across multiple fields
@@ -153,6 +159,32 @@ class EmployeeController extends Controller
         $employees = $query->latest('created_at')->paginate($perPage);
 
         return response()->json($employees);
+    }
+
+    private function syncLeaveStatusesForToday(): void
+    {
+        $today = Carbon::today()->toDateString();
+
+        $onLeaveEmployeeIds = EmployeeLeave::where('status', 'approved')
+            ->whereDate('leave_date_from', '<=', $today)
+            ->whereDate('leave_date_to', '>=', $today)
+            ->distinct()
+            ->pluck('employee_id')
+            ->filter()
+            ->values();
+
+        if ($onLeaveEmployeeIds->isNotEmpty()) {
+            Employee::whereIn('id', $onLeaveEmployeeIds)
+                ->where('activity_status', '!=', 'on_leave')
+                ->update(['activity_status' => 'on_leave']);
+        }
+
+        $activeQuery = Employee::where('activity_status', 'on_leave');
+        if ($onLeaveEmployeeIds->isNotEmpty()) {
+            $activeQuery->whereNotIn('id', $onLeaveEmployeeIds);
+        }
+
+        $activeQuery->update(['activity_status' => 'active']);
     }
 
     public function store(StoreEmployeeRequest $request)

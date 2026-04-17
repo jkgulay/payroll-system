@@ -19,6 +19,7 @@ class EmployeeLeave extends Model
         'status',
         'approved_by',
         'approved_at',
+        'approval_remarks',
         'rejection_reason',
     ];
 
