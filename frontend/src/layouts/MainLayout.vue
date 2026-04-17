@@ -1218,6 +1218,20 @@ async function downloadCurrentPayslip() {
         top: 0 !important;
         bottom: 0 !important;
 
+        // Vuetify adds a spacer after prepend icons; in rail mode this shifts
+        // the visible icon slightly left. Remove it so the icon sits centered.
+        .v-list-item__spacer {
+          display: none !important;
+          width: 0 !important;
+          margin: 0 !important;
+        }
+
+        > .v-badge {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
         .v-icon {
           font-size: 20px !important;
           margin: 0 !important;

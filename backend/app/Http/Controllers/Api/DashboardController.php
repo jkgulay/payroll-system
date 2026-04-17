@@ -15,6 +15,8 @@ use App\Models\Resignation;
 use App\Models\EmployeeAllowance;
 use App\Models\ThirteenthMonthPay;
 use App\Models\EmployeeLoan;
+use App\Models\AttendanceModificationRequest;
+use App\Models\SalaryAdjustment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -80,9 +82,38 @@ class DashboardController extends Controller
             // Pending Employee Loans
             $pendingEmployeeLoans = EmployeeLoan::where('status', 'pending')->count();
 
-            // Pending Access Requests
-            $pendingModificationRequests = \App\Models\AttendanceModificationRequest::where('status', 'pending')->where('module', 'attendance')->count();
-            $pendingDeductionRequests = \App\Models\AttendanceModificationRequest::where('status', 'pending')->where('module', 'deductions')->count();
+            // Pending Salary Exception Records (manual and approval workflow records)
+            $pendingSalaryAdjustments = SalaryAdjustment::where('status', 'pending')->count();
+
+            // Pending module access requests (Access Requests page + per-module badges)
+            $pendingAccessByModule = AttendanceModificationRequest::query()
+                ->where('status', 'pending')
+                ->select('module', DB::raw('COUNT(*) as aggregate_count'))
+                ->groupBy('module')
+                ->pluck('aggregate_count', 'module');
+
+            $pendingAccessRequests = (int) $pendingAccessByModule->sum();
+            $pendingDeductionsAccessRequests = (int) ($pendingAccessByModule['deductions'] ?? 0);
+            $pendingCashAdvancesAccessRequests = (int) ($pendingAccessByModule['cash-advances'] ?? 0);
+            $pendingCashBondsAccessRequests = (int) ($pendingAccessByModule['cash-bonds'] ?? 0);
+            $pendingEmployeeSavingsAccessRequests = (int) ($pendingAccessByModule['employee-savings'] ?? 0);
+
+            // Pending module access requests for Benefits & Deductions-related modules
+            $pendingBenefitDeductionRequests =
+                (int) ($pendingAccessByModule['deductions'] ?? 0)
+                + (int) ($pendingAccessByModule['allowances'] ?? 0)
+                + (int) ($pendingAccessByModule['thirteenth-month-pay'] ?? 0)
+                + (int) ($pendingAccessByModule['loans'] ?? 0)
+                + (int) ($pendingAccessByModule['cash-advances'] ?? 0)
+                + (int) ($pendingAccessByModule['cash-bonds'] ?? 0)
+                + (int) ($pendingAccessByModule['employee-savings'] ?? 0);
+
+            // Pending approvals inside benefits modules (records pending approval/finalization)
+            $pendingBenefitApprovals = $pendingAllowances + $pending13thMonthPay + $pendingEmployeeLoans;
+
+            // Legacy access-request fields kept for compatibility
+            $pendingModificationRequests = (int) ($pendingAccessByModule['attendance'] ?? 0);
+            $pendingDeductionRequests = $pendingDeductionsAccessRequests;
 
             // Employees with complete data (has government info)
             $employeesCompleteData = Employee::where('is_active', true)
@@ -140,6 +171,14 @@ class DashboardController extends Controller
                     'pendingAllowances' => $pendingAllowances,
                     'pending13thMonthPay' => $pending13thMonthPay,
                     'pendingEmployeeLoans' => $pendingEmployeeLoans,
+                    'pendingSalaryAdjustments' => $pendingSalaryAdjustments,
+                    'pendingAccessRequests' => $pendingAccessRequests,
+                    'pendingBenefitDeductionRequests' => $pendingBenefitDeductionRequests,
+                    'pendingBenefitApprovals' => $pendingBenefitApprovals,
+                    'pendingDeductionsAccessRequests' => $pendingDeductionsAccessRequests,
+                    'pendingCashAdvancesAccessRequests' => $pendingCashAdvancesAccessRequests,
+                    'pendingCashBondsAccessRequests' => $pendingCashBondsAccessRequests,
+                    'pendingEmployeeSavingsAccessRequests' => $pendingEmployeeSavingsAccessRequests,
                     'pendingModificationRequests' => $pendingModificationRequests,
                     'pendingDeductionRequests' => $pendingDeductionRequests,
                     'employeesCompleteData' => $employeesCompleteData,
