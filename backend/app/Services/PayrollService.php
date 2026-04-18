@@ -155,6 +155,9 @@ class PayrollService
     {
         $query = Employee::query();
 
+        $referencePeriodColumn = SalaryAdjustment::referencePeriodColumn();
+        $appliedPayrollColumn = SalaryAdjustment::appliedPayrollColumn();
+
         if (is_array($employeeIds)) {
             if (empty($employeeIds)) {
                 return collect();
@@ -208,29 +211,18 @@ class PayrollService
                         );
                 },
                 // Approved one-time salary exception records awaiting payroll consumption.
-                'salaryAdjustments' => function ($q) use ($payroll) {
+                'salaryAdjustments' => function ($q) use ($payroll, $referencePeriodColumn, $appliedPayrollColumn) {
                     $q->where('status', 'applied')
-                        ->whereNull('applied_payroll_id')
+                        ->whereNull($appliedPayrollColumn)
                         ->whereNotNull('reason')
                         ->whereRaw("TRIM(reason) <> ''")
-                        ->whereNotNull('reference_period')
-                        ->whereRaw("TRIM(reference_period) <> ''")
-                        ->where('reference_period', 'not like', 'APPROVAL:%')
+                        ->whereNotNull($referencePeriodColumn)
+                        ->whereRaw("TRIM({$referencePeriodColumn}) <> ''")
+                        ->where($referencePeriodColumn, 'not like', 'APPROVAL:%')
                         ->where(function ($query) use ($payroll) {
                             $query->whereNull('effective_date')
                                 ->orWhereDate('effective_date', '<=', $payroll->period_end);
-                        })
-                        ->select(
-                            'id',
-                            'employee_id',
-                            'amount',
-                            'type',
-                            'reason',
-                            'reference_period',
-                            'effective_date',
-                            'status',
-                            'applied_payroll_id'
-                        );
+                        });
                 },
                 // Active loans with balance
                 'loans' => function ($q) use ($payroll) {
@@ -930,23 +922,27 @@ class PayrollService
      */
     private function calculateApprovedOneTimeAdjustment(Payroll $payroll, Employee $employee): array
     {
+        $referencePeriodColumn = SalaryAdjustment::referencePeriodColumn();
+        $appliedPayrollColumn = SalaryAdjustment::appliedPayrollColumn();
+        $adjustmentTypeColumn = SalaryAdjustment::adjustmentTypeColumn();
+
         if ($employee->relationLoaded('salaryAdjustments')) {
             $adjustments = $employee->salaryAdjustments;
         } else {
             $adjustments = SalaryAdjustment::query()
                 ->where('employee_id', $employee->id)
                 ->where('status', 'applied')
-                ->whereNull('applied_payroll_id')
+                ->whereNull($appliedPayrollColumn)
                 ->whereNotNull('reason')
                 ->whereRaw("TRIM(reason) <> ''")
-                ->whereNotNull('reference_period')
-                ->whereRaw("TRIM(reference_period) <> ''")
-                ->where('reference_period', 'not like', 'APPROVAL:%')
+                ->whereNotNull($referencePeriodColumn)
+                ->whereRaw("TRIM({$referencePeriodColumn}) <> ''")
+                ->where($referencePeriodColumn, 'not like', 'APPROVAL:%')
                 ->where(function ($query) use ($payroll) {
                     $query->whereNull('effective_date')
                         ->orWhereDate('effective_date', '<=', $payroll->period_end);
                 })
-                ->get(['id', 'employee_id', 'amount', 'type']);
+                ->get(['id', 'employee_id', 'amount', $adjustmentTypeColumn]);
         }
 
         if ($adjustments->isEmpty()) {
@@ -974,6 +970,8 @@ class PayrollService
 
     private function markSalaryAdjustmentsAsAppliedToPayroll(array $adjustmentIds, Payroll $payroll): void
     {
+        $appliedPayrollColumn = SalaryAdjustment::appliedPayrollColumn();
+
         $normalizedIds = collect($adjustmentIds)
             ->map(fn($id) => (int) $id)
             ->filter(fn($id) => $id > 0)
@@ -988,9 +986,9 @@ class PayrollService
         SalaryAdjustment::query()
             ->whereIn('id', $normalizedIds)
             ->where('status', 'applied')
-            ->whereNull('applied_payroll_id')
+            ->whereNull($appliedPayrollColumn)
             ->update([
-                'applied_payroll_id' => $payroll->id,
+                $appliedPayrollColumn => $payroll->id,
             ]);
     }
 

@@ -2069,6 +2069,8 @@ class PayrollController extends Controller
         }
 
         $query = $this->buildEmployeeSelectionQuery($payroll, $filters);
+        $referencePeriodColumn = SalaryAdjustment::referencePeriodColumn();
+        $appliedPayrollColumn = SalaryAdjustment::appliedPayrollColumn();
 
         // CRITICAL: Eager load attendances filtered by payroll period
         // Without this, calculatePayrollItem() would process ALL attendance records
@@ -2089,14 +2091,14 @@ class PayrollController extends Controller
                             ->orWhere('end_date', '>=', $payroll->period_start);
                     });
             },
-            'salaryAdjustments' => function ($q) use ($payroll) {
+            'salaryAdjustments' => function ($q) use ($payroll, $referencePeriodColumn, $appliedPayrollColumn) {
                 $q->where('status', 'applied')
-                    ->whereNull('applied_payroll_id')
+                    ->whereNull($appliedPayrollColumn)
                     ->whereNotNull('reason')
                     ->whereRaw("TRIM(reason) <> ''")
-                    ->whereNotNull('reference_period')
-                    ->whereRaw("TRIM(reference_period) <> ''")
-                    ->where('reference_period', 'not like', 'APPROVAL:%')
+                    ->whereNotNull($referencePeriodColumn)
+                    ->whereRaw("TRIM({$referencePeriodColumn}) <> ''")
+                    ->where($referencePeriodColumn, 'not like', 'APPROVAL:%')
                     ->where(function ($query) use ($payroll) {
                         $query->whereNull('effective_date')
                             ->orWhereDate('effective_date', '<=', $payroll->period_end);
@@ -2240,9 +2242,9 @@ class PayrollController extends Controller
                 SalaryAdjustment::query()
                     ->whereIn('id', $normalizedAdjustmentIds)
                     ->where('status', 'applied')
-                    ->whereNull('applied_payroll_id')
+                    ->whereNull($appliedPayrollColumn)
                     ->update([
-                        'applied_payroll_id' => $payroll->id,
+                        $appliedPayrollColumn => $payroll->id,
                     ]);
             }
         }
@@ -3013,17 +3015,29 @@ class PayrollController extends Controller
      */
     private function reverseSalaryAdjustmentsForPayroll(Payroll $payroll)
     {
-        if (!Schema::hasTable('salary_adjustments') || !Schema::hasColumn('salary_adjustments', 'applied_payroll_id')) {
-            Log::warning('Skipping salary adjustment reversal: applied_payroll_id column missing', [
+        if (!Schema::hasTable('salary_adjustments')) {
+            Log::warning('Skipping salary adjustment reversal: salary_adjustments table missing', [
                 'payroll_id' => $payroll->id,
             ]);
             return;
         }
 
-        SalaryAdjustment::where('applied_payroll_id', $payroll->id)
+        $hasModernColumn = Schema::hasColumn('salary_adjustments', 'applied_payroll_id');
+        $hasLegacyColumn = Schema::hasColumn('salary_adjustments', 'payroll_id');
+
+        if (!$hasModernColumn && !$hasLegacyColumn) {
+            Log::warning('Skipping salary adjustment reversal: no payroll linkage column found', [
+                'payroll_id' => $payroll->id,
+            ]);
+            return;
+        }
+
+        $appliedPayrollColumn = SalaryAdjustment::appliedPayrollColumn();
+
+        SalaryAdjustment::where($appliedPayrollColumn, $payroll->id)
             ->where('status', 'applied')
             ->update([
-                'applied_payroll_id' => null,
+                $appliedPayrollColumn => null,
             ]);
     }
 
