@@ -156,14 +156,14 @@ const dayHeaders = [
 ];
 
 const punchFieldMap = [
-  { field: "time_in", type: "Time In" },
-  { field: "break_start", type: "Break Out" },
-  { field: "break_end", type: "Break In" },
-  { field: "time_out", type: "Time Out" },
-  { field: "ot_time_in", type: "OT In" },
-  { field: "ot_time_out", type: "OT Out" },
-  { field: "ot_time_in_2", type: "OT2 In" },
-  { field: "ot_time_out_2", type: "OT2 Out" },
+  { field: "time_in" },
+  { field: "break_start" },
+  { field: "break_end" },
+  { field: "time_out" },
+  { field: "ot_time_in" },
+  { field: "ot_time_out" },
+  { field: "ot_time_in_2" },
+  { field: "ot_time_out_2" },
 ];
 
 const getWeekDay = (dateValue) => {
@@ -186,15 +186,7 @@ const normalizeTime = (timeValue) => {
 };
 
 const getRecordPunches = (record) => {
-  const punches = punchFieldMap
-    .map(({ field, type }) => ({
-      time: normalizeTime(record[field]),
-      type,
-    }))
-    .filter((entry) => entry.time);
-
-  punches.sort((a, b) => a.time.localeCompare(b.time));
-  return punches;
+  return punchFieldMap.map(({ field }) => normalizeTime(record[field]));
 };
 
 const dayViewRows = computed(() => {
@@ -208,9 +200,7 @@ const dayViewRows = computed(() => {
       device_name: record.device_name || "-",
     };
 
-    const punchTimes = getRecordPunches(record)
-      .map((entry) => entry.time)
-      .slice(0, 10);
+    const punchTimes = getRecordPunches(record).slice(0, timeKeys.length);
 
     timeKeys.forEach((timeKey, idx) => {
       row[timeKey] = punchTimes[idx] || null;

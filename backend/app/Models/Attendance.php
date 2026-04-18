@@ -172,26 +172,17 @@ class Attendance extends Model
             $timeOut->addDay();
         }
 
+        // Schedule settings (project overrides if available)
+        $schedule = $this->getScheduleConfig($timeIn);
+        $timeOut = $this->normalizeLateRegularPunchToOvertime($dateString, $timeIn, $timeOut, $schedule);
+
         // Calculate break duration
-        $breakMinutes = 0;
-        if ($this->break_start && $this->break_end) {
-            $breakStart = Carbon::parse($dateString . ' ' . $this->break_start);
-            $breakEnd = Carbon::parse($dateString . ' ' . $this->break_end);
-
-            // Handle overnight break
-            if ($breakEnd->lt($breakStart)) {
-                $breakEnd->addDay();
-            }
-
-            $breakMinutes = $breakStart->diffInMinutes($breakEnd);
-        }
+        $breakMinutes = $this->calculateValidBreakMinutes($dateString, $timeIn, $timeOut);
 
         // REGULAR SHIFT: Calculate hours from time_in to time_out (excluding break)
         $regularMinutes = $timeIn->diffInMinutes($timeOut) - $breakMinutes;
         $regularHours = $regularMinutes / 60;
 
-        // Schedule settings (project overrides if available)
-        $schedule = $this->getScheduleConfig($timeIn);
         $standardHours = $schedule['standard_hours'];
 
         // Cap regular hours at standard hours (8 hours typically)
@@ -320,6 +311,74 @@ class Attendance extends Model
             $this->undertime_hours = round($undertime - $offsetAmount, 4);
             $this->overtime_hours = round($overtime - $offsetAmount, 4);
         }
+    }
+
+    /**
+     * Auto-split late regular timeout into OT slots once the configured window is reached.
+     */
+    private function normalizeLateRegularPunchToOvertime(
+        string $dateString,
+        Carbon $timeIn,
+        Carbon $timeOut,
+        array $schedule
+    ): Carbon {
+        if (!$this->time_out || $this->ot_time_out || $this->ot_time_out_2) {
+            return $timeOut;
+        }
+
+        $scheduledTimeIn = Carbon::parse($dateString . ' ' . $schedule['standard_time_in']);
+        $scheduledTimeOut = Carbon::parse($dateString . ' ' . $schedule['standard_time_out']);
+        if ($scheduledTimeOut->lte($scheduledTimeIn)) {
+            $scheduledTimeOut->addDay();
+        }
+
+        $actualTimeOut = $timeOut->copy();
+        if ($actualTimeOut->lt($scheduledTimeIn)) {
+            $actualTimeOut->addDay();
+        }
+
+        if ($actualTimeOut->lte($scheduledTimeOut)) {
+            return $timeOut;
+        }
+
+        $smartDetectionMinutes = (int) config('payroll.attendance.smart_detection_window_minutes', 120);
+        $otSplitThreshold = $scheduledTimeOut->copy()->addMinutes(max(0, $smartDetectionMinutes));
+
+        if ($actualTimeOut->lt($otSplitThreshold)) {
+            return $timeOut;
+        }
+
+        $this->time_out = $scheduledTimeOut->format('H:i:s');
+        $this->ot_time_in = $scheduledTimeOut->format('H:i:s');
+        $this->ot_time_out = $actualTimeOut->format('H:i:s');
+
+        return $scheduledTimeOut;
+    }
+
+    /**
+     * Count break minutes only when break interval is within regular shift bounds.
+     */
+    private function calculateValidBreakMinutes(string $dateString, Carbon $timeIn, Carbon $timeOut): int
+    {
+        if (!$this->break_start || !$this->break_end) {
+            return 0;
+        }
+
+        $breakStart = Carbon::parse($dateString . ' ' . $this->break_start);
+        $breakEnd = Carbon::parse($dateString . ' ' . $this->break_end);
+
+        if ($breakStart->lt($timeIn)) {
+            $breakStart->addDay();
+        }
+        if ($breakEnd->lt($breakStart)) {
+            $breakEnd->addDay();
+        }
+
+        if ($breakStart->lt($timeIn) || $breakEnd->gt($timeOut) || $breakEnd->lte($breakStart)) {
+            return 0;
+        }
+
+        return $breakStart->diffInMinutes($breakEnd);
     }
 
     private function calculateNightDifferentialHours(Carbon $timeIn, Carbon $timeOut): float
