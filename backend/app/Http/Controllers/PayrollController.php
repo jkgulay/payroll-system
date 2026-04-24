@@ -11,6 +11,9 @@ use App\Models\LoanPayment;
 use App\Models\DeductionPayment;
 use App\Models\AuditLog;
 use App\Models\EmployeeDeduction;
+use App\Models\EmployeeLeave;
+use App\Models\EmployeeLeaveOut;
+use App\Models\PayrollItemLeaveOut;
 use App\Models\SalaryAdjustment;
 use App\Models\CompanyInfo;
 use App\Models\DeviceProfile;
@@ -995,6 +998,7 @@ class PayrollController extends Controller
                 $this->reverseDeductionPaymentsForPayroll($payroll);
                 $this->reverseSalaryAdjustmentsForPayroll($payroll);
                 $this->reverseBonusesForPayroll($payroll);
+                $this->reverseLeaveOutUsageForPayroll($payroll);
             }
 
             $payroll->update($validated);
@@ -1305,6 +1309,7 @@ class PayrollController extends Controller
             $this->reverseDeductionPaymentsForPayroll($payroll);
             $this->reverseSalaryAdjustmentsForPayroll($payroll);
             $this->reverseBonusesForPayroll($payroll);
+            $this->reverseLeaveOutUsageForPayroll($payroll);
 
             // Permanently delete payroll items and payroll (no soft delete)
             $payroll->items()->delete();
@@ -1395,6 +1400,7 @@ class PayrollController extends Controller
             $this->reverseDeductionPaymentsForPayroll($payroll);
             $this->reverseSalaryAdjustmentsForPayroll($payroll);
             $this->reverseBonusesForPayroll($payroll);
+            $this->reverseLeaveOutUsageForPayroll($payroll);
 
             $payrollService = app(\App\Services\PayrollService::class);
             $payrollService->reprocessPayroll($payroll, $employeeIdsForRecalculation);
@@ -2104,6 +2110,19 @@ class PayrollController extends Controller
                             ->orWhereDate('effective_date', '<=', $payroll->period_end);
                     });
             },
+            'leaves' => function ($q) use ($payroll) {
+                $q->where('status', 'approved')
+                    ->whereDate('leave_date_to', '>=', $payroll->period_start)
+                    ->whereDate('leave_date_from', '<=', $payroll->period_end)
+                    ->where(function ($query) {
+                        $query->whereNull('is_locked')
+                            ->orWhere('is_locked', false);
+                    })
+                    ->with([
+                        'leaveType:id,is_paid',
+                        'leaveOut.payrollLinks:id,employee_leave_out_id,payroll_item_id,payroll_id',
+                    ]);
+            },
             'loans' => function ($q) use ($payroll) {
                 $q->where('status', 'active')
                     ->where('balance', '>', 0)
@@ -2196,10 +2215,16 @@ class PayrollController extends Controller
                 if (!empty($item['_adjustment_ids'])) {
                     $allAdjustmentIds = array_merge($allAdjustmentIds, $item['_adjustment_ids']);
                 }
+                $leaveOutEntries = $item['_leave_out_entries'] ?? [];
                 unset($item['_adjustment_ids']);
                 unset($item['_bonus_ids']);
+                unset($item['_leave_out_entries']);
 
                 $payrollItem = PayrollItem::create($item);
+
+                if (!empty($leaveOutEntries)) {
+                    $this->payrollService->recordLeaveOutPayrollLinks($payroll, $payrollItem, $leaveOutEntries);
+                }
 
                 // Record deduction installments for this employee
                 $this->recordDeductionInstallments($payroll, $employee, $payrollItem);
@@ -3086,6 +3111,66 @@ class PayrollController extends Controller
                 ->update([
                     'payment_status' => 'pending',
                     'paid_at' => null,
+                ]);
+        }
+    }
+
+    /**
+     * Reverse leave_out linkage for a payroll and unlock leaves with no remaining payroll usage.
+     */
+    private function reverseLeaveOutUsageForPayroll(Payroll $payroll): void
+    {
+        if (!Schema::hasTable('payroll_item_leave_outs') || !Schema::hasTable('employee_leaves')) {
+            return;
+        }
+
+        $leaveOutIds = PayrollItemLeaveOut::where('payroll_id', $payroll->id)
+            ->pluck('employee_leave_out_id')
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($leaveOutIds)) {
+            return;
+        }
+
+        $leaveOuts = EmployeeLeaveOut::whereIn('id', $leaveOutIds)
+            ->get(['id', 'employee_leave_id'])
+            ->keyBy('id');
+
+        PayrollItemLeaveOut::where('payroll_id', $payroll->id)->delete();
+
+        $candidateLeaveIds = collect($leaveOutIds)
+            ->map(fn($id) => (int) optional($leaveOuts->get($id))->employee_leave_id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($candidateLeaveIds)) {
+            return;
+        }
+
+        $stillLinkedLeaveIds = EmployeeLeaveOut::query()
+            ->whereIn('employee_leave_id', $candidateLeaveIds)
+            ->whereHas('payrollLinks')
+            ->pluck('employee_leave_id')
+            ->map(fn($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $unlockLeaveIds = array_values(array_diff($candidateLeaveIds, $stillLinkedLeaveIds));
+
+        if (!empty($unlockLeaveIds)) {
+            EmployeeLeave::query()
+                ->whereIn('id', $unlockLeaveIds)
+                ->update([
+                    'is_locked' => false,
+                    'locked_by_payroll_id' => null,
+                    'locked_at' => null,
                 ]);
         }
     }

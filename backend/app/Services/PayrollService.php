@@ -5,8 +5,11 @@ namespace App\Services;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\Employee;
+use App\Models\EmployeeLeave;
+use App\Models\EmployeeLeaveOut;
 use App\Models\Holiday;
 use App\Models\GovernmentRate;
+use App\Models\PayrollItemLeaveOut;
 use App\Models\SalaryAdjustment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -114,10 +117,18 @@ class PayrollService
             // Insert payroll items using Eloquent create() to respect model casts
             // (allowances_breakdown and deductions_breakdown are cast to array and need JSON encoding)
             foreach ($payrollItems as $item) {
+                $leaveOutEntries = $item['_leave_out_entries'] ?? [];
+
                 // Remove internal tracking fields before creating
                 unset($item['_adjustment_ids']);
                 unset($item['_bonus_ids']);
-                PayrollItem::create($item);
+                unset($item['_leave_out_entries']);
+
+                $payrollItem = PayrollItem::create($item);
+
+                if (!empty($leaveOutEntries)) {
+                    $this->recordLeaveOutPayrollLinks($payroll, $payrollItem, $leaveOutEntries);
+                }
             }
 
             // Mark approved one-time salary adjustments as consumed by this payroll.
@@ -223,6 +234,20 @@ class PayrollService
                             $query->whereNull('effective_date')
                                 ->orWhereDate('effective_date', '<=', $payroll->period_end);
                         });
+                },
+                // Approved leaves during payroll period that have not yet been payroll-locked.
+                'leaves' => function ($q) use ($payroll) {
+                    $q->where('status', 'approved')
+                        ->whereDate('leave_date_to', '>=', $payroll->period_start)
+                        ->whereDate('leave_date_from', '<=', $payroll->period_end)
+                        ->where(function ($query) {
+                            $query->whereNull('is_locked')
+                                ->orWhere('is_locked', false);
+                        })
+                        ->with([
+                            'leaveType:id,is_paid',
+                            'leaveOut.payrollLinks:id,employee_leave_out_id,payroll_item_id,payroll_id',
+                        ]);
                 },
                 // Active loans with balance
                 'loans' => function ($q) use ($payroll) {
@@ -547,10 +572,28 @@ class PayrollService
         }
         // ===== END OFFSET =====
 
+        $leavePayrollAdjustment = $this->calculateLeavePayrollAdjustments(
+            $payroll,
+            $employee,
+            $rate,
+            $hourlyRate,
+            $standardHours
+        );
+
+        $paidLeaveDays = (float) ($leavePayrollAdjustment['paid_days'] ?? 0);
+        $unpaidLeaveDays = (float) ($leavePayrollAdjustment['unpaid_days'] ?? 0);
+        $leaveWithoutPayDeduction = (float) ($leavePayrollAdjustment['unpaid_deduction'] ?? 0);
+        $leaveOutEntries = $leavePayrollAdjustment['leave_out_entries'] ?? [];
+
+        // Keep paid leaves in days-worked display while unpaid leave deduction
+        // remains auditable through leave_out -> payroll linkage records.
+        $regularDaysForDisplay = $regularDays + $paidLeaveDays;
+        $payableRegularDays = $regularDaysForDisplay + $unpaidLeaveDays;
+
         // Calculate basic pay (excluding holiday days and Sunday)
         // Only weekday regular pay at 1.0x
         // Sunday regular hours are NOT included in basic pay - they go to special_ot_pay
-        $basicPay = ($rate * $regularDays);
+        $basicPay = ($rate * $payableRegularDays);
 
         // Calculate overtime pay with different rates
         // Regular days: rate/8 × 1.25 × hours
@@ -646,7 +689,7 @@ class PayrollService
         // Calculate salary adjustment from pending adjustments (OPTIMIZED - preloaded)
         // Business rule: "No. of Days" should count only regular weekday days.
         // Sunday and holiday work are shown in SUN/SPL. HOL columns instead.
-        $totalDaysWorked = $regularDays;
+        $totalDaysWorked = $regularDaysForDisplay;
 
         // ADJ. PREV. SALARY comes only from approved one-time
         // salary exception records awaiting payroll consumption.
@@ -712,7 +755,8 @@ class PayrollService
         // Compute withholding tax from dynamic GovernmentRate tax table.
         // Taxable base excludes non-taxable allowances.
         $taxableSupplementalIncome = $taxableAllowances + $taxableBonusTotal;
-        $taxableGrossPay = $basicPay + $holidayPay + $totalOtPay + $taxableSupplementalIncome + $salaryAdjustment;
+        $taxableGrossPay = $basicPay + $holidayPay + $totalOtPay +
+            $taxableSupplementalIncome + $salaryAdjustment - $leaveWithoutPayDeduction;
         $taxableIncome = max($taxableGrossPay - $sss - $philhealth - $pagibig, 0);
         $withholdingTax = $this->calculateWithholdingTax($taxableIncome, $payroll->period_end, $isSemiMonthly);
 
@@ -839,6 +883,10 @@ class PayrollService
             }
         }
 
+        if ($leaveWithoutPayDeduction > 0) {
+            $otherDeductions += $leaveWithoutPayDeduction;
+        }
+
         // Keep cash advance deductions from consuming more than available earnings.
         // This still respects each deduction balance, but avoids over-deducting take-home pay.
         $nonCashDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
@@ -869,6 +917,25 @@ class PayrollService
             ];
         }
 
+        if ($leaveWithoutPayDeduction > 0) {
+            foreach ($leaveOutEntries as $entry) {
+                $entryAmount = round((float) ($entry['deduction_amount'] ?? 0), 2);
+                if ($entryAmount <= 0) {
+                    continue;
+                }
+
+                $deductionsBreakdown[] = [
+                    'type' => 'leave_without_pay',
+                    'name' => 'Leave Without Pay',
+                    'amount' => $entryAmount,
+                    'leave_out_id' => (int) ($entry['leave_out_id'] ?? 0),
+                    'leave_id' => (int) ($entry['leave_id'] ?? 0),
+                    'days' => (float) ($entry['applied_days'] ?? 0),
+                    'hours' => (float) ($entry['applied_hours'] ?? 0),
+                ];
+            }
+        }
+
         // Total deductions (including withholding tax and undertime deduction)
         $totalDeductions = $sss + $philhealth + $pagibig + $loanDeduction +
             $withholdingTax + $employeeSavings + $cashAdvance + $employeeDeductions +
@@ -882,7 +949,7 @@ class PayrollService
             'employee_id' => $employee->id,
             'rate' => $rate,
             'days_worked' => $totalDaysWorked,
-            'regular_days' => $regularDays,
+            'regular_days' => $regularDaysForDisplay,
             'holiday_days' => $holidayDays,
             'holiday_pay' => $holidayPay,
             'basic_pay' => $basicPay,
@@ -912,7 +979,276 @@ class PayrollService
             'net_pay' => $netPay,
             '_adjustment_ids' => $oneTimeAdjustmentIds, // Internal: mark consumed after successful payroll save
             '_bonus_ids' => $bonusIds, // Internal: collected by processPayroll to mark bonuses as paid
+            '_leave_out_entries' => $leaveOutEntries, // Internal: leave_out -> payroll linkage + lock operation
         ];
+    }
+
+    private function calculateLeavePayrollAdjustments(
+        Payroll $payroll,
+        Employee $employee,
+        float $dailyRate,
+        float $hourlyRate,
+        float $standardHours
+    ): array {
+        $approvedLeaves = $this->resolveApprovedLeavesForPayroll($payroll, $employee);
+
+        if ($approvedLeaves->isEmpty()) {
+            return [
+                'paid_days' => 0,
+                'unpaid_days' => 0,
+                'unpaid_deduction' => 0,
+                'leave_out_entries' => [],
+            ];
+        }
+
+        $paidDays = 0.0;
+        $unpaidDays = 0.0;
+        $unpaidDeduction = 0.0;
+        $leaveOutEntries = [];
+
+        foreach ($approvedLeaves as $leave) {
+            $coverage = $this->resolveLeaveCoverageForPayroll($leave, $payroll, $standardHours);
+            $dayEquivalent = (float) ($coverage['day_equivalent'] ?? 0);
+            $appliedHours = (float) ($coverage['hours'] ?? 0);
+
+            if ($dayEquivalent <= 0 && $appliedHours <= 0) {
+                continue;
+            }
+
+            if ($leave->isWithPay()) {
+                $paidDays += $dayEquivalent;
+                continue;
+            }
+
+            $leaveOut = $this->ensureLeaveOutRecord($leave);
+            if (!$leaveOut) {
+                continue;
+            }
+
+            $alreadyLinked = $leaveOut->relationLoaded('payrollLinks')
+                ? $leaveOut->payrollLinks->isNotEmpty()
+                : $leaveOut->payrollLinks()->exists();
+
+            if ($alreadyLinked) {
+                continue;
+            }
+
+            $durationType = (string) ($coverage['duration_type'] ?? 'full_day');
+            $deductionAmount = $durationType === 'hours'
+                ? round($appliedHours * $hourlyRate, 2)
+                : round($dayEquivalent * $dailyRate, 2);
+
+            if ($deductionAmount <= 0 && $dayEquivalent <= 0 && $appliedHours <= 0) {
+                continue;
+            }
+
+            $unpaidDays += $dayEquivalent;
+            $unpaidDeduction += $deductionAmount;
+
+            $leaveOutEntries[] = [
+                'leave_id' => (int) $leave->id,
+                'leave_out_id' => (int) $leaveOut->id,
+                'applied_days' => round($dayEquivalent, 2),
+                'applied_hours' => round($appliedHours, 2),
+                'deduction_amount' => $deductionAmount,
+            ];
+        }
+
+        return [
+            'paid_days' => round($paidDays, 2),
+            'unpaid_days' => round($unpaidDays, 2),
+            'unpaid_deduction' => round($unpaidDeduction, 2),
+            'leave_out_entries' => $leaveOutEntries,
+        ];
+    }
+
+    private function resolveApprovedLeavesForPayroll(Payroll $payroll, Employee $employee)
+    {
+        if ($employee->relationLoaded('leaves')) {
+            $periodStart = Carbon::parse($payroll->period_start)->toDateString();
+            $periodEnd = Carbon::parse($payroll->period_end)->toDateString();
+
+            return $employee->leaves->filter(function ($leave) use ($periodStart, $periodEnd) {
+                if ((string) ($leave->status ?? '') !== 'approved') {
+                    return false;
+                }
+
+                if ((bool) ($leave->is_locked ?? false)) {
+                    return false;
+                }
+
+                $leaveStart = optional($leave->leave_date_from)->toDateString();
+                $leaveEnd = optional($leave->leave_date_to)->toDateString();
+
+                if (!$leaveStart || !$leaveEnd) {
+                    return false;
+                }
+
+                return $leaveEnd >= $periodStart && $leaveStart <= $periodEnd;
+            })->values();
+        }
+
+        return EmployeeLeave::query()
+            ->with([
+                'leaveType:id,is_paid',
+                'leaveOut.payrollLinks:id,employee_leave_out_id,payroll_item_id,payroll_id',
+            ])
+            ->where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->whereDate('leave_date_to', '>=', $payroll->period_start)
+            ->whereDate('leave_date_from', '<=', $payroll->period_end)
+            ->where(function ($query) {
+                $query->whereNull('is_locked')
+                    ->orWhere('is_locked', false);
+            })
+            ->get();
+    }
+
+    private function resolveLeaveCoverageForPayroll(EmployeeLeave $leave, Payroll $payroll, float $standardHours): array
+    {
+        $periodStart = Carbon::parse($payroll->period_start)->startOfDay();
+        $periodEnd = Carbon::parse($payroll->period_end)->startOfDay();
+        $leaveStart = Carbon::parse($leave->leave_date_from)->startOfDay();
+        $leaveEnd = Carbon::parse($leave->leave_date_to)->startOfDay();
+
+        $overlapStart = $leaveStart->greaterThan($periodStart) ? $leaveStart : $periodStart;
+        $overlapEnd = $leaveEnd->lessThan($periodEnd) ? $leaveEnd : $periodEnd;
+
+        if ($overlapEnd->lt($overlapStart)) {
+            return [
+                'duration_type' => (string) ($leave->duration_type ?? 'full_day'),
+                'day_equivalent' => 0,
+                'hours' => 0,
+            ];
+        }
+
+        $durationType = in_array((string) $leave->duration_type, ['full_day', 'half_day', 'hours'], true)
+            ? (string) $leave->duration_type
+            : 'full_day';
+
+        if ($durationType === 'half_day') {
+            return [
+                'duration_type' => $durationType,
+                'day_equivalent' => 0.5,
+                'hours' => round($standardHours / 2, 2),
+            ];
+        }
+
+        if ($durationType === 'hours') {
+            $hours = max((float) ($leave->duration_hours ?? 0), 0);
+
+            return [
+                'duration_type' => $durationType,
+                'day_equivalent' => round($standardHours > 0 ? ($hours / $standardHours) : 0, 2),
+                'hours' => round($hours, 2),
+            ];
+        }
+
+        $overlapDays = $overlapStart->diffInDays($overlapEnd) + 1;
+
+        return [
+            'duration_type' => 'full_day',
+            'day_equivalent' => (float) $overlapDays,
+            'hours' => round($overlapDays * $standardHours, 2),
+        ];
+    }
+
+    private function ensureLeaveOutRecord(EmployeeLeave $leave): ?EmployeeLeaveOut
+    {
+        $leaveOut = EmployeeLeaveOut::updateOrCreate(
+            ['employee_leave_id' => $leave->id],
+            [
+                'employee_id' => $leave->employee_id,
+                'leave_type_id' => $leave->leave_type_id,
+                'leave_date_from' => optional($leave->leave_date_from)->toDateString(),
+                'leave_date_to' => optional($leave->leave_date_to)->toDateString(),
+                'duration_type' => $leave->duration_type ?? 'full_day',
+                'quantity_days' => (float) ($leave->number_of_days ?? 0),
+                'quantity_hours' => (float) ($leave->duration_hours ?? 0),
+                'created_by' => $leave->approved_by,
+            ]
+        );
+
+        return $leaveOut->loadMissing('payrollLinks:id,employee_leave_out_id,payroll_item_id,payroll_id');
+    }
+
+    public function recordLeaveOutPayrollLinks(Payroll $payroll, PayrollItem $payrollItem, array $leaveOutEntries): void
+    {
+        if (empty($leaveOutEntries)) {
+            return;
+        }
+
+        $normalizedEntries = collect($leaveOutEntries)
+            ->map(function ($entry) {
+                return [
+                    'leave_out_id' => (int) ($entry['leave_out_id'] ?? 0),
+                    'leave_id' => (int) ($entry['leave_id'] ?? 0),
+                    'deduction_amount' => round((float) ($entry['deduction_amount'] ?? 0), 2),
+                    'applied_days' => round((float) ($entry['applied_days'] ?? 0), 2),
+                    'applied_hours' => round((float) ($entry['applied_hours'] ?? 0), 2),
+                ];
+            })
+            ->filter(fn($entry) => $entry['leave_out_id'] > 0)
+            ->groupBy('leave_out_id')
+            ->map(function ($group) {
+                return [
+                    'leave_out_id' => (int) $group->first()['leave_out_id'],
+                    'leave_id' => (int) $group->first()['leave_id'],
+                    'deduction_amount' => round((float) $group->sum('deduction_amount'), 2),
+                    'applied_days' => round((float) $group->sum('applied_days'), 2),
+                    'applied_hours' => round((float) $group->sum('applied_hours'), 2),
+                ];
+            })
+            ->values();
+
+        if ($normalizedEntries->isEmpty()) {
+            return;
+        }
+
+        $leaveOutIds = $normalizedEntries->pluck('leave_out_id')->all();
+        $existingLinks = PayrollItemLeaveOut::whereIn('employee_leave_out_id', $leaveOutIds)
+            ->pluck('employee_leave_out_id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+        $existingLinkMap = array_flip($existingLinks);
+
+        $lockedLeaveIds = [];
+
+        foreach ($normalizedEntries as $entry) {
+            $leaveOutId = (int) $entry['leave_out_id'];
+            if (isset($existingLinkMap[$leaveOutId])) {
+                continue;
+            }
+
+            PayrollItemLeaveOut::create([
+                'employee_leave_out_id' => $leaveOutId,
+                'payroll_item_id' => $payrollItem->id,
+                'payroll_id' => $payroll->id,
+                'deduction_amount' => $entry['deduction_amount'],
+                'applied_days' => $entry['applied_days'],
+                'applied_hours' => $entry['applied_hours'],
+            ]);
+
+            if ((int) $entry['leave_id'] > 0) {
+                $lockedLeaveIds[] = (int) $entry['leave_id'];
+            }
+        }
+
+        $lockedLeaveIds = collect($lockedLeaveIds)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (!empty($lockedLeaveIds)) {
+            EmployeeLeave::query()
+                ->whereIn('id', $lockedLeaveIds)
+                ->update([
+                    'is_locked' => true,
+                    'locked_by_payroll_id' => $payroll->id,
+                    'locked_at' => now(),
+                ]);
+        }
     }
 
     /**

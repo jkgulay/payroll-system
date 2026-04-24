@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PayrollItem extends Model
 {
@@ -107,5 +108,10 @@ class PayrollItem extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function leaveOutLinks(): HasMany
+    {
+        return $this->hasMany(PayrollItemLeaveOut::class);
     }
 }
