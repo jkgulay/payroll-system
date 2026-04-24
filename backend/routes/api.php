@@ -395,7 +395,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/leaves/stats', [App\Http\Controllers\Api\LeaveController::class, 'stats'])
         ->middleware('role:admin,hr');
     Route::post('/leaves/set-leave', [App\Http\Controllers\Api\LeaveController::class, 'setLeave'])
-        ->middleware('role:admin,hr');
+        ->middleware('role:admin,hr,payrollist');
 
     Route::apiResource('leaves', App\Http\Controllers\Api\LeaveController::class)
         ->only(['index'])

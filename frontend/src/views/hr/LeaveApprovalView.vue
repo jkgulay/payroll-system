@@ -70,7 +70,7 @@
     <div class="modern-card">
       <div class="filters-section">
         <v-row align="center" class="mb-0">
-          <v-col cols="12" md="3">
+          <v-col cols="12" md="2">
             <v-select
               v-model="filters.status"
               :items="statusOptions"
@@ -96,7 +96,19 @@
               @update:model-value="onFilterChange"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="4">
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="filters.is_with_pay"
+              :items="compensationFilterOptions"
+              label="Compensation"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+              clearable
+              @update:model-value="onFilterChange"
+            ></v-select>
+          </v-col>
+          <v-col cols="12" md="3">
             <v-text-field
               v-model="search"
               label="Search by employee"
@@ -107,8 +119,7 @@
               clearable
             ></v-text-field>
           </v-col>
-          <v-spacer></v-spacer>
-          <v-col cols="auto">
+          <v-col cols="12" md="1" class="d-flex justify-end">
             <v-btn
               color="#ED985F"
               variant="tonal"
@@ -151,6 +162,12 @@
           <template #item.leave_type="{ item }">
             <v-chip size="small" color="primary">
               {{ item.leave_type?.name }}
+            </v-chip>
+          </template>
+
+          <template #item.is_with_pay="{ item }">
+            <v-chip size="small" :color="getLeaveCompensationColor(item)">
+              {{ getLeaveCompensationLabel(item) }}
             </v-chip>
           </template>
 
@@ -267,6 +284,13 @@
           <div class="detail-row">
             <div class="detail-label">Leave Type</div>
             <div class="detail-value">{{ selectedLeave.leave_type?.name }}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-label">Compensation</div>
+            <div class="detail-value">
+              {{ getLeaveCompensationLabel(selectedLeave) }}
+            </div>
           </div>
 
           <div class="detail-row">
@@ -414,6 +438,13 @@
               >
             </div>
             <div class="info-row">
+              <v-icon size="16" color="#10b981">mdi-cash-check</v-icon>
+              <span class="info-label">Compensation:</span>
+              <span class="info-value">
+                {{ getLeaveCompensationLabel(selectedLeave) }}
+              </span>
+            </div>
+            <div class="info-row">
               <v-icon size="16" color="#10b981">mdi-calendar-clock</v-icon>
               <span class="info-label">Dates:</span>
               <span class="info-value">
@@ -422,6 +453,22 @@
               </span>
             </div>
           </div>
+
+          <div class="form-field-label mt-3">
+            <v-icon size="16" color="#10b981">mdi-cash-check</v-icon>
+            <span>Set Compensation <span class="required">*</span></span>
+          </div>
+          <v-select
+            v-model="approveData.is_with_pay"
+            :items="compensationOptions"
+            item-title="title"
+            item-value="value"
+            placeholder="Select compensation"
+            variant="outlined"
+            density="comfortable"
+            color="#10b981"
+            hide-details
+          ></v-select>
 
           <div class="form-field-label">
             <v-icon size="16" color="#10b981">mdi-note-text</v-icon>
@@ -447,7 +494,7 @@
           <v-btn
             color="success"
             variant="flat"
-            :disabled="approving"
+            :disabled="approving || !hasApproveCompensation"
             @click="confirmApprove"
           >
             <v-progress-circular
@@ -592,7 +639,7 @@
                 ></v-autocomplete>
               </v-col>
 
-              <v-col cols="12">
+              <v-col cols="12" md="6">
                 <div class="form-field-label">
                   <v-icon size="16" color="#ed985f">mdi-calendar-text</v-icon>
                   <span>Leave Type <span class="required">*</span></span>
@@ -604,6 +651,26 @@
                   item-value="id"
                   placeholder="Select leave type"
                   :rules="[setLeaveRules.required]"
+                  variant="outlined"
+                  density="comfortable"
+                  color="#ed985f"
+                  hide-details="auto"
+                  @update:model-value="onSetLeaveTypeChange"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <div class="form-field-label">
+                  <v-icon size="16" color="#ed985f">mdi-cash-check</v-icon>
+                  <span>Compensation <span class="required">*</span></span>
+                </div>
+                <v-select
+                  v-model="setLeaveForm.is_with_pay"
+                  :items="compensationOptions"
+                  item-title="title"
+                  item-value="value"
+                  placeholder="Select compensation"
+                  :rules="[setLeaveRules.requiredBoolean]"
                   variant="outlined"
                   density="comfortable"
                   color="#ed985f"
@@ -776,10 +843,12 @@ let searchDebounceTimeout = null;
 const filters = ref({
   status: null,
   leave_type_id: null,
+  is_with_pay: null,
 });
 
 const approveData = ref({
   remarks: "",
+  is_with_pay: null,
 });
 
 const rejectData = ref({
@@ -789,6 +858,7 @@ const rejectData = ref({
 const setLeaveForm = ref({
   employee_id: null,
   leave_type_id: null,
+  is_with_pay: null,
   leave_date_from: "",
   leave_date_to: "",
   reason: "",
@@ -865,6 +935,7 @@ const employeeOptions = computed(() => {
 
 const setLeaveRules = {
   required: (v) => !!v || "This field is required",
+  requiredBoolean: (v) => v === true || v === false || "This field is required",
   endDateAfterStart: (v) => {
     if (!setLeaveForm.value.leave_date_from || !v) return true;
     return (
@@ -878,6 +949,7 @@ const setLeaveRules = {
 const headers = [
   { title: "Employee", key: "employee", sortable: false },
   { title: "Leave Type", key: "leave_type", sortable: false },
+  { title: "Compensation", key: "is_with_pay", sortable: false },
   { title: "From Date", key: "leave_date_from", sortable: false },
   { title: "To Date", key: "leave_date_to", sortable: false },
   { title: "Days", key: "number_of_days", sortable: false, align: "center" },
@@ -885,11 +957,99 @@ const headers = [
   { title: "Actions", key: "actions", sortable: false, align: "center" },
 ];
 
+const compensationOptions = [
+  { title: "With Pay", value: true },
+  { title: "Without Pay", value: false },
+];
+
+const getLeaveTypeDefaultCompensation = (leaveTypeId) => {
+  const leaveType = leaveTypes.value.find(
+    (item) => Number(item.id) === Number(leaveTypeId),
+  );
+
+  if (!leaveType || typeof leaveType.is_paid !== "boolean") {
+    return null;
+  }
+
+  return leaveType.is_paid;
+};
+
+const onSetLeaveTypeChange = (leaveTypeId) => {
+  const isWithPayDefault = getLeaveTypeDefaultCompensation(leaveTypeId);
+  if (isWithPayDefault !== null) {
+    setLeaveForm.value.is_with_pay = isWithPayDefault;
+  }
+};
+
+const resolveLeaveWithPay = (leave) => {
+  if (!leave) {
+    return null;
+  }
+
+  if (leave.status !== "approved") {
+    return null;
+  }
+
+  if (leave?.is_with_pay === true || leave?.is_with_pay === false) {
+    return leave.is_with_pay;
+  }
+
+  if (leave?.leave_type && typeof leave.leave_type.is_paid === "boolean") {
+    return leave.leave_type.is_paid;
+  }
+
+  return null;
+};
+
+const getLeaveCompensationLabel = (leave) => {
+  const compensationState = resolveLeaveWithPay(leave);
+
+  if (compensationState === true) {
+    return "With Pay";
+  }
+
+  if (compensationState === false) {
+    return "Without Pay";
+  }
+
+  if (leave?.status === "pending") {
+    return "Pending Decision";
+  }
+
+  return "N/A";
+};
+
+const getLeaveCompensationColor = (leave) => {
+  const compensationState = resolveLeaveWithPay(leave);
+
+  if (compensationState === true) {
+    return "success";
+  }
+
+  if (compensationState === false) {
+    return "warning";
+  }
+
+  return "grey";
+};
+
+const hasApproveCompensation = computed(() => {
+  return (
+    approveData.value.is_with_pay === true ||
+    approveData.value.is_with_pay === false
+  );
+});
+
 const statusOptions = [
   { title: "All", value: null },
   { title: "Pending", value: "pending" },
   { title: "Approved", value: "approved" },
   { title: "Rejected", value: "rejected" },
+];
+
+const compensationFilterOptions = [
+  { title: "With Pay", value: true },
+  { title: "Without Pay", value: false },
 ];
 
 // Methods
@@ -911,6 +1071,12 @@ const loadLeaves = async (page = currentPage.value) => {
     if (filters.value.leave_type_id) {
       listParams.leave_type_id = filters.value.leave_type_id;
     }
+    if (
+      filters.value.is_with_pay === true ||
+      filters.value.is_with_pay === false
+    ) {
+      listParams.is_with_pay = filters.value.is_with_pay;
+    }
     if (searchTerm) {
       listParams.search = searchTerm;
     }
@@ -918,6 +1084,12 @@ const loadLeaves = async (page = currentPage.value) => {
     const statsParams = {};
     if (filters.value.leave_type_id) {
       statsParams.leave_type_id = filters.value.leave_type_id;
+    }
+    if (
+      filters.value.is_with_pay === true ||
+      filters.value.is_with_pay === false
+    ) {
+      statsParams.is_with_pay = filters.value.is_with_pay;
     }
     if (searchTerm) {
       statsParams.search = searchTerm;
@@ -1011,6 +1183,7 @@ const resetSetLeaveForm = () => {
   setLeaveForm.value = {
     employee_id: null,
     leave_type_id: null,
+    is_with_pay: null,
     leave_date_from: "",
     leave_date_to: "",
     reason: "",
@@ -1047,6 +1220,7 @@ const submitSetLeave = async () => {
     await leaveService.setLeave({
       employee_id: setLeaveForm.value.employee_id,
       leave_type_id: setLeaveForm.value.leave_type_id,
+      is_with_pay: setLeaveForm.value.is_with_pay,
       leave_date_from: setLeaveForm.value.leave_date_from,
       leave_date_to: setLeaveForm.value.leave_date_to,
       reason: setLeaveForm.value.reason,
@@ -1073,17 +1247,28 @@ const viewLeave = (leave) => {
 
 const openApproveDialog = (leave) => {
   selectedLeave.value = leave;
-  approveData.value = { remarks: "" };
+  approveData.value = {
+    remarks: "",
+    is_with_pay: null,
+  };
   showViewDialog.value = false;
   showApproveDialog.value = true;
 };
 
 const closeApproveDialog = () => {
   showApproveDialog.value = false;
-  approveData.value = { remarks: "" };
+  approveData.value = {
+    remarks: "",
+    is_with_pay: null,
+  };
 };
 
 const confirmApprove = async () => {
+  if (!hasApproveCompensation.value) {
+    showSnackbar("Please set compensation before approving", "error");
+    return;
+  }
+
   try {
     approving.value = true;
     await leaveService.approveLeave(selectedLeave.value.id, approveData.value);

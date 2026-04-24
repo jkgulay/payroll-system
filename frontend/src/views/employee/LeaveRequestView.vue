@@ -100,6 +100,12 @@
             </v-chip>
           </template>
 
+          <template v-slot:item.is_with_pay="{ item }">
+            <v-chip size="small" :color="getLeaveCompensationColor(item)" dark>
+              {{ getLeaveCompensationLabel(item) }}
+            </v-chip>
+          </template>
+
           <template v-slot:item.leave_date_from="{ item }">
             {{ formatDate(item.leave_date_from) }}
           </template>
@@ -344,6 +350,13 @@
           </div>
 
           <div class="detail-row">
+            <div class="detail-label">Compensation</div>
+            <div class="detail-value">
+              {{ getLeaveCompensationLabel(selectedLeave) }}
+            </div>
+          </div>
+
+          <div class="detail-row">
             <div class="detail-label">Number of Days</div>
             <div class="detail-value">
               {{ selectedLeave.number_of_days }} day{{
@@ -535,6 +548,7 @@ const filteredLeaves = computed(() => {
       const leaveType = leave.leave_type?.name?.toLowerCase() || "";
       const reason = leave.reason?.toLowerCase() || "";
       const status = leave.status?.toLowerCase() || "";
+      const compensation = getLeaveCompensationLabel(leave).toLowerCase();
       const dateFrom = formatDate(leave.leave_date_from).toLowerCase();
       const dateTo = formatDate(leave.leave_date_to).toLowerCase();
 
@@ -542,6 +556,7 @@ const filteredLeaves = computed(() => {
         leaveType.includes(searchLower) ||
         reason.includes(searchLower) ||
         status.includes(searchLower) ||
+        compensation.includes(searchLower) ||
         dateFrom.includes(searchLower) ||
         dateTo.includes(searchLower)
       );
@@ -553,6 +568,7 @@ const filteredLeaves = computed(() => {
 // Table headers
 const headers = [
   { title: "Leave Type", key: "leave_type", sortable: true },
+  { title: "Compensation", key: "is_with_pay", sortable: false },
   { title: "From Date", key: "leave_date_from", sortable: true },
   { title: "To Date", key: "leave_date_to", sortable: true },
   { title: "Days", key: "number_of_days", sortable: true, align: "center" },
@@ -582,6 +598,58 @@ const rules = {
       v >= formData.value.leave_date_from || "End date must be after start date"
     );
   },
+};
+
+const resolveLeaveWithPay = (leave) => {
+  if (!leave) {
+    return null;
+  }
+
+  if (leave.status !== "approved") {
+    return null;
+  }
+
+  if (leave?.is_with_pay === true || leave?.is_with_pay === false) {
+    return leave.is_with_pay;
+  }
+
+  if (leave?.leave_type && typeof leave.leave_type.is_paid === "boolean") {
+    return leave.leave_type.is_paid;
+  }
+
+  return null;
+};
+
+const getLeaveCompensationLabel = (leave) => {
+  const compensationState = resolveLeaveWithPay(leave);
+
+  if (compensationState === true) {
+    return "With Pay";
+  }
+
+  if (compensationState === false) {
+    return "Without Pay";
+  }
+
+  if (leave?.status === "pending") {
+    return "Pending Decision";
+  }
+
+  return "N/A";
+};
+
+const getLeaveCompensationColor = (leave) => {
+  const compensationState = resolveLeaveWithPay(leave);
+
+  if (compensationState === true) {
+    return "#4CAF50";
+  }
+
+  if (compensationState === false) {
+    return "#FF9800";
+  }
+
+  return "#9E9E9E";
 };
 
 // Methods

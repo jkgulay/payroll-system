@@ -209,6 +209,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeLeaveCredit::class);
     }
 
+    public function leaveOuts(): HasMany
+    {
+        return $this->hasMany(EmployeeLeaveOut::class);
+    }
+
     public function thirteenthMonthPay(): HasMany
     {
         return $this->hasMany(ThirteenthMonthPay::class);

@@ -423,8 +423,9 @@ class PunchRecordImportService
     {
         $timeString = $timestamp->format('H:i:s');
 
-        // If punch is within 2 hours of scheduled time_out, just set as time_out (not OT)
-        if ($timestamp->lte($scheduledTimeOut->copy()->addMinutes($smartDetectionMinutes))) {
+        // If punch is before the split threshold, keep it as regular time_out.
+        // At exactly the threshold (e.g., +2h), split to OT.
+        if ($timestamp->lt($scheduledTimeOut->copy()->addMinutes($smartDetectionMinutes))) {
             $attendance->time_out = $timeString;
             return false;
         }
@@ -583,7 +584,7 @@ class PunchRecordImportService
                     $otAutoSplit = true;
                 }
             } elseif ($attendance->time_out) {
-                if ($timestamp->gt($scheduledTimeOut->copy()->addMinutes($smartDetectionMinutes))) {
+                if ($timestamp->gte($scheduledTimeOut->copy()->addMinutes($smartDetectionMinutes))) {
                     $actualTimeOut = Carbon::parse($dateStr . ' ' . $attendance->time_out);
                     if ($actualTimeOut->gt($scheduledTimeOut) && !$attendance->ot_time_in) {
                         $attendance->time_out = $scheduledTimeOut->format('H:i:s');

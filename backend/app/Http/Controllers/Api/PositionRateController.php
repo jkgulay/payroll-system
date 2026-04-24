@@ -39,14 +39,16 @@ class PositionRateController extends Controller
 
         $positionRates = $query->orderBy('position_name')->get();
 
+        $referencePeriodColumn = SalaryAdjustment::referencePeriodColumn();
         $pendingByPositionRate = [];
         $pendingRequests = SalaryAdjustment::query()
-            ->select(['id', 'reference_period', 'created_at'])
+            ->select(['id', 'created_at'])
+            ->addSelect(DB::raw($referencePeriodColumn . ' as reference_period'))
             ->where('status', 'pending')
-            ->where(function ($query) {
+            ->where(function ($query) use ($referencePeriodColumn) {
                 $query
-                    ->where('reference_period', 'like', 'APPROVAL:POSITION_RATE_UPDATE:%')
-                    ->orWhere('reference_period', 'like', 'APPROVAL:POSITION_RATE_BULK_UPDATE:%');
+                    ->where($referencePeriodColumn, 'like', 'APPROVAL:POSITION_RATE_UPDATE:%')
+                    ->orWhere($referencePeriodColumn, 'like', 'APPROVAL:POSITION_RATE_BULK_UPDATE:%');
             })
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -464,8 +466,10 @@ class PositionRateController extends Controller
 
     private function findPendingRateApprovalRequest(string $referencePeriod): ?SalaryAdjustment
     {
+        $referencePeriodColumn = SalaryAdjustment::referencePeriodColumn();
+
         return SalaryAdjustment::query()
-            ->where('reference_period', $referencePeriod)
+            ->where($referencePeriodColumn, $referencePeriod)
             ->where('status', 'pending')
             ->latest('id')
             ->first();

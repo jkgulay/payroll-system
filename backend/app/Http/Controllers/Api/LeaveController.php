@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeLeave;
+use App\Models\EmployeeLeaveOut;
 use App\Models\Employee;
 use App\Models\LeaveType;
 use App\Models\AuditLog;
@@ -45,6 +46,11 @@ class LeaveController extends Controller
         return in_array($user->role, ['admin', 'hr'], true);
     }
 
+    private function canCreateLeaveForEmployees($user): bool
+    {
+        return in_array($user->role, ['admin', 'hr', 'payrollist'], true);
+    }
+
     private function canUseMyLeavePortal($user): bool
     {
         return in_array($user->role, ['employee', 'hr', 'payrollist'], true);
@@ -73,6 +79,165 @@ class LeaveController extends Controller
         return null;
     }
 
+    private function ensureLeaveEditable(EmployeeLeave $leave)
+    {
+        if ((bool) ($leave->is_locked ?? false)) {
+            return response()->json([
+                'message' => 'This leave record is locked because it has been used in payroll and can no longer be modified.'
+            ], 422);
+        }
+
+        return null;
+    }
+
+    private function ensureCanSetLeaveCompensation($user, Request $request)
+    {
+        if (!$request->has('is_with_pay')) {
+            return null;
+        }
+
+        if (!$this->isLeaveManager($user)) {
+            return response()->json([
+                'message' => 'Unauthorized. Only HR/Admin can set leave compensation.'
+            ], 403);
+        }
+
+        return null;
+    }
+
+    private function resolveLeaveCompensationFlag(Request $request, int $leaveTypeId): bool
+    {
+        if ($request->has('is_with_pay')) {
+            return filter_var($request->input('is_with_pay'), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? false;
+        }
+
+        return (bool) LeaveType::whereKey($leaveTypeId)->value('is_paid');
+    }
+
+    private function deriveLeaveUnits(string $leaveDateFrom, string $leaveDateTo, string $durationType, ?float $durationHours): array
+    {
+        $startDate = Carbon::parse($leaveDateFrom);
+        $endDate = Carbon::parse($leaveDateTo);
+        $standardHours = max((float) config('payroll.standard_hours_per_day', 8), 1);
+
+        if ($durationType === 'half_day') {
+            return [
+                'number_of_days' => 0.5,
+                'duration_hours' => round($standardHours / 2, 2),
+            ];
+        }
+
+        if ($durationType === 'hours') {
+            $hours = max((float) ($durationHours ?? 0), 0);
+
+            return [
+                'number_of_days' => round($hours / $standardHours, 2),
+                'duration_hours' => round($hours, 2),
+            ];
+        }
+
+        return [
+            'number_of_days' => (float) ($startDate->diffInDays($endDate) + 1),
+            'duration_hours' => null,
+        ];
+    }
+
+    private function validateDurationPayload($validator, Request $request): void
+    {
+        $validator->after(function ($validator) use ($request) {
+            $leaveDateFrom = $request->input('leave_date_from');
+            $leaveDateTo = $request->input('leave_date_to');
+            $durationType = (string) $request->input('duration_type', 'full_day');
+            $durationHours = $request->input('duration_hours');
+            $standardHours = max((float) config('payroll.standard_hours_per_day', 8), 1);
+
+            if (!$leaveDateFrom || !$leaveDateTo) {
+                return;
+            }
+
+            if (Carbon::parse($leaveDateTo)->lt(Carbon::parse($leaveDateFrom))) {
+                $validator->errors()->add(
+                    'leave_date_to',
+                    'The leave date to must be a date after or equal to leave date from.'
+                );
+            }
+
+            if (in_array($durationType, ['half_day', 'hours'], true) && $leaveDateFrom !== $leaveDateTo) {
+                $validator->errors()->add(
+                    'leave_date_to',
+                    'Half-day and hourly leave requests must use the same start and end date.'
+                );
+            }
+
+            if ($durationType === 'hours') {
+                if ($durationHours === null || $durationHours === '') {
+                    $validator->errors()->add('duration_hours', 'Duration hours is required for hourly leave requests.');
+                    return;
+                }
+
+                $hours = (float) $durationHours;
+                if ($hours <= 0) {
+                    $validator->errors()->add('duration_hours', 'Duration hours must be greater than zero.');
+                }
+
+                if ($hours > $standardHours) {
+                    $validator->errors()->add(
+                        'duration_hours',
+                        'Duration hours must not exceed the configured standard hours per day.'
+                    );
+                }
+            }
+        });
+    }
+
+    private function syncLeaveOutForApprovedLeave(EmployeeLeave $leave, ?int $createdBy = null): void
+    {
+        if ($leave->status !== 'approved') {
+            return;
+        }
+
+        if ($leave->isWithPay()) {
+            $this->deleteUnusedLeaveOutForLeave($leave);
+            return;
+        }
+
+        $leaveOut = EmployeeLeaveOut::updateOrCreate(
+            ['employee_leave_id' => $leave->id],
+            [
+                'employee_id' => $leave->employee_id,
+                'leave_type_id' => $leave->leave_type_id,
+                'leave_date_from' => optional($leave->leave_date_from)->toDateString(),
+                'leave_date_to' => optional($leave->leave_date_to)->toDateString(),
+                'duration_type' => $leave->duration_type ?? 'full_day',
+                'quantity_days' => (float) ($leave->number_of_days ?? 0),
+                'quantity_hours' => (float) ($leave->duration_hours ?? 0),
+                'created_by' => $createdBy,
+            ]
+        );
+
+        if (!$leaveOut->created_by && $createdBy) {
+            $leaveOut->created_by = $createdBy;
+            $leaveOut->save();
+        }
+    }
+
+    private function deleteUnusedLeaveOutForLeave(EmployeeLeave $leave): void
+    {
+        $leaveOut = $leave->relationLoaded('leaveOut')
+            ? $leave->leaveOut
+            : $leave->leaveOut()->first();
+
+        if (!$leaveOut) {
+            return;
+        }
+
+        if ($leaveOut->payrollLinks()->exists()) {
+            return;
+        }
+
+        $leaveOut->delete();
+    }
+
     private function applyListFilters($query, Request $request, bool $includeStatus = true)
     {
         if ($request->filled('employee_id')) {
@@ -85,6 +250,10 @@ class LeaveController extends Controller
 
         if ($request->filled('leave_type_id')) {
             $query->where('leave_type_id', $request->input('leave_type_id'));
+        }
+
+        if ($request->filled('is_with_pay')) {
+            $query->where('is_with_pay', $request->boolean('is_with_pay'));
         }
 
         if ($request->boolean('pending_only')) {
@@ -122,7 +291,7 @@ class LeaveController extends Controller
         $perPage = (int) $request->input('per_page', 15);
         $perPage = max(1, min($perPage, 100));
 
-        $query = EmployeeLeave::with(['employee', 'leaveType', 'approvedBy']);
+        $query = EmployeeLeave::with(['employee', 'leaveType', 'approvedBy', 'leaveOut']);
 
         $this->applyListFilters($query, $request, true);
 
@@ -130,13 +299,14 @@ class LeaveController extends Controller
     }
 
     /**
-     * Manually set leave on behalf of an employee and auto-approve it.
+     * Manually set leave on behalf of an employee.
+     * Admin-created records are auto-approved; HR/payrollist records stay pending.
      */
     public function setLeave(Request $request)
     {
         $user = Auth::user();
 
-        if (!$this->isLeaveManager($user)) {
+        if (!$this->canCreateLeaveForEmployees($user)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -145,17 +315,35 @@ class LeaveController extends Controller
             'leave_type_id' => 'required|exists:leave_types,id',
             'leave_date_from' => 'required|date|after_or_equal:today',
             'leave_date_to' => 'required|date|after_or_equal:leave_date_from',
+            'duration_type' => 'nullable|in:full_day,half_day,hours',
+            'duration_hours' => 'nullable|numeric|min:0.01',
+            'is_with_pay' => 'nullable|boolean',
             'reason' => 'required|string|max:1000',
             'approval_remarks' => 'nullable|string|max:500',
         ]);
+
+        $this->validateDurationPayload($validator, $request);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $startDate = Carbon::parse($request->leave_date_from);
-        $endDate = Carbon::parse($request->leave_date_to);
-        $numberOfDays = $startDate->diffInDays($endDate) + 1;
+        $compensationError = $this->ensureCanSetLeaveCompensation($user, $request);
+        if ($compensationError) {
+            return $compensationError;
+        }
+
+        $durationType = (string) $request->input('duration_type', 'full_day');
+        $units = $this->deriveLeaveUnits(
+            $request->input('leave_date_from'),
+            $request->input('leave_date_to'),
+            $durationType,
+            $request->filled('duration_hours') ? (float) $request->input('duration_hours') : null
+        );
+        $isAutoApproved = $user->role === 'admin';
+        $isWithPay = $isAutoApproved
+            ? $this->resolveLeaveCompensationFlag($request, (int) $request->input('leave_type_id'))
+            : null;
 
         DB::beginTransaction();
 
@@ -165,22 +353,36 @@ class LeaveController extends Controller
                 'leave_type_id' => $request->input('leave_type_id'),
                 'leave_date_from' => $request->input('leave_date_from'),
                 'leave_date_to' => $request->input('leave_date_to'),
-                'number_of_days' => $numberOfDays,
+                'duration_type' => $durationType,
+                'duration_hours' => $units['duration_hours'],
+                'number_of_days' => $units['number_of_days'],
+                'is_with_pay' => $isWithPay,
                 'reason' => $request->input('reason'),
-                'status' => 'approved',
-                'approved_by' => $user->id,
-                'approved_at' => now(),
-                'approval_remarks' => $request->input('approval_remarks'),
+                'status' => $isAutoApproved ? 'approved' : 'pending',
+                'approved_by' => $isAutoApproved ? $user->id : null,
+                'approved_at' => $isAutoApproved ? now() : null,
+                'approval_remarks' => $isAutoApproved ? $request->input('approval_remarks') : null,
                 'rejection_reason' => null,
+                'is_locked' => false,
+                'locked_by_payroll_id' => null,
+                'locked_at' => null,
             ]);
 
-            // Immediately reflect today's approved leave in employee activity status.
-            $this->syncEmployeeLeaveStatus((int) $request->input('employee_id'));
+            if ($isAutoApproved) {
+                $this->syncLeaveOutForApprovedLeave($leave, (int) $user->id);
+            }
+
+            if ($isAutoApproved) {
+                // Immediately reflect today's approved leave in employee activity status.
+                $this->syncEmployeeLeaveStatus((int) $request->input('employee_id'));
+            }
 
             AuditLog::create([
                 'module' => 'leaves',
                 'action' => 'set_leave',
-                'description' => "Leave manually set and approved for employee ID {$request->input('employee_id')}",
+                'description' => $isAutoApproved
+                    ? "Leave manually set and approved for employee ID {$request->input('employee_id')}"
+                    : "Leave manually set and submitted for approval for employee ID {$request->input('employee_id')}",
                 'user_id' => $user->id,
                 'record_id' => $leave->id,
                 'new_values' => json_encode($leave->toArray()),
@@ -191,8 +393,10 @@ class LeaveController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Leave was set and approved successfully',
-                'data' => $leave->load(['employee', 'leaveType', 'approvedBy']),
+                'message' => $isAutoApproved
+                    ? 'Leave was set and approved successfully'
+                    : 'Leave was set and submitted for approval successfully',
+                'data' => $leave->load(['employee', 'leaveType', 'approvedBy', 'leaveOut']),
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -212,7 +416,7 @@ class LeaveController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $canCreateForAnotherEmployee = $this->isLeaveManager($user) && $request->filled('employee_id');
+        $canCreateForAnotherEmployee = $this->canCreateLeaveForEmployees($user) && $request->filled('employee_id');
         $employeeId = $canCreateForAnotherEmployee
             ? (int) $request->input('employee_id')
             : $this->resolveUserEmployeeId($user);
@@ -228,17 +432,34 @@ class LeaveController extends Controller
             'leave_type_id' => 'required|exists:leave_types,id',
             'leave_date_from' => 'required|date|after_or_equal:today',
             'leave_date_to' => 'required|date|after_or_equal:leave_date_from',
+            'duration_type' => 'nullable|in:full_day,half_day,hours',
+            'duration_hours' => 'nullable|numeric|min:0.01',
+            'is_with_pay' => 'nullable|boolean',
             'reason' => 'required|string|max:1000',
         ]);
+
+        $this->validateDurationPayload($validator, $request);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Calculate number of days (excluding weekends - optional)
-        $startDate = Carbon::parse($request->leave_date_from);
-        $endDate = Carbon::parse($request->leave_date_to);
-        $numberOfDays = $startDate->diffInDays($endDate) + 1;
+        $compensationError = $this->ensureCanSetLeaveCompensation($user, $request);
+        if ($compensationError) {
+            return $compensationError;
+        }
+
+        $durationType = (string) $request->input('duration_type', 'full_day');
+        $units = $this->deriveLeaveUnits(
+            $request->input('leave_date_from'),
+            $request->input('leave_date_to'),
+            $durationType,
+            $request->filled('duration_hours') ? (float) $request->input('duration_hours') : null
+        );
+        $isAutoApproved = $user->role === 'admin';
+        $isWithPay = $isAutoApproved
+            ? $this->resolveLeaveCompensationFlag($request, (int) $request->input('leave_type_id'))
+            : null;
 
         DB::beginTransaction();
 
@@ -248,19 +469,36 @@ class LeaveController extends Controller
                 'leave_type_id' => $request->leave_type_id,
                 'leave_date_from' => $request->leave_date_from,
                 'leave_date_to' => $request->leave_date_to,
-                'number_of_days' => $numberOfDays,
+                'duration_type' => $durationType,
+                'duration_hours' => $units['duration_hours'],
+                'number_of_days' => $units['number_of_days'],
+                'is_with_pay' => $isWithPay,
                 'reason' => $request->reason,
-                'status' => 'pending',
+                'status' => $isAutoApproved ? 'approved' : 'pending',
+                'approved_by' => $isAutoApproved ? $user->id : null,
+                'approved_at' => $isAutoApproved ? now() : null,
+                'approval_remarks' => null,
+                'rejection_reason' => null,
+                'is_locked' => false,
+                'locked_by_payroll_id' => null,
+                'locked_at' => null,
             ]);
+
+            if ($isAutoApproved) {
+                $this->syncLeaveOutForApprovedLeave($leave, (int) $user->id);
+                $this->syncEmployeeLeaveStatus($employeeId);
+            }
 
             // Create audit log
             AuditLog::create([
                 'module' => 'leaves',
                 'action' => 'create',
                 'description' => $canCreateForAnotherEmployee
-                    ? "Leave request created for employee ID {$employeeId}"
+                    ? ($isAutoApproved
+                        ? "Leave request created and auto-approved for employee ID {$employeeId}"
+                        : "Leave request created for employee ID {$employeeId}")
                     : (($user->role === 'employee' || $user->role === 'payrollist' || $user->role === 'hr')
-                        ? "Employee filed leave request for {$numberOfDays} day(s)"
+                        ? "Employee filed leave request for {$units['number_of_days']} day(s)"
                         : "Leave request created"),
                 'user_id' => $user->id,
                 'record_id' => $leave->id,
@@ -272,8 +510,10 @@ class LeaveController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Leave request submitted successfully',
-                'data' => $leave->load(['employee', 'leaveType'])
+                'message' => $isAutoApproved
+                    ? 'Leave request created and approved successfully'
+                    : 'Leave request submitted successfully',
+                'data' => $leave->load(['employee', 'leaveType', 'approvedBy', 'leaveOut'])
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -293,7 +533,7 @@ class LeaveController extends Controller
             return $accessError;
         }
 
-        return response()->json($leave->load(['employee', 'leaveType', 'approvedBy']));
+        return response()->json($leave->load(['employee', 'leaveType', 'approvedBy', 'leaveOut']));
     }
 
     public function update(Request $request, EmployeeLeave $leave)
@@ -305,6 +545,11 @@ class LeaveController extends Controller
             return $accessError;
         }
 
+        $lockError = $this->ensureLeaveEditable($leave);
+        if ($lockError) {
+            return $lockError;
+        }
+
         // Only pending leaves can be updated
         if ($leave->status !== 'pending') {
             return response()->json([
@@ -312,40 +557,60 @@ class LeaveController extends Controller
             ], 422);
         }
 
+        $payload = array_merge([
+            'leave_type_id' => $leave->leave_type_id,
+            'leave_date_from' => optional($leave->leave_date_from)->toDateString(),
+            'leave_date_to' => optional($leave->leave_date_to)->toDateString(),
+            'duration_type' => $leave->duration_type ?? 'full_day',
+            'duration_hours' => $leave->duration_hours,
+            'reason' => $leave->reason,
+        ], $request->all());
+
         $validator = Validator::make($request->all(), [
             'leave_type_id' => 'sometimes|exists:leave_types,id',
             'leave_date_from' => 'sometimes|date|after_or_equal:today',
             'leave_date_to' => 'sometimes|date',
+            'duration_type' => 'sometimes|in:full_day,half_day,hours',
+            'duration_hours' => 'nullable|numeric|min:0.01',
             'reason' => 'sometimes|string|max:1000',
         ]);
 
-        $validator->after(function ($validator) use ($request, $leave) {
-            $startDate = $request->input('leave_date_from', optional($leave->leave_date_from)->toDateString());
-            $endDate = $request->input('leave_date_to', optional($leave->leave_date_to)->toDateString());
-
-            if ($startDate && $endDate && Carbon::parse($endDate)->lt(Carbon::parse($startDate))) {
-                $validator->errors()->add(
-                    'leave_date_to',
-                    'The leave date to must be a date after or equal to leave date from.'
-                );
-            }
-        });
+        $this->validateDurationPayload($validator, new Request($payload));
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        if ($request->has('is_with_pay')) {
+            return response()->json([
+                'message' => 'Compensation can only be set during leave approval.'
+            ], 422);
+        }
+
         DB::beginTransaction();
 
         try {
-            $data = $request->only(['leave_type_id', 'leave_date_from', 'leave_date_to', 'reason']);
+            $durationType = (string) ($payload['duration_type'] ?? 'full_day');
+            $units = $this->deriveLeaveUnits(
+                (string) $payload['leave_date_from'],
+                (string) $payload['leave_date_to'],
+                $durationType,
+                isset($payload['duration_hours']) ? (float) $payload['duration_hours'] : null
+            );
 
-            // Recalculate days if dates changed
-            if ($request->has('leave_date_from') || $request->has('leave_date_to')) {
-                $startDate = Carbon::parse($request->leave_date_from ?? $leave->leave_date_from);
-                $endDate = Carbon::parse($request->leave_date_to ?? $leave->leave_date_to);
-                $data['number_of_days'] = $startDate->diffInDays($endDate) + 1;
-            }
+            $updatedLeaveTypeId = (int) ($payload['leave_type_id'] ?? $leave->leave_type_id);
+
+            $data = [
+                'leave_type_id' => $updatedLeaveTypeId,
+                'leave_date_from' => $payload['leave_date_from'],
+                'leave_date_to' => $payload['leave_date_to'],
+                'duration_type' => $durationType,
+                'duration_hours' => $units['duration_hours'],
+                'number_of_days' => $units['number_of_days'],
+                // Pending leave compensation remains undecided until approval.
+                'is_with_pay' => null,
+                'reason' => $payload['reason'],
+            ];
 
             $oldValues = $leave->toArray();
             $leave->update($data);
@@ -367,7 +632,7 @@ class LeaveController extends Controller
 
             return response()->json([
                 'message' => 'Leave request updated successfully',
-                'data' => $leave->load(['employee', 'leaveType'])
+                'data' => $leave->load(['employee', 'leaveType', 'leaveOut'])
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -385,6 +650,11 @@ class LeaveController extends Controller
         $accessError = $this->ensureCanAccessLeave($user, $leave);
         if ($accessError) {
             return $accessError;
+        }
+
+        $lockError = $this->ensureLeaveEditable($leave);
+        if ($lockError) {
+            return $lockError;
         }
 
         // Only pending leaves can be deleted
@@ -442,8 +712,14 @@ class LeaveController extends Controller
             ], 422);
         }
 
+        $lockError = $this->ensureLeaveEditable($leave);
+        if ($lockError) {
+            return $lockError;
+        }
+
         $validator = Validator::make($request->all(), [
             'remarks' => 'nullable|string|max:500',
+            'is_with_pay' => 'required|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -453,13 +729,21 @@ class LeaveController extends Controller
         DB::beginTransaction();
 
         try {
+            $isWithPay = $request->boolean('is_with_pay');
+
             $leave->update([
                 'status' => 'approved',
                 'approved_by' => $user->id,
                 'approved_at' => now(),
                 'approval_remarks' => $request->remarks,
                 'rejection_reason' => null,
+                'is_with_pay' => $isWithPay,
+                'is_locked' => false,
+                'locked_by_payroll_id' => null,
+                'locked_at' => null,
             ]);
+
+            $this->syncLeaveOutForApprovedLeave($leave->fresh(['leaveType', 'leaveOut']), (int) $user->id);
 
             // Instantly sync employee activity status
             $this->syncEmployeeLeaveStatus($leave->employee_id);
@@ -481,7 +765,7 @@ class LeaveController extends Controller
 
             return response()->json([
                 'message' => 'Leave request approved successfully',
-                'data' => $leave->load(['employee', 'leaveType', 'approvedBy']),
+                'data' => $leave->load(['employee', 'leaveType', 'approvedBy', 'leaveOut']),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -506,6 +790,11 @@ class LeaveController extends Controller
             ], 422);
         }
 
+        $lockError = $this->ensureLeaveEditable($leave);
+        if ($lockError) {
+            return $lockError;
+        }
+
         $validator = Validator::make($request->all(), [
             'rejection_reason' => 'required|string|max:500',
         ]);
@@ -523,7 +812,12 @@ class LeaveController extends Controller
                 'approved_at' => now(),
                 'rejection_reason' => $request->rejection_reason,
                 'approval_remarks' => null,
+                'is_locked' => false,
+                'locked_by_payroll_id' => null,
+                'locked_at' => null,
             ]);
+
+            $this->deleteUnusedLeaveOutForLeave($leave->fresh(['leaveOut']));
 
             // Instantly sync employee activity status (may return to active if no other leaves)
             $this->syncEmployeeLeaveStatus($leave->employee_id);
@@ -545,7 +839,7 @@ class LeaveController extends Controller
 
             return response()->json([
                 'message' => 'Leave request rejected',
-                'data' => $leave->load(['employee', 'leaveType', 'approvedBy']),
+                'data' => $leave->load(['employee', 'leaveType', 'approvedBy', 'leaveOut']),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -578,6 +872,10 @@ class LeaveController extends Controller
             $usedDays = EmployeeLeave::where('employee_id', $employee->id)
                 ->where('leave_type_id', $leaveType->id)
                 ->where('status', 'approved')
+                ->where(function ($paidQuery) {
+                    $paidQuery->where('is_with_pay', true)
+                        ->orWhereNull('is_with_pay');
+                })
                 ->whereYear('leave_date_from', $currentYear)
                 ->sum('number_of_days');
 
@@ -645,7 +943,7 @@ class LeaveController extends Controller
             return response()->json(['message' => 'Employee record not found for this account'], 404);
         }
 
-        $query = EmployeeLeave::with(['leaveType', 'approvedBy'])
+        $query = EmployeeLeave::with(['leaveType', 'approvedBy', 'leaveOut'])
             ->where('employee_id', $employeeId);
 
         if ($request->has('status')) {
@@ -666,7 +964,7 @@ class LeaveController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $query = EmployeeLeave::with(['employee', 'leaveType'])
+        $query = EmployeeLeave::with(['employee', 'leaveType', 'leaveOut'])
             ->where('status', 'pending');
 
         return response()->json($query->latest()->get());
@@ -701,6 +999,10 @@ class LeaveController extends Controller
             $usedDays = EmployeeLeave::where('employee_id', $employeeId)
                 ->where('leave_type_id', $leaveType->id)
                 ->where('status', 'approved')
+                ->where(function ($paidQuery) {
+                    $paidQuery->where('is_with_pay', true)
+                        ->orWhereNull('is_with_pay');
+                })
                 ->whereYear('leave_date_from', $currentYear)
                 ->sum('number_of_days');
 

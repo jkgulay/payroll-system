@@ -1965,9 +1965,10 @@ const payrollPunchDayViewRows = computed(() => {
       device_name: record.device_name || "-",
     };
 
-    const punchTimes = getRecordPunches(record)
-      .map((entry) => entry.time)
-      .slice(0, 10);
+    const punchTimes = getRecordPunches(record).slice(
+      0,
+      payrollPunchTimeKeys.length,
+    );
 
     payrollPunchTimeKeys.forEach((timeKey, idx) => {
       row[timeKey] = punchTimes[idx] || null;
@@ -1997,14 +1998,9 @@ const normalizePunchTime = (timeValue) => {
 };
 
 const getRecordPunches = (record) => {
-  const punches = payrollPunchFieldMap
-    .map(({ field }) => ({
-      time: normalizePunchTime(record[field]),
-    }))
-    .filter((entry) => entry.time);
-
-  punches.sort((a, b) => a.time.localeCompare(b.time));
-  return punches;
+  return payrollPunchFieldMap.map(({ field }) =>
+    normalizePunchTime(record[field]),
+  );
 };
 
 const { handleKeydown: handlePayrollFormKeydown } = useKeyboardFirstFlow({
