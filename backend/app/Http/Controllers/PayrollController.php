@@ -1116,24 +1116,9 @@ class PayrollController extends Controller
         $editReason = trim((string) ($validated['reason'] ?? ''));
         unset($validated['reason']);
 
-        $sideEffectManagedFields = [
-            'sss',
-            'philhealth',
-            'pagibig',
-            'withholding_tax',
-            'employee_savings',
-            'cash_advance',
-            'loans',
-            'employee_deductions',
-            'other_deductions',
-        ];
-        $attemptedManagedFields = array_values(array_intersect($sideEffectManagedFields, array_keys($validated)));
-        if (!empty($attemptedManagedFields)) {
-            return response()->json([
-                'message' => 'Direct edits to payroll-managed deduction fields are not allowed. Update source deduction/loan records or payroll-level toggles, then reprocess payroll.',
-                'blocked_fields' => $attemptedManagedFields,
-            ], 422);
-        }
+        // Note: Payroll-managed fields (sss, philhealth, pagibig, loans, etc.) can now be
+        // edited directly in Employee Payroll Details. Changes apply only to this specific
+        // payroll item and do not affect source deduction/loan records.
 
         $editAccessRequest = null;
         if ($user && $user->role === 'payrollist') {
