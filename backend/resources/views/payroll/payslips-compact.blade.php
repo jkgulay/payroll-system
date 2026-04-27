@@ -337,38 +337,38 @@
                             <tr>
                                 <td>Daily Rate</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ number_format($rate, 2) }}</td>
+                                <td class="value-col">PHP {{ number_format($rate, 2) }}</td>
                                 <td class="amount-col"></td>
                             </tr>
                             <tr>
                                 <td>No. of Days</td>
                                 <td class="colon-col">:</td>
                                 <td class="value-col">{{ rtrim(rtrim(number_format($daysWorked, 2), '0'), '.') }}</td>
-                                <td class="amount-col">{{ number_format($basicAmount, 2) }}</td>
+                                <td class="amount-col">PHP {{ number_format($basicAmount, 2) }}</td>
                             </tr>
                             <tr>
                                 <td>Reg. Overtime</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $regOtHours > 0 ? number_format($regOtHours, 2) : '-' }}</td>
-                                <td class="amount-col">{{ $regOtPay > 0 ? number_format($regOtPay, 2) : '' }}</td>
+                                <td class="value-col">{{ $regOtHours > 0 ? number_format($regOtHours, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $regOtPay > 0 ? 'PHP ' . number_format($regOtPay, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>Sun./Spl. Hol.</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $splHolHours > 0 ? number_format($splHolHours, 2) : '-' }}</td>
-                                <td class="amount-col">{{ $splHolPay > 0 ? number_format($splHolPay, 2) : '' }}</td>
+                                <td class="value-col">{{ $splHolHours > 0 ? number_format($splHolHours, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $splHolPay > 0 ? 'PHP ' . number_format($splHolPay, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>Allowance</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $allowances > 0 ? number_format($allowances, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $allowances > 0 ? number_format($allowances, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $allowances > 0 ? 'PHP ' . number_format($allowances, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>TRIPS/Sal. Adj.</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $salaryAdj != 0 ? number_format(abs($salaryAdj), 2) : '-' }}</td>
-                                <td class="amount-col">{{ ($allowances > 0 || $salaryAdj > 0) ? number_format($allowances + max(0, $salaryAdj), 2) : '' }}</td>
+                                <td class="value-col">{{ $salaryAdj != 0 ? number_format(abs($salaryAdj), 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $salaryAdj != 0 ? 'PHP ' . number_format(abs($salaryAdj), 2) : '' }}</td>
                             </tr>
                             <tr class="separator-line">
                                 <td></td>
@@ -380,7 +380,7 @@
                                 <td class="bold">GROSS AMOUNT</td>
                                 <td class="colon-col"></td>
                                 <td class="value-col"></td>
-                                <td class="amount-col bold">{{ number_format($grossAmount, 2) }}</td>
+                                <td class="amount-col bold">PHP {{ number_format($grossAmount, 2) }}</td>
                             </tr>
                             <tr class="space-row">
                                 <td colspan="4"></td>
@@ -391,50 +391,50 @@
                             <tr>
                                 <td>EMP. SAVINGS</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $employeeSavings > 0 ? number_format($employeeSavings, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $employeeSavings > 0 ? number_format($employeeSavings, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $employeeSavings > 0 ? 'PHP ' . number_format($employeeSavings, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>CASH ADVANCE</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $cashAdvance > 0 ? number_format($cashAdvance, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $cashAdvance > 0 ? number_format($cashAdvance, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $cashAdvance > 0 ? 'PHP ' . number_format($cashAdvance, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>LOANS</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $loanDeductions > 0 ? number_format($loanDeductions, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $loanDeductions > 0 ? number_format($loanDeductions, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $loanDeductions > 0 ? 'PHP ' . number_format($loanDeductions, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>DEDUCTIONS</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $combinedDeductions > 0 ? number_format($combinedDeductions, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $combinedDeductions > 0 ? number_format($combinedDeductions, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $combinedDeductions > 0 ? 'PHP ' . number_format($combinedDeductions, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>UNDERTIME</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $undertime > 0 ? number_format($undertime, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $undertime > 0 ? number_format($undertime, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $undertime > 0 ? 'PHP ' . number_format($undertime, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>SSS Prem.</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $sssPrem > 0 ? number_format($sssPrem, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $sssPrem > 0 ? number_format($sssPrem, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $sssPrem > 0 ? 'PHP ' . number_format($sssPrem, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>PHIC Prem.</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $phicPrem > 0 ? number_format($phicPrem, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $phicPrem > 0 ? number_format($phicPrem, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $phicPrem > 0 ? 'PHP ' . number_format($phicPrem, 2) : '' }}</td>
                             </tr>
                             <tr>
                                 <td>HDMF Prem.</td>
                                 <td class="colon-col">:</td>
-                                <td class="value-col">{{ $hdmfPrem > 0 ? number_format($hdmfPrem, 2) : '-' }}</td>
-                                <td class="amount-col"></td>
+                                <td class="value-col">{{ $hdmfPrem > 0 ? number_format($hdmfPrem, 2) : '0.00' }}</td>
+                                <td class="amount-col">{{ $hdmfPrem > 0 ? 'PHP ' . number_format($hdmfPrem, 2) : '' }}</td>
                             </tr>
                             <tr class="separator-line">
                                 <td></td>
@@ -443,10 +443,10 @@
                                 <td class="line-right"></td>
                             </tr>
                             <tr>
-                                <td>Total Deductions</td>
-                                <td class="colon-col">:</td>
-                                <td class="value-col">-</td>
-                                <td class="amount-col">{{ $totalDeductions > 0 ? number_format($totalDeductions, 2) : '' }}</td>
+                                <td class="bold">Total Deductions</td>
+                                <td class="colon-col"></td>
+                                <td class="value-col"></td>
+                                <td class="amount-col bold">PHP {{ number_format($totalDeductions, 2) }}</td>
                             </tr>
                             <tr class="separator-line-thick">
                                 <td></td>
@@ -458,7 +458,7 @@
                                 <td class="bold">NET AMOUNT</td>
                                 <td class="colon-col"></td>
                                 <td class="value-col"></td>
-                                <td class="amount-col bold">{{ number_format($netAmount, 2) }}</td>
+                                <td class="amount-col bold">PHP {{ number_format($netAmount, 2) }}</td>
                             </tr>
                         </table>
 
