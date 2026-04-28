@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use DateTimeInterface;
 use Carbon\Carbon;
 
 class Attendance extends Model
@@ -130,27 +132,27 @@ class Attendance extends Model
     }
 
     // Scopes
-    public function scopeByEmployee($query, $employeeId)
+    public function scopeByEmployee(Builder $query, int|string $employeeId): Builder
     {
         return $query->where('employee_id', $employeeId);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, DateTimeInterface|string|null $startDate, DateTimeInterface|string|null $endDate): Builder
     {
         return $query->whereBetween('attendance_date', [$startDate, $endDate]);
     }
 
-    public function scopePresent($query)
+    public function scopePresent(Builder $query): Builder
     {
         return $query->where('status', 'present');
     }
 
-    public function scopeWithOvertime($query)
+    public function scopeWithOvertime(Builder $query): Builder
     {
         return $query->where('overtime_hours', '>', 0);
     }
 
-    public function scopePendingApproval($query)
+    public function scopePendingApproval(Builder $query): Builder
     {
         return $query->where('approval_status', 'pending');
     }

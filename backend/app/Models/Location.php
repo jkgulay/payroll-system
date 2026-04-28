@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -30,17 +31,17 @@ class Location extends Model
         return $this->hasMany(Employee::class);
     }
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeSites($query)
+    public function scopeSites(Builder $query): Builder
     {
         return $query->where('location_type', 'site');
     }
 
-    public function scopeHeadOffice($query)
+    public function scopeHeadOffice(Builder $query): Builder
     {
         return $query->where('location_type', 'head_office');
     }

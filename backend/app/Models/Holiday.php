@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
+use DateTimeInterface;
 use Carbon\Carbon;
 
 class Holiday extends Model
@@ -83,7 +85,7 @@ class Holiday extends Model
     /**
      * Scope to get only active holidays
      */
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
@@ -91,7 +93,7 @@ class Holiday extends Model
     /**
      * Scope to get holidays by type
      */
-    public function scopeByType($query, $type)
+    public function scopeByType(Builder $query, string $type): Builder
     {
         return $query->where('type', $type);
     }
@@ -99,7 +101,7 @@ class Holiday extends Model
     /**
      * Scope to get holidays in date range
      */
-    public function scopeInDateRange($query, $startDate, $endDate)
+    public function scopeInDateRange(Builder $query, DateTimeInterface|string|null $startDate, DateTimeInterface|string|null $endDate): Builder
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
@@ -109,7 +111,7 @@ class Holiday extends Model
      * Includes both holidays with dates in the specified year
      * AND recurring holidays from other years (shown with the target year's date)
      */
-    public function scopeForYear($query, $year)
+    public function scopeForYear(Builder $query, int|string $year): Builder
     {
         return $query->where(function ($q) use ($year) {
             // Include holidays with dates in the specified year
@@ -123,7 +125,7 @@ class Holiday extends Model
      * Check if a given date is a holiday
      * Supports recurring holidays (matches by month and day regardless of year)
      */
-    public static function isHoliday($date)
+    public static function isHoliday(DateTimeInterface|string|null $date): bool
     {
         $date = Carbon::parse($date);
         return static::active()
@@ -144,7 +146,7 @@ class Holiday extends Model
      * Get holiday for a given date
      * Supports recurring holidays (matches by month and day regardless of year)
      */
-    public static function getHolidayForDate($date)
+    public static function getHolidayForDate(DateTimeInterface|string|null $date): ?self
     {
         $date = Carbon::parse($date);
         return static::active()
@@ -168,7 +170,7 @@ class Holiday extends Model
      * Special holiday: rate * 1.3
      * Special holiday on Sunday: rate * 1.3
      */
-    public function getPayMultiplier($date = null)
+    public function getPayMultiplier(DateTimeInterface|string|null $date = null): float
     {
         $checkDate = $date ? Carbon::parse($date) : Carbon::parse($this->date);
         $isSunday = $checkDate->isSunday();
@@ -187,7 +189,7 @@ class Holiday extends Model
     /**
      * Get formatted holiday type
      */
-    public function getFormattedTypeAttribute()
+    public function getFormattedTypeAttribute(): string
     {
         return ucfirst($this->type) . ' Holiday';
     }

@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use DateTimeInterface;
 use Carbon\Carbon;
 
 class GovernmentRate extends Model
@@ -56,7 +58,7 @@ class GovernmentRate extends Model
     }
 
     // Scopes
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true)
             ->where('effective_date', '<=', now())
@@ -66,12 +68,12 @@ class GovernmentRate extends Model
             });
     }
 
-    public function scopeByType($query, $type)
+    public function scopeByType(Builder $query, string $type): Builder
     {
         return $query->where('type', $type);
     }
 
-    public function scopeForSalary($query, $salary)
+    public function scopeForSalary(Builder $query, float|int|string $salary): Builder
     {
         return $query
             // Null min_salary is treated as 0 for non-bracket/manual rows.
@@ -86,7 +88,7 @@ class GovernmentRate extends Model
             });
     }
 
-    public function scopeEffectiveOn($query, $date = null)
+    public function scopeEffectiveOn(Builder $query, DateTimeInterface|string|null $date = null): Builder
     {
         $date = $date ?? now();
         return $query->where('effective_date', '<=', $date)
@@ -97,7 +99,7 @@ class GovernmentRate extends Model
     }
 
     // Helper methods
-    public static function getContributionForSalary($type, $monthlySalary, $date = null)
+    public static function getContributionForSalary(string $type, float|int|string $monthlySalary, DateTimeInterface|string|null $date = null): array
     {
         // Use effectiveOn() only (which handles date filtering) instead of active() + effectiveOn()
         // to avoid conflicts when computing contributions for past payroll periods
@@ -168,10 +170,10 @@ class GovernmentRate extends Model
      * - Flat percentage per bracket (employee_rate only)
      *
      * @param float $taxableIncome
-     * @param mixed $date Effective date used to pick active rows.
+        * @param DateTimeInterface|string|null $date Effective date used to pick active rows.
      * @param bool $splitSemiMonthly Split computed monthly tax by 2 for semi-monthly payrolls.
      */
-    public static function calculateTaxForIncome(float $taxableIncome, $date = null, bool $splitSemiMonthly = false): float
+    public static function calculateTaxForIncome(float $taxableIncome, DateTimeInterface|string|null $date = null, bool $splitSemiMonthly = false): float
     {
         if ($taxableIncome <= 0) {
             return 0;
