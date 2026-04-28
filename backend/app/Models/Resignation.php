@@ -83,14 +83,14 @@ class Resignation extends Model
         if (!$this->effective_date) {
             return null;
         }
-        
+
         $today = \Carbon\Carbon::now()->startOfDay();
         $effectiveDate = \Carbon\Carbon::parse($this->effective_date)->startOfDay();
-        
+
         if ($effectiveDate->isPast()) {
             return 0;
         }
-        
+
         return $today->diffInDays($effectiveDate, false);
     }
 

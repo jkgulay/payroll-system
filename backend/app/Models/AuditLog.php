@@ -62,8 +62,7 @@ class AuditLog extends Model
         string|null $newPosition,
         float|int|string|null $oldSalary = null,
         float|int|string|null $newSalary = null
-    ): self
-    {
+    ): self {
         $description = "Position changed from '{$oldPosition}' to '{$newPosition}'";
         $oldValues = ['position' => $oldPosition];
         $newValues = ['position' => $newPosition];

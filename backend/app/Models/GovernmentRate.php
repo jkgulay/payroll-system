@@ -170,7 +170,7 @@ class GovernmentRate extends Model
      * - Flat percentage per bracket (employee_rate only)
      *
      * @param float $taxableIncome
-        * @param DateTimeInterface|string|null $date Effective date used to pick active rows.
+     * @param DateTimeInterface|string|null $date Effective date used to pick active rows.
      * @param bool $splitSemiMonthly Split computed monthly tax by 2 for semi-monthly payrolls.
      */
     public static function calculateTaxForIncome(float $taxableIncome, DateTimeInterface|string|null $date = null, bool $splitSemiMonthly = false): float
