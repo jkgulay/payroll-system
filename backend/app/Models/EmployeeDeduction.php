@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -55,27 +56,27 @@ class EmployeeDeduction extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');
     }
 
-    public function scopeByType($query, $type)
+    public function scopeByType(Builder $query, string $type): Builder
     {
         return $query->where('deduction_type', $type);
     }
 
-    public function scopeGovernment($query)
+    public function scopeGovernment(Builder $query): Builder
     {
         return $query->whereIn('deduction_type', ['sss', 'philhealth', 'pagibig', 'tax']);
     }
 
-    public function scopeCompany($query)
+    public function scopeCompany(Builder $query): Builder
     {
         return $query->whereIn('deduction_type', ['ppe', 'tools', 'uniform', 'absence', 'loan', 'insurance', 'cooperative', 'other']);
     }
 
-    public function scopeOtherDeductions($query)
+    public function scopeOtherDeductions(Builder $query): Builder
     {
         return $query->whereIn('deduction_type', ['damages', 'cash_advance']);
     }

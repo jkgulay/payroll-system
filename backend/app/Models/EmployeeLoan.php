@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -100,22 +101,22 @@ class EmployeeLoan extends Model
         return $this->hasMany(LoanPayment::class, 'employee_loan_id');
     }
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active')->where('balance', '>', 0);
     }
 
-    public function scopePending($query)
+    public function scopePending(Builder $query): Builder
     {
         return $query->where('status', 'pending');
     }
 
-    public function scopeApproved($query)
+    public function scopeApproved(Builder $query): Builder
     {
         return $query->whereIn('status', ['approved', 'active']);
     }
 
-    public function scopeByType($query, $type)
+    public function scopeByType(Builder $query, string $type): Builder
     {
         return $query->where('loan_type', $type);
     }

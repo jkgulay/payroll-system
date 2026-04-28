@@ -284,7 +284,7 @@
             @endif
             <tr class="total-row">
                 <td class="label">TOTAL DEDUCTIONS</td>
-                <td class="value">PHP {{ number_format($item->total_deductions, 2) }}</td>
+                <td class="value" style="text-align:left;">PHP {{ number_format($item->total_deductions, 2) }}</td>
             </tr>
         </table>
     </div>
@@ -294,7 +294,7 @@
         <table>
             <tr class="net-pay">
                 <td class="label">NET AMOUNT</td>
-                <td class="value"><?php echo 'PHP '; ?>{{ number_format($item->net_pay, 2) }}</td>
+                <td class="value" style="text-align:left;">PHP {{ number_format($item->net_pay, 2) }}</td>
             </tr>
         </table>
     </div>

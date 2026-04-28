@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -100,7 +101,7 @@ class EmployeeApplication extends Model
     /**
      * Scope to get pending applications.
      */
-    public function scopePending($query)
+    public function scopePending(Builder $query): Builder
     {
         return $query->where('application_status', 'pending');
     }
@@ -108,7 +109,7 @@ class EmployeeApplication extends Model
     /**
      * Scope to get approved applications.
      */
-    public function scopeApproved($query)
+    public function scopeApproved(Builder $query): Builder
     {
         return $query->where('application_status', 'approved');
     }
@@ -116,7 +117,7 @@ class EmployeeApplication extends Model
     /**
      * Scope to get rejected applications.
      */
-    public function scopeRejected($query)
+    public function scopeRejected(Builder $query): Builder
     {
         return $query->where('application_status', 'rejected');
     }

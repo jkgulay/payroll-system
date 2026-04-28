@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -58,7 +59,7 @@ class SalaryAdjustment extends Model
     /**
      * Scope for pending adjustments.
      */
-    public function scopePending($query)
+    public function scopePending(Builder $query): Builder
     {
         return $query->where('status', 'pending');
     }
@@ -66,7 +67,7 @@ class SalaryAdjustment extends Model
     /**
      * Scope for applied adjustments.
      */
-    public function scopeApplied($query)
+    public function scopeApplied(Builder $query): Builder
     {
         return $query->where('status', 'applied');
     }
@@ -82,12 +83,12 @@ class SalaryAdjustment extends Model
     /**
      * Accessor for description attribute (alias for reference_period for backwards compatibility)
      */
-    public function getDescriptionAttribute($value): ?string
+    public function getDescriptionAttribute(mixed $value): ?string
     {
         return $value ?? ($this->attributes['reference_period'] ?? null);
     }
 
-    public function setDescriptionAttribute($value): void
+    public function setDescriptionAttribute(mixed $value): void
     {
         if (static::hasSchemaColumn('description')) {
             $this->attributes['description'] = $value;
@@ -98,12 +99,12 @@ class SalaryAdjustment extends Model
         }
     }
 
-    public function getReferencePeriodAttribute($value): ?string
+    public function getReferencePeriodAttribute(mixed $value): ?string
     {
         return $value ?? ($this->attributes['description'] ?? null);
     }
 
-    public function setReferencePeriodAttribute($value): void
+    public function setReferencePeriodAttribute(mixed $value): void
     {
         if (static::hasSchemaColumn('reference_period')) {
             $this->attributes['reference_period'] = $value;
@@ -114,12 +115,12 @@ class SalaryAdjustment extends Model
         }
     }
 
-    public function getTypeAttribute($value): ?string
+    public function getTypeAttribute(mixed $value): ?string
     {
         return $value ?? ($this->attributes['adjustment_type'] ?? null);
     }
 
-    public function setTypeAttribute($value): void
+    public function setTypeAttribute(mixed $value): void
     {
         if (static::hasSchemaColumn('type')) {
             $this->attributes['type'] = $value;
@@ -130,12 +131,12 @@ class SalaryAdjustment extends Model
         }
     }
 
-    public function getAdjustmentTypeAttribute($value): ?string
+    public function getAdjustmentTypeAttribute(mixed $value): ?string
     {
         return $value ?? ($this->attributes['type'] ?? null);
     }
 
-    public function setAdjustmentTypeAttribute($value): void
+    public function setAdjustmentTypeAttribute(mixed $value): void
     {
         if (static::hasSchemaColumn('adjustment_type')) {
             $this->attributes['adjustment_type'] = $value;
@@ -146,7 +147,7 @@ class SalaryAdjustment extends Model
         }
     }
 
-    public function getAppliedPayrollIdAttribute($value): ?int
+    public function getAppliedPayrollIdAttribute(mixed $value): ?int
     {
         if ($value !== null) {
             return (int) $value;
@@ -156,7 +157,7 @@ class SalaryAdjustment extends Model
         return $legacyValue !== null ? (int) $legacyValue : null;
     }
 
-    public function setAppliedPayrollIdAttribute($value): void
+    public function setAppliedPayrollIdAttribute(mixed $value): void
     {
         if (static::hasSchemaColumn('applied_payroll_id')) {
             $this->attributes['applied_payroll_id'] = $value;
@@ -167,7 +168,7 @@ class SalaryAdjustment extends Model
         }
     }
 
-    public function getPayrollIdAttribute($value): ?int
+    public function getPayrollIdAttribute(mixed $value): ?int
     {
         if ($value !== null) {
             return (int) $value;
@@ -177,7 +178,7 @@ class SalaryAdjustment extends Model
         return $modernValue !== null ? (int) $modernValue : null;
     }
 
-    public function setPayrollIdAttribute($value): void
+    public function setPayrollIdAttribute(mixed $value): void
     {
         if (static::hasSchemaColumn('payroll_id')) {
             $this->attributes['payroll_id'] = $value;
@@ -188,7 +189,7 @@ class SalaryAdjustment extends Model
         }
     }
 
-    public function setNotesAttribute($value): void
+    public function setNotesAttribute(mixed $value): void
     {
         if (static::hasSchemaColumn('notes')) {
             $this->attributes['notes'] = $value;

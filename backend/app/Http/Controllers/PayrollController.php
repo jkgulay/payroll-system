@@ -30,7 +30,7 @@ class PayrollController extends Controller
 {
     private const PAYROLL_ITEM_EDIT_MODULE = 'payroll-item-adjustments';
 
-    protected $payrollService;
+    protected PayrollService $payrollService;
 
     public function __construct(PayrollService $payrollService)
     {
@@ -416,7 +416,7 @@ class PayrollController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(int|string $id)
     {
         $payroll = Payroll::with([
             'creator:id,username,name',
@@ -862,7 +862,7 @@ class PayrollController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int|string $id)
     {
         $payroll = Payroll::findOrFail($id);
 
@@ -1329,7 +1329,7 @@ class PayrollController extends Controller
         }
     }
 
-    public function finalize($id)
+    public function finalize(int|string $id)
     {
         $payroll = Payroll::findOrFail($id);
 
@@ -1366,7 +1366,7 @@ class PayrollController extends Controller
         ]);
     }
 
-    public function reprocess($id)
+    public function reprocess(int|string $id)
     {
         $payroll = Payroll::findOrFail($id);
 
@@ -1438,7 +1438,7 @@ class PayrollController extends Controller
         ]);
     }
 
-    public function downloadPayslip($payrollId, $employeeId)
+    public function downloadPayslip(int|string $payrollId, int|string $employeeId)
     {
         // Validate parameters
         $payrollId = (int) $payrollId;

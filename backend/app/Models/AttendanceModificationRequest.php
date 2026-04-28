@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -37,17 +38,17 @@ class AttendanceModificationRequest extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
-    public function scopePending($query)
+    public function scopePending(Builder $query): Builder
     {
         return $query->where('status', 'pending');
     }
 
-    public function scopeApproved($query)
+    public function scopeApproved(Builder $query): Builder
     {
         return $query->where('status', 'approved');
     }
 
-    public function scopeForModule($query, $module)
+    public function scopeForModule(Builder $query, string $module): Builder
     {
         return $query->where('module', $module);
     }

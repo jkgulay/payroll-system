@@ -37,7 +37,7 @@ class AuditLog extends Model
     /**
      * Log salary change for an employee
      */
-    public static function logSalaryChange(Employee $employee, $oldSalary, $newSalary): self
+    public static function logSalaryChange(Employee $employee, float|int|string $oldSalary, float|int|string $newSalary): self
     {
         return self::create([
             'user_id' => auth()->id(),
@@ -56,8 +56,13 @@ class AuditLog extends Model
     /**
      * Log position change (which may affect salary)
      */
-    public static function logPositionChange(Employee $employee, $oldPosition, $newPosition, $oldSalary = null, $newSalary = null): self
-    {
+    public static function logPositionChange(
+        Employee $employee,
+        string|null $oldPosition,
+        string|null $newPosition,
+        float|int|string|null $oldSalary = null,
+        float|int|string|null $newSalary = null
+    ): self {
         $description = "Position changed from '{$oldPosition}' to '{$newPosition}'";
         $oldValues = ['position' => $oldPosition];
         $newValues = ['position' => $newPosition];

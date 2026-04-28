@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -230,45 +231,45 @@ class Employee extends Model
     }
 
     // Scopes
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeByWorkSchedule($query, $schedule)
+    public function scopeByWorkSchedule(Builder $query, string $schedule): Builder
     {
         return $query->where('work_schedule', $schedule);
     }
 
     // Legacy alias
-    public function scopeByEmploymentType($query, $type)
+    public function scopeByEmploymentType(Builder $query, string $type): Builder
     {
         // Map old values to new
         $schedule = $type === 'part_time' ? 'part_time' : 'full_time';
         return $query->where('work_schedule', $schedule);
     }
 
-    public function scopeByContractType($query, $type)
+    public function scopeByContractType(Builder $query, string $type): Builder
     {
         return $query->where('contract_type', $type);
     }
 
-    public function scopeByActivityStatus($query, $status)
+    public function scopeByActivityStatus(Builder $query, string $status): Builder
     {
         return $query->where('activity_status', $status);
     }
 
-    public function scopeByProject($query, $projectId)
+    public function scopeByProject(Builder $query, int|string $projectId): Builder
     {
         return $query->where('project_id', $projectId);
     }
 
-    public function scopeDailyPaid($query)
+    public function scopeDailyPaid(Builder $query): Builder
     {
         return $query->where('salary_type', 'daily');
     }
 
-    public function scopeMonthlyPaid($query)
+    public function scopeMonthlyPaid(Builder $query): Builder
     {
         return $query->where('salary_type', 'monthly');
     }

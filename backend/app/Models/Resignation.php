@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -82,34 +83,34 @@ class Resignation extends Model
         if (!$this->effective_date) {
             return null;
         }
-        
+
         $today = \Carbon\Carbon::now()->startOfDay();
         $effectiveDate = \Carbon\Carbon::parse($this->effective_date)->startOfDay();
-        
+
         if ($effectiveDate->isPast()) {
             return 0;
         }
-        
+
         return $today->diffInDays($effectiveDate, false);
     }
 
     // Scopes
-    public function scopePending($query)
+    public function scopePending(Builder $query): Builder
     {
         return $query->where('status', 'pending');
     }
 
-    public function scopeApproved($query)
+    public function scopeApproved(Builder $query): Builder
     {
         return $query->where('status', 'approved');
     }
 
-    public function scopeCompleted($query)
+    public function scopeCompleted(Builder $query): Builder
     {
         return $query->where('status', 'completed');
     }
 
-    public function scopeWithRelations($query)
+    public function scopeWithRelations(Builder $query): Builder
     {
         return $query->with(['employee', 'processedBy', 'createdBy']);
     }
