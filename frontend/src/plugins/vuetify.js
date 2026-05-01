@@ -88,44 +88,54 @@ import {
 
 import { Intersect, Ripple, Touch } from "vuetify/directives";
 
-// Construction Company Theme
-// Inspired by steel, concrete, safety, and industrial design
+// Custom Professional Theme
+// Using custom color palette: Navy, Orange, Peach, Light Gray
 const customTheme = {
   dark: false,
   colors: {
-    primary: "#ff6f00", // Construction Orange - Bold, industrial (from login page)
-    secondary: "#37474F", // Charcoal Steel - Dark gray for construction machinery
-    accent: "#ff9800", // Safety Orange - High visibility (from login page)
-    error: "#C62828", // Safety Red - Danger/error signage
-    info: "#0277BD", // Steel Blue - Professional and technical
-    success: "#2E7D32", // Safety Green - Go/approved
-    warning: "#F9A825", // Caution Yellow - Warning signs
-    background: "#ECEFF1", // Light concrete gray
-    surface: "#FFFFFF",
-    steel: "#546E7A", // Steel gray for structural elements (from login page)
-    concrete: "#90A4AE", // Concrete gray for secondary elements
-    hardhat: "#ff9800", // Hardhat orange for important highlights (from login page)
-    blueprint: "#1565C0", // Blueprint blue for technical elements
+    primary: "#ED985F", // Orange - Primary brand color
+    secondary: "#F7B980", // Peach - Complementary accent
+    accent: "#ED985F", // Orange - Call-to-action highlights
+    error: "#ef4444", // Red - Error states
+    info: "#ED985F", // Orange - Information (changed from purple/blue)
+    success: "#10b981", // Emerald - Success states
+    warning: "#F7B980", // Peach - Warnings
+    background: "#f8fafc", // Light background
+    surface: "#ffffff", // White - Surface elements
+    slate: "#64748b", // Slate - Secondary text
+    navy: "#001F3D", // Custom Navy - Dark elements
+    orange: "#ED985F", // Custom Orange - Primary highlights
+    peach: "#F7B980", // Custom Peach - Secondary highlights
+    lightGray: "#E6E6E6", // Custom Light Gray
+    // Legacy color aliases for backward compatibility
+    steel: "#64748b", // Maps to slate
+    hardhat: "#ED985F", // Maps to orange
+    concrete: "#E6E6E6", // Light gray
   },
 };
 
-// Dark theme for construction sites (optional)
+// Dark theme for night mode
 const constructionDark = {
   dark: true,
   colors: {
-    primary: "#ff9800", // Bright construction orange (from login page)
-    secondary: "#546E7A", // Lighter steel for dark mode
-    accent: "#ff9800", // Warm safety orange (from login page)
-    error: "#EF5350",
-    info: "#29B6F6",
-    success: "#66BB6A",
-    warning: "#FFCA28",
-    background: "#263238", // Dark concrete
-    surface: "#37474F", // Dark steel (from login page)
-    steel: "#607D8B",
-    concrete: "#78909C",
-    hardhat: "#ff9800", // From login page
-    blueprint: "#42A5F5",
+    primary: "#F7B980", // Lighter peach for dark mode
+    secondary: "#ED985F", // Orange
+    accent: "#F7B980", // Peach
+    error: "#f87171",
+    info: "#F7B980",
+    success: "#34d399",
+    warning: "#ED985F",
+    background: "#0f172a", // Slate 900
+    surface: "#1e293b", // Slate 800
+    slate: "#94a3b8",
+    navy: "#001F3D", // Custom Navy
+    orange: "#ED985F",
+    peach: "#F7B980",
+    lightGray: "#E6E6E6",
+    // Legacy color aliases for backward compatibility
+    steel: "#94a3b8", // Light slate for dark mode
+    hardhat: "#ED985F", // Maps to orange
+    concrete: "#E6E6E6", // Light gray
   },
 };
 
@@ -231,9 +241,9 @@ export default createVuetify({
       style: "text-transform: none; font-weight: 600;",
     },
     VCard: {
-      elevation: 2,
+      elevation: 0,
       rounded: "lg",
-      style: "border-left: 4px solid;",
+      style: "border: 1px solid rgba(0, 31, 61, 0.08); background: #ffffff;",
     },
     VTextField: {
       variant: "outlined",

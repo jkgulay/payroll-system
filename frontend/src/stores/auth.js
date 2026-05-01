@@ -1,12 +1,13 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 export const useAuthStore = defineStore("auth", () => {
   // State
   const user = ref(null);
   const token = ref(
-    localStorage.getItem("token") || sessionStorage.getItem("token") || null
+    localStorage.getItem("token") || sessionStorage.getItem("token") || null,
   );
   const loading = ref(false);
   const rememberMe = ref(localStorage.getItem("rememberMe") === "true");
@@ -21,7 +22,7 @@ export const useAuthStore = defineStore("auth", () => {
       api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
       initialized.value = true;
     } catch (e) {
-      console.error("Failed to parse stored user:", e);
+      devLog.error("Failed to parse stored user:", e);
       localStorage.removeItem("user");
     }
   }
@@ -30,12 +31,26 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = computed(() => !!token.value);
   const userRole = computed(() => user.value?.role || null);
   const isAdmin = computed(() => userRole.value === "admin");
-  const isAccountant = computed(() =>
-    ["admin", "accountant"].includes(userRole.value)
+  const isHr = computed(() =>
+    ["admin", "hr"].includes(userRole.value),
   );
   const mustChangePassword = computed(
-    () => user.value?.must_change_password || false
+    () => user.value?.must_change_password || false,
   );
+
+  async function refreshProfileInBackground() {
+    if (!token.value) return;
+
+    try {
+      const profileResponse = await api.get("/profile", { skipToast: true });
+      if (profileResponse.data.success && profileResponse.data.data) {
+        user.value = { ...user.value, ...profileResponse.data.data };
+        localStorage.setItem("user", JSON.stringify(user.value));
+      }
+    } catch (profileError) {
+      devLog.warn("Could not refresh profile after login:", profileError);
+    }
+  }
 
   // Actions
   async function login(credentials) {
@@ -53,6 +68,9 @@ export const useAuthStore = defineStore("auth", () => {
       user.value = response.data.user;
       rememberMe.value = credentials.remember || false;
 
+      // Set default Authorization header first
+      api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
+
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(user.value));
 
@@ -69,8 +87,8 @@ export const useAuthStore = defineStore("auth", () => {
         localStorage.removeItem("rememberMe");
       }
 
-      // Set default Authorization header
-      api.defaults.headers.common["Authorization"] = `Bearer ${token.value}`;
+      // Refresh profile asynchronously without blocking login UX
+      refreshProfileInBackground();
 
       return response.data;
     } catch (error) {
@@ -85,7 +103,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       await api.post("/logout");
     } catch (error) {
-      console.error("Logout error:", error);
+      devLog.error("Logout error:", error);
     } finally {
       // Clear state
       user.value = null;
@@ -153,7 +171,7 @@ export const useAuthStore = defineStore("auth", () => {
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(user.value));
     } catch (error) {
-      console.error("Fetch user error:", error);
+      devLog.error("Fetch user error:", error);
     } finally {
       loading.value = false;
     }
@@ -176,7 +194,7 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated,
     userRole,
     isAdmin,
-    isAccountant,
+    isHr,
     mustChangePassword,
     // Actions
     login,

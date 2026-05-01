@@ -1,11 +1,11 @@
-import api from './api';
+import api from "./api";
 
 export default {
   /**
    * Get all leaves
    */
   async getLeaves(params = {}) {
-    const response = await api.get('/leaves', { params });
+    const response = await api.get("/leaves", { params });
     return response.data;
   },
 
@@ -13,7 +13,7 @@ export default {
    * Get my leaves (for employee)
    */
   async getMyLeaves(params = {}) {
-    const response = await api.get('/leaves/my-leaves', { params });
+    const response = await api.get("/leaves/my-leaves", { params });
     return response.data;
   },
 
@@ -21,7 +21,31 @@ export default {
    * Get pending leaves for approval (HR)
    */
   async getPendingLeaves() {
-    const response = await api.get('/leaves/pending');
+    const response = await api.get("/leaves/pending");
+    return response.data;
+  },
+
+  /**
+   * Get leave stats for approval dashboard
+   */
+  async getLeaveStats(params = {}) {
+    const response = await api.get("/leaves/stats", { params });
+    return response.data;
+  },
+
+  /**
+   * Manually set and auto-approve leave for an employee (admin/hr).
+   */
+  async setLeave(data) {
+    const response = await api.post("/leaves/set-leave", data);
+    return response.data;
+  },
+
+  /**
+   * Get employees for leave assignment picker.
+   */
+  async getEmployees(params = {}) {
+    const response = await api.get("/employees", { params });
     return response.data;
   },
 
@@ -37,7 +61,7 @@ export default {
    * Create a new leave request
    */
   async createLeave(data) {
-    const response = await api.post('/leaves', data);
+    const response = await api.post("/leaves", data);
     return response.data;
   },
 
@@ -85,7 +109,7 @@ export default {
    * Get my leave credits (for current employee)
    */
   async getMyCredits() {
-    const response = await api.get('/leaves/my-credits');
+    const response = await api.get("/leaves/my-credits");
     return response.data;
   },
 
@@ -93,7 +117,7 @@ export default {
    * Get all leave types
    */
   async getLeaveTypes() {
-    const response = await api.get('/leave-types');
+    const response = await api.get("/leave-types");
     return response.data;
   },
 
@@ -101,7 +125,7 @@ export default {
    * Create a new leave type
    */
   async createLeaveType(data) {
-    const response = await api.post('/leave-types', data);
+    const response = await api.post("/leave-types", data);
     return response.data;
   },
 
@@ -119,5 +143,5 @@ export default {
   async deleteLeaveType(id) {
     const response = await api.delete(`/leave-types/${id}`);
     return response.data;
-  }
+  },
 };

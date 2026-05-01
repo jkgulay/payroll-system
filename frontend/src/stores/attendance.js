@@ -2,11 +2,22 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "@/services/api";
 
+// Event bus for attendance updates
+const attendanceEventBus = new EventTarget();
+
 export const useAttendanceStore = defineStore("attendance", () => {
   // State
   const attendances = ref([]);
   const currentAttendance = ref(null);
   const loading = ref(false);
+
+  // Helper function to emit events
+  const emitAttendanceUpdate = (type, data = null) => {
+    const event = new CustomEvent("attendance-updated", {
+      detail: { type, data, timestamp: Date.now() },
+    });
+    attendanceEventBus.dispatchEvent(event);
+  };
 
   // Actions
   async function fetchAttendances(params = {}) {
@@ -39,8 +50,10 @@ export const useAttendanceStore = defineStore("attendance", () => {
     loading.value = true;
     try {
       const response = await api.post("/attendance", data);
-      attendances.value.unshift(response.data);
-      return response.data;
+      const attendancePayload = response.data?.attendance || response.data;
+      attendances.value.unshift(attendancePayload);
+      emitAttendanceUpdate("created", attendancePayload);
+      return attendancePayload;
     } catch (error) {
       throw error;
     } finally {
@@ -48,15 +61,17 @@ export const useAttendanceStore = defineStore("attendance", () => {
     }
   }
 
-  async function updateAttendance(id, data) {
+  async function updateAttendance(id, data, config = {}) {
     loading.value = true;
     try {
-      const response = await api.put(`/attendance/${id}`, data);
+      const response = await api.put(`/attendance/${id}`, data, config);
+      const attendancePayload = response.data?.attendance || response.data;
       const index = attendances.value.findIndex((a) => a.id === id);
       if (index !== -1) {
-        attendances.value[index] = response.data;
+        attendances.value[index] = attendancePayload;
       }
-      return response.data;
+      emitAttendanceUpdate("updated", attendancePayload);
+      return attendancePayload;
     } catch (error) {
       throw error;
     } finally {
@@ -69,6 +84,7 @@ export const useAttendanceStore = defineStore("attendance", () => {
     try {
       await api.delete(`/attendance/${id}`);
       attendances.value = attendances.value.filter((a) => a.id !== id);
+      emitAttendanceUpdate("deleted", { id });
     } catch (error) {
       throw error;
     } finally {
@@ -152,3 +168,12 @@ export const useAttendanceStore = defineStore("attendance", () => {
     fetchEmployeeSummary,
   };
 });
+
+// Export event subscription helper
+export const onAttendanceUpdate = (callback) => {
+  const handler = (event) => callback(event.detail);
+  attendanceEventBus.addEventListener("attendance-updated", handler);
+  // Return unsubscribe function
+  return () =>
+    attendanceEventBus.removeEventListener("attendance-updated", handler);
+};

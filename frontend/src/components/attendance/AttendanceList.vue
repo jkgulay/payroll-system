@@ -5,18 +5,8 @@
       <v-row>
         <v-col cols="12" md="3">
           <v-text-field
-            v-model="filters.date_from"
-            label="Date From"
-            type="date"
-            density="compact"
-            variant="outlined"
-            hide-details
-          ></v-text-field>
-        </v-col>
-        <v-col cols="12" md="3">
-          <v-text-field
-            v-model="filters.date_to"
-            label="Date To"
+            v-model="filters.date"
+            label="Date"
             type="date"
             density="compact"
             variant="outlined"
@@ -35,22 +25,53 @@
           ></v-select>
         </v-col>
         <v-col cols="12" md="3">
-          <v-btn color="primary" block @click="loadAttendance">
-            <v-icon start>mdi-magnify</v-icon>
-            Search
-          </v-btn>
+          <v-select
+            v-model="filters.approval_status"
+            label="Approval"
+            :items="approvalOptions"
+            density="compact"
+            variant="outlined"
+            clearable
+            hide-details
+          ></v-select>
+        </v-col>
+        <v-col cols="12" md="2">
+          <v-text-field
+            v-model="filters.search"
+            label="Search Employee"
+            density="compact"
+            variant="outlined"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+            hide-details
+            placeholder="Name or staff code..."
+          ></v-text-field>
+        </v-col>
+        <v-col cols="12" md="1" class="d-flex align-center justify-end">
+          <v-btn
+            variant="tonal"
+            color="grey"
+            icon="mdi-filter-remove"
+            @click="clearFilters"
+            title="Clear filters"
+          ></v-btn>
         </v-col>
       </v-row>
     </v-card-text>
 
-    <v-divider></v-divider>
-
     <!-- Data Table -->
     <v-data-table
       :headers="headers"
-      :items="attendance"
+      :items="filteredAttendance"
       :loading="loading"
-      :items-per-page="15"
+      :items-per-page="10"
+      :items-per-page-options="[
+        { value: 10, title: '10' },
+        { value: 25, title: '25' },
+        { value: 50, title: '50' },
+        { value: 100, title: '100' },
+        { value: -1, title: 'All' },
+      ]"
       class="elevation-0"
     >
       <template v-slot:item.employee="{ item }">
@@ -67,29 +88,73 @@
       </template>
 
       <template v-slot:item.time_in="{ item }">
-        {{ item.time_in || "--:--" }}
+        <v-chip
+          v-if="item.time_in"
+          size="small"
+          color="success"
+          variant="tonal"
+          prepend-icon="mdi-login"
+        >
+          {{ item.time_in }}
+        </v-chip>
+        <span v-else class="text-medium-emphasis">--:--</span>
+      </template>
+
+      <template v-slot:item.break_start="{ item }">
+        <v-chip
+          v-if="item.break_start"
+          size="small"
+          color="warning"
+          variant="tonal"
+          prepend-icon="mdi-coffee"
+        >
+          {{ item.break_start }}
+        </v-chip>
+        <span v-else class="text-medium-emphasis">--:--</span>
+      </template>
+
+      <template v-slot:item.break_end="{ item }">
+        <v-chip
+          v-if="item.break_end"
+          size="small"
+          color="info"
+          variant="tonal"
+          prepend-icon="mdi-coffee-outline"
+        >
+          {{ item.break_end }}
+        </v-chip>
+        <span v-else class="text-medium-emphasis">--:--</span>
       </template>
 
       <template v-slot:item.time_out="{ item }">
-        {{ item.time_out || "--:--" }}
+        <v-chip
+          v-if="item.actual_time_out"
+          size="small"
+          color="error"
+          variant="tonal"
+          prepend-icon="mdi-logout"
+        >
+          {{ item.actual_time_out }}
+        </v-chip>
+        <span v-else class="text-medium-emphasis">--:--</span>
       </template>
 
       <template v-slot:item.hours_worked="{ item }">
-        {{ item.regular_hours || 0 }}h
+        <span>{{ formatHoursWorked(item.regular_hours) }}</span>
         <span v-if="item.overtime_hours > 0" class="text-warning">
-          +{{ item.overtime_hours }}h OT
+          +{{ formatOvertimeHours(item.overtime_hours) }} OT
         </span>
       </template>
 
       <template v-slot:item.status="{ item }">
         <v-chip :color="getStatusColor(item.status)" size="small">
-          {{ item.status }}
+          {{ formatStatusLabel(item.status) }}
         </v-chip>
       </template>
 
       <template v-slot:item.approval="{ item }">
         <v-chip
-          v-if="item.is_approved"
+          v-if="item.approval_status === 'approved'"
           color="success"
           size="small"
           prepend-icon="mdi-check"
@@ -97,7 +162,7 @@
           Approved
         </v-chip>
         <v-chip
-          v-else-if="item.is_rejected"
+          v-else-if="item.approval_status === 'rejected'"
           color="error"
           size="small"
           prepend-icon="mdi-close"
@@ -114,77 +179,117 @@
         <v-icon v-else color="success">mdi-fingerprint</v-icon>
       </template>
 
+      <template v-slot:item.device_name="{ item }">
+        <span v-if="item.device_name" class="text-body-2">{{
+          item.device_name
+        }}</span>
+        <span v-else class="text-medium-emphasis">--</span>
+      </template>
+
       <template v-slot:item.actions="{ item }">
-        <v-btn
-          icon="mdi-pencil"
-          size="small"
-          variant="text"
-          @click="$emit('edit', item)"
-          v-if="canEdit(item)"
-        ></v-btn>
-        <v-btn
-          icon="mdi-check"
-          size="small"
-          variant="text"
-          color="success"
-          @click="$emit('approve', item)"
-          v-if="canApprove(item)"
-        ></v-btn>
-        <v-btn
-          icon="mdi-close"
-          size="small"
-          variant="text"
-          color="error"
-          @click="$emit('reject', item)"
-          v-if="canApprove(item)"
-        ></v-btn>
-        <v-btn
-          icon="mdi-delete"
-          size="small"
-          variant="text"
-          color="error"
-          @click="$emit('delete', item)"
-          v-if="canDelete(item)"
-        ></v-btn>
+        <v-menu location="bottom end">
+          <template v-slot:activator="{ props }">
+            <v-btn
+              v-bind="props"
+              icon="mdi-dots-vertical"
+              size="small"
+              variant="text"
+            ></v-btn>
+          </template>
+          <v-list density="compact">
+            <v-list-item v-if="canEdit(item)" @click="$emit('edit', item)">
+              <template v-slot:prepend>
+                <v-icon size="18">mdi-pencil</v-icon>
+              </template>
+              <v-list-item-title>Edit</v-list-item-title>
+            </v-list-item>
+            <v-list-item
+              v-if="canApprove(item)"
+              @click="$emit('approve', item)"
+            >
+              <template v-slot:prepend>
+                <v-icon size="18" color="success">mdi-check</v-icon>
+              </template>
+              <v-list-item-title>Approve</v-list-item-title>
+            </v-list-item>
+            <v-list-item v-if="canApprove(item)" @click="$emit('reject', item)">
+              <template v-slot:prepend>
+                <v-icon size="18" color="error">mdi-close</v-icon>
+              </template>
+              <v-list-item-title>Reject</v-list-item-title>
+            </v-list-item>
+            <v-list-item v-if="canDelete(item)" @click="$emit('delete', item)">
+              <template v-slot:prepend>
+                <v-icon size="18" color="error">mdi-delete</v-icon>
+              </template>
+              <v-list-item-title>Delete</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </template>
+
+      <template v-slot:no-data>
+        <div class="text-center py-8">
+          <v-icon size="52" color="grey"
+            >mdi-clipboard-text-search-outline</v-icon
+          >
+          <p class="text-h6 mt-3 mb-1">No attendance records found</p>
+          <p class="text-body-2 text-medium-emphasis mb-4">
+            Adjust the filters or clear them to view available records.
+          </p>
+          <v-btn variant="outlined" color="primary" @click="clearFilters">
+            Clear filters
+          </v-btn>
+        </div>
       </template>
     </v-data-table>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from "vue";
+import { ref, reactive, onMounted, computed, onUnmounted, watch } from "vue";
+import { useRoute } from "vue-router";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
+import { formatDate } from "@/utils/formatters";
 
 const toast = useToast();
+const route = useRoute();
 const emit = defineEmits(["edit", "delete", "approve", "reject"]);
 
 const loading = ref(false);
 const attendance = ref([]);
+const ATTENDANCE_CACHE_PREFIX = "attendance:list:v1";
+const isFetchingAttendance = ref(false);
 
 const user = JSON.parse(localStorage.getItem("user") || "{}");
-const canEditRole = computed(() => ["admin", "accountant"].includes(user.role));
+const canEditRole = computed(() =>
+  ["admin", "hr", "payrollist"].includes(user.role),
+);
 const canApproveRole = computed(() =>
-  ["admin", "accountant", "manager"].includes(user.role)
+  ["admin", "hr", "manager"].includes(user.role),
 );
 
 const filters = reactive({
-  date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0],
-  date_to: new Date().toISOString().split("T")[0],
+  date: new Date().toISOString().split("T")[0],
   status: null,
+  approval_status: null,
+  search: "",
 });
 
 const headers = [
   { title: "Employee", key: "employee", sortable: false },
   { title: "Date", key: "attendance_date" },
   { title: "Time In", key: "time_in" },
+  { title: "Break Out", key: "break_start" },
+  { title: "Break In", key: "break_end" },
   { title: "Time Out", key: "time_out" },
   { title: "Hours", key: "hours_worked", sortable: false },
   { title: "Status", key: "status" },
   { title: "Approval", key: "approval", sortable: false },
   { title: "Type", key: "is_manual_entry", sortable: false },
+  { title: "Device", key: "device_name", sortable: false },
   { title: "Actions", key: "actions", sortable: false },
 ];
 
@@ -193,28 +298,119 @@ const statusOptions = [
   { title: "Absent", value: "absent" },
   { title: "Late", value: "late" },
   { title: "Half Day", value: "half_day" },
+  { title: "Incomplete", value: "incomplete" },
   { title: "On Leave", value: "on_leave" },
 ];
 
+const approvalOptions = [
+  { title: "Pending", value: "pending" },
+  { title: "Approved", value: "approved" },
+  { title: "Rejected", value: "rejected" },
+];
+
 const loadAttendance = async () => {
-  loading.value = true;
+  const cacheKey = `${ATTENDANCE_CACHE_PREFIX}:${filters.date || ""}:${filters.status || "all"}:${filters.approval_status || "all"}`;
+
+  const cachedData = sessionStorage.getItem(cacheKey);
+  if (cachedData) {
+    try {
+      attendance.value = JSON.parse(cachedData);
+    } catch {
+      sessionStorage.removeItem(cacheKey);
+    }
+  }
+
+  if (isFetchingAttendance.value) return;
+
+  const showLoader = attendance.value.length === 0;
+  if (showLoader) {
+    loading.value = true;
+  }
+
+  isFetchingAttendance.value = true;
   try {
-    const response = await attendanceService.getAttendance(filters);
+    const response = await attendanceService.getAttendance(
+      {
+        date_from: filters.date,
+        date_to: filters.date,
+        status: filters.status,
+        per_page: 10000, // Fetch all records
+      },
+      {
+        cacheTTL: 15000,
+        skipToast: true,
+      },
+    );
     attendance.value = response.data || [];
+    sessionStorage.setItem(cacheKey, JSON.stringify(attendance.value));
   } catch (error) {
     toast.error("Failed to load attendance records");
   } finally {
+    isFetchingAttendance.value = false;
     loading.value = false;
   }
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+// Filtered attendance based on search
+const filteredAttendance = computed(() => {
+  const hasSearch = !!filters.search;
+  const q = filters.search.toLowerCase();
+
+  return attendance.value
+    .filter((a) => {
+      const approvalMatches =
+        !filters.approval_status ||
+        a.approval_status === filters.approval_status;
+
+      if (!approvalMatches) return false;
+      if (!hasSearch) return true;
+
+      const name = (a.employee?.full_name || "").toLowerCase();
+      const code = (a.employee?.employee_number || "").toLowerCase();
+      return name.includes(q) || code.includes(q);
+    })
+    .sort((a, b) => {
+      const dateA = String(a.attendance_date || "");
+      const dateB = String(b.attendance_date || "");
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+
+      const nameA = String(a.employee?.full_name || "");
+      const nameB = String(b.employee?.full_name || "");
+      const nameCompare = nameA.localeCompare(nameB);
+      if (nameCompare !== 0) {
+        return nameCompare;
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+});
+
+const clearFilters = () => {
+  filters.date = new Date().toISOString().split("T")[0];
+  filters.status = null;
+  filters.approval_status = null;
+  filters.search = "";
+  loadAttendance();
 };
+
+// Auto-load when date or status changes
+watch(
+  () => filters.date,
+  (newDate) => {
+    if (newDate) loadAttendance();
+  },
+);
+
+watch(
+  () => filters.status,
+  () => {
+    loadAttendance();
+  },
+);
+
+// formatDate imported from @/utils/formatters
 
 const getStatusColor = (status) => {
   const colors = {
@@ -222,25 +418,87 @@ const getStatusColor = (status) => {
     absent: "error",
     late: "warning",
     half_day: "info",
+    incomplete: "orange",
     on_leave: "purple",
   };
   return colors[status] || "grey";
 };
 
+const formatHoursWorked = (hours) => {
+  if (!hours || hours <= 0) return "0.00h";
+
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+
+  if (hrs === 0) {
+    return `${mins}m`;
+  } else if (mins === 0) {
+    return `${hrs}h`;
+  } else {
+    return `${hrs}h ${mins}m`;
+  }
+};
+
+const formatOvertimeHours = (hours) => {
+  if (!hours || hours <= 0) return "";
+  const totalMinutes = Math.round(hours * 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hrs === 0) return `${mins}m`;
+  if (mins === 0) return `${hrs}h`;
+  return `${hrs}h ${mins}m`;
+};
+
+const formatStatusLabel = (status) => {
+  const labels = {
+    present: "Present",
+    absent: "Absent",
+    late: "Late",
+    half_day: "Half Day",
+    incomplete: "Incomplete",
+    on_leave: "On Leave",
+  };
+  return labels[status] || status;
+};
+
 const canEdit = (item) => {
-  return canEditRole.value && (!item.is_approved || user.role === "admin");
+  return (
+    canEditRole.value &&
+    (item.approval_status !== "approved" || user.role === "admin")
+  );
 };
 
 const canApprove = (item) => {
-  return canApproveRole.value && !item.is_approved && !item.is_rejected;
+  return canApproveRole.value && item.approval_status === "pending";
 };
 
 const canDelete = (item) => {
-  return canEditRole.value && !item.is_approved;
+  return canEditRole.value;
 };
 
+let unsubscribeAttendance = null;
+
 onMounted(() => {
+  // Apply query parameters if present (from dashboard)
+  if (route.query.date_from) {
+    filters.date = route.query.date_from;
+  } else if (route.query.date) {
+    filters.date = route.query.date;
+  }
+
   loadAttendance();
+
+  // Listen for attendance updates
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    loadAttendance();
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 
 defineExpose({ loadAttendance });

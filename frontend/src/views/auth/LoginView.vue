@@ -25,14 +25,14 @@
               <h1
                 class="display-1 font-weight-bold text-white mb-4 text-shadow"
               >
-                Payroll Management System
+                Giovanni Construction Management System
               </h1>
               <p class="text-h6 text-white-80 mb-6 text-shadow">
-                A comprehensive Philippine payroll management system designed
-                specifically for construction companies. Built with modern
-                technologies to handle complex payroll computations, employee
-                management, attendance tracking, and government compliance
-                requirements.
+                At Giovanni Construction, we specialize in building not just
+                structures but also efficient solutions for managing your
+                workforce. Our system is designed to tackle the unique demands
+                of the construction industry, from payroll and compliance to
+                attendance tracking, so you can focus on building the future.
               </p>
             </div>
           </v-col>
@@ -46,12 +46,14 @@
                   <div class="icon-circle">
                     <v-icon
                       icon="mdi-hard-hat"
-                      size="40"
+                      size="32"
                       color="white"
                     ></v-icon>
                   </div>
-                  <h1 class="header-title">Sign In</h1>
-                  <p class="header-subtitle">Access your payroll dashboard</p>
+                  <div class="header-text">
+                    <h1 class="header-title">Sign In</h1>
+                    <p class="header-subtitle">Access your payroll dashboard</p>
+                  </div>
                 </div>
               </div>
 
@@ -60,7 +62,7 @@
                   <!-- Username Field -->
                   <div class="field-wrapper">
                     <div class="field-label">
-                      <v-icon size="18" color="#546e7a"
+                      <v-icon size="18" color="#001f3d"
                         >mdi-account-outline</v-icon
                       >
                       <span>Username or Email</span>
@@ -70,7 +72,7 @@
                       placeholder="Enter your username or email"
                       variant="solo"
                       flat
-                      color="#ff6f00"
+                      color="#ed985f"
                       bg-color="#f8f9fa"
                       :rules="[rules.required]"
                       :error-messages="errors.email"
@@ -80,7 +82,7 @@
                       hide-details="auto"
                     >
                       <template v-slot:prepend-inner>
-                        <v-icon color="#546e7a" size="20"
+                        <v-icon color="#001f3d" size="20"
                           >mdi-account-circle</v-icon
                         >
                       </template>
@@ -90,7 +92,7 @@
                   <!-- Password Field -->
                   <div class="field-wrapper">
                     <div class="field-label">
-                      <v-icon size="18" color="#546e7a"
+                      <v-icon size="18" color="#001f3d"
                         >mdi-lock-outline</v-icon
                       >
                       <span>Password</span>
@@ -101,7 +103,7 @@
                       :type="showPassword ? 'text' : 'password'"
                       variant="solo"
                       flat
-                      color="#ff6f00"
+                      color="#ed985f"
                       bg-color="#f8f9fa"
                       :rules="[rules.required, rules.minLength(8)]"
                       :error-messages="errors.password"
@@ -111,12 +113,12 @@
                       hide-details="auto"
                     >
                       <template v-slot:prepend-inner>
-                        <v-icon color="#546e7a" size="20">mdi-lock</v-icon>
+                        <v-icon color="#001f3d" size="20">mdi-lock</v-icon>
                       </template>
                       <template v-slot:append-inner>
                         <v-icon
                           @click="showPassword = !showPassword"
-                          color="#546e7a"
+                          color="#001f3d"
                           size="20"
                           style="cursor: pointer"
                         >
@@ -129,7 +131,7 @@
                   <!-- Role Select -->
                   <div class="field-wrapper">
                     <div class="field-label">
-                      <v-icon size="18" color="#546e7a"
+                      <v-icon size="18" color="#001f3d"
                         >mdi-shield-account-outline</v-icon
                       >
                       <span>Select Role</span>
@@ -140,7 +142,7 @@
                       :items="roles"
                       variant="solo"
                       flat
-                      color="#ff6f00"
+                      color="#ed985f"
                       bg-color="#f8f9fa"
                       :rules="[rules.required]"
                       :error-messages="errors.role"
@@ -150,7 +152,7 @@
                       hide-details="auto"
                     >
                       <template v-slot:prepend-inner>
-                        <v-icon color="#546e7a" size="20"
+                        <v-icon color="#001f3d" size="20"
                           >mdi-shield-account</v-icon
                         >
                       </template>
@@ -160,19 +162,23 @@
                             <v-icon
                               :color="
                                 item.value === 'admin'
-                                  ? '#ff6f00'
-                                  : item.value === 'accountant'
-                                  ? '#ff9800'
-                                  : '#546e7a'
+                                  ? '#ed985f'
+                                  : item.value === 'hr'
+                                    ? '#f7b980'
+                                    : item.value === 'payrollist'
+                                      ? '#4CAF50'
+                                      : '#001f3d'
                               "
                               size="20"
                             >
                               {{
                                 item.value === "admin"
                                   ? "mdi-shield-crown"
-                                  : item.value === "accountant"
-                                  ? "mdi-calculator"
-                                  : "mdi-account-hard-hat"
+                                  : item.value === "hr"
+                                    ? "mdi-calculator"
+                                    : item.value === "payrollist"
+                                      ? "mdi-cash-register"
+                                      : "mdi-account-hard-hat"
                               }}
                             </v-icon>
                           </template>
@@ -185,7 +191,7 @@
                   <div class="remember-section">
                     <v-checkbox
                       v-model="form.remember"
-                      color="#ff6f00"
+                      color="#ed985f"
                       hide-details
                       density="compact"
                     >
@@ -198,7 +204,7 @@
                   <!-- Sign In Button -->
                   <v-btn
                     type="submit"
-                    color="#ff6f00"
+                    color="#ed985f"
                     size="x-large"
                     :loading="authStore.loading"
                     class="signin-btn"
@@ -210,7 +216,7 @@
 
                   <!-- Security Info -->
                   <div class="security-info">
-                    <v-icon size="16" color="#546e7a">mdi-shield-check</v-icon>
+                    <v-icon size="16" color="#001f3d">mdi-shield-check</v-icon>
                     <span>Protected by 2FA & SSL Encryption</span>
                   </div>
 
@@ -257,6 +263,7 @@ import { useToast } from "vue-toastification";
 import TwoFactorVerify from "@/components/TwoFactorVerify.vue";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog.vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 const router = useRouter();
 const route = useRoute();
@@ -286,7 +293,8 @@ const errors = reactive({
 
 const roles = [
   { title: "Admin", value: "admin" },
-  { title: "Accountant", value: "accountant" },
+  { title: "HR", value: "hr" },
+  { title: "Payrollist", value: "payrollist" },
   { title: "Employee", value: "employee" },
 ];
 
@@ -296,6 +304,18 @@ const rules = {
     (value && value.length >= min) || `Must be at least ${min} characters`,
 };
 
+function preloadDashboardChunk(role) {
+  const chunkLoaders = {
+    admin: () => import("@/views/DashboardView.vue"),
+    hr: () => import("@/views/hr/HrDashboardView.vue"),
+    payrollist: () => import("@/views/payrollist/PayrollistDashboardView.vue"),
+    employee: () => import("@/views/employee/EmployeeDashboardView.vue"),
+  };
+
+  const load = chunkLoaders[role] || chunkLoaders.admin;
+  return load().catch(() => {});
+}
+
 async function handleLogin() {
   errorMessage.value = "";
 
@@ -304,6 +324,9 @@ async function handleLogin() {
   if (!valid) return;
 
   try {
+    // Start dashboard chunk preload while login request is in flight
+    preloadDashboardChunk(form.role);
+
     const response = await authStore.login({
       email: form.email,
       password: form.password,
@@ -330,10 +353,10 @@ async function handleLogin() {
     const redirect = route.query.redirect || "/";
     router.push(redirect);
   } catch (error) {
-    console.error("Login error:", error);
-    console.error("Login error response:", error.response?.data);
-    console.error("Login validation errors:", error.response?.data?.errors);
-    console.error("Login credentials sent:", {
+    devLog.error("Login error:", error);
+    devLog.error("Login error response:", error.response?.data);
+    devLog.error("Login validation errors:", error.response?.data?.errors);
+    devLog.error("Login credentials sent:", {
       email: form.email,
       role: form.role,
     });
@@ -383,9 +406,8 @@ async function handleTwoFactorVerified({ userId, code }) {
       }
 
       // Set default Authorization header for future requests
-      api.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${response.data.token}`;
+      api.defaults.headers.common["Authorization"] =
+        `Bearer ${response.data.token}`;
 
       showTwoFactorDialog.value = false;
       toast.success("Login successful");
@@ -396,8 +418,8 @@ async function handleTwoFactorVerified({ userId, code }) {
         const role = response.data.user.role;
         if (role === "employee") {
           redirectPath = "/employee-dashboard";
-        } else if (role === "accountant") {
-          redirectPath = "/accountant-dashboard";
+        } else if (role === "hr") {
+          redirectPath = "/hr-dashboard";
         } else {
           redirectPath = "/admin-dashboard";
         }
@@ -406,15 +428,15 @@ async function handleTwoFactorVerified({ userId, code }) {
       await router.push(redirectPath);
     }
   } catch (error) {
-    console.error("2FA verification error:", error);
+    devLog.error("2FA verification error:", error);
 
     if (error.response?.status === 401) {
       twoFactorVerifyRef.value.setError(
-        error.response?.data?.message || "Invalid verification code"
+        error.response?.data?.message || "Invalid verification code",
       );
     } else {
       twoFactorVerifyRef.value.setError(
-        "Verification failed. Please try again."
+        "Verification failed. Please try again.",
       );
     }
   }
@@ -439,8 +461,8 @@ async function handlePasswordChanged() {
       const role = authStore.userRole;
       if (role === "employee") {
         router.push("/employee-dashboard");
-      } else if (role === "accountant") {
-        router.push("/accountant-dashboard");
+      } else if (role === "hr") {
+        router.push("/hr-dashboard");
       } else {
         router.push("/admin-dashboard");
       }

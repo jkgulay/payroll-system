@@ -4,8 +4,8 @@ const attendanceService = {
   /**
    * Get attendance records with filters
    */
-  async getAttendance(params = {}) {
-    const response = await api.get("/attendance", { params });
+  async getAttendance(params = {}, config = {}) {
+    const response = await api.get("/attendance", { ...config, params });
     return response.data;
   },
 
@@ -78,6 +78,22 @@ const attendanceService = {
   },
 
   /**
+   * Get captured device names with employee counts and saved metadata
+   */
+  async getDeviceSummaries() {
+    const response = await api.get("/attendance/device-summaries");
+    return response.data;
+  },
+
+  /**
+   * Save designation/location metadata for a device name
+   */
+  async saveDeviceProfile(data) {
+    const response = await api.post("/attendance/device-profiles", data);
+    return response.data;
+  },
+
+  /**
    * Approve attendance record
    */
   async approve(id, notes = null) {
@@ -114,7 +130,7 @@ const attendanceService = {
    */
   async getEmployeeSummary(employeeId) {
     const response = await api.get(
-      `/attendance/employee/${employeeId}/summary`
+      `/attendance/employee/${employeeId}/summary`,
     );
     return response.data;
   },
@@ -128,6 +144,14 @@ const attendanceService = {
   },
 
   /**
+   * Get employees with missing attendance data for a specific date
+   */
+  async getMissingAttendance(params) {
+    const response = await api.get("/attendance/missing", { params });
+    return response.data;
+  },
+
+  /**
    * Clear device logs
    */
   async clearDeviceLogs() {
@@ -135,19 +159,74 @@ const attendanceService = {
     return response.data;
   },
 
+  // ===== Attendance Modification Requests =====
+
   /**
-   * Fetch attendance from Yunatt Cloud API
+   * Get modification requests
    */
-  async fetchFromYunatt(params) {
-    const response = await api.post("/attendance/fetch-from-yunatt", params);
+  async getModificationRequests(params = {}) {
+    const response = await api.get("/attendance-modification-requests", {
+      params: { ...params, module: "attendance" },
+    });
     return response.data;
   },
 
   /**
-   * Test Yunatt API connection
+   * Submit a modification request for a specific date
    */
-  async testYunattConnection() {
-    const response = await api.get("/attendance/test-yunatt-connection");
+  async submitModificationRequest(data) {
+    const response = await api.post("/attendance-modification-requests", {
+      ...data,
+      module: "attendance",
+    });
+    return response.data;
+  },
+
+  /**
+   * Check if user has access to modify attendance for a date
+   */
+  async checkModificationAccess(date) {
+    const response = await api.get(
+      "/attendance-modification-requests/check-access",
+      {
+        params: { date, module: "attendance" },
+      },
+    );
+    return response.data;
+  },
+
+  /**
+   * Get count of pending modification requests (admin)
+   */
+  async getModificationPendingCount() {
+    const response = await api.get(
+      "/attendance-modification-requests/pending-count",
+      {
+        params: { module: "attendance" },
+      },
+    );
+    return response.data;
+  },
+
+  /**
+   * Approve a modification request (admin)
+   */
+  async approveModificationRequest(id, notes = null) {
+    const response = await api.post(
+      `/attendance-modification-requests/${id}/approve`,
+      { notes },
+    );
+    return response.data;
+  },
+
+  /**
+   * Reject a modification request (admin)
+   */
+  async rejectModificationRequest(id, notes) {
+    const response = await api.post(
+      `/attendance-modification-requests/${id}/reject`,
+      { notes },
+    );
     return response.data;
   },
 };

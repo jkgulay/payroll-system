@@ -37,7 +37,7 @@
       </template>
 
       <template v-slot:item.time_out="{ item }">
-        {{ item.time_out || "--:--" }}
+        {{ item.actual_time_out || "--:--" }}
       </template>
 
       <template v-slot:item.status="{ item }">
@@ -91,9 +91,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, onUnmounted } from "vue";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
+import { formatDate } from "@/utils/formatters";
 
 const emit = defineEmits(["approve", "reject", "update-count"]);
 const toast = useToast();
@@ -116,7 +118,23 @@ const loadPending = async () => {
   loading.value = true;
   try {
     const response = await attendanceService.getPendingApprovals();
-    pendingList.value = response.data || [];
+    const pendingData = Array.isArray(response.data) ? response.data : [];
+    pendingList.value = pendingData.sort((a, b) => {
+      const dateA = String(a.attendance_date || "");
+      const dateB = String(b.attendance_date || "");
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+
+      const nameA = String(a.employee?.full_name || "");
+      const nameB = String(b.employee?.full_name || "");
+      const nameCompare = nameA.localeCompare(nameB);
+      if (nameCompare !== 0) {
+        return nameCompare;
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
     emit("update-count", pendingList.value.length);
   } catch (error) {
     toast.error("Failed to load pending approvals");
@@ -125,13 +143,7 @@ const loadPending = async () => {
   }
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+// formatDate imported from @/utils/formatters
 
 const getStatusColor = (status) => {
   const colors = {
@@ -144,8 +156,21 @@ const getStatusColor = (status) => {
   return colors[status] || "grey";
 };
 
+let unsubscribeAttendance = null;
+
 onMounted(() => {
   loadPending();
+
+  // Listen for attendance updates
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    loadPending();
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 
 // Watch for external updates
@@ -153,7 +178,7 @@ watch(
   () => pendingList.value,
   (newVal) => {
     emit("update-count", newVal.length);
-  }
+  },
 );
 
 defineExpose({ loadPending });

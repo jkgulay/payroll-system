@@ -1,4 +1,5 @@
 import { ref, watch, unref } from "vue";
+import { devLog } from "@/utils/devLog";
 
 /**
  * Debounce composable for Vue 3
@@ -49,7 +50,7 @@ export function useDebounce(value, delay = 300) {
  * 
  * @example
  * const handleSearch = useDebouncedFn((query) => {
- *   console.log('Searching for:', query);
+ *   devLog.log('Searching for:', query);
  *   api.search(query);
  * }, 500);
  * 
@@ -91,7 +92,7 @@ export function useDebouncedFn(fn, delay = 300) {
  * 
  * @example
  * const handleScroll = useThrottle(() => {
- *   console.log('Scroll event');
+ *   devLog.log('Scroll event');
  * }, 200);
  * 
  * window.addEventListener('scroll', handleScroll);

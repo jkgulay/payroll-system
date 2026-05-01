@@ -1,5 +1,6 @@
 import { ref, computed } from "vue";
 import api from "@/services/api";
+import { devLog } from "@/utils/devLog";
 
 // Shared reactive position rates from database
 const positionRates = ref([]);
@@ -21,7 +22,7 @@ export function usePositionRates() {
       positionRates.value = response.data || [];
       loaded.value = true;
     } catch (error) {
-      console.error("Error loading position rates:", error);
+      devLog.error("Error loading position rates:", error);
       positionRates.value = [];
     } finally {
       loading.value = false;
@@ -36,7 +37,7 @@ export function usePositionRates() {
   // Get rate for a position
   const getRate = (positionName) => {
     const position = positionRates.value.find(
-      (rate) => rate.position_name === positionName
+      (rate) => rate.position_name === positionName,
     );
     return position ? parseFloat(position.daily_rate) : 450; // Default to 450 if not found
   };
@@ -44,7 +45,7 @@ export function usePositionRates() {
   // Get full position rate object
   const getPositionRate = (positionName) => {
     return positionRates.value.find(
-      (rate) => rate.position_name === positionName
+      (rate) => rate.position_name === positionName,
     );
   };
 
@@ -55,7 +56,7 @@ export function usePositionRates() {
       positionRates.value.push(response.data.data);
       return response.data.data;
     } catch (error) {
-      console.error("Error adding position:", error);
+      devLog.error("Error adding position:", error);
       throw error;
     }
   };
@@ -64,13 +65,17 @@ export function usePositionRates() {
   const updateRate = async (id, positionData) => {
     try {
       const response = await api.put(`/position-rates/${id}`, positionData);
+      if (response.data?.approval_required) {
+        return response.data;
+      }
+
       const index = positionRates.value.findIndex((rate) => rate.id === id);
       if (index !== -1) {
         positionRates.value[index] = response.data.data;
       }
       return response.data.data;
     } catch (error) {
-      console.error("Error updating position:", error);
+      devLog.error("Error updating position:", error);
       throw error;
     }
   };
@@ -84,7 +89,7 @@ export function usePositionRates() {
         positionRates.value.splice(index, 1);
       }
     } catch (error) {
-      console.error("Error deleting position:", error);
+      devLog.error("Error deleting position:", error);
       throw error;
     }
   };
@@ -94,18 +99,23 @@ export function usePositionRates() {
     try {
       const response = await api.post(
         `/position-rates/${positionRateId}/bulk-update`,
-        { new_rate: newRate }
+        { new_rate: newRate },
       );
+
+      if (response.data?.approval_required) {
+        return response.data;
+      }
+
       // Update the rate in our local array
       const index = positionRates.value.findIndex(
-        (rate) => rate.id === positionRateId
+        (rate) => rate.id === positionRateId,
       );
       if (index !== -1) {
         positionRates.value[index] = response.data.position_rate;
       }
       return response.data;
     } catch (error) {
-      console.error("Error bulk updating employees:", error);
+      devLog.error("Error bulk updating employees:", error);
       throw error;
     }
   };

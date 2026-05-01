@@ -41,17 +41,6 @@ export const GENDERS = [
   { value: "other", title: "Other" },
 ];
 
-// Payroll Status
-export const PAYROLL_STATUSES = [
-  { value: "draft", title: "Draft", color: "grey" },
-  { value: "processing", title: "Processing", color: "info" },
-  { value: "checked", title: "Checked", color: "primary" },
-  { value: "recommended", title: "Recommended", color: "warning" },
-  { value: "approved", title: "Approved", color: "success" },
-  { value: "paid", title: "Paid", color: "success" },
-  { value: "cancelled", title: "Cancelled", color: "error" },
-];
-
 // Period Types
 export const PERIOD_TYPES = [
   { value: "semi_monthly", title: "Semi-Monthly" },
@@ -65,7 +54,7 @@ export const ALLOWANCE_TYPES = [
   { value: "incentive", title: "Incentive" },
   { value: "ppe", title: "PPE (Personal Protective Equipment)" },
   { value: "transportation", title: "Transportation Allowance" },
-  { value: "meal", title: "Meal Allowance" },
+  { value: "meal", title: "Meal" },
   { value: "communication", title: "Communication Allowance" },
   { value: "housing", title: "Housing Allowance" },
   { value: "clothing", title: "Clothing Allowance" },
@@ -117,7 +106,6 @@ export const LOAN_TYPES = [
   { value: "pag_ibig", title: "Pag-IBIG Loan" },
   { value: "company", title: "Company Loan" },
   { value: "emergency", title: "Emergency Loan" },
-  { value: "salary_advance", title: "Salary Advance" },
   { value: "other", title: "Other Loan" },
 ];
 
@@ -167,7 +155,7 @@ export const DEDUCTION_STATUSES = [
 // User Roles
 export const USER_ROLES = [
   { value: "admin", title: "Administrator" },
-  { value: "accountant", title: "Accountant" },
+  { value: "hr", title: "Human Resources" },
   { value: "hr", title: "HR" },
   { value: "employee", title: "Employee" },
 ];
@@ -203,7 +191,6 @@ export default {
   SALARY_TYPES,
   EMPLOYMENT_TYPES,
   GENDERS,
-  PAYROLL_STATUSES,
   PERIOD_TYPES,
   ALLOWANCE_TYPES,
   ALLOWANCE_FREQUENCIES,

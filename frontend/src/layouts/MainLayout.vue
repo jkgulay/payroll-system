@@ -12,79 +12,111 @@
       :width="256"
       :rail-width="72"
       app
+      @click="rail = false"
     >
-      <!-- User Profile Section -->
-      <v-list-item nav class="user-profile-item pa-3">
-        <template v-slot:prepend>
-          <v-tooltip location="right" :disabled="!rail || isMobile">
-            <template v-slot:activator="{ props }">
-              <v-avatar v-bind="props" size="40" color="primary">
-                <v-img v-if="userAvatar" :src="userAvatar" cover></v-img>
-                <v-icon v-else color="white">mdi-account</v-icon>
-              </v-avatar>
-            </template>
-            <span>{{ userName }} - {{ userRole }}</span>
-          </v-tooltip>
-        </template>
-        <v-list-item-title v-if="!rail">{{ userName }}</v-list-item-title>
-        <v-list-item-subtitle v-if="!rail">{{ userRole }}</v-list-item-subtitle>
-        <template v-slot:append v-if="!isMobile">
-          <v-btn
-            variant="text"
-            :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
-            @click.stop="rail = !rail"
-            size="small"
-            color="white"
-          ></v-btn>
-        </template>
-      </v-list-item>
+      <!-- Logo Header -->
+      <div class="sidebar-header" v-if="!isMobile" @click.stop="rail = !rail">
+        <transition name="logo-fade" mode="out-in">
+          <div v-if="!rail" class="sidebar-logo-expanded" key="expanded">
+            <div class="logo-icon-wrapper">
+              <img
+                v-if="companyInfoStore.hasLogo"
+                :src="companyInfoStore.companyLogo"
+                class="company-logo-img"
+                alt="Company Logo"
+              />
+              <v-icon v-else icon="mdi-hard-hat" size="24"></v-icon>
+            </div>
+            <div class="logo-text-wrapper">
+              <span class="logo-text">GC Payroll</span>
+              <span class="logo-subtext">Management System</span>
+            </div>
+            <v-icon
+              icon="mdi-chevron-left"
+              size="20"
+              class="collapse-icon"
+            ></v-icon>
+          </div>
+          <div v-else class="sidebar-logo-collapsed" key="collapsed">
+            <div class="logo-icon-wrapper-rail">
+              <img
+                v-if="companyInfoStore.hasLogo"
+                :src="companyInfoStore.companyLogo"
+                class="company-logo-img-rail"
+                alt="Company Logo"
+              />
+              <v-icon v-else icon="mdi-hard-hat" size="22"></v-icon>
+            </div>
+          </div>
+        </transition>
+      </div>
 
-      <v-divider class="steel-divider mx-3"></v-divider>
+      <v-divider class="steel-divider mx-3" v-if="!isMobile"></v-divider>
 
       <!-- Navigation Menu -->
       <v-list density="compact" nav class="pa-2">
-        <template v-for="item in menuItems" :key="item.value">
-          <!-- Items with children (submenu) - hide in rail mode -->
-          <v-list-group v-if="item.children && !rail" :value="item.value">
-            <template v-slot:activator="{ props }">
-              <v-list-item
-                v-bind="props"
-                :prepend-icon="item.icon"
-                :title="item.title"
-                color="hardhat"
-                class="menu-item mb-1"
-                rounded="lg"
-              ></v-list-item>
-            </template>
-            <v-list-item
-              v-for="child in item.children"
-              :key="child.value"
-              :prepend-icon="child.icon"
-              :title="child.title"
-              :value="child.value"
-              :to="child.to"
-              color="hardhat"
-              class="menu-item mb-1 ml-4"
-              rounded="lg"
-            ></v-list-item>
-          </v-list-group>
+        <template v-for="section in menuSections" :key="section.title">
+          <!-- Section Header -->
+          <v-list-subheader
+            v-if="!rail"
+            class="menu-section-header text-caption font-weight-bold text-medium-emphasis px-4 py-2 mt-2"
+          >
+            {{ section.title }}
+          </v-list-subheader>
+          <v-divider v-else class="my-2 mx-4"></v-divider>
 
-          <!-- Regular items without children -->
-          <v-tooltip v-else location="right" :disabled="!rail || isMobile">
-            <template v-slot:activator="{ props: tooltipProps }">
+          <!-- Section Items -->
+          <template v-for="item in section.items" :key="item.value">
+            <!-- Items with children (submenu) - hide in rail mode -->
+            <v-list-group v-if="item.children && !rail" :value="item.value">
+              <template v-slot:activator="{ props }">
+                <v-list-item
+                  v-bind="props"
+                  :prepend-icon="item.icon"
+                  :title="item.title"
+                  color="hardhat"
+                  class="menu-item mb-1"
+                  rounded="lg"
+                ></v-list-item>
+              </template>
               <v-list-item
-                v-bind="tooltipProps"
-                :prepend-icon="item.icon"
-                :title="rail ? '' : item.title"
-                :value="item.value"
-                :to="item.to || (item.children?.[0]?.to)"
+                v-for="child in item.children"
+                :key="child.value"
+                :prepend-icon="child.icon"
+                :title="child.title"
+                :value="child.value"
+                :to="child.to"
                 color="hardhat"
-                class="menu-item mb-1"
+                class="menu-item mb-1 ml-4"
                 rounded="lg"
               ></v-list-item>
-            </template>
-            <span>{{ item.title }}</span>
-          </v-tooltip>
+            </v-list-group>
+
+            <!-- Regular items without children -->
+            <v-tooltip v-else location="right" :disabled="!rail || isMobile">
+              <template v-slot:activator="{ props: tooltipProps }">
+                <v-list-item
+                  v-bind="tooltipProps"
+                  :prepend-icon="item.icon"
+                  :title="rail ? '' : item.title"
+                  :value="item.value"
+                  :to="item.to || item.children?.[0]?.to"
+                  color="hardhat"
+                  class="menu-item mb-1"
+                  rounded="lg"
+                >
+                  <template v-slot:append v-if="item.badge > 0 && !rail">
+                    <v-badge
+                      :content="item.badge"
+                      color="error"
+                      inline
+                    ></v-badge>
+                  </template>
+                </v-list-item>
+              </template>
+              <span>{{ item.title }}</span>
+            </v-tooltip>
+          </template>
         </template>
       </v-list>
 
@@ -121,88 +153,60 @@
       </template>
     </v-navigation-drawer>
 
-    <!-- Construction-themed App Bar -->
-    <v-app-bar elevation="4" class="construction-appbar" color="surface" app>
+    <!-- App Bar -->
+    <v-app-bar elevation="0" class="construction-appbar" app>
       <!-- Hamburger Menu Button (Mobile Only) -->
       <v-app-bar-nav-icon
         v-if="isMobile"
         @click="drawer = !drawer"
-        color="hardhat"
+        class="appbar-menu-btn"
       ></v-app-bar-nav-icon>
 
-      <!-- Construction-themed Title with Icon -->
+      <!-- Page Title -->
       <div class="d-flex align-center">
-        <v-icon
-          v-if="!isMobile"
-          icon="mdi-hard-hat"
-          color="hardhat"
-          size="32"
-          class="mr-3 rotating-hardhat"
-        ></v-icon>
+        <div class="appbar-icon-wrapper" v-if="!isMobile">
+          <img
+            v-if="companyInfoStore.hasLogo"
+            :src="companyInfoStore.companyLogo"
+            class="company-logo-navbar"
+            alt="Company Logo"
+          />
+          <v-icon v-else icon="mdi-hard-hat" size="24"></v-icon>
+        </div>
         <div>
-          <v-app-bar-title :class="isMobile ? 'text-subtitle-1' : 'construction-header text-h6'">
-            {{ isMobile ? (pageTitle.length > 20 ? pageTitle.substring(0, 20) + '...' : pageTitle) : pageTitle }}
+          <v-app-bar-title class="appbar-title">
+            {{
+              isMobile
+                ? pageTitle.length > 20
+                  ? pageTitle.substring(0, 20) + "..."
+                  : pageTitle
+                : pageTitle
+            }}
           </v-app-bar-title>
-          <div v-if="!isMobile" class="text-caption text-medium-emphasis">
-            Construction Payroll System
+          <div v-if="!isMobile" class="appbar-subtitle">
+            {{ companyInfoStore.companyName }}
           </div>
         </div>
       </div>
 
       <v-spacer></v-spacer>
 
-      <!-- Sync status indicator with construction theme (Hidden on mobile) -->
-      <v-chip
-        v-if="syncStore.pendingChanges > 0 && !isMobile"
-        color="info"
-        size="small"
-        class="mr-2 construction-chip"
-        prepend-icon="mdi-sync"
-      >
-        {{ syncStore.pendingChanges }} pending
-      </v-chip>
-
-      <!-- Online/Offline indicator with construction safety colors -->
-      <v-chip
-        :color="syncStore.isOnline ? 'success' : 'error'"
-        size="small"
-        variant="elevated"
-        class="construction-chip mr-2"
-        :prepend-icon="syncStore.isOnline ? 'mdi-wifi' : 'mdi-wifi-off'"
-      >
-        <span v-if="!isMobile">{{ syncStore.isOnline ? "Online" : "Offline" }}</span>
-      </v-chip>
-
-      <!-- Notification Bell -->
-      <v-btn icon="mdi-bell-outline" variant="text" color="steel" :size="isMobile ? 'small' : 'default'"></v-btn>
+      <!-- User Info Badge -->
+      <div class="appbar-user-badge" v-if="!isMobile">
+        <v-avatar size="32">
+          <v-img v-if="userAvatar" :src="userAvatar" cover></v-img>
+          <v-icon v-else size="20">mdi-account</v-icon>
+        </v-avatar>
+        <div class="ml-2">
+          <div class="appbar-user-name">{{ userName }}</div>
+          <div class="appbar-user-role">{{ userRole }}</div>
+        </div>
+      </div>
     </v-app-bar>
 
     <!-- Main Content Area -->
     <v-main class="main-content">
       <v-container fluid class="pa-6 main-container">
-        <!-- Breadcrumbs for better navigation -->
-        <v-breadcrumbs
-          v-if="breadcrumbs.length > 1"
-          :items="breadcrumbs"
-          class="px-0 mb-4 breadcrumbs-construction"
-        >
-          <template v-slot:divider>
-            <v-icon size="small">mdi-chevron-right</v-icon>
-          </template>
-          <template v-slot:item="{ item }">
-            <v-breadcrumbs-item
-              :to="item.to"
-              :disabled="item.disabled"
-              class="text-body-2"
-            >
-              <v-icon v-if="item.icon" size="small" class="mr-1">{{
-                item.icon
-              }}</v-icon>
-              {{ item.title }}
-            </v-breadcrumbs-item>
-          </template>
-        </v-breadcrumbs>
-
         <router-view v-slot="{ Component }">
           <transition name="page-transition" mode="out-in">
             <component :is="Component" :key="route.fullPath" />
@@ -213,7 +217,7 @@
 
     <!-- Logout Confirmation Dialog -->
     <v-dialog v-model="logoutDialog" max-width="480" persistent>
-      <v-card class="logout-dialog-card" elevation="24">
+      <v-card class="modern-dialog-card logout-dialog-card">
         <!-- Modern Header with Gradient -->
         <div class="logout-dialog-header">
           <div class="logout-icon-circle">
@@ -227,13 +231,17 @@
         <v-card-text class="logout-dialog-content pa-8">
           <!-- Warning Banner -->
           <div class="logout-warning-banner">
-            <v-icon icon="mdi-alert-circle-outline" size="24" color="#ff6f00"></v-icon>
+            <v-icon
+              icon="mdi-alert-circle-outline"
+              size="24"
+              color="#ed985f"
+            ></v-icon>
             <div class="ml-3">
               <div class="logout-message-title">
                 Are you sure you want to logout?
               </div>
               <div class="logout-message-subtitle">
-                You will be signed out from the Construction Payroll System
+                You will be signed out from Giovanni Construction
               </div>
             </div>
           </div>
@@ -244,7 +252,6 @@
             <span>Any unsaved changes will be lost</span>
           </div>
         </v-card-text>
-
         <!-- Action Buttons -->
         <v-card-actions class="logout-dialog-actions pa-6 pt-0">
           <v-btn
@@ -277,15 +284,17 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { useSyncStore } from "@/stores/sync";
+import { useCompanyInfoStore } from "@/stores/companyInfo";
 import { useToast } from "vue-toastification";
 import { useDisplay } from "vuetify";
 import api from "@/services/api";
+import moduleAccessService from "@/services/moduleAccessService";
+import { devLog } from "@/utils/devLog";
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
-const syncStore = useSyncStore();
+const companyInfoStore = useCompanyInfoStore();
 const toast = useToast();
 const { mobile, mdAndDown } = useDisplay();
 
@@ -295,16 +304,111 @@ const logoutDialog = ref(false);
 const loggingOut = ref(false);
 const isMobile = computed(() => mdAndDown.value);
 
+// Access request badge counts
+const pendingAllRequests = ref(0);
+
+const ALL_REQUEST_MODULES = [
+  "attendance",
+  "attendance-settings",
+  "government-rates",
+  "deductions",
+  "allowances",
+  "thirteenth-month-pay",
+  "loans",
+  "cash-advances",
+  "cash-bonds",
+  "employee-savings",
+  "salary-adjustments",
+];
+
+async function loadAccessRequestCounts() {
+  const role = authStore.user?.role;
+  if (!role || !["admin", "hr"].includes(role)) return;
+  try {
+    const allRes =
+      await moduleAccessService.getPendingCountForModules(ALL_REQUEST_MODULES);
+    pendingAllRequests.value = allRes.count || 0;
+  } catch {
+    // ignore
+  }
+}
+
+function runOnIdle(callback) {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    window.requestIdleCallback(callback, { timeout: 2000 });
+    return;
+  }
+
+  setTimeout(callback, 350);
+}
+
+function prefetchLikelyRouteChunks() {
+  if (!authStore.isAuthenticated) return;
+
+  const prefetchByRole = {
+    admin: [
+      () => import("@/views/DashboardView.vue"),
+      () => import("@/views/employees/EmployeeListView.vue"),
+      () => import("@/views/payroll/PayrollListView.vue"),
+      () => import("@/views/attendance/AttendanceView.vue"),
+      () => import("@/views/projects/ProjectManagementView.vue"),
+      () => import("@/views/settings/UserManagementView.vue"),
+    ],
+    hr: [
+      () => import("@/views/hr/HrDashboardView.vue"),
+      () => import("@/views/employees/EmployeeListView.vue"),
+      () => import("@/views/hr/LeaveApprovalView.vue"),
+      () => import("@/views/employees/ResignationManagementView.vue"),
+      () => import("@/views/hr/HRResumeSubmissions.vue"),
+      () => import("@/views/employee/ProfileView.vue"),
+    ],
+    payrollist: [
+      () => import("@/views/payrollist/PayrollistDashboardView.vue"),
+      () => import("@/views/payroll/PayrollListView.vue"),
+      () => import("@/views/attendance/AttendanceView.vue"),
+      () => import("@/views/projects/ProjectManagementView.vue"),
+      () => import("@/views/settings/HolidayManagementView.vue"),
+      () => import("@/views/employee/ProfileView.vue"),
+    ],
+    employee: [
+      () => import("@/views/employee/EmployeeDashboardView.vue"),
+      () => import("@/views/employee/LeaveRequestView.vue"),
+      () => import("@/views/employee/MyLoansView.vue"),
+      () => import("@/views/employee/ResignationView.vue"),
+      () => import("@/views/employee/ProfileView.vue"),
+    ],
+  };
+
+  const role = authStore.userRole;
+  const loaders = prefetchByRole[role] || [];
+  loaders.forEach((load) => {
+    load().catch(() => {});
+  });
+}
+
 // Handle initial drawer state for mobile
-onMounted(() => {
+onMounted(async () => {
   if (isMobile.value) {
     drawer.value = false;
     rail.value = false;
   }
+
+  // Keep startup non-blocking: refresh data in background
+  if (authStore.isAuthenticated) {
+    authStore.fetchUser().catch(() => {});
+  }
+
+  companyInfoStore.fetchCompanyInfo().catch(() => {});
+  loadAccessRequestCounts().catch(() => {});
+  runOnIdle(prefetchLikelyRouteChunks);
 });
 
 const userName = computed(
-  () => authStore.user?.name || authStore.user?.username || "User"
+  () =>
+    authStore.user?.full_name ||
+    authStore.user?.name ||
+    authStore.user?.username ||
+    "User",
 );
 const userRole = computed(() => {
   const role = authStore.user?.role || "Employee";
@@ -323,35 +427,6 @@ const userAvatar = computed(() => {
 });
 const pageTitle = computed(() => route.meta.title || "Dashboard");
 
-// Breadcrumbs generation
-const breadcrumbs = computed(() => {
-  const crumbs = [
-    {
-      title: "Home",
-      icon: "mdi-home",
-      to: "/",
-      disabled: false,
-    },
-  ];
-
-  // Parse route path to create breadcrumbs
-  const paths = route.path.split("/").filter((p) => p);
-  let currentPath = "";
-
-  paths.forEach((path, index) => {
-    currentPath += `/${path}`;
-    const isLast = index === paths.length - 1;
-
-    crumbs.push({
-      title: path.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-      to: currentPath,
-      disabled: isLast,
-    });
-  });
-
-  return crumbs;
-});
-
 // Filter menu items based on user role with construction-themed icons
 const menuItems = computed(() => {
   const allItems = [
@@ -365,9 +440,9 @@ const menuItems = computed(() => {
     {
       title: "Dashboard",
       icon: "mdi-view-dashboard-variant",
-      value: "accountant-dashboard",
-      to: "/accountant-dashboard",
-      roles: ["accountant"],
+      value: "hr-dashboard",
+      to: "/hr-dashboard",
+      roles: ["hr"],
     },
     {
       title: "My Dashboard",
@@ -381,7 +456,7 @@ const menuItems = computed(() => {
       icon: "mdi-hard-hat",
       value: "employees",
       to: "/employees",
-      roles: ["admin"],
+      roles: ["admin", "hr"],
     },
     {
       title: "Projects",
@@ -395,48 +470,77 @@ const menuItems = computed(() => {
       icon: "mdi-clock-check-outline",
       value: "attendance",
       to: "/attendance",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
+    },
+    {
+      title: "Biometric Import",
+      icon: "mdi-file-upload-outline",
+      value: "biometric-import",
+      to: "/biometric-import",
+      roles: ["admin", "hr"],
     },
     {
       title: "Payroll",
-      icon: "mdi-currency-php",
+      icon: "mdi-cash-multiple",
       value: "payroll",
       to: "/payroll",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
     },
     {
-      title: "Pay Rates",
-      icon: "mdi-cash-multiple",
-      value: "pay-rates",
-      to: "/payroll/pay-rates",
-      roles: ["admin", "accountant"],
+      title: "Resume Submissions",
+      icon: "mdi-file-account-outline",
+      value: "hr-resume-submissions",
+      to: "/hr-resume-submissions",
+      roles: ["hr"],
     },
     {
-      title: "My Resumes",
-      icon: "mdi-file-document-outline",
-      value: "resumes",
-      to: "/resumes",
-      roles: ["accountant"],
-    },
-    {
-      title: "Resume Review",
-      icon: "mdi-file-certificate-outline",
-      value: "resume-review",
-      to: "/resume-review",
+      title: "HR Management",
+      icon: "mdi-account-tie",
+      value: "hr-management",
       roles: ["admin"],
+      children: [
+        {
+          title: "Resume Review",
+          icon: "mdi-file-certificate-outline",
+          value: "resume-review",
+          to: "/resume-review",
+          roles: ["admin"],
+        },
+        {
+          title: "Leave Approval",
+          icon: "mdi-calendar-check",
+          value: "leave-approval",
+          to: "/leave-approval",
+          roles: ["admin", "hr"],
+        },
+        {
+          title: "Resignations",
+          icon: "mdi-briefcase-remove-outline",
+          value: "resignations",
+          to: "/resignations",
+          roles: ["admin", "hr"],
+        },
+      ],
     },
     {
       title: "Benefits & Deductions",
       icon: "mdi-cash-multiple",
       value: "benefits",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
       children: [
         {
           title: "Allowances",
-          icon: "mdi-food",
+          icon: "mdi-cash-multiple",
           value: "allowances",
           to: "/allowances",
-          roles: ["admin", "accountant", "hr"],
+          roles: ["admin", "hr", "hr"],
+        },
+        {
+          title: "13th Month Pay",
+          icon: "mdi-gift-outline",
+          value: "thirteenth-month-pay",
+          to: "/thirteenth-month-pay",
+          roles: ["admin", "hr", "hr"],
         },
         {
           title: "Loans",
@@ -451,10 +555,30 @@ const menuItems = computed(() => {
           to: "/deductions",
         },
         {
+          title: "Cash Advances",
+          icon: "mdi-wallet-plus-outline",
+          value: "cash-advances",
+          to: "/cash-advances",
+        },
+        {
           title: "Cash Bonds",
           icon: "mdi-cash-lock",
           value: "cash-bonds",
           to: "/cash-bonds",
+        },
+        {
+          title: "Employee Savings",
+          icon: "mdi-piggy-bank-outline",
+          value: "employee-savings",
+          to: "/employee-savings",
+          roles: ["admin", "hr"],
+        },
+        {
+          title: "Salary Exception Records",
+          icon: "mdi-cash-sync",
+          value: "salary-adjustments",
+          to: "/salary-adjustments",
+          roles: ["admin", "payrollist"],
         },
       ],
     },
@@ -463,14 +587,7 @@ const menuItems = computed(() => {
       icon: "mdi-file-chart-outline",
       value: "reports",
       to: "/reports",
-      roles: ["admin", "accountant"],
-    },
-    {
-      title: "Resignations",
-      icon: "mdi-briefcase-remove-outline",
-      value: "resignations",
-      to: "/resignations",
-      roles: ["admin", "accountant"],
+      roles: ["admin", "hr"],
     },
     {
       title: "My Leaves",
@@ -478,13 +595,6 @@ const menuItems = computed(() => {
       value: "my-leaves",
       to: "/my-leaves",
       roles: ["employee"],
-    },
-    {
-      title: "Leave Approval",
-      icon: "mdi-calendar-check",
-      value: "leave-approval",
-      to: "/leave-approval",
-      roles: ["admin", "hr"],
     },
     {
       title: "My Loans",
@@ -505,7 +615,21 @@ const menuItems = computed(() => {
       icon: "mdi-badge-account-horizontal-outline",
       value: "profile",
       to: "/profile",
-      roles: ["admin", "accountant", "employee"],
+      roles: ["admin", "hr", "employee"],
+    },
+    {
+      title: "Position Rates",
+      icon: "mdi-badge-account",
+      value: "position-rates",
+      to: "/position-rates",
+      roles: ["admin", "hr"],
+    },
+    {
+      title: "Holidays",
+      icon: "mdi-calendar-star",
+      value: "holidays",
+      to: "/holidays",
+      roles: ["admin", "hr", "payrollist"],
     },
     {
       title: "Settings",
@@ -514,13 +638,348 @@ const menuItems = computed(() => {
       to: "/settings",
       roles: ["admin"],
     },
+    {
+      title: "Audit Trail",
+      icon: "mdi-shield-search",
+      value: "audit-trail",
+      to: "/audit-trail",
+      roles: ["admin"],
+    },
   ];
 
   // Filter items based on user role
   const currentRole = authStore.userRole;
   return allItems.filter(
-    (item) => !item.roles || item.roles.includes(currentRole)
+    (item) => !item.roles || item.roles.includes(currentRole),
   );
+});
+
+// Organize menu items into sections with labels
+const menuSections = computed(() => {
+  const currentRole = authStore.userRole;
+
+  // Define sections based on role
+  const sections = [
+    {
+      title: "MAIN MENU",
+      items: [],
+    },
+    {
+      title: "TEAM MANAGEMENT",
+      items: [],
+    },
+    {
+      title: "LIST",
+      items: [],
+    },
+  ];
+
+  // Main Menu items (common actions)
+  const mainMenuItems = [
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard-variant",
+      value: "admin-dashboard",
+      to: "/admin-dashboard",
+      roles: ["admin"],
+    },
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard-variant",
+      value: "hr-dashboard",
+      to: "/hr-dashboard",
+      roles: ["hr"],
+    },
+    {
+      title: "Dashboard",
+      icon: "mdi-calculator",
+      value: "payrollist-dashboard",
+      to: "/payrollist-dashboard",
+      roles: ["payrollist"],
+    },
+    {
+      title: "Dashboard",
+      icon: "mdi-view-dashboard",
+      value: "employee-dashboard",
+      to: "/employee-dashboard",
+      roles: ["employee"],
+    },
+    {
+      title: "Attendance",
+      icon: "mdi-clock-check-outline",
+      value: "attendance",
+      to: "/attendance",
+      roles: ["admin", "payrollist"],
+    },
+
+    {
+      title: "Settings",
+      icon: "mdi-cog-outline",
+      value: "settings",
+      to: "/settings",
+      roles: ["admin"],
+    },
+    {
+      title: "My Profile",
+      icon: "mdi-badge-account-horizontal-outline",
+      value: "profile",
+      to: "/profile",
+      roles: ["admin", "hr", "employee", "payrollist"],
+    },
+  ];
+
+  // Team Management items
+  const teamManagementItems = [
+    {
+      title: "Employees",
+      icon: "mdi-hard-hat",
+      value: "employees",
+      to: "/employees",
+      roles: ["admin", "hr", "payrollist"],
+    },
+    {
+      title: "Payrolls",
+      icon: "mdi-cash-multiple",
+      value: "payroll",
+      to: "/payroll",
+      roles: ["admin", "hr", "payrollist"],
+    },
+    {
+      title: "Position Rates",
+      icon: "mdi-badge-account",
+      value: "position-rates",
+      to: "/position-rates",
+      roles: ["admin"],
+    },
+    {
+      title: "Holidays",
+      icon: "mdi-calendar-star",
+      value: "holidays",
+      to: "/holidays",
+      roles: ["admin", "hr", "payrollist"],
+    },
+    {
+      title: "Projects",
+      icon: "mdi-office-building",
+      value: "projects",
+      to: "/projects",
+      roles: ["admin", "payrollist"],
+    },
+    {
+      title: "Hiring",
+      icon: "mdi-account-plus-outline",
+      value: "hr-management",
+      roles: ["admin", "hr"],
+      children: [
+        {
+          title: "Resume Review",
+          icon: "mdi-file-certificate-outline",
+          value: "resume-review",
+          to: "/resume-review",
+          roles: ["admin", "hr"],
+        },
+        {
+          title: "Leave Approval",
+          icon: "mdi-calendar-check",
+          value: "leave-approval",
+          to: "/leave-approval",
+          roles: ["admin", "hr"],
+        },
+        {
+          title: "Resignations",
+          icon: "mdi-briefcase-remove-outline",
+          value: "resignations",
+          to: "/resignations",
+          roles: ["admin", "hr"],
+        },
+      ],
+    },
+    {
+      title: "Resume Submissions",
+      icon: "mdi-file-account-outline",
+      value: "hr-resume-submissions",
+      to: "/hr-resume-submissions",
+      roles: ["hr"],
+    },
+  ];
+
+  // List items (reports and data views)
+  const listItems = [
+    {
+      title: "Reports",
+      icon: "mdi-file-chart-outline",
+      value: "reports",
+      to: "/reports",
+      roles: ["admin"],
+    },
+    {
+      title: "Benefits & Deductions",
+      icon: "mdi-cash-multiple",
+      value: "benefits",
+      roles: ["admin", "hr", "payrollist"],
+      children: [
+        {
+          title: "Allowances",
+          icon: "mdi-cash-multiple",
+          value: "allowances",
+          to: "/allowances",
+          roles: ["admin", "hr", "payrollist"],
+        },
+        {
+          title: "13th Month Pay",
+          icon: "mdi-gift-outline",
+          value: "thirteenth-month-pay",
+          to: "/thirteenth-month-pay",
+          roles: ["admin", "hr", "payrollist"],
+        },
+        {
+          title: "Loans",
+          icon: "mdi-hand-coin-outline",
+          value: "loans",
+          to: "/loans",
+          roles: ["admin", "hr", "payrollist"],
+        },
+        {
+          title: "Deductions",
+          icon: "mdi-cash-minus",
+          value: "deductions",
+          to: "/deductions",
+          roles: ["admin", "hr", "payrollist"],
+        },
+        {
+          title: "Cash Advances",
+          icon: "mdi-wallet-plus-outline",
+          value: "cash-advances",
+          to: "/cash-advances",
+          roles: ["admin", "hr", "payrollist"],
+        },
+        {
+          title: "Cash Bonds",
+          icon: "mdi-cash-lock",
+          value: "cash-bonds",
+          to: "/cash-bonds",
+          roles: ["admin", "hr", "payrollist"],
+        },
+        {
+          title: "Employee Savings",
+          icon: "mdi-piggy-bank-outline",
+          value: "employee-savings",
+          to: "/employee-savings",
+          roles: ["admin", "hr", "payrollist"],
+        },
+        {
+          title: "Salary Exception Records",
+          icon: "mdi-cash-sync",
+          value: "salary-adjustments",
+          to: "/salary-adjustments",
+          roles: ["admin", "hr", "payrollist"],
+        },
+      ],
+    },
+    {
+      title: "Government Rates",
+      icon: "mdi-bank",
+      value: "government-rates",
+      to: "/government-rates",
+      roles: ["payrollist"],
+    },
+    {
+      title: "Attendance Settings",
+      icon: "mdi-clock-edit-outline",
+      value: "attendance-settings",
+      to: "/attendance-settings",
+      roles: ["admin", "payrollist"],
+    },
+    {
+      title: "Biometric Import",
+      icon: "mdi-file-upload-outline",
+      value: "biometric-import",
+      to: "/biometric-import",
+      roles: ["admin", "hr", "payrollist"],
+    },
+    {
+      title: "My Leaves",
+      icon: "mdi-calendar-clock",
+      value: "my-leaves",
+      to: "/my-leaves",
+      roles: ["employee", "payrollist"],
+    },
+    {
+      title: "My Loans",
+      icon: "mdi-hand-coin-outline",
+      value: "my-loans",
+      to: "/my-loans",
+      roles: ["employee", "payrollist"],
+    },
+    {
+      title: "My Cash Advances",
+      icon: "mdi-wallet-plus-outline",
+      value: "my-cash-advances",
+      to: "/cash-advances",
+      roles: ["employee"],
+    },
+    {
+      title: "My Cash Bonds",
+      icon: "mdi-cash-lock",
+      value: "my-cash-bonds",
+      to: "/cash-bonds",
+      roles: ["employee"],
+    },
+    {
+      title: "My Employee Savings",
+      icon: "mdi-piggy-bank-outline",
+      value: "my-employee-savings",
+      to: "/employee-savings",
+      roles: ["employee"],
+    },
+    {
+      title: "My Resignation",
+      icon: "mdi-briefcase-remove-outline",
+      value: "my-resignation",
+      to: "/my-resignation",
+      roles: ["employee", "payrollist"],
+    },
+  ];
+
+  // Access request items (admin/hr only)
+  const accessRequestItems = [
+    {
+      title: "Access Requests",
+      icon: "mdi-clipboard-list-outline",
+      value: "access-requests",
+      to: "/requests",
+      roles: ["admin", "hr"],
+      badge: pendingAllRequests.value,
+    },
+  ];
+
+  // Only show section if there are any pending requests
+  const filteredAccessItems = accessRequestItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole),
+  );
+
+  if (filteredAccessItems.length > 0) {
+    sections.push({
+      title: "ACCESS REQUESTS",
+      items: filteredAccessItems,
+    });
+  }
+
+  // Filter and assign items to sections
+  sections[0].items = mainMenuItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole),
+  );
+
+  sections[1].items = teamManagementItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole),
+  );
+
+  sections[2].items = listItems.filter(
+    (item) => !item.roles || item.roles.includes(currentRole),
+  );
+
+  // Remove empty sections
+  return sections.filter((section) => section.items.length > 0);
 });
 
 async function handleLogout() {
@@ -535,7 +994,7 @@ async function confirmLogout() {
     toast.success("Logged out successfully");
     router.push("/login");
   } catch (error) {
-    console.error("Logout error:", error);
+    devLog.error("Logout error:", error);
     toast.error("Error logging out");
   } finally {
     loggingOut.value = false;
@@ -574,120 +1033,179 @@ async function downloadCurrentPayslip() {
       toast.warning("No current payslip available");
     }
   } catch (error) {
-    console.error("Error downloading payslip:", error);
+    devLog.error("Error downloading payslip:", error);
     toast.error("Failed to download payslip");
   }
 }
 </script>
 
 <style scoped lang="scss">
-// Construction-themed Navigation Drawer
+// Professional Navigation Drawer - Clean Design
 .construction-drawer {
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+  background: #001f3d !important;
   position: fixed !important;
   top: 0 !important;
   bottom: 0 !important;
-  height: 100vh !important;
+  height: auto !important;
   overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(230, 230, 230, 0.1);
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
 
   :deep(.v-navigation-drawer__content) {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     overflow-y: auto !important;
+    background: transparent;
+
+    /* Hide scrollbar but keep scrolling functionality */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   :deep(.v-list) {
     flex: 1 !important;
     overflow-y: auto !important;
+    background: transparent !important;
+    padding: 8px !important;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   :deep(.v-list-item) {
-    color: rgba(255, 255, 255, 0.85) !important;
-    margin: 4px 8px;
-    border-radius: 12px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #e6e6e6 !important;
+    margin: 4px 8px !important;
+    border-radius: 8px !important;
+    min-height: 44px !important;
+    transition: all 0.2s ease !important;
+    background: transparent !important;
 
     .v-list-item-title {
-      color: rgba(255, 255, 255, 0.9) !important;
+      color: #e6e6e6 !important;
       font-weight: 500;
+      font-size: 0.9rem;
+      letter-spacing: 0.2px;
     }
 
     .v-icon {
-      color: rgba(255, 255, 255, 0.7) !important;
+      color: #e6e6e6 !important;
+      opacity: 0.8;
+      font-size: 20px !important;
+      transition: all 0.2s ease;
     }
 
     &:hover {
-      background: rgba(99, 102, 241, 0.2) !important;
-      transform: translateX(4px);
+      background: rgba(237, 152, 95, 0.12) !important;
 
       .v-list-item-title {
-        color: white !important;
+        color: #f7b980 !important;
       }
 
       .v-icon {
-        color: rgba(255, 255, 255, 0.9) !important;
+        color: #f7b980 !important;
+        opacity: 1;
       }
     }
   }
 
   :deep(.v-list-item--active) {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-    color: white !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-
-    &::before {
-      opacity: 0;
-    }
+    background: #ed985f !important;
 
     .v-list-item-title {
-      color: white !important;
+      color: #001f3d !important;
       font-weight: 600;
     }
 
     .v-icon {
-      color: white !important;
+      color: #001f3d !important;
+      opacity: 1;
+    }
+
+    &:hover {
+      background: #f7b980 !important;
+
+      .v-list-item-title {
+        color: #001f3d !important;
+      }
+
+      .v-icon {
+        color: #001f3d !important;
+      }
     }
   }
 
   // List group styling for submenus
   :deep(.v-list-group) {
     .v-list-item {
-      color: rgba(255, 255, 255, 0.85) !important;
+      color: #e6e6e6 !important;
     }
 
     .v-list-group__items {
       .v-list-item {
         padding-left: 48px;
+
+        &::before {
+          content: "";
+          position: absolute;
+          left: 28px;
+          top: 50%;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(230, 230, 230, 0.3);
+          transform: translateY(-50%);
+        }
+
+        &.v-list-item--active::before {
+          background: #001f3d;
+        }
       }
     }
   }
-  
+
   // Rail mode specific styling
   &.v-navigation-drawer--rail {
     :deep(.v-list-item) {
       padding: 0 !important;
-      margin: 6px auto !important;
-      justify-content: center !important;
-      align-items: center !important;
-      min-height: 48px !important;
-      height: 48px !important;
-      width: 48px !important;
-      border-radius: 12px !important;
+      padding-inline-start: 0 !important;
+      padding-inline-end: 0 !important;
+      margin: 4px auto !important;
+      margin-inline-start: auto !important;
+      margin-inline-end: auto !important;
+      min-height: 44px !important;
+      height: 44px !important;
+      width: 44px !important;
+      min-width: 44px !important;
+      max-width: 44px !important;
+      border-radius: 8px !important;
       display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
       flex-shrink: 0 !important;
       position: relative !important;
-      
+
       .v-list-item__overlay {
-        border-radius: 12px !important;
+        border-radius: 8px !important;
       }
-      
+
       .v-list-item__prepend {
         margin: 0 !important;
+        margin-inline-start: 0 !important;
+        margin-inline-end: 0 !important;
         padding: 0 !important;
+        padding-inline-start: 0 !important;
+        padding-inline-end: 0 !important;
         width: 100% !important;
         height: 100% !important;
         display: flex !important;
@@ -696,299 +1214,393 @@ async function downloadCurrentPayslip() {
         opacity: 1 !important;
         position: absolute !important;
         left: 0 !important;
+        right: 0 !important;
         top: 0 !important;
-        
-        .v-icon {
-          font-size: 22px !important;
+        bottom: 0 !important;
+
+        // Vuetify adds a spacer after prepend icons; in rail mode this shifts
+        // the visible icon slightly left. Remove it so the icon sits centered.
+        .v-list-item__spacer {
+          display: none !important;
+          width: 0 !important;
           margin: 0 !important;
+        }
+
+        > .v-badge {
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
-          position: relative !important;
+        }
+
+        .v-icon {
+          font-size: 20px !important;
+          margin: 0 !important;
+          margin-inline-start: 0 !important;
+          margin-inline-end: 0 !important;
         }
       }
-      
+
       .v-list-item__content {
         display: none !important;
         width: 0 !important;
         flex: none !important;
       }
-      
+
       .v-list-item__append {
         display: none !important;
         width: 0 !important;
       }
-      
+
       &:hover {
-        transform: scale(1.05);
-        background: rgba(99, 102, 241, 0.25) !important;
-      }
-      
-      &::before {
-        border-radius: 12px !important;
+        background: rgba(237, 152, 95, 0.15) !important;
       }
     }
-    
+
     :deep(.v-list-item--active) {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-      
+      background: #ed985f !important;
+
       .v-icon {
-        color: white !important;
-      }
-      
-      &::before {
-        opacity: 0 !important;
+        color: #001f3d !important;
       }
     }
-    
+
     :deep(.v-list-group) {
       display: none;
     }
-    
-    .user-profile-item {
-      padding: 0 !important;
-      margin: 8px auto !important;
-      justify-content: center !important;
-      align-items: center !important;
-      height: 56px !important;
-      width: 56px !important;
-      position: relative;
-      border-radius: 50% !important;
-      display: flex !important;
-      
-      :deep(.v-list-item__prepend) {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-      }
-      
-      :deep(.v-list-item__content) {
-        display: none !important;
-      }
-      
-      :deep(.v-list-item__append) {
-        display: flex !important;
-        position: absolute;
-        right: -8px;
-        top: -4px;
-        opacity: 1 !important;
-        z-index: 100 !important;
-        width: auto !important;
-        
-        .v-btn {
-          width: 24px !important;
-          height: 24px !important;
-          min-width: 24px !important;
-          padding: 0 !important;
-          background: rgba(0, 0, 0, 0.3) !important;
-          opacity: 1 !important;
-          
-          &:hover {
-            background: rgba(0, 0, 0, 0.5) !important;
-          }
-        }
-      }
-      
-      :deep(.v-avatar) {
-        margin: 0 !important;
-        position: relative !important;
-      }
-      
-      &:hover {
-        transform: none !important;
-        background: rgba(0, 0, 0, 0.3) !important;
-      }
-    }
-    
+
     .steel-divider {
       margin: 8px 16px !important;
     }
   }
 }
 
-.user-profile-item {
-  background: rgba(0, 0, 0, 0.2);
-  margin: 8px;
-  border-radius: 12px;
-  padding: 12px 8px;
-  transition: all 0.3s ease;
-  min-height: 64px;
+// Sidebar Header
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  min-height: 72px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
-  :deep(.v-list-item-title) {
-    color: white !important;
-    font-weight: 600;
-    font-size: 0.95rem;
-  }
-
-  :deep(.v-list-item-subtitle) {
-    color: rgba(255, 255, 255, 0.75) !important;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.8px;
-    font-weight: 600;
-    margin-top: 2px;
-  }
-
-  :deep(.v-avatar) {
-    border: 2px solid rgba(255, 255, 255, 0.2);
-  }
-
-  :deep(.v-btn) {
-    color: rgba(255, 255, 255, 0.8) !important;
+  &:hover {
+    background: rgba(237, 152, 95, 0.08);
   }
 }
 
-.menu-item {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.sidebar-logo-expanded {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
 
+.logo-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+
+  .v-icon {
+    color: #001f3d !important;
+  }
+
+  .company-logo-img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+}
+
+.logo-text-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.logo-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.logo-subtext {
+  font-size: 0.65rem;
+  color: #f7b980;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.collapse-icon {
+  color: #e6e6e6 !important;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+
+  .sidebar-header:hover & {
+    opacity: 1;
+    color: #f7b980 !important;
+  }
+}
+
+.sidebar-logo-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.logo-icon-wrapper-rail {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  transition: all 0.2s ease;
+
+  .v-icon {
+    color: #001f3d !important;
+  }
+
+  .company-logo-img-rail {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+
+  .sidebar-header:hover & {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(237, 152, 95, 0.4);
+  }
+}
+
+// Logo transition
+.logo-fade-enter-active,
+.logo-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.logo-fade-enter-from,
+.logo-fade-leave-to {
+  opacity: 0;
+}
+
+// Menu item styling
+.menu-item {
   :deep(.v-list-item__prepend) {
     .v-icon {
       font-size: 20px;
-      color: rgba(255, 255, 255, 0.7) !important;
+      color: #e6e6e6 !important;
+      opacity: 0.8;
     }
   }
 
   :deep(.v-list-item-title) {
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: #e6e6e6 !important;
     font-weight: 500;
   }
 
   &:hover {
     :deep(.v-list-item__prepend) {
       .v-icon {
-        color: rgba(255, 255, 255, 0.95) !important;
+        color: #f7b980 !important;
+        opacity: 1;
       }
     }
 
     :deep(.v-list-item-title) {
-      color: white !important;
+      color: #f7b980 !important;
     }
   }
 }
 
-// Steel beam divider effect
+// Clean divider
 :deep(.steel-divider) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  height: 1px;
-  margin: 12px 16px;
+  background: rgba(230, 230, 230, 0.15) !important;
+  height: 1px !important;
+  margin: 12px 16px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
-// Logout button styling in drawer
+// Menu section headers
+.menu-section-header {
+  color: #f7b980 !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+  margin-top: 20px !important;
+  margin-bottom: 8px !important;
+  padding-left: 20px !important;
+  padding-right: 16px !important;
+  user-select: none;
+
+  &:first-of-type {
+    margin-top: 4px !important;
+  }
+}
+
+// Logout button - clean style
 .logout-btn,
 .logout-btn-rail {
-  background-color: rgba(239, 68, 68, 0.15) !important;
-  color: #fca5a5 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
   font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: rgba(239, 68, 68, 0.25) !important;
-    color: #fef2f2 !important;
-    
-    .v-icon {
-      color: #fef2f2 !important;
-    }
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
   }
 
   .v-icon {
-    color: #fca5a5 !important;
-    font-size: 24px !important;
+    color: #ef4444 !important;
+    font-size: 20px !important;
   }
 }
 
 .logout-btn-rail {
-  width: 48px !important;
-  height: 48px !important;
-  min-width: 48px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  border-radius: 8px !important;
 }
 
-// Breadcrumbs styling
-.breadcrumbs-construction {
-  :deep(.v-breadcrumbs-item) {
-    color: #546e7a;
-    font-weight: 500;
-    transition: all 0.2s ease;
+// Clean App Bar styling
+.construction-appbar {
+  background: #fff !important;
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  padding: 0 16px !important;
+}
 
-    &:hover {
-      color: #d84315;
+.appbar-menu-btn {
+  color: #001f3d !important;
+}
+
+.appbar-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(237, 152, 95, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+
+  .v-icon {
+    color: #ed985f !important;
+  }
+
+  .company-logo-navbar {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+}
+
+.appbar-title {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: #001f3d !important;
+  letter-spacing: -0.2px;
+}
+
+.appbar-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: -2px;
+}
+
+.appbar-user-badge {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(0, 31, 61, 0.04);
+  border: 1px solid rgba(0, 31, 61, 0.08);
+
+  .v-avatar {
+    border: 2px solid #ed985f;
+    background: rgba(237, 152, 95, 0.1);
+
+    .v-icon {
+      color: #ed985f !important;
     }
   }
-
-  :deep(.v-breadcrumbs-item--disabled) {
-    color: #d84315;
-    font-weight: 600;
-  }
-
-  :deep(.v-breadcrumbs-divider) {
-    color: #b0bec5;
-  }
 }
 
-// Construction App Bar styling
-.construction-appbar {
-  backdrop-filter: blur(10px);
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+.appbar-user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #001f3d;
+  line-height: 1.2;
+}
+
+.appbar-user-role {
+  font-size: 0.7rem;
+  color: #ed985f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .construction-chip {
   font-weight: 600;
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.5px;
-}
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  background: rgba(237, 152, 95, 0.1) !important;
+  border: 1px solid rgba(237, 152, 95, 0.2) !important;
+  color: #001f3d !important;
 
-// Rotating hardhat animation
-.rotating-hardhat {
-  animation: subtle-rotate 3s ease-in-out infinite;
-}
-
-@keyframes subtle-rotate {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(-5deg);
-  }
-  75% {
-    transform: rotate(5deg);
+  &:hover {
+    background: rgba(237, 152, 95, 0.15) !important;
   }
 }
 
-// Main content area
+// Clean main content area
 .main-content {
-  background: #f8fafc;
+  background: #f5f5f5;
   min-height: 100vh;
   overflow-y: auto;
 }
 
 .main-container {
   min-height: 100vh;
-  padding-bottom: 24px;
+  padding-bottom: 32px;
 }
 
 // Page transitions
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
+.fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
 }
 
 // ========================================
@@ -999,9 +1611,10 @@ async function downloadCurrentPayslip() {
   border-radius: 20px !important;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.98) !important;
-  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.4),
-    0 20px 40px -20px rgba(255, 111, 0, 0.15),
-    0 0 0 1px rgba(255, 152, 0, 0.1) inset !important;
+  box-shadow:
+    0 40px 80px -20px rgba(0, 0, 0, 0.4),
+    0 20px 40px -20px rgba(237, 152, 95, 0.15),
+    0 0 0 1px rgba(247, 185, 128, 0.1) inset !important;
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   animation: dialogFadeIn 0.3s ease-out;
@@ -1020,7 +1633,7 @@ async function downloadCurrentPayslip() {
 
 .logout-dialog-header {
   padding: 2.5rem 2rem 2rem;
-  background: linear-gradient(135deg, #37474f 0%, #ff6f00 100%);
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
   position: relative;
   text-align: center;
 
@@ -1031,7 +1644,7 @@ async function downloadCurrentPayslip() {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, transparent, #ff9800, transparent);
+    background: linear-gradient(90deg, transparent, #f7b980, transparent);
   }
 }
 
@@ -1052,7 +1665,8 @@ async function downloadCurrentPayslip() {
 }
 
 @keyframes pulseIcon {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -1085,23 +1699,23 @@ async function downloadCurrentPayslip() {
   display: flex;
   align-items: flex-start;
   padding: 1.5rem;
-  background: rgba(255, 111, 0, 0.08);
+  background: rgba(237, 152, 95, 0.08);
   border-radius: 12px;
-  border: 1px solid rgba(255, 111, 0, 0.2);
-  box-shadow: 0 2px 8px rgba(255, 111, 0, 0.08);
+  border: 1px solid rgba(237, 152, 95, 0.2);
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.08);
   margin-bottom: 1rem;
 }
 
 .logout-message-title {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #37474f;
+  color: #001f3d;
   margin-bottom: 0.25rem;
 }
 
 .logout-message-subtitle {
   font-size: 0.875rem;
-  color: #546e7a;
+  color: rgba(0, 31, 61, 0.7);
   line-height: 1.5;
 }
 
@@ -1110,12 +1724,12 @@ async function downloadCurrentPayslip() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1rem;
-  background: rgba(84, 110, 122, 0.06);
+  background: rgba(0, 31, 61, 0.04);
   border-radius: 10px;
   font-size: 0.8125rem;
-  color: #546e7a;
+  color: rgba(0, 31, 61, 0.7);
   font-weight: 500;
-  border: 1px solid rgba(84, 110, 122, 0.1);
+  border: 1px solid rgba(0, 31, 61, 0.08);
 }
 
 .logout-dialog-actions {
@@ -1129,13 +1743,13 @@ async function downloadCurrentPayslip() {
   height: 48px !important;
   border-radius: 12px !important;
   font-weight: 600 !important;
-  border: 2px solid rgba(84, 110, 122, 0.3) !important;
-  color: #546e7a !important;
+  border: 2px solid rgba(0, 31, 61, 0.2) !important;
+  color: #001f3d !important;
   transition: all 0.3s ease !important;
 
   &:hover {
-    border-color: #546e7a !important;
-    background: rgba(84, 110, 122, 0.08) !important;
+    border-color: #001f3d !important;
+    background: rgba(0, 31, 61, 0.04) !important;
     transform: translateY(-2px);
   }
 }
@@ -1144,19 +1758,22 @@ async function downloadCurrentPayslip() {
   height: 48px !important;
   border-radius: 12px !important;
   font-weight: 600 !important;
-  background: linear-gradient(135deg, #ff6f00 0%, #ff9800 100%) !important;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%) !important;
   color: white !important;
-  box-shadow: 0 8px 20px rgba(255, 111, 0, 0.3),
-    0 4px 10px rgba(255, 111, 0, 0.2) !important;
+  box-shadow:
+    0 8px 20px rgba(237, 152, 95, 0.3),
+    0 4px 10px rgba(237, 152, 95, 0.2) !important;
   transition: all 0.3s ease !important;
 
   &:hover {
-    box-shadow: 0 12px 28px rgba(255, 111, 0, 0.4),
-      0 6px 14px rgba(255, 111, 0, 0.3) !important;
+    box-shadow:
+      0 12px 28px rgba(237, 152, 95, 0.4),
+      0 6px 14px rgba(237, 152, 95, 0.3) !important;
     transform: translateY(-2px);
   }
 
   &:active {
     transform: translateY(0);
   }
-}</style>
+}
+</style>

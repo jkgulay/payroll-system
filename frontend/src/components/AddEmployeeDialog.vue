@@ -6,14 +6,19 @@
     persistent
     scrollable
   >
-    <v-card>
-      <v-card-title class="text-h5 py-4 bg-primary">
-        <v-icon start>mdi-account-plus</v-icon>
-        Add New Employee
+    <v-card class="modern-dialog">
+      <v-card-title class="dialog-header">
+        <div class="dialog-icon-wrapper primary">
+          <v-icon size="24">mdi-account-plus</v-icon>
+        </div>
+        <div>
+          <div class="dialog-title">Add New Employee</div>
+          <div class="dialog-subtitle">Complete all required fields</div>
+        </div>
       </v-card-title>
       <v-divider></v-divider>
 
-      <v-card-text class="pt-4" style="max-height: 70vh">
+      <v-card-text class="dialog-content" style="max-height: 70vh">
         <v-form ref="employeeForm">
           <!-- Info Alert -->
           <v-alert
@@ -23,18 +28,18 @@
             class="mb-4"
             icon="mdi-information"
           >
-            Complete all required fields. Employee number and credentials will
-            be auto-generated upon saving.
+            Employee number and credentials will be auto-generated upon saving.
           </v-alert>
 
           <v-row>
             <!-- Section 1: Personal Information -->
             <v-col cols="12">
-              <div class="text-h6 mb-2 d-flex align-center">
-                <v-icon start color="primary">mdi-account-circle</v-icon>
-                Section 1: Personal Information
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-account-circle</v-icon>
+                </div>
+                <h3 class="section-title">Personal Information</h3>
               </div>
-              <v-divider class="mb-4"></v-divider>
             </v-col>
 
             <v-col cols="12" md="4">
@@ -134,11 +139,12 @@
 
             <!-- Section 2: Employment Information -->
             <v-col cols="12" class="mt-4">
-              <div class="text-h6 mb-2 d-flex align-center">
-                <v-icon start color="primary">mdi-briefcase</v-icon>
-                Section 2: Employment Information
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-briefcase</v-icon>
+                </div>
+                <h3 class="section-title">Employment Information</h3>
               </div>
-              <v-divider class="mb-4"></v-divider>
             </v-col>
 
             <v-col cols="12" md="6">
@@ -177,7 +183,7 @@
                 :rules="[rules.required]"
                 variant="outlined"
                 density="comfortable"
-                hint="Daily rate will be set automatically based on position"
+                hint="Position daily rate is used as payroll base and converted by salary type"
                 persistent-hint
                 @update:model-value="updateBasicSalary"
               ></v-select>
@@ -197,12 +203,12 @@
             <v-col cols="12" md="6">
               <v-text-field
                 :model-value="formatSalaryDisplay()"
-                label="Daily Rate"
+                label="Position Rate Reference"
                 prepend-inner-icon="mdi-cash"
                 readonly
                 variant="outlined"
                 density="comfortable"
-                hint="Based on selected position"
+                hint="Displayed as daily reference for the selected position"
                 persistent-hint
                 prefix="₱"
                 suffix="/day"
@@ -211,11 +217,12 @@
 
             <!-- Section 3: Employment Type & Status -->
             <v-col cols="12" class="mt-4">
-              <div class="text-h6 mb-2 d-flex align-center">
-                <v-icon start color="primary">mdi-file-document</v-icon>
-                Section 3: Contract & Status
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-file-document</v-icon>
+                </div>
+                <h3 class="section-title">Contract & Status</h3>
               </div>
-              <v-divider class="mb-4"></v-divider>
             </v-col>
 
             <v-col cols="12" md="6">
@@ -274,11 +281,12 @@
 
             <!-- Section 4: User Account -->
             <v-col cols="12" class="mt-4">
-              <div class="text-h6 mb-2 d-flex align-center">
-                <v-icon start color="primary">mdi-account-key</v-icon>
-                Section 4: User Account
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-account-key</v-icon>
+                </div>
+                <h3 class="section-title">User Account</h3>
               </div>
-              <v-divider class="mb-4"></v-divider>
             </v-col>
 
             <v-col cols="12">
@@ -307,7 +315,7 @@
               <v-select
                 v-model="formData.role"
                 :items="[
-                  { title: 'Accountant', value: 'accountant' },
+                  { title: 'hr', value: 'hr' },
                   { title: 'Employee', value: 'employee' },
                 ]"
                 label="User Role"
@@ -319,32 +327,100 @@
                 density="comfortable"
               ></v-select>
             </v-col>
+
+            <!-- Section 5: Government Contributions -->
+            <v-col cols="12" class="mt-4">
+              <div class="section-header">
+                <div class="section-icon">
+                  <v-icon size="18">mdi-shield-check</v-icon>
+                </div>
+                <h3 class="section-title">Government Contributions</h3>
+              </div>
+            </v-col>
+
+            <v-col cols="12">
+              <v-alert
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-2"
+              >
+                Select which government contributions apply to this employee.
+                Only selected contributions will be calculated in the payroll.
+              </v-alert>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-checkbox
+                v-model="formData.has_sss"
+                label="SSS (Social Security System)"
+                color="primary"
+                hide-details
+                density="comfortable"
+              >
+                <template v-slot:prepend>
+                  <v-icon color="primary">mdi-shield-account</v-icon>
+                </template>
+              </v-checkbox>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-checkbox
+                v-model="formData.has_philhealth"
+                label="PhilHealth"
+                color="success"
+                hide-details
+                density="comfortable"
+              >
+                <template v-slot:prepend>
+                  <v-icon color="success">mdi-hospital-box</v-icon>
+                </template>
+              </v-checkbox>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-checkbox
+                v-model="formData.has_pagibig"
+                label="Pag-IBIG"
+                color="orange"
+                hide-details
+                density="comfortable"
+              >
+                <template v-slot:prepend>
+                  <v-icon color="orange">mdi-home-city</v-icon>
+                </template>
+              </v-checkbox>
+            </v-col>
           </v-row>
         </v-form>
       </v-card-text>
 
       <v-divider></v-divider>
 
-      <v-card-actions class="pa-4">
+      <v-card-actions class="dialog-actions">
         <v-spacer></v-spacer>
-        <v-btn
-          variant="text"
+        <button
+          class="dialog-btn dialog-btn-cancel"
           @click="handleClose"
           :disabled="saving"
-          size="large"
         >
           Cancel
-        </v-btn>
-        <v-btn
-          color="primary"
-          variant="elevated"
+        </button>
+        <button
+          class="dialog-btn dialog-btn-primary"
           @click="handleSave"
-          :loading="saving"
-          size="large"
-          prepend-icon="mdi-content-save"
+          :disabled="saving"
         >
-          Create Employee
-        </v-btn>
+          <v-progress-circular
+            v-if="saving"
+            indeterminate
+            size="16"
+            width="2"
+            class="mr-2"
+          ></v-progress-circular>
+          <v-icon v-else size="18" class="mr-1">mdi-content-save</v-icon>
+          {{ saving ? "Creating..." : "Create Employee" }}
+        </button>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -366,7 +442,8 @@ const props = defineProps({
   },
 });
 
-const { positionOptions, getRate, loadPositionRates } = usePositionRates();
+const { positionOptions, getRate, loadPositionRates, refreshRates } =
+  usePositionRates();
 
 const employeeForm = ref(null);
 const saving = ref(false);
@@ -394,7 +471,11 @@ const ACTIVITY_STATUSES = [
 const SALARY_TYPES = [
   { title: "Daily", value: "daily" },
   { title: "Monthly", value: "monthly" },
+  { title: "Hourly", value: "hourly" },
 ];
+
+const DEFAULT_WORKING_DAYS_PER_MONTH = 22;
+const DEFAULT_STANDARD_HOURS_PER_DAY = 8;
 
 const formData = ref({
   // Personal Information
@@ -418,6 +499,11 @@ const formData = ref({
   salary_type: "daily",
   basic_salary: 0,
 
+  // Government Contributions
+  has_sss: true,
+  has_philhealth: true,
+  has_pagibig: true,
+
   // User Account
   role: "employee",
 });
@@ -437,8 +523,28 @@ onMounted(async () => {
 // Update basic salary when position changes
 function updateBasicSalary(position) {
   if (position) {
-    formData.value.basic_salary = getRate(position);
+    const dailyRate = getRate(position);
+    formData.value.basic_salary = convertDailyRateBySalaryType(
+      dailyRate,
+      formData.value.salary_type,
+    );
   }
+}
+
+function convertDailyRateBySalaryType(dailyRate, salaryType) {
+  const normalizedDailyRate = Number(dailyRate) || 0;
+
+  if (salaryType === "monthly") {
+    return normalizedDailyRate * DEFAULT_WORKING_DAYS_PER_MONTH;
+  }
+
+  if (salaryType === "hourly") {
+    return DEFAULT_STANDARD_HOURS_PER_DAY > 0
+      ? normalizedDailyRate / DEFAULT_STANDARD_HOURS_PER_DAY
+      : normalizedDailyRate;
+  }
+
+  return normalizedDailyRate;
 }
 
 // Format salary display
@@ -481,8 +587,12 @@ const handleSave = async () => {
 
 watch(
   () => props.modelValue,
-  (newVal) => {
-    if (!newVal) {
+  async (newVal) => {
+    if (newVal) {
+      // Dialog is opening - refresh position rates to get latest data
+      await refreshRates();
+    } else {
+      // Dialog is closing - reset form
       formData.value = {
         first_name: "",
         middle_name: "",
@@ -501,6 +611,9 @@ watch(
         activity_status: "active",
         salary_type: "daily",
         basic_salary: 0,
+        has_sss: true,
+        has_philhealth: true,
+        has_pagibig: true,
         role: "employee",
       };
       saving.value = false;
@@ -508,6 +621,145 @@ watch(
         employeeForm.value.resetValidation();
       }
     }
-  }
+  },
+);
+
+watch(
+  () => formData.value.salary_type,
+  () => {
+    if (formData.value.position) {
+      updateBasicSalary(formData.value.position);
+    }
+  },
 );
 </script>
+
+<style scoped lang="scss">
+.modern-dialog {
+  border-radius: 16px;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-bottom: 1px solid rgba(0, 31, 61, 0.08);
+}
+
+.dialog-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+
+  &.primary {
+    background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
+  }
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #001f3d;
+  line-height: 1.2;
+}
+
+.dialog-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 31, 61, 0.02) 0%,
+    rgba(237, 152, 95, 0.02) 100%
+  );
+  border-radius: 12px;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.25);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #001f3d;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: rgba(0, 31, 61, 0.02);
+}
+
+.dialog-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.dialog-btn-cancel {
+  background: transparent;
+  color: #64748b;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 31, 61, 0.04);
+  }
+}
+
+.dialog-btn-primary {
+  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(237, 152, 95, 0.3);
+  margin-left: 12px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 152, 95, 0.4);
+  }
+}
+</style>

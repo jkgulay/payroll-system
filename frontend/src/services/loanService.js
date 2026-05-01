@@ -11,7 +11,7 @@ export default {
     return api.get(`/loans/${id}`);
   },
 
-  // Create a new loan (employee request or accountant create)
+  // Create a new loan (employee request or HR create)
   createLoan(data) {
     return api.post("/loans", data);
   },
@@ -27,8 +27,18 @@ export default {
   },
 
   // Approve a loan (admin only)
-  approveLoan(id, approvalNotes = null) {
-    return api.post(`/loans/${id}/approve`, { approval_notes: approvalNotes });
+  approveLoan(id, approvalData = null) {
+    if (
+      approvalData &&
+      typeof approvalData === "object" &&
+      !Array.isArray(approvalData)
+    ) {
+      return api.post(`/loans/${id}/approve`, approvalData);
+    }
+
+    return api.post(`/loans/${id}/approve`, {
+      approval_notes: approvalData,
+    });
   },
 
   // Reject a loan (admin only)

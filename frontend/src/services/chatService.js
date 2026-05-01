@@ -1,4 +1,5 @@
 import api from './api';
+import { devLog } from "@/utils/devLog";
 
 const chatService = {
   /**
@@ -18,7 +19,7 @@ const chatService = {
         usage: response.data.usage,
       };
     } catch (error) {
-      console.error('Chat API Error:', error);
+      devLog.error('Chat API Error:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to get response',
@@ -41,7 +42,7 @@ const chatService = {
         suggestions: response.data.suggestions,
       };
     } catch (error) {
-      console.error('Suggestions API Error:', error);
+      devLog.error('Suggestions API Error:', error);
       return {
         success: false,
         suggestions: [],
@@ -60,7 +61,7 @@ const chatService = {
         message: response.data.message,
       };
     } catch (error) {
-      console.error('Clear History API Error:', error);
+      devLog.error('Clear History API Error:', error);
       return {
         success: false,
         message: 'Failed to clear history',

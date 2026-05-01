@@ -23,8 +23,10 @@ const router = createRouter({
             const authStore = useAuthStore();
             if (authStore.userRole === "employee") {
               return { name: "employee-dashboard" };
-            } else if (authStore.userRole === "accountant") {
-              return { name: "accountant-dashboard" };
+            } else if (authStore.userRole === "hr") {
+              return { name: "hr-dashboard" };
+            } else if (authStore.userRole === "payrollist") {
+              return { name: "payrollist-dashboard" };
             } else {
               return { name: "admin-dashboard" };
             }
@@ -40,13 +42,22 @@ const router = createRouter({
           meta: { title: "Dashboard", roles: ["admin"] },
         },
         {
-          path: "accountant-dashboard",
-          name: "accountant-dashboard",
+          path: "hr-dashboard",
+          name: "hr-dashboard",
           component: () =>
             import(
-              /* webpackChunkName: "dashboard" */ "@/views/accountant/AccountantDashboardView.vue"
+              /* webpackChunkName: "dashboard" */ "@/views/hr/HrDashboardView.vue"
             ),
-          meta: { title: "Dashboard", roles: ["accountant"] },
+          meta: { title: "Dashboard", roles: ["hr"] },
+        },
+        {
+          path: "payrollist-dashboard",
+          name: "payrollist-dashboard",
+          component: () =>
+            import(
+              /* webpackChunkName: "dashboard" */ "@/views/payrollist/PayrollistDashboardView.vue"
+            ),
+          meta: { title: "Dashboard", roles: ["payrollist"] },
         },
         {
           path: "employee-dashboard",
@@ -66,7 +77,7 @@ const router = createRouter({
             ),
           meta: {
             title: "My Profile",
-            roles: ["admin", "accountant", "employee"],
+            roles: ["admin", "hr", "employee", "payrollist"],
           },
         },
         {
@@ -76,16 +87,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "employees" */ "@/views/employees/EmployeeListView.vue"
             ),
-          meta: { title: "Employees", roles: ["admin"] },
-        },
-        {
-          path: "employees/import",
-          name: "employees-import",
-          component: () =>
-            import(
-              /* webpackChunkName: "employees" */ "@/views/employees/ImportEmployeesView.vue"
-            ),
-          meta: { title: "Import Employees", roles: ["admin", "accountant"] },
+          meta: { title: "Employees", roles: ["admin", "hr", "payrollist"] },
         },
         {
           path: "resignations",
@@ -94,7 +96,10 @@ const router = createRouter({
             import(
               /* webpackChunkName: "employees" */ "@/views/employees/ResignationManagementView.vue"
             ),
-          meta: { title: "Resignation Management", roles: ["admin", "accountant"] },
+          meta: {
+            title: "Resignation Management",
+            roles: ["admin", "hr"],
+          },
         },
         {
           path: "my-resignation",
@@ -103,7 +108,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "employee" */ "@/views/employee/ResignationView.vue"
             ),
-          meta: { title: "My Resignation", roles: ["employee"] },
+          meta: { title: "My Resignation", roles: ["employee", "payrollist"] },
         },
         {
           path: "my-leaves",
@@ -112,7 +117,16 @@ const router = createRouter({
             import(
               /* webpackChunkName: "employee" */ "@/views/employee/LeaveRequestView.vue"
             ),
-          meta: { title: "My Leaves", roles: ["employee"] },
+          meta: { title: "My Leaves", roles: ["employee", "hr", "payrollist"] },
+        },
+        {
+          path: "my-loans",
+          name: "my-loans",
+          component: () =>
+            import(
+              /* webpackChunkName: "employee" */ "@/views/employee/MyLoansView.vue"
+            ),
+          meta: { title: "My Loans", roles: ["employee", "payrollist"] },
         },
         {
           path: "leave-approval",
@@ -121,7 +135,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "hr" */ "@/views/hr/LeaveApprovalView.vue"
             ),
-          meta: { title: "Leave Approval", roles: ["admin", "accountant"] },
+          meta: { title: "Leave Approval", roles: ["admin", "hr"] },
         },
         {
           path: "projects",
@@ -130,7 +144,10 @@ const router = createRouter({
             import(
               /* webpackChunkName: "projects" */ "@/views/projects/ProjectManagementView.vue"
             ),
-          meta: { title: "Project Management", roles: ["admin"] },
+          meta: {
+            title: "Project Management",
+            roles: ["admin", "payrollist"],
+          },
         },
         {
           path: "attendance",
@@ -139,82 +156,70 @@ const router = createRouter({
             import(
               /* webpackChunkName: "attendance" */ "@/views/attendance/AttendanceView.vue"
             ),
-          meta: { title: "Attendance", roles: ["admin", "accountant"] },
+          meta: { title: "Attendance", roles: ["admin", "hr", "payrollist"] },
+        },
+        {
+          path: "biometric-import",
+          name: "biometric-import",
+          component: () =>
+            import(
+              /* webpackChunkName: "attendance" */ "@/views/attendance/BiometricImportView.vue"
+            ),
+          meta: {
+            title: "Biometric Import",
+            roles: ["admin", "hr", "payrollist"],
+          },
         },
         {
           path: "resumes",
           name: "resumes",
           component: () =>
             import(
-              /* webpackChunkName: "accountant" */ "@/views/accountant/ResumeManagement.vue"
+              /* webpackChunkName: "hr" */ "@/views/hr/ResumeManagement.vue"
             ),
-          meta: { title: "My Resumes", roles: ["accountant"] },
+          meta: { title: "My Resumes", roles: ["admin"] },
+        },
+        {
+          path: "hr-resume-submissions",
+          name: "hr-resume-submissions",
+          component: () =>
+            import(
+              /* webpackChunkName: "hr" */ "@/views/hr/HRResumeSubmissions.vue"
+            ),
+          meta: { title: "Resume Submissions", roles: ["hr"] },
         },
         {
           path: "resume-review",
           name: "resume-review",
           component: () =>
             import(
-              /* webpackChunkName: "accountant" */ "@/views/accountant/AdminResumeReview.vue"
+              /* webpackChunkName: "hr" */ "@/views/hr/AdminResumeReview.vue"
             ),
           meta: { title: "Resume Review", roles: ["admin"] },
-        },
-        {
-          path: "payroll",
-          name: "payroll",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollListView.vue"
-            ),
-          meta: { title: "Payroll", roles: ["admin", "accountant"] },
-        },
-        {
-          path: "payroll/create",
-          name: "payroll-create",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollFormView.vue"
-            ),
-          meta: { title: "Create Payroll" },
-        },
-        {
-          path: "payroll/:id",
-          name: "payroll-detail",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollDetailView.vue"
-            ),
-          meta: { title: "Payroll Details" },
-        },
-        {
-          path: "payroll/pay-rates",
-          name: "pay-rates",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayRateManagementView.vue"
-            ),
-          meta: {
-            title: "Compensation & Pay Rates",
-            roles: ["admin", "accountant"],
-          },
-        },
-        {
-          path: "payroll/:id/process",
-          name: "payroll-process",
-          component: () =>
-            import(
-              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollProcessView.vue"
-            ),
-          meta: { title: "Process Payroll" },
         },
         {
           path: "allowances",
           name: "allowances",
           component: () =>
             import(
-              /* webpackChunkName: "benefits" */ "@/views/benefits/MealAllowanceView.vue"
+              /* webpackChunkName: "benefits" */ "@/views/benefits/AllowanceView.vue"
             ),
-          meta: { title: "Allowances", roles: ["admin", "accountant", "hr"] },
+          meta: {
+            title: "Allowances",
+            roles: ["admin", "hr", "payrollist"],
+          },
+        },
+        {
+          path: "thirteenth-month-pay",
+          name: "thirteenth-month-pay",
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/ThirteenthMonthPayView.vue"
+            ),
+          meta: {
+            title: "13th Month Pay",
+            roles: ["admin", "hr", "payrollist"],
+          },
         },
         {
           path: "loans",
@@ -223,7 +228,7 @@ const router = createRouter({
             import(
               /* webpackChunkName: "benefits" */ "@/views/benefits/LoansView.vue"
             ),
-          meta: { title: "Loans" },
+          meta: { title: "Loans", roles: ["admin", "hr", "payrollist"] },
         },
         {
           path: "deductions",
@@ -232,7 +237,19 @@ const router = createRouter({
             import(
               /* webpackChunkName: "benefits" */ "@/views/benefits/DeductionsView.vue"
             ),
-          meta: { title: "Deductions" },
+          meta: { title: "Deductions", roles: ["admin", "hr", "payrollist"] },
+        },
+        {
+          path: "cash-advances",
+          name: "cash-advances",
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/CashAdvanceView.vue"
+            ),
+          meta: {
+            title: "Cash Advance Management",
+            roles: ["admin", "hr", "payrollist", "employee"],
+          },
         },
         {
           path: "cash-bonds",
@@ -241,7 +258,34 @@ const router = createRouter({
             import(
               /* webpackChunkName: "benefits" */ "@/views/benefits/CashBondView.vue"
             ),
-          meta: { title: "Cash Bond Management" },
+          meta: {
+            title: "Cash Bond Management",
+            roles: ["admin", "hr", "payrollist", "employee"],
+          },
+        },
+        {
+          path: "employee-savings",
+          name: "employee-savings",
+          component: () =>
+            import(
+              /* webpackChunkName: "benefits" */ "@/views/benefits/EmployeeSavingsView.vue"
+            ),
+          meta: {
+            title: "Employee Savings Management",
+            roles: ["admin", "hr", "payrollist", "employee"],
+          },
+        },
+        {
+          path: "salary-adjustments",
+          name: "salary-adjustments",
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/SalaryAdjustmentView.vue"
+            ),
+          meta: {
+            title: "Salary Exception Records",
+            roles: ["admin", "hr", "payrollist"],
+          },
         },
         {
           path: "reports",
@@ -250,19 +294,49 @@ const router = createRouter({
             import(
               /* webpackChunkName: "reports" */ "@/views/reports/ReportsView.vue"
             ),
-          meta: { title: "Reports" },
+          meta: { title: "Reports", roles: ["admin", "hr", "payrollist"] },
         },
         {
-          path: "analytics",
-          name: "analytics",
+          path: "reports/government-contributions",
+          name: "government-contributions-report",
           component: () =>
             import(
-              /* webpackChunkName: "analytics" */ "@/views/AnalyticsDashboard.vue"
+              /* webpackChunkName: "reports" */ "@/views/reports/GovernmentContributionsReport.vue"
             ),
           meta: {
-            title: "Analytics Dashboard",
-            roles: ["admin", "accountant"],
+            title: "Government Contributions Report",
+            roles: ["admin", "hr"],
           },
+        },
+        {
+          path: "reports/attendance-summary",
+          name: "attendance-summary-report",
+          component: () =>
+            import(
+              /* webpackChunkName: "reports" */ "@/views/reports/AttendanceSummaryReport.vue"
+            ),
+          meta: {
+            title: "Attendance Summary Report",
+            roles: ["admin", "hr"],
+          },
+        },
+        {
+          path: "payroll",
+          name: "payroll",
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollListView.vue"
+            ),
+          meta: { title: "Payroll Management", roles: ["admin", "payrollist"] },
+        },
+        {
+          path: "payroll/:id",
+          name: "payroll-detail",
+          component: () =>
+            import(
+              /* webpackChunkName: "payroll" */ "@/views/payroll/PayrollDetailView.vue"
+            ),
+          meta: { title: "Payroll Details", roles: ["admin", "payrollist"] },
         },
         {
           path: "settings",
@@ -272,6 +346,93 @@ const router = createRouter({
               /* webpackChunkName: "settings" */ "@/views/settings/SettingsView.vue"
             ),
           meta: { title: "Settings", roles: ["admin"] },
+        },
+        {
+          path: "user-management",
+          name: "user-management",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/UserManagementView.vue"
+            ),
+          meta: { title: "User Management", roles: ["admin"] },
+        },
+        {
+          path: "company-info",
+          name: "company-info",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/CompanyInfoView.vue"
+            ),
+          meta: { title: "Company Information", roles: ["admin"] },
+        },
+        {
+          path: "attendance-settings",
+          name: "attendance-settings",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/AttendanceSettingsView.vue"
+            ),
+          meta: {
+            title: "Attendance Settings",
+            roles: ["admin", "payrollist"],
+          },
+        },
+        {
+          path: "government-rates",
+          name: "government-rates",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/GovernmentRatesView.vue"
+            ),
+          meta: { title: "Government Rates", roles: ["admin", "payrollist"] },
+        },
+        {
+          path: "maintenance",
+          name: "maintenance",
+          component: () =>
+            import(
+              /* webpackChunkName: "admin" */ "@/views/admin/MaintenanceView.vue"
+            ),
+          meta: { title: "Database Maintenance", roles: ["admin"] },
+        },
+        {
+          path: "position-rates",
+          name: "position-rates",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/PositionRatesView.vue"
+            ),
+          meta: { title: "Position Rates", roles: ["admin", "hr"] },
+        },
+        {
+          path: "holidays",
+          name: "holidays",
+          component: () =>
+            import(
+              /* webpackChunkName: "settings" */ "@/views/settings/HolidayManagementView.vue"
+            ),
+          meta: {
+            title: "Holiday Management",
+            roles: ["admin", "hr", "payrollist"],
+          },
+        },
+        {
+          path: "audit-trail",
+          name: "audit-trail",
+          component: () =>
+            import(
+              /* webpackChunkName: "audit" */ "@/views/audit/AuditTrailView.vue"
+            ),
+          meta: { title: "Audit Trail", roles: ["admin"] },
+        },
+        {
+          path: "requests",
+          name: "requests",
+          component: () =>
+            import(
+              /* webpackChunkName: "access-requests" */ "@/views/access-requests/RequestsView.vue"
+            ),
+          meta: { title: "Access Requests", roles: ["admin", "hr"] },
         },
         {
           path: "security",
@@ -317,8 +478,10 @@ router.beforeEach(async (to, from, next) => {
       let targetRoute;
       if (authStore.userRole === "employee") {
         targetRoute = "employee-dashboard";
-      } else if (authStore.userRole === "accountant") {
-        targetRoute = "accountant-dashboard";
+      } else if (authStore.userRole === "hr") {
+        targetRoute = "hr-dashboard";
+      } else if (authStore.userRole === "payrollist") {
+        targetRoute = "payrollist-dashboard";
       } else {
         targetRoute = "admin-dashboard";
       }
@@ -331,8 +494,10 @@ router.beforeEach(async (to, from, next) => {
       let targetRoute;
       if (authStore.userRole === "employee") {
         targetRoute = "employee-dashboard";
-      } else if (authStore.userRole === "accountant") {
-        targetRoute = "accountant-dashboard";
+      } else if (authStore.userRole === "hr") {
+        targetRoute = "hr-dashboard";
+      } else if (authStore.userRole === "payrollist") {
+        targetRoute = "payrollist-dashboard";
       } else {
         targetRoute = "admin-dashboard";
       }
@@ -349,8 +514,10 @@ router.beforeEach(async (to, from, next) => {
       let targetRoute;
       if (authStore.userRole === "employee") {
         targetRoute = "employee-dashboard";
-      } else if (authStore.userRole === "accountant") {
-        targetRoute = "accountant-dashboard";
+      } else if (authStore.userRole === "hr") {
+        targetRoute = "hr-dashboard";
+      } else if (authStore.userRole === "payrollist") {
+        targetRoute = "payrollist-dashboard";
       } else {
         targetRoute = "admin-dashboard";
       }
@@ -360,8 +527,8 @@ router.beforeEach(async (to, from, next) => {
 
   // Set page title
   document.title = to.meta.title
-    ? `${to.meta.title} - Payroll System`
-    : "Payroll System";
+    ? `${to.meta.title} - Giovanni Construction`
+    : "Giovanni Construction";
 
   next();
 });

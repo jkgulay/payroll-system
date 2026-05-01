@@ -47,6 +47,17 @@
                   Generate Summary
                 </v-btn>
               </v-col>
+              <v-col cols="12" v-if="summary">
+                <v-btn
+                  color="success"
+                  block
+                  @click="exportToExcel"
+                  :loading="exporting"
+                  prepend-icon="mdi-file-excel"
+                >
+                  Export to Excel
+                </v-btn>
+              </v-col>
             </v-row>
           </v-card-text>
         </v-card>
@@ -136,7 +147,7 @@
                 <v-card color="teal" variant="tonal">
                   <v-card-text class="text-center">
                     <div class="text-h4">
-                      {{ summary.total_overtime_hours?.toFixed(1) }}
+                      {{ Math.floor(summary.total_overtime_hours || 0) }}
                     </div>
                     <div class="text-caption">Overtime Hours</div>
                   </v-card-text>
@@ -199,15 +210,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted } from "vue";
 import attendanceService from "@/services/attendanceService";
 import api from "@/services/api";
 import { useToast } from "vue-toastification";
+import { onAttendanceUpdate } from "@/stores/attendance";
+import { formatDate } from "@/utils/formatters";
+import { devLog } from "@/utils/devLog";
 
 const toast = useToast();
 
 const loading = ref(false);
 const loadingEmployees = ref(false);
+const exporting = ref(false);
 const summary = ref(null);
 const employees = ref([]);
 
@@ -240,7 +255,11 @@ const loadSummary = async () => {
 const loadEmployees = async () => {
   loadingEmployees.value = true;
   try {
-    const response = await api.get("/employees");
+    const response = await api.get("/employees", {
+      params: {
+        per_page: 10000,
+      },
+    });
     employees.value = response.data.data || response.data || [];
   } catch (error) {
     toast.error("Failed to load employees");
@@ -249,13 +268,7 @@ const loadEmployees = async () => {
   }
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+// formatDate imported from @/utils/formatters
 
 const setToday = () => {
   const today = new Date().toISOString().split("T")[0];
@@ -286,8 +299,49 @@ const setLastMonth = () => {
   filters.date_from = firstDay.toISOString().split("T")[0];
   filters.date_to = lastDay.toISOString().split("T")[0];
 };
+const exportToExcel = async () => {
+  exporting.value = true;
+  try {
+    const response = await api.get("/attendance/summary/export", {
+      params: filters,
+      responseType: "blob",
+    });
+
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `attendance_summary_${filters.date_from}_to_${filters.date_to}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Attendance summary exported successfully");
+  } catch (error) {
+    devLog.error("Export error:", error);
+    toast.error("Failed to export attendance summary");
+  } finally {
+    exporting.value = false;
+  }
+};
+
+let unsubscribeAttendance = null;
 
 onMounted(() => {
   loadEmployees();
+
+  // Listen for attendance updates to refresh summary if it's loaded
+  unsubscribeAttendance = onAttendanceUpdate(() => {
+    if (summary.value) {
+      loadSummary();
+    }
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+  }
 });
 </script>
