@@ -28,7 +28,7 @@ Vue 3 + Vuetify 3 frontend for Giovanni Construction.
 ## Prerequisites
 
 - Node.js 18+ and npm/yarn
-- Backend API running on http://localhost:8000
+- Access to the backend API configured through `VITE_API_URL`
 
 ## Installation
 
@@ -36,8 +36,7 @@ Vue 3 + Vuetify 3 frontend for Giovanni Construction.
 # Install dependencies
 npm install
 
-# Copy environment file
-cp .env.example .env
+# Set `VITE_API_URL` in `.env` or `.env.local`
 
 # Start development server
 npm run dev
@@ -57,12 +56,6 @@ npm run build
 # Preview production build
 npm run preview
 
-# Run with Electron (desktop app)
-npm run electron:dev
-
-# Build Electron app
-npm run electron:build
-
 # Lint and fix files
 npm run lint
 ```
@@ -72,7 +65,6 @@ npm run lint
 ```
 frontend/
 ├── src/
-│   ├── assets/          # Static assets (images, fonts)
 │   ├── components/      # Reusable Vue components
 │   ├── layouts/         # Layout components
 │   ├── plugins/         # Vuetify and other plugins
@@ -84,8 +76,6 @@ frontend/
 │   ├── App.vue          # Root component
 │   └── main.js          # App entry point
 ├── public/              # Public static assets
-├── electron/            # Electron main process files
-├── .env.example         # Environment variables template
 ├── index.html           # HTML template
 ├── package.json         # Dependencies and scripts
 └── vite.config.js       # Vite configuration
@@ -154,33 +144,11 @@ VITE_ENABLE_OFFLINE_MODE=true
 ## Building for Production
 
 ```bash
-# Build web app
+# Build the web app
 npm run build
-
-# Build Electron desktop app
-npm run electron:build
 ```
 
-The web build will be in `dist/` and Electron builds in `dist-electron/`.
-
-## Desktop App (Electron)
-
-The system can run as a standalone desktop application:
-
-```bash
-# Development
-npm run electron:dev
-
-# Build for Windows/Mac/Linux
-npm run electron:build
-```
-
-Features:
-
-- No browser required
-- System tray integration
-- Auto-updates
-- Better offline support
+The web build will be in `dist/`.
 
 ## License
 

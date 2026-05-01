@@ -4,13 +4,9 @@
   "description": "Giovanni Construction - Frontend",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run frontend\" \"npm run backend\" --names \"FRONTEND,BACKEND\" --prefix-colors \"blue,yellow\"",
-    "frontend": "vite",
-    "backend": "cd ../payroll-backend && php artisan serve",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
   },
   "dependencies": {
@@ -34,9 +30,6 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.4",
-    "concurrently": "^8.2.2",
-    "electron": "^39.2.7",
-    "electron-builder": "^26.7.0",
     "eslint": "^8.56.0",
     "eslint-plugin-vue": "^9.20.1",
     "rollup-plugin-visualizer": "^6.0.5",
@@ -44,32 +37,7 @@
     "terser": "^5.36.0",
     "vite": "^7.3.1",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-vuetify": "^2.0.1",
-    "wait-on": "^7.2.0"
-  },
-  "main": "electron/main.js",
-  "build": {
-    "appId": "com.payroll.construction",
-    "productName": "Giovanni Construction",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "public/icon.ico"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "public/icon.icns"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "public/icon.png"
-    }
+    "vite-plugin-vuetify": "^2.0.1"
   },
   "overrides": {
     "dompurify": "^3.3.1"
