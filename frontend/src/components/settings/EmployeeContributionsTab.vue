@@ -1,130 +1,146 @@
 <template>
   <div class="contributions-tab">
+    <v-overlay :model-value="loading" class="align-center justify-center">
+      <v-progress-circular
+        indeterminate
+        color="#ED985F"
+        :size="70"
+        :width="7"
+      ></v-progress-circular>
+    </v-overlay>
+
     <!-- Summary Cards -->
-    <div class="summary-grid">
-      <div class="summary-card summary-employees">
-        <div class="summary-icon-ring">
-          <v-icon size="22">mdi-account-group</v-icon>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <v-icon size="20">mdi-account-group</v-icon>
         </div>
-        <div class="summary-info">
-          <span class="summary-value">{{ summary.total_employees || 0 }}</span>
-          <span class="summary-label">Total Employees</span>
-        </div>
-      </div>
-      <div class="summary-card summary-sss">
-        <div class="summary-icon-ring">
-          <v-icon size="22">mdi-shield-account</v-icon>
-        </div>
-        <div class="summary-info">
-          <span class="summary-value"
-            >₱{{ formatCurrency(summary.total_sss || 0) }}</span
-          >
-          <span class="summary-label"
-            >SSS
-            <span class="summary-count"
-              >({{ summary.employees_with_sss || 0 }})</span
-            ></span
-          >
+        <div class="stat-content">
+          <div class="stat-label">Total Employees</div>
+          <div class="stat-value">{{ summary.total_employees || 0 }}</div>
         </div>
       </div>
-      <div class="summary-card summary-ph">
-        <div class="summary-icon-ring">
-          <v-icon size="22">mdi-hospital-box</v-icon>
+      <div class="stat-card">
+        <div class="stat-icon active">
+          <v-icon size="20">mdi-shield-account</v-icon>
         </div>
-        <div class="summary-info">
-          <span class="summary-value"
-            >₱{{ formatCurrency(summary.total_philhealth || 0) }}</span
-          >
-          <span class="summary-label"
-            >PhilHealth
-            <span class="summary-count"
-              >({{ summary.employees_with_philhealth || 0 }})</span
-            ></span
-          >
+        <div class="stat-content">
+          <div class="stat-label">SSS Exact Value</div>
+          <div class="stat-value success">
+            ₱{{ formatCurrency(summary.total_sss || 0) }}
+          </div>
         </div>
       </div>
-      <div class="summary-card summary-pi">
-        <div class="summary-icon-ring">
-          <v-icon size="22">mdi-home-city</v-icon>
+      <div class="stat-card">
+        <div class="stat-icon inactive">
+          <v-icon size="20">mdi-hospital-box</v-icon>
         </div>
-        <div class="summary-info">
-          <span class="summary-value"
-            >₱{{ formatCurrency(summary.total_pagibig || 0) }}</span
-          >
-          <span class="summary-label"
-            >Pag-IBIG
-            <span class="summary-count"
-              >({{ summary.employees_with_pagibig || 0 }})</span
-            ></span
-          >
+        <div class="stat-content">
+          <div class="stat-label">PhilHealth Exact Value</div>
+          <div class="stat-value">
+            ₱{{ formatCurrency(summary.total_philhealth || 0) }}
+          </div>
         </div>
       </div>
-      <div class="summary-card summary-total">
-        <div class="summary-icon-ring">
-          <v-icon size="22">mdi-sigma</v-icon>
+      <div class="stat-card">
+        <div class="stat-icon admin">
+          <v-icon size="20">mdi-home-city</v-icon>
         </div>
-        <div class="summary-info">
-          <span class="summary-value"
-            >₱{{ formatCurrency(summary.total_contributions || 0) }}</span
-          >
-          <span class="summary-label"
-            >Total Per Cutoff
-            <span class="summary-count"
-              >({{ summary.employees_with_custom || 0 }} custom)</span
-            ></span
-          >
+        <div class="stat-content">
+          <div class="stat-label">Pag-IBIG Exact Value</div>
+          <div class="stat-value">
+            ₱{{ formatCurrency(summary.total_pagibig || 0) }}
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <v-icon size="20">mdi-sigma</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Deducted</div>
+          <div class="stat-value warning">
+            ₱{{ formatCurrency(summary.total_contributions || 0) }}
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Toolbar -->
-    <div class="toolbar-row">
-      <v-text-field
-        v-model="search"
-        prepend-inner-icon="mdi-magnify"
-        placeholder="Search employee name or number..."
-        variant="outlined"
-        density="compact"
-        hide-details
-        clearable
-        class="toolbar-search"
-      />
-      <v-select
-        v-model="selectedProject"
-        :items="projects"
-        item-title="name"
-        item-value="id"
-        label="Project"
-        variant="outlined"
-        density="compact"
-        hide-details
-        clearable
-        class="toolbar-filter"
-      />
-      <v-select
-        v-model="statusFilter"
-        :items="statusOptions"
-        label="Status"
-        variant="outlined"
-        density="compact"
-        hide-details
-        clearable
-        class="toolbar-filter-sm"
-      />
-      <v-btn
-        color="primary"
-        variant="tonal"
-        density="comfortable"
-        @click="loadData"
-        :loading="loading"
-        prepend-icon="mdi-refresh"
-      >
-        Refresh
-      </v-btn>
-    </div>
+    <div class="content-card">
+      <div class="table-controls">
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          label="Search employees..."
+          variant="outlined"
+          density="comfortable"
+          hide-details
+          clearable
+          class="search-field"
+        />
 
-    <!-- Data Table -->
-    <v-card variant="flat" class="table-card">
+        <v-select
+          v-model="selectedProject"
+          :items="projects"
+          item-title="name"
+          item-value="id"
+          label="Project"
+          variant="outlined"
+          density="comfortable"
+          hide-details
+          clearable
+          class="filter-select"
+        />
+
+        <v-select
+          v-model="statusFilter"
+          :items="statusOptions"
+          label="Status"
+          variant="outlined"
+          density="comfortable"
+          hide-details
+          clearable
+          class="filter-select"
+        />
+
+        <v-btn
+          variant="tonal"
+          color="grey"
+          prepend-icon="mdi-filter-remove"
+          @click="clearTableFilters"
+          :disabled="!hasActiveFilters"
+        >
+          Clear
+        </v-btn>
+
+        <v-chip
+          v-if="hasActiveFilters"
+          size="small"
+          color="info"
+          variant="tonal"
+        >
+          {{ activeFilterCount }} active filter{{
+            activeFilterCount > 1 ? "s" : ""
+          }}
+        </v-chip>
+
+        <v-spacer />
+
+        <v-btn
+          class="refresh-btn"
+          color="primary"
+          variant="tonal"
+          density="comfortable"
+          @click="loadData"
+          :loading="loading"
+          prepend-icon="mdi-refresh"
+        >
+          Refresh
+        </v-btn>
+      </div>
+
+      <!-- Data Table -->
       <v-data-table
         :headers="headers"
         :items="filteredEmployees"
@@ -132,7 +148,7 @@
         :search="search"
         density="comfortable"
         :items-per-page="15"
-        class="contributions-table"
+        class="modern-table contributions-table"
         hover
         @click:row="(_, { item }) => openEditDialog(item)"
       >
@@ -297,7 +313,7 @@
           </div>
         </template>
       </v-data-table>
-    </v-card>
+    </div>
 
     <!-- Legend -->
     <div class="legend-row">
@@ -315,8 +331,8 @@
       </div>
       <div class="legend-note">
         <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
-        All amounts are <strong>semi-monthly (per cutoff)</strong> and deducted
-        as-is from each payroll period. Click any row to edit.
+        All amounts are the <strong> exact value used in payroll</strong> and
+        deducted as-is from each payroll period. Click any row to edit.
       </div>
     </div>
 
@@ -345,7 +361,7 @@
               <span v-if="editEmployee.project">
                 · {{ editEmployee.project }}</span
               >
-              · Monthly: ₱{{ formatCurrency(editEmployee.monthly_rate) }}
+              · Monthly basis: ₱{{ formatCurrency(editEmployee.monthly_rate) }}
             </div>
           </div>
           <v-btn
@@ -383,7 +399,7 @@
             <div v-if="editForm.has_sss" class="contrib-fields">
               <div class="computed-row">
                 <span class="text-caption text-medium-emphasis"
-                  >Computed from salary:</span
+                  >Exact value used in payroll:</span
                 >
                 <span class="text-caption font-weight-medium"
                   >₱{{ formatCurrency(editEmployee.computed_sss) }}</span
@@ -391,7 +407,7 @@
               </div>
               <v-text-field
                 v-model.number="editForm.custom_sss"
-                label="Custom SSS Amount (per cutoff)"
+                label="Custom SSS Amount (exact value)"
                 type="number"
                 step="0.01"
                 prefix="₱"
@@ -429,7 +445,7 @@
             <div v-if="editForm.has_philhealth" class="contrib-fields">
               <div class="computed-row">
                 <span class="text-caption text-medium-emphasis"
-                  >Computed from salary:</span
+                  >Exact value used in payroll:</span
                 >
                 <span class="text-caption font-weight-medium"
                   >₱{{ formatCurrency(editEmployee.computed_philhealth) }}</span
@@ -437,7 +453,7 @@
               </div>
               <v-text-field
                 v-model.number="editForm.custom_philhealth"
-                label="Custom PhilHealth Amount (per cutoff)"
+                label="Custom PhilHealth Amount (exact value)"
                 type="number"
                 step="0.01"
                 prefix="₱"
@@ -475,7 +491,7 @@
             <div v-if="editForm.has_pagibig" class="contrib-fields">
               <div class="computed-row">
                 <span class="text-caption text-medium-emphasis"
-                  >Computed from salary:</span
+                  >Exact value used in payroll:</span
                 >
                 <span class="text-caption font-weight-medium"
                   >₱{{ formatCurrency(editEmployee.computed_pagibig) }}</span
@@ -483,7 +499,7 @@
               </div>
               <v-text-field
                 v-model.number="editForm.custom_pagibig"
-                label="Custom Pag-IBIG Amount (per cutoff)"
+                label="Custom Pag-IBIG Amount (exact value)"
                 type="number"
                 step="0.01"
                 prefix="₱"
@@ -505,7 +521,7 @@
           <div class="preview-section">
             <div class="preview-title">
               <v-icon size="16" class="mr-1">mdi-calculator</v-icon>
-              Payroll Preview (per cutoff)
+              Payroll Preview (exact value)
             </div>
             <div class="preview-grid">
               <div class="preview-item">
@@ -686,6 +702,16 @@ const filteredEmployees = computed(() => {
   return result;
 });
 
+const hasActiveFilters = computed(
+  () => !!search.value || !!selectedProject.value || !!statusFilter.value,
+);
+
+const activeFilterCount = computed(() => {
+  return [search.value, selectedProject.value, statusFilter.value].filter(
+    (value) => value !== null && value !== "" && value !== undefined,
+  ).length;
+});
+
 const previewSSS = computed(() => {
   if (!editForm.value.has_sss) return 0;
   return (
@@ -770,6 +796,12 @@ const loadData = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const clearTableFilters = () => {
+  search.value = "";
+  selectedProject.value = null;
+  statusFilter.value = null;
 };
 
 const openEditDialog = (employee) => {
@@ -898,161 +930,32 @@ defineExpose({ loadData });
   padding: 20px;
 }
 
-/* Summary Cards */
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.summary-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  background: #fff;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.summary-card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
-  transform: scaleY(0);
-  transition: transform 0.3s ease;
-}
-
-.summary-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  border-color: rgba(237, 152, 95, 0.25);
-}
-
-.summary-card:hover::before {
-  transform: scaleY(1);
-}
-
-.summary-icon-ring {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.summary-employees .summary-icon-ring {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-}
-
-.summary-employees .summary-icon-ring .v-icon {
-  color: white !important;
-}
-
-.summary-sss .summary-icon-ring {
-  background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
-}
-
-.summary-sss .summary-icon-ring .v-icon {
-  color: white !important;
-}
-
-.summary-ph .summary-icon-ring {
-  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
-}
-
-.summary-ph .summary-icon-ring .v-icon {
-  color: white !important;
-}
-
-.summary-pi .summary-icon-ring {
-  background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
-}
-
-.summary-pi .summary-icon-ring .v-icon {
-  color: white !important;
-}
-
-.summary-total .summary-icon-ring {
-  background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%);
-}
-
-.summary-total .summary-icon-ring .v-icon {
-  color: white !important;
-}
-
-.summary-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.summary-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a1a;
-  line-height: 1.2;
-}
-
-.summary-label {
-  font-size: 11px;
-  color: #94a3b8;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.summary-count {
-  font-weight: 400;
-  opacity: 0.7;
-}
-
-/* Toolbar */
-.toolbar-row {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  padding: 16px 20px;
+.content-card {
   background: white;
-  border-radius: 14px;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 31, 61, 0.08);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.toolbar-search {
+.table-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.search-field {
   flex: 1;
-  min-width: 200px;
-  max-width: 340px;
+  min-width: 240px;
 }
 
-.toolbar-filter {
-  width: 180px;
-  flex-shrink: 0;
+.filter-select {
+  min-width: 180px;
 }
 
-.toolbar-filter-sm {
-  width: 160px;
-  flex-shrink: 0;
-}
-
-/* Table */
-.table-card {
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+.refresh-btn {
+  margin-left: auto;
 }
 
 .contributions-table :deep(thead tr th) {
@@ -1075,6 +978,10 @@ defineExpose({ loadData });
 
 .contributions-table :deep(tbody tr td) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.contributions-table :deep(tbody tr:hover) {
+  background: rgba(237, 152, 95, 0.04) !important;
 }
 
 .employee-cell {
