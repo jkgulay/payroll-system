@@ -155,7 +155,7 @@
 
         <!-- Enhanced Summary Cards with Animation -->
         <v-slide-y-transition group>
-            <v-row v-if="reportData" class="mb-6" key="summary-cards">
+          <v-row v-if="reportData" class="mb-6" key="summary-cards">
             <!-- Warning Alert for Zero Contributions -->
             <v-col
               cols="12"
@@ -199,12 +199,12 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-                <v-card
-                  class="summary-card sss-card h-100"
-                  elevation="1"
-                  rounded="lg"
-                >
-                  <v-card-text class="pa-4">
+              <v-card
+                class="summary-card sss-card h-100"
+                elevation="1"
+                rounded="lg"
+              >
+                <v-card-text class="pa-4">
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-avatar color="primary" size="40" class="mr-3">
@@ -223,23 +223,13 @@
                   </div>
                   <v-divider class="mb-3"></v-divider>
                   <div class="contribution-breakdown">
-                    <div class="d-flex justify-space-between mb-2">
-                      <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-account</v-icon
-                        >Employee Share
-                      </span>
-                      <span class="font-weight-medium"
-                        >₱{{ formatNumber(reportData.sss_employee) }}</span
-                      >
-                    </div>
                     <div class="d-flex justify-space-between">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1"
-                          >mdi-office-building</v-icon
-                        >Employer Share
+                        <v-icon size="16" class="mr-1">mdi-dollar-sign</v-icon
+                        >Total Deducted
                       </span>
                       <span class="font-weight-medium"
-                        >₱{{ formatNumber(reportData.sss_employer) }}</span
+                        >₱{{ formatNumber(reportData.sss_total) }}</span
                       >
                     </div>
                   </div>
@@ -248,12 +238,12 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-                <v-card
-                  class="summary-card philhealth-card h-100"
-                  elevation="1"
-                  rounded="lg"
-                >
-                  <v-card-text class="pa-4">
+              <v-card
+                class="summary-card philhealth-card h-100"
+                elevation="1"
+                rounded="lg"
+              >
+                <v-card-text class="pa-4">
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-avatar color="success" size="40" class="mr-3">
@@ -272,27 +262,13 @@
                   </div>
                   <v-divider class="mb-3"></v-divider>
                   <div class="contribution-breakdown">
-                    <div class="d-flex justify-space-between mb-2">
-                      <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-account</v-icon
-                        >Employee Share
-                      </span>
-                      <span class="font-weight-medium"
-                        >₱{{
-                          formatNumber(reportData.philhealth_employee)
-                        }}</span
-                      >
-                    </div>
                     <div class="d-flex justify-space-between">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1"
-                          >mdi-office-building</v-icon
-                        >Employer Share
+                        <v-icon size="16" class="mr-1">mdi-dollar-sign</v-icon
+                        >Total Deducted
                       </span>
                       <span class="font-weight-medium"
-                        >₱{{
-                          formatNumber(reportData.philhealth_employer)
-                        }}</span
+                        >₱{{ formatNumber(reportData.philhealth_total) }}</span
                       >
                     </div>
                   </div>
@@ -301,18 +277,16 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-                <v-card
-                  class="summary-card pagibig-card h-100"
-                  elevation="1"
-                  rounded="lg"
-                >
-                  <v-card-text class="pa-4">
+              <v-card
+                class="summary-card pagibig-card h-100"
+                elevation="1"
+                rounded="lg"
+              >
+                <v-card-text class="pa-4">
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-avatar color="warning" size="40" class="mr-3">
-                        <v-icon color="white" size="22"
-                          >mdi-home-city</v-icon
-                        >
+                        <v-icon color="white" size="22">mdi-home-city</v-icon>
                       </v-avatar>
                       <span class="text-h6 font-weight-medium">Pag-IBIG</span>
                     </div>
@@ -325,23 +299,13 @@
                   </div>
                   <v-divider class="mb-3"></v-divider>
                   <div class="contribution-breakdown">
-                    <div class="d-flex justify-space-between mb-2">
-                      <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1">mdi-account</v-icon
-                        >Employee Share
-                      </span>
-                      <span class="font-weight-medium"
-                        >₱{{ formatNumber(reportData.pagibig_employee) }}</span
-                      >
-                    </div>
                     <div class="d-flex justify-space-between">
                       <span class="text-body-2 text-medium-emphasis">
-                        <v-icon size="16" class="mr-1"
-                          >mdi-office-building</v-icon
-                        >Employer Share
+                        <v-icon size="16" class="mr-1">mdi-dollar-sign</v-icon
+                        >Total Deducted
                       </span>
                       <span class="font-weight-medium"
-                        >₱{{ formatNumber(reportData.pagibig_employer) }}</span
+                        >₱{{ formatNumber(reportData.pagibig_total) }}</span
                       >
                     </div>
                   </div>
@@ -350,12 +314,12 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-                <v-card
-                  class="summary-card total-card h-100"
-                  elevation="1"
-                  rounded="lg"
-                >
-                  <v-card-text class="pa-4">
+              <v-card
+                class="summary-card total-card h-100"
+                elevation="1"
+                rounded="lg"
+              >
+                <v-card-text class="pa-4">
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-avatar color="secondary" size="40" class="mr-3">
@@ -590,56 +554,20 @@
               </template>
 
               <template v-slot:item.sss_employee="{ item }">
-                <span class="text-body-2"
-                  >₱{{ formatNumber(item.sss_employee) }}</span
-                >
-              </template>
-
-              <template v-slot:item.sss_employer="{ item }">
-                <span class="text-body-2"
-                  >₱{{ formatNumber(item.sss_employer) }}</span
-                >
-              </template>
-
-              <template v-slot:item.sss_total="{ item }">
                 <v-chip size="small" color="primary" variant="flat">
-                  ₱{{ formatNumber(item.sss_total) }}
+                  ₱{{ formatNumber(item.sss_employee) }}
                 </v-chip>
               </template>
 
               <template v-slot:item.philhealth_employee="{ item }">
-                <span class="text-body-2"
-                  >₱{{ formatNumber(item.philhealth_employee) }}</span
-                >
-              </template>
-
-              <template v-slot:item.philhealth_employer="{ item }">
-                <span class="text-body-2"
-                  >₱{{ formatNumber(item.philhealth_employer) }}</span
-                >
-              </template>
-
-              <template v-slot:item.philhealth_total="{ item }">
                 <v-chip size="small" color="green" variant="flat">
-                  ₱{{ formatNumber(item.philhealth_total) }}
+                  ₱{{ formatNumber(item.philhealth_employee) }}
                 </v-chip>
               </template>
 
               <template v-slot:item.pagibig_employee="{ item }">
-                <span class="text-body-2"
-                  >₱{{ formatNumber(item.pagibig_employee) }}</span
-                >
-              </template>
-
-              <template v-slot:item.pagibig_employer="{ item }">
-                <span class="text-body-2"
-                  >₱{{ formatNumber(item.pagibig_employer) }}</span
-                >
-              </template>
-
-              <template v-slot:item.pagibig_total="{ item }">
                 <v-chip size="small" color="warning" variant="flat">
-                  ₱{{ formatNumber(item.pagibig_total) }}
+                  ₱{{ formatNumber(item.pagibig_employee) }}
                 </v-chip>
               </template>
 
@@ -847,7 +775,9 @@
         <v-divider></v-divider>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="showPdfExportDialog = false">Cancel</v-btn>
+          <v-btn variant="text" @click="showPdfExportDialog = false"
+            >Cancel</v-btn
+          >
           <v-btn
             color="error"
             variant="elevated"
@@ -983,16 +913,10 @@ const headers = [
   { title: "Employee #", key: "employee_number", sortable: true },
   { title: "Employee Name", key: "full_name", sortable: true },
   { title: "Project", key: "department", sortable: true },
-  { title: "SSS (EE)", key: "sss_employee", align: "end" },
-  { title: "SSS (ER)", key: "sss_employer", align: "end" },
-  { title: "SSS Total", key: "sss_total", align: "end" },
-  { title: "PhilHealth (EE)", key: "philhealth_employee", align: "end" },
-  { title: "PhilHealth (ER)", key: "philhealth_employer", align: "end" },
-  { title: "PhilHealth Total", key: "philhealth_total", align: "end" },
-  { title: "Pag-IBIG (EE)", key: "pagibig_employee", align: "end" },
-  { title: "Pag-IBIG (ER)", key: "pagibig_employer", align: "end" },
-  { title: "Pag-IBIG Total", key: "pagibig_total", align: "end" },
-  { title: "Grand Total", key: "grand_total", align: "end" },
+  { title: "SSS", key: "sss_employee", align: "end" },
+  { title: "PhilHealth", key: "philhealth_employee", align: "end" },
+  { title: "Pag-IBIG", key: "pagibig_employee", align: "end" },
+  { title: "Total", key: "grand_total", align: "end" },
 ];
 
 const getDepartmentColor = (department) => {
@@ -1027,12 +951,44 @@ const loadReport = async () => {
         year: selectedYear.value,
       },
     });
-    reportData.value = response.data;
+
+    // Transform API response to match template expectations
+    const data = response.data;
+    const transformedEmployees = (data.employees || []).map((emp) => ({
+      ...emp,
+      // Map to expected field names (employee-only deductions)
+      sss_employee: emp.sss || 0,
+      sss_employer: 0,
+      sss_total: emp.sss || 0,
+      philhealth_employee: emp.philhealth || 0,
+      philhealth_employer: 0,
+      philhealth_total: emp.philhealth || 0,
+      pagibig_employee: emp.pagibig || 0,
+      pagibig_employer: 0,
+      pagibig_total: emp.pagibig || 0,
+      grand_total: emp.total || 0,
+    }));
+
+    reportData.value = {
+      ...data,
+      employees: transformedEmployees,
+      // Map single values to total fields (these are employee-only deductions per your requirement)
+      sss_total: data.sss || 0,
+      sss_employee: data.sss || 0,
+      sss_employer: 0,
+      philhealth_total: data.philhealth || 0,
+      philhealth_employee: data.philhealth || 0,
+      philhealth_employer: 0,
+      pagibig_total: data.pagibig || 0,
+      pagibig_employee: data.pagibig || 0,
+      pagibig_employer: 0,
+      grand_total: data.total || 0,
+    };
 
     // Check if there's actual contribution data
     if (response.data.employee_count === 0) {
       showSnackbar("No employees found for this period", "warning");
-    } else if (response.data.grand_total === 0) {
+    } else if (reportData.value.grand_total === 0) {
       showSnackbar(
         `Report generated for ${response.data.employee_count} employees, but no contributions found. Ensure payroll has been processed with government deductions.`,
         "warning",
@@ -1095,7 +1051,10 @@ const exportPdf = async () => {
     };
 
     // Add department filter if specified
-    if (selectedDepartment.value && selectedDepartment.value !== "All Projects") {
+    if (
+      selectedDepartment.value &&
+      selectedDepartment.value !== "All Projects"
+    ) {
       params.department = selectedDepartment.value;
     }
 
