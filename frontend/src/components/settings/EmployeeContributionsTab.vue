@@ -68,7 +68,7 @@
             >₱{{ formatCurrency(summary.total_contributions || 0) }}</span
           >
           <span class="summary-label"
-            >Total Per Cutoff
+            >Total Exact Value
             <span class="summary-count"
               >({{ summary.employees_with_custom || 0 }} custom)</span
             ></span
@@ -315,8 +315,8 @@
       </div>
       <div class="legend-note">
         <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
-        All amounts are <strong>semi-monthly (per cutoff)</strong> and deducted
-        as-is from each payroll period. Click any row to edit.
+        All amounts are the <strong>exact value used in payroll</strong> and
+        deducted as-is from each payroll period. Click any row to edit.
       </div>
     </div>
 
@@ -345,7 +345,7 @@
               <span v-if="editEmployee.project">
                 · {{ editEmployee.project }}</span
               >
-              · Monthly: ₱{{ formatCurrency(editEmployee.monthly_rate) }}
+              · Monthly basis: ₱{{ formatCurrency(editEmployee.monthly_rate) }}
             </div>
           </div>
           <v-btn
@@ -383,7 +383,7 @@
             <div v-if="editForm.has_sss" class="contrib-fields">
               <div class="computed-row">
                 <span class="text-caption text-medium-emphasis"
-                  >Computed from salary:</span
+                  >Exact value used in payroll:</span
                 >
                 <span class="text-caption font-weight-medium"
                   >₱{{ formatCurrency(editEmployee.computed_sss) }}</span
@@ -391,7 +391,7 @@
               </div>
               <v-text-field
                 v-model.number="editForm.custom_sss"
-                label="Custom SSS Amount (per cutoff)"
+                label="Custom SSS Amount (exact value)"
                 type="number"
                 step="0.01"
                 prefix="₱"
@@ -429,7 +429,7 @@
             <div v-if="editForm.has_philhealth" class="contrib-fields">
               <div class="computed-row">
                 <span class="text-caption text-medium-emphasis"
-                  >Computed from salary:</span
+                  >Exact value used in payroll:</span
                 >
                 <span class="text-caption font-weight-medium"
                   >₱{{ formatCurrency(editEmployee.computed_philhealth) }}</span
@@ -437,7 +437,7 @@
               </div>
               <v-text-field
                 v-model.number="editForm.custom_philhealth"
-                label="Custom PhilHealth Amount (per cutoff)"
+                label="Custom PhilHealth Amount (exact value)"
                 type="number"
                 step="0.01"
                 prefix="₱"
@@ -475,7 +475,7 @@
             <div v-if="editForm.has_pagibig" class="contrib-fields">
               <div class="computed-row">
                 <span class="text-caption text-medium-emphasis"
-                  >Computed from salary:</span
+                  >Exact value used in payroll:</span
                 >
                 <span class="text-caption font-weight-medium"
                   >₱{{ formatCurrency(editEmployee.computed_pagibig) }}</span
@@ -483,7 +483,7 @@
               </div>
               <v-text-field
                 v-model.number="editForm.custom_pagibig"
-                label="Custom Pag-IBIG Amount (per cutoff)"
+                label="Custom Pag-IBIG Amount (exact value)"
                 type="number"
                 step="0.01"
                 prefix="₱"
@@ -505,7 +505,7 @@
           <div class="preview-section">
             <div class="preview-title">
               <v-icon size="16" class="mr-1">mdi-calculator</v-icon>
-              Payroll Preview (per cutoff)
+              Payroll Preview (exact value)
             </div>
             <div class="preview-grid">
               <div class="preview-item">

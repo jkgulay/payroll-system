@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { computed, defineExpose, onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import api from "@/services/api";
 import attendanceService from "@/services/attendanceService";
 import { useToast } from "vue-toastification";

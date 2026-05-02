@@ -6,7 +6,7 @@
         <div class="back-button-wrapper">
           <button class="back-button" @click="goBack">
             <v-icon size="20">mdi-arrow-left</v-icon>
-            <span>{{ isAdmin ? 'Back to Settings' : 'Back' }}</span>
+            <span>{{ isAdmin ? "Back to Settings" : "Back" }}</span>
           </button>
         </div>
 
@@ -38,7 +38,10 @@
         icon="mdi-lock-outline"
       >
         <v-alert-title>Access Required</v-alert-title>
-        <p class="mt-1">You need to request access from an administrator before you can manage government rates.</p>
+        <p class="mt-1">
+          You need to request access from an administrator before you can manage
+          government rates.
+        </p>
         <v-btn
           color="primary"
           variant="flat"
@@ -60,7 +63,10 @@
         icon="mdi-clock-outline"
       >
         <v-alert-title>Pending Approval</v-alert-title>
-        <p class="mt-1">Your access request is pending admin approval. You will be able to manage government rates once approved.</p>
+        <p class="mt-1">
+          Your access request is pending admin approval. You will be able to
+          manage government rates once approved.
+        </p>
       </v-alert>
 
       <!-- Rejected -->
@@ -101,17 +107,29 @@
               >
                 <template v-slot:prepend>
                   <v-icon :color="getRequestStatusColor(req.status)">
-                    {{ req.status === 'pending' ? 'mdi-clock-outline' : req.status === 'approved' ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                    {{
+                      req.status === "pending"
+                        ? "mdi-clock-outline"
+                        : req.status === "approved"
+                          ? "mdi-check-circle"
+                          : "mdi-close-circle"
+                    }}
                   </v-icon>
                 </template>
                 <template v-slot:append>
-                  <v-chip :color="getRequestStatusColor(req.status)" size="x-small" variant="flat">
+                  <v-chip
+                    :color="getRequestStatusColor(req.status)"
+                    size="x-small"
+                    variant="flat"
+                  >
                     {{ req.status }}
                   </v-chip>
                 </template>
               </v-list-item>
             </v-list>
-            <p v-else class="text-center text-medium-emphasis py-4">No requests yet.</p>
+            <p v-else class="text-center text-medium-emphasis py-4">
+              No requests yet.
+            </p>
           </v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>
@@ -126,21 +144,28 @@
           <v-divider></v-divider>
           <v-card-text class="pa-4">
             <p class="text-body-2 mb-4">
-              Please provide a reason for needing access to the Government Rates module.
+              Please provide a reason for needing access to the Government Rates
+              module.
             </p>
             <v-textarea
               v-model="requestReason"
               label="Reason"
               variant="outlined"
               rows="3"
-              :rules="[v => !!v || 'Reason is required']"
+              :rules="[(v) => !!v || 'Reason is required']"
               placeholder="Explain why you need access to manage government rates"
             ></v-textarea>
           </v-card-text>
           <v-divider></v-divider>
           <v-card-actions class="pa-4">
             <v-spacer></v-spacer>
-            <v-btn variant="text" @click="requestDialog = false; requestReason = ''">
+            <v-btn
+              variant="text"
+              @click="
+                requestDialog = false;
+                requestReason = '';
+              "
+            >
               Cancel
             </v-btn>
             <v-btn
@@ -160,656 +185,665 @@
 
     <!-- Main Content (only when access granted) -->
     <template v-if="hasAccess">
-
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-      <div
-        class="stat-card"
-        :class="{ active: activeTab === 'employees' }"
-        @click="switchTab('employees')"
-      >
-        <div class="stat-icon employees">
-          <v-icon size="20">mdi-account-group</v-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-label">Employee Overrides</div>
-          <div class="stat-value">Custom</div>
-        </div>
-      </div>
-      <div
-        v-for="rt in rateTabs"
-        :key="rt.value"
-        class="stat-card"
-        :class="{ active: activeTab === rt.value }"
-        @click="switchTab(rt.value)"
-      >
-        <div class="stat-icon" :class="rt.value">
-          <v-icon size="20">{{ rt.icon }}</v-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-label">{{ rt.label }} Brackets</div>
-          <div class="stat-value" :class="{ success: rates[rt.value].length }">
-            {{ rates[rt.value].length || "Fallback" }}
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div
+          class="stat-card"
+          :class="{ active: activeTab === 'employees' }"
+          @click="switchTab('employees')"
+        >
+          <div class="stat-icon employees">
+            <v-icon size="20">mdi-account-group</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Employee Overrides</div>
+            <div class="stat-value">Custom</div>
           </div>
         </div>
-      </div>
-      <div
-        class="stat-card"
-        :class="{ active: activeTab === 'calculator' }"
-        @click="switchTab('calculator')"
-      >
-        <div class="stat-icon calculator">
-          <v-icon size="20">mdi-calculator-variant</v-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-label">Calculator</div>
-          <div class="stat-value">Compute</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Loading Bar -->
-    <v-progress-linear
-      v-if="loading"
-      indeterminate
-      color="primary"
-      height="3"
-      class="mb-4"
-      style="border-radius: 8px"
-    />
-
-    <!-- Content Card -->
-    <div class="content-card">
-      <!-- ──── Employee Contributions ──── -->
-      <div v-if="activeTab === 'employees'">
-        <employee-contributions-tab ref="employeeContributionsRef" />
-      </div>
-
-      <!-- ──── Rate Tables (SSS / PhilHealth / PagIBIG / Tax) ──── -->
-      <div v-for="rt in rateTabs" :key="rt.value">
-        <div v-if="activeTab === rt.value" class="rate-panel">
-          <!-- Info Banner -->
-          <div class="rate-info-banner" :class="rt.value">
-            <v-icon size="18" class="mr-2">{{ rt.icon }}</v-icon>
-            <span>{{ rt.description }}</span>
-            <span class="rate-info-note">{{
-              currentRates(rt.value).length
-                ? `${currentRates(rt.value).length} bracket(s) configured`
-                : "Using built-in fallback table"
-            }}</span>
+        <div
+          v-for="rt in rateTabs"
+          :key="rt.value"
+          class="stat-card"
+          :class="{ active: activeTab === rt.value }"
+          @click="switchTab(rt.value)"
+        >
+          <div class="stat-icon" :class="rt.value">
+            <v-icon size="20">{{ rt.icon }}</v-icon>
           </div>
-
-          <!-- Toolbar -->
-          <div class="rate-toolbar">
-            <v-btn
-              v-if="!showForm || editingForTab !== rt.value"
-              :color="rt.color"
-              variant="tonal"
-              size="small"
-              prepend-icon="mdi-plus"
-              @click="startAdd(rt.value)"
-            >
-              Add Bracket
-            </v-btn>
-            <v-spacer />
-            <v-btn
-              v-if="currentRates(rt.value).length > 0"
-              color="error"
-              variant="text"
-              size="small"
-              prepend-icon="mdi-delete-sweep"
-              @click="clearTabRates(rt.value)"
-              :disabled="loading"
-            >
-              Clear All
-            </v-btn>
-          </div>
-
-          <!-- ──── Inline Add/Edit Form ──── -->
-          <v-expand-transition>
+          <div class="stat-content">
+            <div class="stat-label">{{ rt.label }} Brackets</div>
             <div
-              v-if="showForm && editingForTab === rt.value"
-              class="form-panel"
+              class="stat-value"
+              :class="{ success: rates[rt.value].length }"
             >
-              <div class="form-panel-header">
-                <div class="form-panel-title">
-                  <v-icon size="18" class="mr-2" :color="rt.color">{{
-                    editingRate ? "mdi-pencil" : "mdi-plus-circle"
-                  }}</v-icon>
-                  {{ editingRate ? "Edit" : "New" }} {{ rt.label }} Bracket
+              {{ rates[rt.value].length || "Fallback" }}
+            </div>
+          </div>
+        </div>
+        <div
+          class="stat-card"
+          :class="{ active: activeTab === 'calculator' }"
+          @click="switchTab('calculator')"
+        >
+          <div class="stat-icon calculator">
+            <v-icon size="20">mdi-calculator-variant</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Calculator</div>
+            <div class="stat-value">Compute</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Bar -->
+      <v-progress-linear
+        v-if="loading"
+        indeterminate
+        color="primary"
+        height="3"
+        class="mb-4"
+        style="border-radius: 8px"
+      />
+
+      <!-- Content Card -->
+      <div class="content-card">
+        <!-- ──── Employee Contributions ──── -->
+        <div v-if="activeTab === 'employees'">
+          <employee-contributions-tab ref="employeeContributionsRef" />
+        </div>
+
+        <!-- ──── Rate Tables (SSS / PhilHealth / PagIBIG / Tax) ──── -->
+        <div v-for="rt in rateTabs" :key="rt.value">
+          <div v-if="activeTab === rt.value" class="rate-panel">
+            <!-- Info Banner -->
+            <div class="rate-info-banner" :class="rt.value">
+              <v-icon size="18" class="mr-2">{{ rt.icon }}</v-icon>
+              <span>{{ rt.description }}</span>
+              <span class="rate-info-note">{{
+                currentRates(rt.value).length
+                  ? `${currentRates(rt.value).length} bracket(s) configured`
+                  : "Using built-in fallback table"
+              }}</span>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="rate-toolbar">
+              <v-btn
+                v-if="!showForm || editingForTab !== rt.value"
+                :color="rt.color"
+                variant="tonal"
+                size="small"
+                prepend-icon="mdi-plus"
+                @click="startAdd(rt.value)"
+              >
+                Add Bracket
+              </v-btn>
+              <v-spacer />
+              <v-btn
+                v-if="currentRates(rt.value).length > 0"
+                color="error"
+                variant="text"
+                size="small"
+                prepend-icon="mdi-delete-sweep"
+                @click="clearTabRates(rt.value)"
+                :disabled="loading"
+              >
+                Clear All
+              </v-btn>
+            </div>
+
+            <!-- ──── Inline Add/Edit Form ──── -->
+            <v-expand-transition>
+              <div
+                v-if="showForm && editingForTab === rt.value"
+                class="form-panel"
+              >
+                <div class="form-panel-header">
+                  <div class="form-panel-title">
+                    <v-icon size="18" class="mr-2" :color="rt.color">{{
+                      editingRate ? "mdi-pencil" : "mdi-plus-circle"
+                    }}</v-icon>
+                    {{ editingRate ? "Edit" : "New" }} {{ rt.label }} Bracket
+                  </div>
+                  <v-btn
+                    icon="mdi-close"
+                    size="small"
+                    variant="text"
+                    @click="cancelForm"
+                  />
                 </div>
-                <v-btn
-                  icon="mdi-close"
-                  size="small"
-                  variant="text"
-                  @click="cancelForm"
-                />
+
+                <v-form ref="formRef" v-model="formValid" class="pa-4">
+                  <v-row dense>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model="form.name"
+                        label="Bracket Name *"
+                        :rules="[rules.required]"
+                        variant="outlined"
+                        density="compact"
+                        placeholder="e.g., SSS Bracket 1"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col cols="6" md="2">
+                      <v-text-field
+                        v-model.number="form.min_salary"
+                        label="Min Salary *"
+                        type="number"
+                        prefix="₱"
+                        :rules="[rules.requiredNumeric]"
+                        variant="outlined"
+                        density="compact"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col cols="6" md="2">
+                      <v-text-field
+                        v-model.number="form.max_salary"
+                        label="Max Salary"
+                        type="number"
+                        prefix="₱"
+                        variant="outlined"
+                        density="compact"
+                        hint="Empty = no limit"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col cols="6" md="2">
+                      <v-text-field
+                        v-model="form.effective_date"
+                        label="Effective Date *"
+                        type="date"
+                        :rules="[rules.required]"
+                        variant="outlined"
+                        density="compact"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col cols="6" md="2">
+                      <v-text-field
+                        v-model="form.end_date"
+                        label="End Date"
+                        type="date"
+                        variant="outlined"
+                        density="compact"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                  </v-row>
+
+                  <v-row dense class="mt-1">
+                    <v-col cols="6" md="3">
+                      <v-text-field
+                        v-model.number="form.employee_rate"
+                        label="Employee Rate (%)"
+                        type="number"
+                        suffix="%"
+                        :rules="[rules.rateRange]"
+                        variant="outlined"
+                        density="compact"
+                        :disabled="!!form.employee_fixed"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col cols="6" md="3">
+                      <v-text-field
+                        v-model.number="form.employee_fixed"
+                        label="Employee Fixed (₱)"
+                        type="number"
+                        prefix="₱"
+                        variant="outlined"
+                        density="compact"
+                        :disabled="!!form.employee_rate"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col cols="6" md="3">
+                      <v-text-field
+                        v-model.number="form.employer_rate"
+                        label="Employer Rate (%)"
+                        type="number"
+                        suffix="%"
+                        :rules="[rules.rateRange]"
+                        variant="outlined"
+                        density="compact"
+                        :disabled="!!form.employer_fixed"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col cols="6" md="3">
+                      <v-text-field
+                        v-model.number="form.employer_fixed"
+                        label="Employer Fixed (₱)"
+                        type="number"
+                        prefix="₱"
+                        variant="outlined"
+                        density="compact"
+                        :disabled="!!form.employer_rate"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                  </v-row>
+
+                  <v-row dense class="mt-1">
+                    <v-col cols="12" md="3">
+                      <v-text-field
+                        v-model.number="form.total_contribution"
+                        label="Total Contribution (₱)"
+                        type="number"
+                        prefix="₱"
+                        variant="outlined"
+                        density="compact"
+                        hint="Overrides computed total"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col cols="12" md="5">
+                      <v-text-field
+                        v-model="form.notes"
+                        label="Notes"
+                        variant="outlined"
+                        density="compact"
+                        hide-details="auto"
+                      />
+                    </v-col>
+                    <v-col
+                      cols="12"
+                      md="2"
+                      class="d-flex align-center justify-center"
+                    >
+                      <v-switch
+                        v-model="form.is_active"
+                        label="Active"
+                        color="primary"
+                        density="compact"
+                        hide-details
+                      />
+                    </v-col>
+                    <v-col
+                      cols="12"
+                      md="2"
+                      class="d-flex align-center justify-end ga-2"
+                    >
+                      <v-btn
+                        variant="text"
+                        size="small"
+                        @click="cancelForm"
+                        :disabled="saving"
+                      >
+                        Cancel
+                      </v-btn>
+                      <v-btn
+                        :color="rt.color"
+                        variant="elevated"
+                        size="small"
+                        :loading="saving"
+                        @click="saveRate(rt.value)"
+                        prepend-icon="mdi-content-save"
+                      >
+                        {{ editingRate ? "Update" : "Save" }}
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+                </v-form>
+              </div>
+            </v-expand-transition>
+
+            <!-- ──── Rates Table ──── -->
+            <div
+              v-if="currentRates(rt.value).length > 0"
+              class="rates-table-wrap"
+            >
+              <v-table density="compact" class="rates-table">
+                <thead>
+                  <tr>
+                    <th>Bracket</th>
+                    <th class="text-right">Min Salary</th>
+                    <th class="text-right">Max Salary</th>
+                    <th class="text-right">Employee</th>
+                    <th class="text-right">Employer</th>
+                    <th class="text-right">Total</th>
+                    <th>Effective</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center" style="width: 80px">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="rate in currentRates(rt.value)"
+                    :key="rate.id"
+                    :class="{ 'row-inactive': !rate.is_active }"
+                  >
+                    <td>
+                      <div class="font-weight-medium text-body-2">
+                        {{ rate.name }}
+                      </div>
+                      <div
+                        v-if="rate.notes"
+                        class="text-caption text-medium-emphasis"
+                      >
+                        {{ rate.notes }}
+                      </div>
+                    </td>
+                    <td class="text-right mono">
+                      ₱{{ formatCurrency(rate.min_salary) }}
+                    </td>
+                    <td class="text-right mono">
+                      <template v-if="rate.max_salary"
+                        >₱{{ formatCurrency(rate.max_salary) }}</template
+                      >
+                      <span v-else class="text-medium-emphasis text-caption"
+                        >No limit</span
+                      >
+                    </td>
+                    <td class="text-right">
+                      <v-chip
+                        v-if="rate.employee_rate"
+                        size="x-small"
+                        color="blue"
+                        variant="tonal"
+                        >{{ rate.employee_rate }}%</v-chip
+                      >
+                      <span
+                        v-else-if="rate.employee_fixed"
+                        class="mono text-blue"
+                        >₱{{ formatCurrency(rate.employee_fixed) }}</span
+                      >
+                      <span v-else class="text-medium-emphasis">—</span>
+                    </td>
+                    <td class="text-right">
+                      <v-chip
+                        v-if="rate.employer_rate"
+                        size="x-small"
+                        color="green"
+                        variant="tonal"
+                        >{{ rate.employer_rate }}%</v-chip
+                      >
+                      <span
+                        v-else-if="rate.employer_fixed"
+                        class="mono text-green"
+                        >₱{{ formatCurrency(rate.employer_fixed) }}</span
+                      >
+                      <span v-else class="text-medium-emphasis">—</span>
+                    </td>
+                    <td class="text-right">
+                      <span
+                        v-if="rate.total_contribution"
+                        class="font-weight-bold mono"
+                        >₱{{ formatCurrency(rate.total_contribution) }}</span
+                      >
+                      <span v-else class="text-caption text-medium-emphasis"
+                        >Auto</span
+                      >
+                    </td>
+                    <td>
+                      <div class="text-caption">
+                        {{ formatDate(rate.effective_date) }}
+                        <template v-if="rate.end_date">
+                          → {{ formatDate(rate.end_date) }}
+                        </template>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <v-chip
+                        :color="rate.is_active ? 'success' : 'default'"
+                        size="x-small"
+                        variant="tonal"
+                        class="status-chip"
+                        @click="toggleActive(rate)"
+                      >
+                        {{ rate.is_active ? "Active" : "Inactive" }}
+                      </v-chip>
+                    </td>
+                    <td class="text-center">
+                      <v-btn
+                        icon
+                        size="x-small"
+                        variant="text"
+                        color="primary"
+                        @click="startEdit(rate)"
+                        title="Edit"
+                      >
+                        <v-icon size="16">mdi-pencil</v-icon>
+                      </v-btn>
+                      <v-btn
+                        icon
+                        size="x-small"
+                        variant="text"
+                        color="error"
+                        @click="deleteRate(rate)"
+                        title="Delete"
+                      >
+                        <v-icon size="16">mdi-delete</v-icon>
+                      </v-btn>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </div>
+
+            <!-- Empty state -->
+            <div
+              v-else-if="!showForm || editingForTab !== rt.value"
+              class="empty-state"
+            >
+              <v-icon size="52" :color="rt.color" class="empty-icon">{{
+                rt.icon
+              }}</v-icon>
+              <p class="text-body-1 mt-3 font-weight-medium">
+                No {{ rt.label }} brackets configured
+              </p>
+              <p class="text-caption text-medium-emphasis mb-3">
+                The system uses built-in {{ rt.label }} contribution tables as
+                fallback. Add custom brackets to override them.
+              </p>
+              <v-btn
+                :color="rt.color"
+                variant="tonal"
+                size="small"
+                prepend-icon="mdi-plus"
+                @click="startAdd(rt.value)"
+              >
+                Add First Bracket
+              </v-btn>
+            </div>
+          </div>
+        </div>
+
+        <!-- ──── Calculator ──── -->
+        <div v-if="activeTab === 'calculator'" class="calculator-panel">
+          <div class="calc-header">
+            <v-icon size="24" color="primary" class="mr-2"
+              >mdi-calculator-variant</v-icon
+            >
+            <div>
+              <div class="text-h6 font-weight-bold">
+                Contribution Calculator
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                Enter a monthly salary to see the computed government
+                contributions per cutoff
+              </div>
+            </div>
+          </div>
+
+          <div class="calc-input-row">
+            <v-text-field
+              v-model.number="calcSalary"
+              label="Monthly Basic Salary"
+              type="number"
+              prefix="₱"
+              variant="outlined"
+              density="comfortable"
+              hide-details
+              class="calc-input"
+              @keyup.enter="computeContributions"
+            />
+            <v-btn
+              color="primary"
+              variant="elevated"
+              size="large"
+              @click="computeContributions"
+              :loading="calcLoading"
+              prepend-icon="mdi-calculator"
+            >
+              Compute
+            </v-btn>
+          </div>
+
+          <v-expand-transition>
+            <div v-if="calcResult" class="calc-results">
+              <div class="calc-salary-label">
+                Monthly Salary:
+                <strong>₱{{ formatCurrency(calcResult.salary) }}</strong>
               </div>
 
-              <v-form ref="formRef" v-model="formValid" class="pa-4">
-                <v-row dense>
-                  <v-col cols="12" md="4">
-                    <v-text-field
-                      v-model="form.name"
-                      label="Bracket Name *"
-                      :rules="[rules.required]"
-                      variant="outlined"
-                      density="compact"
-                      placeholder="e.g., SSS Bracket 1"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col cols="6" md="2">
-                    <v-text-field
-                      v-model.number="form.min_salary"
-                      label="Min Salary *"
-                      type="number"
-                      prefix="₱"
-                      :rules="[rules.requiredNumeric]"
-                      variant="outlined"
-                      density="compact"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col cols="6" md="2">
-                    <v-text-field
-                      v-model.number="form.max_salary"
-                      label="Max Salary"
-                      type="number"
-                      prefix="₱"
-                      variant="outlined"
-                      density="compact"
-                      hint="Empty = no limit"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col cols="6" md="2">
-                    <v-text-field
-                      v-model="form.effective_date"
-                      label="Effective Date *"
-                      type="date"
-                      :rules="[rules.required]"
-                      variant="outlined"
-                      density="compact"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col cols="6" md="2">
-                    <v-text-field
-                      v-model="form.end_date"
-                      label="End Date"
-                      type="date"
-                      variant="outlined"
-                      density="compact"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                </v-row>
+              <div class="calc-cards">
+                <!-- SSS -->
+                <div class="calc-card calc-sss">
+                  <div class="calc-card-icon">
+                    <v-icon size="22" color="white">mdi-shield-account</v-icon>
+                  </div>
+                  <div class="calc-card-body">
+                    <div class="calc-card-title">SSS</div>
+                    <div class="calc-card-row">
+                      <span>Employee share</span>
+                      <span class="mono"
+                        >₱{{
+                          formatCurrency(calcResult.sss?.employee_share || 0)
+                        }}</span
+                      >
+                    </div>
+                    <div class="calc-card-row">
+                      <span>Employer share</span>
+                      <span class="mono"
+                        >₱{{
+                          formatCurrency(calcResult.sss?.employer_share || 0)
+                        }}</span
+                      >
+                    </div>
+                    <v-divider class="my-1" />
+                    <div class="calc-card-row highlight">
+                      <span>Exact value used in payroll</span>
+                      <span class="mono font-weight-bold"
+                        >₱{{
+                          formatCurrency(calcResult.sss?.employee_share || 0)
+                        }}</span
+                      >
+                    </div>
+                  </div>
+                </div>
 
-                <v-row dense class="mt-1">
-                  <v-col cols="6" md="3">
-                    <v-text-field
-                      v-model.number="form.employee_rate"
-                      label="Employee Rate (%)"
-                      type="number"
-                      suffix="%"
-                      :rules="[rules.rateRange]"
-                      variant="outlined"
-                      density="compact"
-                      :disabled="!!form.employee_fixed"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col cols="6" md="3">
-                    <v-text-field
-                      v-model.number="form.employee_fixed"
-                      label="Employee Fixed (₱)"
-                      type="number"
-                      prefix="₱"
-                      variant="outlined"
-                      density="compact"
-                      :disabled="!!form.employee_rate"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col cols="6" md="3">
-                    <v-text-field
-                      v-model.number="form.employer_rate"
-                      label="Employer Rate (%)"
-                      type="number"
-                      suffix="%"
-                      :rules="[rules.rateRange]"
-                      variant="outlined"
-                      density="compact"
-                      :disabled="!!form.employer_fixed"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col cols="6" md="3">
-                    <v-text-field
-                      v-model.number="form.employer_fixed"
-                      label="Employer Fixed (₱)"
-                      type="number"
-                      prefix="₱"
-                      variant="outlined"
-                      density="compact"
-                      :disabled="!!form.employer_rate"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                </v-row>
+                <!-- PhilHealth -->
+                <div class="calc-card calc-ph">
+                  <div class="calc-card-icon">
+                    <v-icon size="22" color="white">mdi-hospital-box</v-icon>
+                  </div>
+                  <div class="calc-card-body">
+                    <div class="calc-card-title">PhilHealth</div>
+                    <div class="calc-card-row">
+                      <span>Employee share</span>
+                      <span class="mono"
+                        >₱{{
+                          formatCurrency(
+                            calcResult.philhealth?.employee_share || 0,
+                          )
+                        }}</span
+                      >
+                    </div>
+                    <div class="calc-card-row">
+                      <span>Employer share</span>
+                      <span class="mono"
+                        >₱{{
+                          formatCurrency(
+                            calcResult.philhealth?.employer_share || 0,
+                          )
+                        }}</span
+                      >
+                    </div>
+                    <v-divider class="my-1" />
+                    <div class="calc-card-row highlight">
+                      <span>Exact value used in payroll</span>
+                      <span class="mono font-weight-bold"
+                        >₱{{
+                          formatCurrency(
+                            calcResult.philhealth?.employee_share || 0,
+                          )
+                        }}</span
+                      >
+                    </div>
+                  </div>
+                </div>
 
-                <v-row dense class="mt-1">
-                  <v-col cols="12" md="3">
-                    <v-text-field
-                      v-model.number="form.total_contribution"
-                      label="Total Contribution (₱)"
-                      type="number"
-                      prefix="₱"
-                      variant="outlined"
-                      density="compact"
-                      hint="Overrides computed total"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col cols="12" md="5">
-                    <v-text-field
-                      v-model="form.notes"
-                      label="Notes"
-                      variant="outlined"
-                      density="compact"
-                      hide-details="auto"
-                    />
-                  </v-col>
-                  <v-col
-                    cols="12"
-                    md="2"
-                    class="d-flex align-center justify-center"
-                  >
-                    <v-switch
-                      v-model="form.is_active"
-                      label="Active"
-                      color="primary"
-                      density="compact"
-                      hide-details
-                    />
-                  </v-col>
-                  <v-col
-                    cols="12"
-                    md="2"
-                    class="d-flex align-center justify-end ga-2"
-                  >
-                    <v-btn
-                      variant="text"
-                      size="small"
-                      @click="cancelForm"
-                      :disabled="saving"
-                    >
-                      Cancel
-                    </v-btn>
-                    <v-btn
-                      :color="rt.color"
-                      variant="elevated"
-                      size="small"
-                      :loading="saving"
-                      @click="saveRate(rt.value)"
-                      prepend-icon="mdi-content-save"
-                    >
-                      {{ editingRate ? "Update" : "Save" }}
-                    </v-btn>
-                  </v-col>
-                </v-row>
-              </v-form>
+                <!-- Pag-IBIG -->
+                <div class="calc-card calc-pi">
+                  <div class="calc-card-icon">
+                    <v-icon size="22" color="white">mdi-home-city</v-icon>
+                  </div>
+                  <div class="calc-card-body">
+                    <div class="calc-card-title">Pag-IBIG</div>
+                    <div class="calc-card-row">
+                      <span>Employee share</span>
+                      <span class="mono"
+                        >₱{{
+                          formatCurrency(
+                            calcResult.pagibig?.employee_share || 0,
+                          )
+                        }}</span
+                      >
+                    </div>
+                    `
+                    <div class="calc-card-row">
+                      <span>Employer share</span>
+                      <span class="mono"
+                        >₱{{
+                          formatCurrency(
+                            calcResult.pagibig?.employer_share || 0,
+                          )
+                        }}</span
+                      >
+                    </div>
+                    <v-divider class="my-1" />
+                    <div class="calc-card-row highlight">
+                      <span>Exact value used in payroll</span>
+                      <span class="mono font-weight-bold"
+                        >₱{{
+                          formatCurrency(
+                            calcResult.pagibig?.employee_share || 0,
+                          )
+                        }}</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Total Summary -->
+              <div class="calc-total-bar">
+                <div class="calc-total-label">
+                  <v-icon size="18" class="mr-2">mdi-sigma</v-icon>
+                  Total Employee Deduction Per Cutoff
+                </div>
+                <div class="calc-total-value">
+                  ₱{{
+                    formatCurrency(
+                      (calcResult.total_employee_deductions || 0) / 2,
+                    )
+                  }}
+                </div>
+              </div>
+
+              <div class="calc-note">
+                <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
+                These are the computed defaults. If an employee has a custom
+                override set in the Employee Contributions tab, that value is
+                used instead.
+              </div>
             </div>
           </v-expand-transition>
-
-          <!-- ──── Rates Table ──── -->
-          <div
-            v-if="currentRates(rt.value).length > 0"
-            class="rates-table-wrap"
-          >
-            <v-table density="compact" class="rates-table">
-              <thead>
-                <tr>
-                  <th>Bracket</th>
-                  <th class="text-right">Min Salary</th>
-                  <th class="text-right">Max Salary</th>
-                  <th class="text-right">Employee</th>
-                  <th class="text-right">Employer</th>
-                  <th class="text-right">Total</th>
-                  <th>Effective</th>
-                  <th class="text-center">Status</th>
-                  <th class="text-center" style="width: 80px">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="rate in currentRates(rt.value)"
-                  :key="rate.id"
-                  :class="{ 'row-inactive': !rate.is_active }"
-                >
-                  <td>
-                    <div class="font-weight-medium text-body-2">
-                      {{ rate.name }}
-                    </div>
-                    <div
-                      v-if="rate.notes"
-                      class="text-caption text-medium-emphasis"
-                    >
-                      {{ rate.notes }}
-                    </div>
-                  </td>
-                  <td class="text-right mono">
-                    ₱{{ formatCurrency(rate.min_salary) }}
-                  </td>
-                  <td class="text-right mono">
-                    <template v-if="rate.max_salary"
-                      >₱{{ formatCurrency(rate.max_salary) }}</template
-                    >
-                    <span v-else class="text-medium-emphasis text-caption"
-                      >No limit</span
-                    >
-                  </td>
-                  <td class="text-right">
-                    <v-chip
-                      v-if="rate.employee_rate"
-                      size="x-small"
-                      color="blue"
-                      variant="tonal"
-                      >{{ rate.employee_rate }}%</v-chip
-                    >
-                    <span v-else-if="rate.employee_fixed" class="mono text-blue"
-                      >₱{{ formatCurrency(rate.employee_fixed) }}</span
-                    >
-                    <span v-else class="text-medium-emphasis">—</span>
-                  </td>
-                  <td class="text-right">
-                    <v-chip
-                      v-if="rate.employer_rate"
-                      size="x-small"
-                      color="green"
-                      variant="tonal"
-                      >{{ rate.employer_rate }}%</v-chip
-                    >
-                    <span
-                      v-else-if="rate.employer_fixed"
-                      class="mono text-green"
-                      >₱{{ formatCurrency(rate.employer_fixed) }}</span
-                    >
-                    <span v-else class="text-medium-emphasis">—</span>
-                  </td>
-                  <td class="text-right">
-                    <span
-                      v-if="rate.total_contribution"
-                      class="font-weight-bold mono"
-                      >₱{{ formatCurrency(rate.total_contribution) }}</span
-                    >
-                    <span v-else class="text-caption text-medium-emphasis"
-                      >Auto</span
-                    >
-                  </td>
-                  <td>
-                    <div class="text-caption">
-                      {{ formatDate(rate.effective_date) }}
-                      <template v-if="rate.end_date">
-                        → {{ formatDate(rate.end_date) }}
-                      </template>
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <v-chip
-                      :color="rate.is_active ? 'success' : 'default'"
-                      size="x-small"
-                      variant="tonal"
-                      class="status-chip"
-                      @click="toggleActive(rate)"
-                    >
-                      {{ rate.is_active ? "Active" : "Inactive" }}
-                    </v-chip>
-                  </td>
-                  <td class="text-center">
-                    <v-btn
-                      icon
-                      size="x-small"
-                      variant="text"
-                      color="primary"
-                      @click="startEdit(rate)"
-                      title="Edit"
-                    >
-                      <v-icon size="16">mdi-pencil</v-icon>
-                    </v-btn>
-                    <v-btn
-                      icon
-                      size="x-small"
-                      variant="text"
-                      color="error"
-                      @click="deleteRate(rate)"
-                      title="Delete"
-                    >
-                      <v-icon size="16">mdi-delete</v-icon>
-                    </v-btn>
-                  </td>
-                </tr>
-              </tbody>
-            </v-table>
-          </div>
-
-          <!-- Empty state -->
-          <div
-            v-else-if="!showForm || editingForTab !== rt.value"
-            class="empty-state"
-          >
-            <v-icon size="52" :color="rt.color" class="empty-icon">{{
-              rt.icon
-            }}</v-icon>
-            <p class="text-body-1 mt-3 font-weight-medium">
-              No {{ rt.label }} brackets configured
-            </p>
-            <p class="text-caption text-medium-emphasis mb-3">
-              The system uses built-in {{ rt.label }} contribution tables as
-              fallback. Add custom brackets to override them.
-            </p>
-            <v-btn
-              :color="rt.color"
-              variant="tonal"
-              size="small"
-              prepend-icon="mdi-plus"
-              @click="startAdd(rt.value)"
-            >
-              Add First Bracket
-            </v-btn>
-          </div>
         </div>
       </div>
-
-      <!-- ──── Calculator ──── -->
-      <div v-if="activeTab === 'calculator'" class="calculator-panel">
-        <div class="calc-header">
-          <v-icon size="24" color="primary" class="mr-2"
-            >mdi-calculator-variant</v-icon
-          >
-          <div>
-            <div class="text-h6 font-weight-bold">Contribution Calculator</div>
-            <div class="text-caption text-medium-emphasis">
-              Enter a monthly salary to see the computed government
-              contributions per cutoff
-            </div>
-          </div>
-        </div>
-
-        <div class="calc-input-row">
-          <v-text-field
-            v-model.number="calcSalary"
-            label="Monthly Basic Salary"
-            type="number"
-            prefix="₱"
-            variant="outlined"
-            density="comfortable"
-            hide-details
-            class="calc-input"
-            @keyup.enter="computeContributions"
-          />
-          <v-btn
-            color="primary"
-            variant="elevated"
-            size="large"
-            @click="computeContributions"
-            :loading="calcLoading"
-            prepend-icon="mdi-calculator"
-          >
-            Compute
-          </v-btn>
-        </div>
-
-        <v-expand-transition>
-          <div v-if="calcResult" class="calc-results">
-            <div class="calc-salary-label">
-              Monthly Salary:
-              <strong>₱{{ formatCurrency(calcResult.salary) }}</strong>
-            </div>
-
-            <div class="calc-cards">
-              <!-- SSS -->
-              <div class="calc-card calc-sss">
-                <div class="calc-card-icon">
-                  <v-icon size="22" color="white">mdi-shield-account</v-icon>
-                </div>
-                <div class="calc-card-body">
-                  <div class="calc-card-title">SSS</div>
-                  <div class="calc-card-row">
-                    <span>Employee (monthly)</span>
-                    <span class="mono"
-                      >₱{{
-                        formatCurrency(calcResult.sss?.employee_share || 0)
-                      }}</span
-                    >
-                  </div>
-                  <div class="calc-card-row">
-                    <span>Employer (monthly)</span>
-                    <span class="mono"
-                      >₱{{
-                        formatCurrency(calcResult.sss?.employer_share || 0)
-                      }}</span
-                    >
-                  </div>
-                  <v-divider class="my-1" />
-                  <div class="calc-card-row highlight">
-                    <span>Per Cutoff (employee)</span>
-                    <span class="mono font-weight-bold"
-                      >₱{{
-                        formatCurrency(
-                          (calcResult.sss?.employee_share || 0) / 2,
-                        )
-                      }}</span
-                    >
-                  </div>
-                </div>
-              </div>
-
-              <!-- PhilHealth -->
-              <div class="calc-card calc-ph">
-                <div class="calc-card-icon">
-                  <v-icon size="22" color="white">mdi-hospital-box</v-icon>
-                </div>
-                <div class="calc-card-body">
-                  <div class="calc-card-title">PhilHealth</div>
-                  <div class="calc-card-row">
-                    <span>Employee (monthly)</span>
-                    <span class="mono"
-                      >₱{{
-                        formatCurrency(
-                          calcResult.philhealth?.employee_share || 0,
-                        )
-                      }}</span
-                    >
-                  </div>
-                  <div class="calc-card-row">
-                    <span>Employer (monthly)</span>
-                    <span class="mono"
-                      >₱{{
-                        formatCurrency(
-                          calcResult.philhealth?.employer_share || 0,
-                        )
-                      }}</span
-                    >
-                  </div>
-                  <v-divider class="my-1" />
-                  <div class="calc-card-row highlight">
-                    <span>Per Cutoff (employee)</span>
-                    <span class="mono font-weight-bold"
-                      >₱{{
-                        formatCurrency(
-                          (calcResult.philhealth?.employee_share || 0) / 2,
-                        )
-                      }}</span
-                    >
-                  </div>
-                </div>
-              </div>
-
-              <!-- Pag-IBIG -->
-              <div class="calc-card calc-pi">
-                <div class="calc-card-icon">
-                  <v-icon size="22" color="white">mdi-home-city</v-icon>
-                </div>
-                <div class="calc-card-body">
-                  <div class="calc-card-title">Pag-IBIG</div>
-                  <div class="calc-card-row">
-                    <span>Employee (monthly)</span>
-                    <span class="mono"
-                      >₱{{
-                        formatCurrency(calcResult.pagibig?.employee_share || 0)
-                      }}</span
-                    >
-                  </div>`
-                  <div class="calc-card-row">
-                    <span>Employer (monthly)</span>
-                    <span class="mono"
-                      >₱{{
-                        formatCurrency(calcResult.pagibig?.employer_share || 0)
-                      }}</span
-                    >
-                  </div>
-                  <v-divider class="my-1" />
-                  <div class="calc-card-row highlight">
-                    <span>Per Cutoff (employee)</span>
-                    <span class="mono font-weight-bold"
-                      >₱{{
-                        formatCurrency(
-                          (calcResult.pagibig?.employee_share || 0) / 2,
-                        )
-                      }}</span
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Total Summary -->
-            <div class="calc-total-bar">
-              <div class="calc-total-label">
-                <v-icon size="18" class="mr-2">mdi-sigma</v-icon>
-                Total Employee Deduction Per Cutoff
-              </div>
-              <div class="calc-total-value">
-                ₱{{
-                  formatCurrency(
-                    (calcResult.total_employee_deductions || 0) / 2,
-                  )
-                }}
-              </div>
-            </div>
-
-            <div class="calc-note">
-              <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
-              These are the computed defaults. If an employee has a custom
-              override set in the Employee Contributions tab, that value is used
-              instead.
-            </div>
-          </div>
-        </v-expand-transition>
-      </div>
-    </div>
     </template>
   </div>
 </template>
@@ -832,48 +866,55 @@ const route = useRoute();
 const authStore = useAuthStore();
 const { confirm: confirmDialog } = useConfirmDialog();
 
-const isAdmin = computed(() => authStore.userRole === 'admin');
-const isAdminOrHr = computed(() => ['admin', 'hr'].includes(authStore.userRole));
+const isAdmin = computed(() => authStore.userRole === "admin");
+const isAdminOrHr = computed(() =>
+  ["admin", "hr"].includes(authStore.userRole),
+);
 const userRole = computed(() => authStore.userRole);
 
 const goBack = () => {
   if (isAdmin.value) {
-    router.push('/settings');
+    router.push("/settings");
   } else {
     router.back();
   }
 };
 
 // Access control
-const accessStatus = ref('none');
-const accessMessage = ref('');
+const accessStatus = ref("none");
+const accessMessage = ref("");
 const requestDialog = ref(false);
-const requestReason = ref('');
+const requestReason = ref("");
 const submittingRequest = ref(false);
 const myRequests = ref([]);
 const requestsPanel = ref(null);
-const hasAccess = computed(() => isAdminOrHr.value || accessStatus.value === 'approved' || accessStatus.value === 'admin');
+const hasAccess = computed(
+  () =>
+    isAdminOrHr.value ||
+    accessStatus.value === "approved" ||
+    accessStatus.value === "admin",
+);
 
 const getRequestStatusColor = (status) => {
-  const colors = { pending: 'warning', approved: 'success', rejected: 'error' };
-  return colors[status] || 'grey';
+  const colors = { pending: "warning", approved: "success", rejected: "error" };
+  return colors[status] || "grey";
 };
 
 const checkGovRatesAccess = async () => {
   if (isAdminOrHr.value) return;
   try {
-    const response = await moduleAccessService.checkAccess('government-rates');
+    const response = await moduleAccessService.checkAccess("government-rates");
     accessStatus.value = response.status;
-    accessMessage.value = response.message || '';
+    accessMessage.value = response.message || "";
   } catch {
-    accessStatus.value = 'none';
+    accessStatus.value = "none";
   }
 };
 
 const loadMyRequests = async () => {
   if (isAdminOrHr.value) return;
   try {
-    const response = await moduleAccessService.getRequests('government-rates');
+    const response = await moduleAccessService.getRequests("government-rates");
     myRequests.value = response.data || [];
   } catch {
     myRequests.value = [];
@@ -884,14 +925,16 @@ const submitAccessRequest = async () => {
   if (!requestReason.value) return;
   submittingRequest.value = true;
   try {
-    await moduleAccessService.submitRequest('government-rates', { reason: requestReason.value });
-    toast.success('Access request submitted successfully');
+    await moduleAccessService.submitRequest("government-rates", {
+      reason: requestReason.value,
+    });
+    toast.success("Access request submitted successfully");
     requestDialog.value = false;
-    requestReason.value = '';
-    accessStatus.value = 'pending';
+    requestReason.value = "";
+    accessStatus.value = "pending";
     await loadMyRequests();
   } catch (error) {
-    const msg = error.response?.data?.message || 'Failed to submit request';
+    const msg = error.response?.data?.message || "Failed to submit request";
     toast.error(msg);
   } finally {
     submittingRequest.value = false;
