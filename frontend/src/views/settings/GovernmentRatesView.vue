@@ -1,5 +1,14 @@
 <template>
   <div class="gov-rates-page">
+    <v-overlay :model-value="loading" class="align-center justify-center">
+      <v-progress-circular
+        indeterminate
+        color="#ED985F"
+        :size="70"
+        :width="7"
+      ></v-progress-circular>
+    </v-overlay>
+
     <!-- Modern Page Header -->
     <div class="page-header">
       <div class="header-content">
@@ -21,6 +30,28 @@
                 Manage contribution tables and customize employee deductions
               </p>
             </div>
+          </div>
+
+          <div class="action-buttons" v-if="hasAccess">
+            <button class="action-btn action-btn-secondary" @click="loadRates">
+              <v-icon size="20">mdi-refresh</v-icon>
+              <span>Refresh</span>
+            </button>
+            <button
+              class="action-btn action-btn-secondary"
+              @click="switchTab('calculator')"
+            >
+              <v-icon size="20">mdi-calculator-variant</v-icon>
+              <span>Calculator</span>
+            </button>
+            <button
+              v-if="activeTab !== 'employees' && activeTab !== 'calculator'"
+              class="action-btn action-btn-primary"
+              @click="startAdd(activeTab)"
+            >
+              <v-icon size="20">mdi-plus</v-icon>
+              <span>Add Bracket</span>
+            </button>
           </div>
         </div>
       </div>
@@ -234,16 +265,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Loading Bar -->
-      <v-progress-linear
-        v-if="loading"
-        indeterminate
-        color="primary"
-        height="3"
-        class="mb-4"
-        style="border-radius: 8px"
-      />
 
       <!-- Content Card -->
       <div class="content-card">
@@ -1195,208 +1216,44 @@ const computeContributions = async () => {
 .gov-rates-page {
   max-width: 1600px;
   margin: 0 auto;
-}
-
-/* Page Header */
-.page-header {
-  margin-bottom: 32px;
-}
-
-.header-content {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 16px;
+  padding: 24px 24px 32px;
 }
 
 .back-button-wrapper {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .back-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(0, 31, 61, 0.08);
+  background: rgba(255, 255, 255, 0.9);
   color: #001f3d;
   font-weight: 600;
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .back-button:hover {
-  background: rgba(0, 31, 61, 0.08);
+  background: #ffffff;
+  border-color: rgba(237, 152, 95, 0.35);
+  color: #ed985f;
+  transform: translateY(-1px);
 }
 
 .header-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.page-title-section {
-  display: flex;
-  align-items: center;
   gap: 16px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
-.page-icon-badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(237, 152, 95, 0.3);
-  flex-shrink: 0;
-}
-
-.page-icon-badge .v-icon {
-  color: #ffffff !important;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #001f3d;
-  margin: 0 0 4px 0;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: rgba(0, 31, 61, 0.6);
-  margin: 0;
-}
-
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(180deg, #ed985f 0%, #f7b980 100%);
-  transform: scaleY(0);
-  transition: transform 0.3s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(237, 152, 95, 0.2);
-  border-color: rgba(237, 152, 95, 0.3);
-}
-
-.stat-card:hover::before {
-  transform: scaleY(1);
-}
-
-.stat-card.active {
-  border-color: #ed985f;
-  box-shadow: 0 4px 16px rgba(237, 152, 95, 0.2);
-}
-
-.stat-card.active::before {
-  transform: scaleY(1);
-}
-
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.stat-icon .v-icon {
-  color: white !important;
-}
-
-.stat-icon.employees {
-  background: linear-gradient(135deg, #ed985f 0%, #f7b980 100%);
-}
-
-.stat-icon.sss {
-  background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
-}
-
-.stat-icon.philhealth {
-  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
-}
-
-.stat-icon.pagibig {
-  background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
-}
-
-.stat-icon.tax {
-  background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%);
-}
-
-.stat-icon.calculator {
-  background: linear-gradient(135deg, #009688 0%, #26a69a 100%);
-}
-
-.stat-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 2px;
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
-}
-
-.stat-value.success {
-  color: #4caf50;
-}
-
-/* Content Card */
-.content-card {
-  background: white;
-  border-radius: 16px;
-  padding: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 31, 61, 0.08);
-  overflow: hidden;
-}
-
-/* Rate Panel */
 .rate-panel {
   padding: 0;
 }
@@ -1406,7 +1263,7 @@ const computeContributions = async () => {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 14px 24px;
+  padding: 16px 24px;
   font-size: 13px;
   font-weight: 500;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -1458,12 +1315,13 @@ const computeContributions = async () => {
 .rate-toolbar {
   display: flex;
   align-items: center;
-  padding: 14px 24px;
+  gap: 12px;
+  padding: 16px 24px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   background: #fafbfc;
+  flex-wrap: wrap;
 }
 
-/* Inline Form */
 .form-panel {
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
@@ -1484,7 +1342,6 @@ const computeContributions = async () => {
   align-items: center;
 }
 
-/* Rate Table */
 .rates-table-wrap {
   overflow-x: auto;
 }
@@ -1529,7 +1386,6 @@ const computeContributions = async () => {
   transform: scale(1.05);
 }
 
-/* Empty State */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1542,7 +1398,6 @@ const computeContributions = async () => {
   opacity: 0.2;
 }
 
-/* Calculator */
 .calculator-panel {
   padding: 28px;
 }
@@ -1558,10 +1413,12 @@ const computeContributions = async () => {
   gap: 12px;
   align-items: flex-start;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .calc-input {
   max-width: 320px;
+  flex: 1 1 280px;
 }
 
 .calc-results {
@@ -1654,11 +1511,13 @@ const computeContributions = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 14px 18px;
   background: linear-gradient(135deg, #1e293b, #334155);
   border-radius: 12px;
   color: white;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .calc-total-label {
@@ -1681,10 +1540,14 @@ const computeContributions = async () => {
   align-items: center;
 }
 
-/* Responsive */
 @media (max-width: 960px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .header-main {
+    align-items: flex-start;
+  }
+
+  .rate-info-note {
+    margin-left: 0;
+    width: 100%;
   }
 
   .calc-cards {
@@ -1693,8 +1556,12 @@ const computeContributions = async () => {
 }
 
 @media (max-width: 600px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
+  .gov-rates-page {
+    padding: 16px 16px 24px;
+  }
+
+  .calc-total-bar {
+    align-items: flex-start;
   }
 }
 </style>
